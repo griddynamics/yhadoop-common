@@ -75,6 +75,7 @@ public final class FileSystemTestHelper {
       throws IOException {
     // NOTE: can't cache because of different filesystems!
     //if (absTestRootDir == null) 
+      new Exception("getAbsoluteTestRootDir fSys=" + fSys).printStackTrace();
       if (TEST_ROOT_DIR.startsWith("/")) {
         absTestRootDir = TEST_ROOT_DIR;
       } else {
