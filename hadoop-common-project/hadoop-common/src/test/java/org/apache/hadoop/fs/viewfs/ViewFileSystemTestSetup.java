@@ -53,6 +53,7 @@ public class ViewFileSystemTestSetup {
      */
     Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
+    Log.info("Clean up " + targetOfTests);
     fsTarget.delete(targetOfTests, true);
     fsTarget.mkdirs(targetOfTests);
 
@@ -62,12 +63,16 @@ public class ViewFileSystemTestSetup {
         .getPath();
     int indexOf2ndSlash = testDir.indexOf('/', 1);
     String testDirFirstComponent = testDir.substring(0, indexOf2ndSlash);
+    Log.info("add link " + testDirFirstComponent + " -- " + fsTarget.makeQualified(
+        new Path(testDirFirstComponent)).toUri());
     ConfigUtil.addLink(conf, testDirFirstComponent, fsTarget.makeQualified(
         new Path(testDirFirstComponent)).toUri());
 
     // viewFs://home => fsTarget://home
     String homeDirRoot = fsTarget.getHomeDirectory()
         .getParent().toUri().getPath();
+    Log.info("add link " + homeDirRoot + " -- " + 
+        fsTarget.makeQualified(new Path(homeDirRoot)).toUri());
     ConfigUtil.addLink(conf, homeDirRoot,
         fsTarget.makeQualified(new Path(homeDirRoot)).toUri());
     ConfigUtil.setHomeDirConf(conf, homeDirRoot);
