@@ -53,6 +53,7 @@ public class ViewFileSystemTestSetup {
      */
     Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
+    Log.info("Clean up " + targetOfTests);
     fsTarget.delete(targetOfTests, true);
     fsTarget.mkdirs(targetOfTests);
 
@@ -60,16 +61,20 @@ public class ViewFileSystemTestSetup {
     // path of testdir.
     String testDir = FileSystemTestHelper.getTestRootPath(fsTarget).toUri()
         .getPath();
-    int indexOf2ndSlash = testDir.indexOf('/', 1);
-    String testDirFirstComponent = testDir.substring(0, indexOf2ndSlash);
+    String testDirFirstComponent = getDirFirstComponent(testDir);
+    Log.info("add link " + testDirFirstComponent + " -- " + fsTarget.makeQualified(
+        new Path(testDirFirstComponent)).toUri());
     ConfigUtil.addLink(conf, testDirFirstComponent, fsTarget.makeQualified(
         new Path(testDirFirstComponent)).toUri());
 
     // viewFs://home => fsTarget://home
     String homeDirRoot = fsTarget.getHomeDirectory()
         .getParent().toUri().getPath();
-    ConfigUtil.addLink(conf, homeDirRoot,
-        fsTarget.makeQualified(new Path(homeDirRoot)).toUri());
+    String homeDirFirstComponent = getDirFirstComponent(homeDirRoot);
+    Log.info("add link " + homeDirFirstComponent + " -- " + 
+        fsTarget.makeQualified(new Path(homeDirFirstComponent)).toUri());
+    ConfigUtil.addLink(conf, homeDirFirstComponent,
+        fsTarget.makeQualified(new Path(homeDirFirstComponent)).toUri());
     ConfigUtil.setHomeDirConf(conf, homeDirRoot);
     Log.info("Home dir base " + homeDirRoot);
 
@@ -91,4 +96,14 @@ public class ViewFileSystemTestSetup {
     conf.set("fs.viewfs.impl", ViewFileSystem.class.getName());
     return conf; 
   }
+
+  private static String getDirFirstComponent(String dir) {
+	System.out.println("Get first component of dir " + dir);
+    int indexOf2ndSlash = dir.indexOf('/', 1);
+    if (indexOf2ndSlash == -1)
+      return dir;
+    String testDirFirstComponent = dir.substring(0, indexOf2ndSlash);
+    return testDirFirstComponent;
+  }
+
 }
