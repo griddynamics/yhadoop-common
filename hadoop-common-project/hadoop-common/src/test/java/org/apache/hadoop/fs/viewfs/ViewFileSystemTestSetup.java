@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
+import org.junit.Assert;
 import org.mortbay.log.Log;
 
 
@@ -40,6 +47,49 @@ import org.mortbay.log.Log;
  * /<firstComponent>" pointing to the target fs's  testdir 
  */
 public class ViewFileSystemTestSetup {
+
+  /**
+   * A LocalFileSystem which places home dir under the tests root dir, to avoid modifications of the real user home 
+   * while running tests.
+   */
+  static class TestLFS extends LocalFileSystem {
+    Path home;
+    TestLFS() throws IOException {
+      this(new LocalFileSystem());
+    }
+    TestLFS(FileSystem fs) throws IOException {
+      this(fs, new Path(new File(FileSystemTestHelper.TEST_ROOT_DIR).getCanonicalPath(), System.getProperty("user.name")));
+    }
+    TestLFS(FileSystem fs, Path home) throws IOException {
+      super(fs);
+      this.home = home;
+    }
+    public FileSystem getRawFileSystem() {
+      return ((LocalFileSystem)fs).getRawFileSystem();
+    }
+    public Path getHomeDirectory() {
+      return home;
+    }
+    public boolean delete(Path f, boolean recursive) throws IOException {
+      Path testRootDir;
+      Path path;
+      try {
+        testRootDir = new Path(new URI("file:///").resolve(new File(FileSystemTestHelper.TEST_ROOT_DIR).getCanonicalPath()));
+        path = new Path(new URI("file:///").resolve(f.toUri()));
+      } catch (URISyntaxException e) {
+        throw new IOException(e);
+      }
+      assertParent(String.format("Attempt to delete dir %s which is not under the test dir %s", f, testRootDir), testRootDir, path);
+      return super.delete(f, recursive);
+    }
+    private void assertParent(String message, Path parent, Path f) {
+      if (f == null)
+        Assert.fail(message);
+      if (f.equals(parent))
+        return;
+      assertParent(message, parent, f.getParent());
+    }
+  }
 
   /**
    * 
@@ -70,11 +120,6 @@ public class ViewFileSystemTestSetup {
     // viewFs://home => fsTarget://home
     String homeDirRoot = fsTarget.getHomeDirectory()
         .getParent().toUri().getPath();
-    String homeDirFirstComponent = getDirFirstComponent(homeDirRoot);
-    Log.info("add link " + homeDirFirstComponent + " -- " + 
-        fsTarget.makeQualified(new Path(homeDirFirstComponent)).toUri());
-    ConfigUtil.addLink(conf, homeDirFirstComponent,
-        fsTarget.makeQualified(new Path(homeDirFirstComponent)).toUri());
     ConfigUtil.setHomeDirConf(conf, homeDirRoot);
     Log.info("Home dir base " + homeDirRoot);
 
@@ -93,6 +138,7 @@ public class ViewFileSystemTestSetup {
   
   public static Configuration createConfig() {
     Configuration conf = new Configuration();
+    conf.set("fs.file.impl", TestLFS.class.getName());
     conf.set("fs.viewfs.impl", ViewFileSystem.class.getName());
     return conf; 
   }
