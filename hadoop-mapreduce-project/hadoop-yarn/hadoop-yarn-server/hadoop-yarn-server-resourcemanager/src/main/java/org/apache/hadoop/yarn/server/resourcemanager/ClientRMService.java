@@ -196,6 +196,10 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
   
+  /**
+   * It gives response which includes application report if the application
+   * present otherwise gives response with application report as null.
+   */
   @Override
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnRemoteException {
@@ -211,8 +215,10 @@ public class ClientRMService extends AbstractService implements
 
     RMApp application = this.rmContext.getRMApps().get(applicationId);
     if (application == null) {
-      throw RPCUtil.getRemoteException("Trying to get information for an "
-          + "absent application " + applicationId);
+      // If the RM doesn't have the application, provide the response with
+      // application report as null and let the clients to handle.
+      return recordFactory
+          .newRecordInstance(GetApplicationReportResponse.class);
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
@@ -383,7 +389,9 @@ public class ClientRMService extends AbstractService implements
         appReports = new ArrayList<ApplicationReport>(
             apps.size());
         for (RMApp app : apps) {
-          appReports.add(app.createAndGetApplicationReport(true));
+          if (app.getQueue().equals(queueInfo.getQueueName())) {
+            appReports.add(app.createAndGetApplicationReport(true));
+          }
         }
       }
       queueInfo.setApplications(appReports);
