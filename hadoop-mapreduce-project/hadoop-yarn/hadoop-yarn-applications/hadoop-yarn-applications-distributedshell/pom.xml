@@ -107,7 +107,6 @@
         <configuration>
           <environmentVariables>
             <JAVA_HOME>${java.home}</JAVA_HOME>
-            <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
        </configuration>
       </plugin>
