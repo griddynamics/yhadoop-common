@@ -27,6 +27,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.namenode.GetImageServlet;
 import org.apache.hadoop.security.SecurityUtil;
 import org.junit.Test;
 
@@ -44,7 +45,7 @@ public class TestGetImageServlet {
   
   // Worker class to poke the isValidRequestor method with verifying it accepts
   // or rejects with these standard allowed principals
-  private void verifyIsValidReqBehavior(GetImageServlet gim, 
+  private void verifyIsValidReqBehavior(GetImageServlet gim,
                                         boolean shouldSucceed, String msg) 
       throws IOException {
     final String [] validRequestors = {DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY,

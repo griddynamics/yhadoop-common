@@ -25,6 +25,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.junit.Test;
 
 public class TestINodeFile {
@@ -44,7 +46,7 @@ public class TestINodeFile {
   public void testReplication () {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(new PermissionStatus(userName, null, 
+    INodeFile inf = new INodeFile(new PermissionStatus(userName, null,
                                   FsPermission.getDefault()), null, replication,
                                   0L, 0L, preferredBlockSize);
     assertEquals("True has to be returned in this case", replication,

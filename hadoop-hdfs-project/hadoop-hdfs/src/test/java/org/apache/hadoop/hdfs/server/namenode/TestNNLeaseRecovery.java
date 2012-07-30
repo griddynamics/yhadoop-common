@@ -107,7 +107,7 @@ public class TestNNLeaseRecovery {
   }
 
   // Release the lease for the given file
-  private boolean releaseLease(FSNamesystem ns, LeaseManager.Lease lm, 
+  private boolean releaseLease(FSNamesystem ns, LeaseManager.Lease lm,
       Path file) throws IOException {
     fsn.writeLock();
     try {

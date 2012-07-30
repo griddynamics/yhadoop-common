@@ -33,7 +33,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.junit.experimental.categories.Category;
 
+@Category(org.apache.hadoop.classification.InterfaceStability.class)
 public class TestDataDirs {
 
   @Test public void testGetDataDirsFromURIs() throws Throwable {
