@@ -56,6 +56,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
     mapred-default.xml (Rui Kubo via harsh)
 
+    MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
+    via tgraves)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
@@ -354,6 +357,11 @@ Release 0.23.3 - UNRELEASED
     via tgraves)
 
     MAPREDUCE-4010.  TestWritableJobConf fails on trunk (tucu via bobby)
+
+    MAPREDUCE-4456. LocalDistributedCacheManager can get an 
+    ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
+
+    MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
 
 Release 0.23.2 - UNRELEASED
 
