@@ -35,7 +35,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Semaphore;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 
 public class TestFileSystemCaching {
@@ -266,5 +266,85 @@ public class TestFileSystemCaching {
       }
     });
     assertNotSame(fsA, fsA1);
+  }
+  
+  @Test
+  public void testDelete() throws IOException {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);    
+    Path path = new Path("/a");
+
+    fs.delete(path, false);
+    verify(mockFs).delete(eq(path), eq(false));
+    reset(mockFs);
+    fs.delete(path, true);
+    verify(mockFs).delete(eq(path), eq(true));
+  }
+
+  @Test
+  public void testDeleteOnExit() throws IOException {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+    Path path = new Path("/a");
+
+    // delete on close if path does exist
+    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+    assertTrue(fs.deleteOnExit(path));
+    verify(mockFs).getFileStatus(eq(path));
+    reset(mockFs);
+    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+    fs.close();
+    verify(mockFs).getFileStatus(eq(path));
+    verify(mockFs).delete(eq(path), eq(true));
+  }
+
+  @Test
+  public void testDeleteOnExitFNF() throws IOException {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+    Path path = new Path("/a");
+
+    // don't delete on close if path doesn't exist
+    assertFalse(fs.deleteOnExit(path));
+    verify(mockFs).getFileStatus(eq(path));
+    reset(mockFs);
+    fs.close();
+    verify(mockFs, never()).getFileStatus(eq(path));
+    verify(mockFs, never()).delete(any(Path.class), anyBoolean());
+  }
+
+
+  @Test
+  public void testDeleteOnExitRemoved() throws IOException {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+    Path path = new Path("/a");
+
+    // don't delete on close if path existed, but later removed
+    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+    assertTrue(fs.deleteOnExit(path));
+    verify(mockFs).getFileStatus(eq(path));
+    reset(mockFs);
+    fs.close();
+    verify(mockFs).getFileStatus(eq(path));
+    verify(mockFs, never()).delete(any(Path.class), anyBoolean());
+  }
+
+  @Test
+  public void testCancelDeleteOnExit() throws IOException {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+    Path path = new Path("/a");
+
+    // don't delete on close if path existed, but later cancelled
+    when(mockFs.getFileStatus(eq(path))).thenReturn(new FileStatus());
+    assertTrue(fs.deleteOnExit(path));
+    verify(mockFs).getFileStatus(eq(path));
+    assertTrue(fs.cancelDeleteOnExit(path));
+    assertFalse(fs.cancelDeleteOnExit(path)); // false because not registered
+    reset(mockFs);
+    fs.close();
+    verify(mockFs, never()).getFileStatus(any(Path.class));
+    verify(mockFs, never()).delete(any(Path.class), anyBoolean());
   }
 }

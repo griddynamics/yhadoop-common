@@ -1155,6 +1155,16 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     return true;
   }
+  
+  /**
+   * Cancel the deletion of the path when the FileSystem is closed
+   * @param f the path to cancel deletion
+   */
+  public boolean cancelDeleteOnExit(Path f) {
+    synchronized (deleteOnExit) {
+      return deleteOnExit.remove(f);
+    }
+  }
 
   /**
    * Delete all files that were marked as delete-on-exit. This recursively
@@ -1165,7 +1175,9 @@ public abstract class FileSystem extends Configured implements Closeable {
       for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
         Path path = iter.next();
         try {
-          delete(path, true);
+          if (exists(path)) {
+            delete(path, true);
+          }
         }
         catch (IOException e) {
           LOG.info("Ignoring failure to deleteOnExit for path " + path);
