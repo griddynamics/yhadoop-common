@@ -1,0 +1,8 @@
+org.apache.hadoop.mapred.TestTaskAttemptListenerImpl
+org.apache.hadoop.mapreduce.jobhistory.TestJobHistoryEventHandler
+org.apache.hadoop.mapreduce.v2.app.job.impl.TestJobImpl
+org.apache.hadoop.mapreduce.v2.app.job.impl.TestTaskImpl
+org.apache.hadoop.mapreduce.v2.app.launcher.TestContainerLauncher
+org.apache.hadoop.mapreduce.v2.app.launcher.TestContainerLauncherImpl
+org.apache.hadoop.mapreduce.v2.app.metrics.TestMRAppMetrics
+org.apache.hadoop.mapreduce.v2.app.speculate.TestDataStatistics

@@ -309,6 +309,12 @@
         <groupId>com.atlassian.maven.plugins</groupId>
         <artifactId>maven-clover2-plugin</artifactId>
         <!-- until we have reporting management cf. MSITE-443 -->
+        <configuration>
+      <excludes>
+          <exclude>**/hamlet/**/*.java</exclude>
+          <exclude>**/examples/**/*.java</exclude>
+      </excludes>
+          </configuration>
         <version>3.0.2</version>
       </plugin>
     </plugins>
