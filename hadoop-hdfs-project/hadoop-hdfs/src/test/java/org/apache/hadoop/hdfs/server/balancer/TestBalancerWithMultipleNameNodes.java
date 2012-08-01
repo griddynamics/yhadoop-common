@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -367,6 +368,7 @@ public class TestBalancerWithMultipleNameNodes {
   /** Test a cluster with even distribution, 
    * then a new empty node is added to the cluster
    */
+  @Ignore
   @Test
   public void testBalancer() throws Exception {
     final Configuration conf = createConf();
@@ -375,6 +377,7 @@ public class TestBalancerWithMultipleNameNodes {
   }
 
   /** Test unevenly distributed cluster */
+  @Ignore
   @Test
   public void testUnevenDistribution() throws Exception {
     final Configuration conf = createConf();
