@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class tests the replication of a DFS file.
@@ -181,7 +182,7 @@ public class TestReplication extends TestCase {
     while (blocks.get(0).isCorrupt() != true) {
       try {
         LOG.info("Waiting until block is marked as corrupt...");
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException ie) {
       }
       blocks = dfsClient.getNamenode().
@@ -283,7 +284,7 @@ public class TestReplication extends TestCase {
       }
       
       try {
-        Thread.sleep(500);
+        ThreadUtils.sleep(500);
       } catch (InterruptedException ignored) {}
     }
   }
@@ -439,13 +440,13 @@ public class TestReplication extends TestCase {
     if (lenDelta < 0) { // replica truncated
     	while (!blocks.get(0).isCorrupt() || 
     			REPLICATION_FACTOR != blocks.get(0).getLocations().length) {
-    		Thread.sleep(100);
+    		ThreadUtils.sleep(100);
     		blocks = dfsClient.getNamenode().getBlockLocations(
     				fileName.toString(), 0, fileLen);
     	}
     } else { // no corruption detected; block replicated
     	while (REPLICATION_FACTOR+1 != blocks.get(0).getLocations().length) {
-    		Thread.sleep(100);
+    		ThreadUtils.sleep(100);
     		blocks = dfsClient.getNamenode().getBlockLocations(
     				fileName.toString(), 0, fileLen);
     	}

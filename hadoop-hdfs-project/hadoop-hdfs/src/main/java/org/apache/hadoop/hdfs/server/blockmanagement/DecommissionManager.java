@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * Manage node decommissioning.
@@ -73,7 +74,7 @@ class DecommissionManager {
         }
   
         try {
-          Thread.sleep(recheckInterval);
+          ThreadUtils.sleep(recheckInterval);
         } catch (InterruptedException ie) {
           LOG.warn(this.getClass().getSimpleName() + " interrupted: " + ie);
         }

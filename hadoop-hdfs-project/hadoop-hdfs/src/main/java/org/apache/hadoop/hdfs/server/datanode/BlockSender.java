@@ -42,6 +42,7 @@ import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * Reads a block from the disk and sends it to a recipient.
@@ -374,7 +375,7 @@ class BlockSender implements java.io.Closeable {
     // Wait for 3 seconds for rbw replica to reach the minimum length
     for (int i = 0; i < 30 && rbw.getBytesOnDisk() < len; i++) {
       try {
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       } catch (InterruptedException ie) {
         throw new IOException(ie);
       }

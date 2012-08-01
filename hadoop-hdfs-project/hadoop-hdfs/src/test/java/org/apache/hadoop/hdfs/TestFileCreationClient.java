@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 
 /**
@@ -67,14 +68,14 @@ public class TestFileCreationClient extends junit.framework.TestCase {
           slowwriters[i].start();
         }
 
-        Thread.sleep(1000);                       // let writers get started
+        ThreadUtils.sleep(1000);                       // let writers get started
 
         //stop a datanode, it should have least recover.
         cluster.stopDataNode(AppendTestUtil.nextInt(REPLICATION));
         
         //let the slow writer writes a few more seconds
         System.out.println("Wait a few seconds");
-        Thread.sleep(5000);
+        ThreadUtils.sleep(5000);
       }
       finally {
         for(int i = 0; i < slowwriters.length; i++) {

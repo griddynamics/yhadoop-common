@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -197,7 +198,7 @@ public class TestDecommissioningStatus {
 
     Path file2 = new Path("decommission1.dat");
     FSDataOutputStream st1 = writeIncompleteFile(fileSys, file2, replicas);
-    Thread.sleep(5000);
+    ThreadUtils.sleep(5000);
 
     FSNamesystem fsn = cluster.getNamesystem();
     final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
@@ -205,7 +206,7 @@ public class TestDecommissioningStatus {
       String downnode = decommissionNode(fsn, client, localFileSys, iteration);
       dm.refreshNodes(conf);
       decommissionedNodes.add(downnode);
-      Thread.sleep(5000);
+      ThreadUtils.sleep(5000);
       final List<DatanodeDescriptor> decommissioningNodes = dm.getDecommissioningNodes();
       if (iteration == 0) {
         assertEquals(decommissioningNodes.size(), 1);

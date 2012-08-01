@@ -52,6 +52,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.utils.ThreadUtils;
+
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
@@ -76,7 +78,7 @@ public class TestBlockReplacement extends TestCase {
     throttler.throttle(bytesSent);
     bytesToSend -= bytesSent;
     try {
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
     } catch (InterruptedException ignored) {}
     throttler.throttle(bytesToSend);
     long end = Util.now();
@@ -206,7 +208,7 @@ public class TestBlockReplacement extends TestCase {
     long failtime = starttime + TIMEOUT;
     do {
       try {
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       } catch(InterruptedException e) {
       }
       List<LocatedBlock> blocks = client.getNamenode().

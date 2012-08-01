@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Test;
 
 /**
@@ -103,7 +104,7 @@ public class TestDeleteBlockPool {
           bpid1).list().length != 0) || (MiniDFSCluster.getFinalizedDir(
               dn2StorageDir2, bpid1).list().length != 0)) {
         try {
-          Thread.sleep(3000);
+          ThreadUtils.sleep(3000);
         } catch (Exception ignored) {
         }
       }

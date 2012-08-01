@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class tests if a balancer schedules tasks correctly.
@@ -236,7 +237,7 @@ public class TestBalancer extends TestCase {
             + "), in more than " + timeout + " msec.");
       }
       try {
-        Thread.sleep(100L);
+        ThreadUtils.sleep(100L);
       } catch(InterruptedException ignored) {
       }
     }
@@ -273,7 +274,7 @@ public class TestBalancer extends TestCase {
                 + " after more than " + TIMEOUT + " msec.");
           }
           try {
-            Thread.sleep(100);
+            ThreadUtils.sleep(100);
           } catch (InterruptedException ignored) {
           }
           break;

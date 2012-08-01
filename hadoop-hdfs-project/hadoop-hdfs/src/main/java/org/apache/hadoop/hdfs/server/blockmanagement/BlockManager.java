@@ -67,6 +67,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -2591,7 +2592,7 @@ public class BlockManager {
         try {
           computeDatanodeWork();
           processPendingReplications();
-          Thread.sleep(replicationRecheckInterval);
+          ThreadUtils.sleep(replicationRecheckInterval);
         } catch (InterruptedException ie) {
           LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
           break;

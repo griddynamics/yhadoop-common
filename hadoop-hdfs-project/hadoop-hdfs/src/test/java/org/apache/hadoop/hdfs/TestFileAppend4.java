@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
@@ -125,7 +126,7 @@ public class TestFileAppend4 {
       } catch (IOException e) {
         LOG.info("Failed open for append, waiting on lease recovery");
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException ex) {
           // ignore it and try again
         }

@@ -21,6 +21,7 @@ import junit.framework.TestCase;
 import java.lang.System;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class tests the internals of PendingReplicationBlocks.java
@@ -78,7 +79,7 @@ public class TestPendingReplication extends TestCase {
     // Wait for one second and then insert some more items.
     //
     try {
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
     } catch (Exception e) {
     }
 
@@ -94,7 +95,7 @@ public class TestPendingReplication extends TestCase {
     int loop = 0;
     while (pendingReplications.size() > 0) {
       try {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (Exception e) {
       }
       loop++;

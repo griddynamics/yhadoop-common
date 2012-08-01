@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This test ensures that the balancer bandwidth is dynamically adjusted
@@ -64,7 +65,7 @@ public class TestBalancerBandwidth extends TestCase {
 
       // Give it a few seconds to propogate new the value to the datanodes.
       try {
-        Thread.sleep(5000);
+        ThreadUtils.sleep(5000);
       } catch (Exception e) {}
 
       assertEquals(newBandwidth, (long) datanodes.get(0).getBalancerBandwidth());
@@ -76,7 +77,7 @@ public class TestBalancerBandwidth extends TestCase {
 
       // Give it a few seconds to propogate new the value to the datanodes.
       try {
-        Thread.sleep(5000);
+        ThreadUtils.sleep(5000);
       } catch (Exception e) {}
 
       assertEquals(newBandwidth, (long) datanodes.get(0).getBalancerBandwidth());

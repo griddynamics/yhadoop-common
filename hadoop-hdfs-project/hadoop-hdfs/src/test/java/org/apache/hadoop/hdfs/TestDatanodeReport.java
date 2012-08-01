@@ -26,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.utils.ThreadUtils;
+
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
 /**
@@ -65,7 +67,7 @@ public class TestDatanodeReport extends TestCase {
       DatanodeInfo[] nodeInfo = client.datanodeReport(DatanodeReportType.DEAD);
       while (nodeInfo.length != 1) {
         try {
-          Thread.sleep(500);
+          ThreadUtils.sleep(500);
         } catch (Exception e) {
         }
         nodeInfo = client.datanodeReport(DatanodeReportType.DEAD);
@@ -76,7 +78,7 @@ public class TestDatanodeReport extends TestCase {
       assertEquals(client.datanodeReport(DatanodeReportType.ALL).length,
                    NUM_OF_DATANODES);
 
-      Thread.sleep(5000);
+      ThreadUtils.sleep(5000);
       assertGauge("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
     }finally {
       cluster.shutdown();

@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,7 +98,7 @@ public class TestBackupNode {
       try {
         LOG.info("Waiting checkpoint to complete... " +
             "checkpoint txid should increase above " + txid);
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (Exception e) {}
       thisCheckpointTxId = cluster.getNameNode().getFSImage().getStorage()
         .getMostRecentCheckpointTxId();

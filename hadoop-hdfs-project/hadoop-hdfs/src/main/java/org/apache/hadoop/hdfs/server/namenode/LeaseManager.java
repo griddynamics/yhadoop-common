@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.utils.ThreadUtils;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -379,7 +380,7 @@ public class LeaseManager {
 
 
         try {
-          Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
+          ThreadUtils.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
         } catch(InterruptedException ie) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(name + " is interrupted", ie);

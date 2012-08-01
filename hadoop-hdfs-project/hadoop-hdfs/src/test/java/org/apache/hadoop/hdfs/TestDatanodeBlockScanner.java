@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This test verifies that block verification occurs on the datanode
@@ -108,7 +109,7 @@ public class TestDatanodeBlockScanner extends TestCase {
           lastWarnTime = now; 
         }
         try {
-          Thread.sleep(500);
+          ThreadUtils.sleep(500);
         } catch (InterruptedException ignored) {}
       }
     }
@@ -401,7 +402,7 @@ public class TestDatanodeBlockScanner extends TestCase {
         throw new TimeoutException("waited too long for blocks to be deleted: "
             + blockFile.getPath() + (blockFile.exists() ? " still exists; " : " is absent; "));
       }
-      Thread.sleep(100);
+      ThreadUtils.sleep(100);
       blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
     }
   }

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -94,7 +95,7 @@ public class TestReadWhileWriting {
       //c. On M1, append another half block of data.  Close file on M1.
       {
         //sleep to let the lease is expired.
-        Thread.sleep(2*SOFT_LEASE_LIMIT);
+        ThreadUtils.sleep(2*SOFT_LEASE_LIMIT);
   
         final UserGroupInformation current = UserGroupInformation.getCurrentUser();
         final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
@@ -126,7 +127,7 @@ public class TestReadWhileWriting {
       } catch(RemoteException re) {
         if (re.getClassName().equals(RecoveryInProgressException.class.getName())) {
           AppendTestUtil.LOG.info("Will sleep and retry, i=" + i +", p="+p, re);
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         }
         else
           throw re;

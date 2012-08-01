@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Test;
 
 /**
@@ -66,7 +67,7 @@ public class TestFileAppend{
     // wait till all full blocks are confirmed by the datanodes.
     while (!done) {
       try {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException e) {;}
       done = true;
       BlockLocation[] locations = fileSys.getFileBlockLocations(

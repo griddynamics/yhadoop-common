@@ -57,6 +57,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.znerd.xmlenc.XMLOutputter;
 
 class NamenodeJspHelper {
@@ -607,7 +608,7 @@ class NamenodeJspHelper {
       counterReset();
 
       try {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException e) {
       }
 

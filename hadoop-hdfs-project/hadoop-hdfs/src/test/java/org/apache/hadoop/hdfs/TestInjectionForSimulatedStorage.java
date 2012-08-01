@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.utils.ThreadUtils;
 
 
 /**
@@ -102,7 +103,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
         }
       
         try {
-          Thread.sleep(500);
+          ThreadUtils.sleep(500);
         } catch (InterruptedException ignored) {}
       }
     }

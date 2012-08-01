@@ -171,6 +171,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -2599,7 +2600,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             enterSafeMode(true);
           }
           try {
-            Thread.sleep(resourceRecheckInterval);
+            ThreadUtils.sleep(resourceRecheckInterval);
           } catch (InterruptedException ie) {
             // Deliberately ignore
           }
@@ -3250,7 +3251,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     public void run() {
       while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
         try {
-          Thread.sleep(recheckInterval);
+          ThreadUtils.sleep(recheckInterval);
         } catch (InterruptedException ie) {
         }
       }

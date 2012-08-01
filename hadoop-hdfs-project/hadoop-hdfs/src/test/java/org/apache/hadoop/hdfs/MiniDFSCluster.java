@@ -75,6 +75,7 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -701,7 +702,7 @@ public class MiniDFSCluster {
     while (!isNameNodeUp(nnIndex)) {
       try {
         LOG.warn("Waiting for namenode at " + nnIndex + " to start...");
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException e) {
       }
     }
@@ -715,7 +716,7 @@ public class MiniDFSCluster {
       while (!isClusterUp()) {
         try {
           LOG.warn("Waiting for the Mini HDFS Cluster to start...");
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException e) {
         }
       }
@@ -1514,7 +1515,7 @@ public class MiniDFSCluster {
     while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
       try {
         LOG.info("Waiting for cluster to become active");
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       } catch (InterruptedException e) {
       }
     }

@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * OfflineEditsViewerHelper is a helper class for TestOfflineEditsViewer,
@@ -232,7 +233,7 @@ public class OfflineEditsViewerHelper {
     LocatedBlocks locatedBlocks;
     do {
       try {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException e) {
         LOG.info("Innocuous exception", e);
       }

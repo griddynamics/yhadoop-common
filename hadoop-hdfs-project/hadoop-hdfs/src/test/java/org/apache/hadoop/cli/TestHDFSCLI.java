@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
@@ -77,7 +78,7 @@ public class TestHDFSCLI extends CLITestHelperDFS {
     if (null != fs)
       fs.close();
     dfsCluster.shutdown();
-    Thread.sleep(2000);
+    ThreadUtils.sleep(2000);
     super.tearDown();
   }
 

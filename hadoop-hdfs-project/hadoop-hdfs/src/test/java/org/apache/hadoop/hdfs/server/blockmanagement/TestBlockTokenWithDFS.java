@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -226,7 +227,7 @@ public class TestBlockTokenWithDFS {
       Token<BlockTokenIdentifier> token = DFSTestUtil.getBlockToken(stm);
       while (!SecurityTestUtil.isBlockTokenExpired(token)) {
         try {
-          Thread.sleep(10);
+          ThreadUtils.sleep(10);
         } catch (InterruptedException ignored) {
         }
       }
@@ -283,7 +284,7 @@ public class TestBlockTokenWithDFS {
       Token<BlockTokenIdentifier> token = DFSTestUtil.getBlockToken(stm);
       while (!SecurityTestUtil.isBlockTokenExpired(token)) {
         try {
-          Thread.sleep(10);
+          ThreadUtils.sleep(10);
         } catch (InterruptedException ignored) {
         }
       }
@@ -361,7 +362,7 @@ public class TestBlockTokenWithDFS {
 
       while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
         try {
-          Thread.sleep(10);
+          ThreadUtils.sleep(10);
         } catch (InterruptedException ignored) {
         }
       }

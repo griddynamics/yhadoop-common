@@ -29,6 +29,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /***************************************************
  * PendingReplicationBlocks does the bookkeeping of all
@@ -189,7 +190,7 @@ class PendingReplicationBlocks {
         long period = Math.min(defaultRecheckInterval, timeout);
         try {
           pendingReplicationCheck();
-          Thread.sleep(period);
+          ThreadUtils.sleep(period);
         } catch (InterruptedException ie) {
           if(LOG.isDebugEnabled()) {
             LOG.debug("PendingReplicationMonitor thread is interrupted.", ie);

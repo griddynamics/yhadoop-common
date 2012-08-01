@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -114,7 +115,7 @@ public class TestLeaseRenewer {
     long failTime = System.currentTimeMillis() + 5000;
     while (System.currentTimeMillis() < failTime &&
         leaseRenewalCount.get() == 0) {
-      Thread.sleep(50);
+      ThreadUtils.sleep(50);
     }
     if (leaseRenewalCount.get() == 0) {
       Assert.fail("Did not renew lease at all!");
@@ -201,7 +202,7 @@ public class TestLeaseRenewer {
     // Should stop the renewer running within a few seconds
     long failTime = System.currentTimeMillis() + 5000;
     while (renewer.isRunning() && System.currentTimeMillis() < failTime) {
-      Thread.sleep(50);
+      ThreadUtils.sleep(50);
     }
     Assert.assertFalse(renewer.isRunning());
   }

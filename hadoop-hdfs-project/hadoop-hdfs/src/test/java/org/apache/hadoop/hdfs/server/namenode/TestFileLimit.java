@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.utils.ThreadUtils;
 
 
 /**
@@ -65,7 +66,7 @@ public class TestFileLimit extends TestCase {
         break;
       }
       try {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException e) {
       }
     }

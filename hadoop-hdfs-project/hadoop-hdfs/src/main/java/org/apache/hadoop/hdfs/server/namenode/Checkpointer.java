@@ -40,6 +40,7 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * The Checkpointer is responsible for supporting periodic checkpoints 
@@ -157,7 +158,7 @@ class Checkpointer extends Daemon {
         break;
       }
       try {
-        Thread.sleep(periodMSec);
+        ThreadUtils.sleep(periodMSec);
       } catch(InterruptedException ie) {
         // do nothing
       }

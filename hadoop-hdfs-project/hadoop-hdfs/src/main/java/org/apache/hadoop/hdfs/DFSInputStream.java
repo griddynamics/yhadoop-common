@@ -48,6 +48,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles 
@@ -631,7 +632,7 @@ public class DFSInputStream extends FSInputStream {
           double waitTime = timeWindow * failures +       // grace period for the last round of attempt
             timeWindow * (failures + 1) * DFSUtil.getRandom().nextDouble(); // expanding time window for each failure
           DFSClient.LOG.warn("DFS chooseDataNode: got # " + (failures + 1) + " IOException, will wait for " + waitTime + " msec.");
-          Thread.sleep((long)waitTime);
+          ThreadUtils.sleep((long) waitTime);
         } catch (InterruptedException iex) {
         }
         deadNodes.clear(); //2nd option is to remove only nodes[blockId]

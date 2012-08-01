@@ -73,6 +73,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -284,7 +285,7 @@ public class DFSTestUtil {
     final int ATTEMPTS = 20;
 
     do {
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
       int[] r = BlockManagerTestUtil.getReplicaInfo(cluster.getNamesystem(),
           b.getLocalBlock());
       curRacks = r[0];
@@ -341,7 +342,7 @@ public class DFSTestUtil {
     final int ATTEMPTS = 20;
 
     do {
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
       DistributedFileSystem dfs = (DistributedFileSystem)fs;
       for (DatanodeInfo info : dfs.getDataNodeStats()) {
         if (name.equals(info.getName())) {
@@ -411,7 +412,7 @@ public class DFSTestUtil {
     int volFails = 0;
 
     do {
-      Thread.sleep(timeout);
+      ThreadUtils.sleep(timeout);
       live.clear();
       dead.clear();
       dm.fetchDatanodes(live, dead, false);
@@ -446,7 +447,7 @@ public class DFSTestUtil {
     final int ATTEMPTS = 10;
     int count = 0;
     do {
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
       count++;
     } while (dn.isDatanodeUp() && count < ATTEMPTS);
 
@@ -487,7 +488,7 @@ public class DFSTestUtil {
           good = false;
           try {
             System.out.println("Waiting for replication factor to drain");
-            Thread.sleep(100);
+            ThreadUtils.sleep(100);
           } catch (InterruptedException e) {} 
           break;
         }

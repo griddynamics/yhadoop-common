@@ -22,6 +22,7 @@ import java.util.ConcurrentModificationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * Test empty file creation.
@@ -69,7 +70,7 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
       // namenode triggers lease recovery
       cluster.setLeasePeriod(leasePeriod, leasePeriod);
       // wait for the lease to expire
-      try {Thread.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
+      try {ThreadUtils.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
 
       assertFalse(isConcurrentModificationException);
     } finally {

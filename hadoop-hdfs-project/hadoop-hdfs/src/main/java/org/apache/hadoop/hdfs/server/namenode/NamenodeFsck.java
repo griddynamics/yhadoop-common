@@ -54,6 +54,7 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -498,7 +499,7 @@ public class NamenodeFsck {
         }
         LOG.info("Could not obtain block from any node:  " + ie);
         try {
-          Thread.sleep(10000);
+          ThreadUtils.sleep(10000);
         }  catch (InterruptedException iex) {
         }
         deadNodes.clear();

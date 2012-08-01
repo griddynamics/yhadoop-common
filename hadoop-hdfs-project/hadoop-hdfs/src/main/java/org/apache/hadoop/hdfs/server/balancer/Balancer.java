@@ -73,6 +73,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /** <p>The balancer is a tool that balances disk space usage on an HDFS cluster
  * when some datanodes become full or when new empty nodes join the cluster.
@@ -1124,7 +1125,7 @@ public class Balancer {
       }
       if (shouldWait) {
         try {
-          Thread.sleep(blockMoveWaitTime);
+          ThreadUtils.sleep(blockMoveWaitTime);
         } catch (InterruptedException ignored) {
         }
       }
@@ -1413,7 +1414,7 @@ public class Balancer {
         }
 
         if (!done) {
-          Thread.sleep(sleeptime);
+          ThreadUtils.sleep(sleeptime);
         }
       }
     } finally {

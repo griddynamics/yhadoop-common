@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.utils.ThreadUtils;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
   static final int BLOCK_SIZE = 1024;
@@ -55,7 +56,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
     cluster.setLeasePeriod(LEASE_PERIOD, LEASE_PERIOD);
     // wait for the lease to expire
     try {
-      Thread.sleep(2 * 3000);  // 2 heartbeat intervals
+      ThreadUtils.sleep(2 * 3000);  // 2 heartbeat intervals
     } catch (InterruptedException e) {
     }
   }

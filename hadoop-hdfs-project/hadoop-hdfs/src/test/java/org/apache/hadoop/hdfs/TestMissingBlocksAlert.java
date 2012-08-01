@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have
@@ -84,7 +85,7 @@ public class TestMissingBlocksAlert extends TestCase {
       LOG.info("Waiting for missing blocks count to increase...");
 
       while (dfs.getMissingBlocksCount() <= 0) {
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       }
       assertTrue(dfs.getMissingBlocksCount() == 1);
       assertEquals(4, dfs.getUnderReplicatedBlocksCount());
@@ -106,7 +107,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
       LOG.info("Waiting for missing blocks count to be zero...");
       while (dfs.getMissingBlocksCount() > 0) {
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       }
 
       assertEquals(2, dfs.getUnderReplicatedBlocksCount());

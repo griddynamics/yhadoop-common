@@ -64,6 +64,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -103,7 +104,7 @@ public class TestDFSClientRetries extends TestCase {
       if (sleep) {
         // sleep a bit
         try {
-          Thread.sleep(PING_INTERVAL + MIN_SLEEP_TIME);
+          ThreadUtils.sleep(PING_INTERVAL + MIN_SLEEP_TIME);
         } catch (InterruptedException e) {}
       }
       if (responseClass != null) {
@@ -166,7 +167,7 @@ public class TestDFSClientRetries extends TestCase {
       IOUtils.readFully(in, buf, 0, bufferSize/2);
       //now read few more chunks of data by sleeping in between :
       for(int i=0; i<10; i++) {
-        Thread.sleep(2*writeTimeout); // force write timeout at the datanode.
+        ThreadUtils.sleep(2*writeTimeout); // force write timeout at the datanode.
         // read enough to empty out socket buffers.
         IOUtils.readFully(in, buf, 0, buf.length); 
       }

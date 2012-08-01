@@ -73,6 +73,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**********************************************************
  * The Secondary NameNode is a helper to the primary NameNode.
@@ -362,7 +363,7 @@ public class SecondaryNameNode implements Runnable {
 
     while (shouldRun) {
       try {
-        Thread.sleep(1000 * period);
+        ThreadUtils.sleep(1000 * period);
       } catch (InterruptedException ie) {
         // do nothing
       }

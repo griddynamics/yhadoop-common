@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,7 +63,7 @@ public class TestTransferRbw {
     final Collection<ReplicaInfo> replicas = dataset.volumeMap.replicas(bpid);
     for(int i = 0; i < 5 && replicas.size() == 0; i++) {
       LOG.info("wait since replicas.size() == 0; i=" + i);
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
     }
     Assert.assertEquals(1, replicas.size());
     final ReplicaInfo r = replicas.iterator().next();

@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * DataBlockScanner manages block scanning for all the block pools. For each
@@ -68,7 +69,7 @@ public class DataBlockScanner implements Runnable {
       //Sleep everytime except in the first interation.
       if (!firstRun) {
         try {
-          Thread.sleep(5000);
+          ThreadUtils.sleep(5000);
         } catch (InterruptedException ex) {
           // Interrupt itself again to set the interrupt status
           blockScannerThread.interrupt();
@@ -105,7 +106,7 @@ public class DataBlockScanner implements Runnable {
         || (getBlockPoolSetSize() < datanode.getAllBpOs().length)
         || (getBlockPoolSetSize() < 1)) {
       try {
-        Thread.sleep(5000);
+        ThreadUtils.sleep(5000);
       } catch (InterruptedException e) {
         blockScannerThread.interrupt();
         return;
@@ -170,7 +171,7 @@ public class DataBlockScanner implements Runnable {
       }
       LOG.warn("No block pool is up, going to wait");
       try {
-        Thread.sleep(5000);
+        ThreadUtils.sleep(5000);
       } catch (InterruptedException ex) {
         LOG.warn("Received exception: " + ex);
         blockScannerThread.interrupt();

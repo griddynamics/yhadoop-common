@@ -37,6 +37,8 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.junit.Assert.*;
+
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -120,7 +122,7 @@ public class TestSafeMode {
     
     // wait longer than dfs.namenode.safemode.extension
     try {
-      Thread.sleep(2000);
+      ThreadUtils.sleep(2000);
     } catch (InterruptedException ignored) {}
 
     assertTrue("should still be in SafeMode",
@@ -350,7 +352,7 @@ public class TestSafeMode {
 
     // Wait long enough for safemode check to refire
     try {
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
     } catch (InterruptedException ignored) {}
 
     // We now should be out of safe mode.

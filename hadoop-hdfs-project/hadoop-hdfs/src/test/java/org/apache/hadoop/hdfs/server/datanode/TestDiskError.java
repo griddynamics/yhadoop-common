@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -160,7 +161,7 @@ public class TestDiskError {
     storageDir = cluster.getInstanceStorageDir(sndNode, 1);
     File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     while (dir1.listFiles().length != 0 || dir2.listFiles().length != 0) {
-      Thread.sleep(100);
+      ThreadUtils.sleep(100);
     }
 
     // then increase the file's replication factor

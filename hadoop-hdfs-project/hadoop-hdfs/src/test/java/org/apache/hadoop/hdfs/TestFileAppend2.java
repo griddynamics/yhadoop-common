@@ -39,6 +39,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 
 /**
@@ -293,7 +294,7 @@ public class TestFileAppend2 extends TestCase {
                                  " size " + fs.getFileStatus(testfile).getLen() +
                                  " expected size " + (len + sizeToAppend) +
                                  " waiting for namenode metadata update.");
-              Thread.sleep(5000);
+              ThreadUtils.sleep(5000);
             } catch (InterruptedException e) {;}
           }
 

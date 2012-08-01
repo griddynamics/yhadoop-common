@@ -62,6 +62,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
@@ -115,7 +116,7 @@ public class TestFsck {
       util.waitReplication(fs, fileName, (short)3);
       final Path file = new Path(fileName);
       long aTime = fs.getFileStatus(file).getAccessTime();
-      Thread.sleep(precision);
+      ThreadUtils.sleep(precision);
       setupAuditLogs();
       String outStr = runFsck(conf, 0, true, "/");
       verifyAuditLogs();
@@ -277,7 +278,7 @@ public class TestFsck {
       outStr = runFsck(conf, 1, false, "/");
       while (!outStr.contains(NamenodeFsck.CORRUPT_STATUS)) {
         try {
-          Thread.sleep(100);
+          ThreadUtils.sleep(100);
         } catch (InterruptedException ignore) {
         }
         outStr = runFsck(conf, 1, false, "/");
@@ -404,7 +405,7 @@ public class TestFsck {
     replicaCount = blocks.get(0).getLocations().length;
     while (replicaCount != factor) {
       try {
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       } catch (InterruptedException ignore) {
       }
       blocks = dfsClient.getNamenode().
@@ -507,7 +508,7 @@ public class TestFsck {
           .listCorruptFileBlocks("/corruptData", null);
       int numCorrupt = corruptFileBlocks.getFiles().length;
       while (numCorrupt == 0) {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
         corruptFileBlocks = namenode
             .listCorruptFileBlocks("/corruptData", null);
         numCorrupt = corruptFileBlocks.getFiles().length;

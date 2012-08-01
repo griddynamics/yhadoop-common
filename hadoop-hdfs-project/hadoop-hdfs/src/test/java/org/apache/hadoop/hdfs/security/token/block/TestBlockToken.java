@@ -69,6 +69,7 @@ import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -378,7 +379,7 @@ public class TestBlockToken {
       LocatedBlocks locatedBlocks = cluster.getNameNodeRpc().getBlockLocations(
           fileName, 0, 1000);
       while (locatedBlocks.getLastLocatedBlock() == null) {
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
         locatedBlocks = cluster.getNameNodeRpc().getBlockLocations(fileName, 0,
             1000);
       }

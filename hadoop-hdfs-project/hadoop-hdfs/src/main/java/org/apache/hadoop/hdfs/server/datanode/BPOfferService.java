@@ -55,6 +55,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * A thread per namenode to perform:
@@ -536,7 +537,7 @@ class BPOfferService implements Runnable {
         LOG.warn("RemoteException in offerService", re);
         try {
           long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
-          Thread.sleep(sleepTime);
+          ThreadUtils.sleep(sleepTime);
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
         }
@@ -590,7 +591,7 @@ class BPOfferService implements Runnable {
   private void sleepAndLogInterrupts(int millis,
       String stateString) {
     try {
-      Thread.sleep(millis);
+      ThreadUtils.sleep(millis);
     } catch (InterruptedException ie) {
       LOG.info("BPOfferService " + this +
           " interrupted while " + stateString);

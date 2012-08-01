@@ -18,6 +18,7 @@
 package org.apache.hadoop.test;
 
 import junit.framework.Assert;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Rule;
 import org.junit.rules.MethodRule;
 
@@ -103,7 +104,7 @@ public abstract class HTestCase {
    */
   protected void sleep(long time) {
     try {
-      Thread.sleep((long) (getWaitForRatio() * time));
+      ThreadUtils.sleep((long) (getWaitForRatio() * time));
     } catch (InterruptedException ex) {
       System.err.println(MessageFormat.format("Sleep interrupted, {0}", ex.toString()));
     }
@@ -155,7 +156,7 @@ public abstract class HTestCase {
           System.out.println(MessageFormat.format("Waiting up to [{0}] msec", waiting));
           lastEcho = System.currentTimeMillis();
         }
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       }
       if (!eval) {
         if (failIfTimeout) {

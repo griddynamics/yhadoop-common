@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 
 
@@ -338,7 +339,7 @@ public class TestFileCreation extends junit.framework.TestCase {
         System.out.println("testFileCreationError1: waiting for datanode " +
                            " to die.");
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException e) {
         }
       }
@@ -417,7 +418,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // wait for the lease to expire
       try {
-        Thread.sleep(5 * leasePeriod);
+        ThreadUtils.sleep(5 * leasePeriod);
       } catch (InterruptedException e) {
       }
 
@@ -547,7 +548,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {
-        Thread.sleep(2*MAX_IDLE_TIME);
+        ThreadUtils.sleep(2*MAX_IDLE_TIME);
       } catch (InterruptedException e) {
       }
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
@@ -559,7 +560,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // persistent leases from fsimage.
       cluster.shutdown();
       try {
-        Thread.sleep(5000);
+        ThreadUtils.sleep(5000);
       } catch (InterruptedException e) {
       }
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
@@ -849,7 +850,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       // namenode triggers lease recovery
       cluster.setLeasePeriod(leasePeriod, leasePeriod);
       // wait for the lease to expire
-      try {Thread.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
+      try {ThreadUtils.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
 
       LocatedBlocks locations = dfs.dfs.getNamenode().getBlockLocations(
           f, 0, Long.MAX_VALUE);

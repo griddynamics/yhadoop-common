@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,7 +70,7 @@ public class TestDataNodeExit {
     }
     int iterations = 3000; // Total 30 seconds MAX wait time
     while(dn.getBpOsCount() != expected && iterations > 0) {
-      Thread.sleep(WAIT_TIME_IN_MILLIS);
+      ThreadUtils.sleep(WAIT_TIME_IN_MILLIS);
       iterations--;
     }
     assertEquals("Mismatch in number of BPServices running", expected,

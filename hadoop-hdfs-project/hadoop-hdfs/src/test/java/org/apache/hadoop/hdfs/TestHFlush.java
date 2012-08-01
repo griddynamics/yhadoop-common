@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 
 import static org.junit.Assert.assertEquals;
@@ -181,26 +182,26 @@ public class TestHFlush {
       FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, DATANODE_NUM);
 
       stm.write(fileContents, 0, 1);
-      Thread.sleep(timeout);
+      ThreadUtils.sleep(timeout);
       stm.hflush();
       System.out.println("Wrote 1 byte and hflush " + p);
 
       // write another byte
-      Thread.sleep(timeout);
+      ThreadUtils.sleep(timeout);
       stm.write(fileContents, 1, 1);
       stm.hflush();
 
       stm.write(fileContents, 2, 1);
-      Thread.sleep(timeout);
+      ThreadUtils.sleep(timeout);
       stm.hflush();
 
       stm.write(fileContents, 3, 1);
-      Thread.sleep(timeout);
+      ThreadUtils.sleep(timeout);
       stm.write(fileContents, 4, 1);
       stm.hflush();
 
       stm.write(fileContents, 5, 1);
-      Thread.sleep(timeout);
+      ThreadUtils.sleep(timeout);
       stm.close();
 
       // verify that entire file is good

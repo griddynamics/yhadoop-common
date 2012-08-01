@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -181,7 +182,7 @@ public class TestReplaceDatanodeOnFailure {
 
   static void sleepSeconds(final int waittime) throws InterruptedException {
     LOG.info("Wait " + waittime + " seconds");
-    Thread.sleep(waittime * 1000L);
+    ThreadUtils.sleep(waittime * 1000L);
   }
 
   static class SlowWriter extends Thread {

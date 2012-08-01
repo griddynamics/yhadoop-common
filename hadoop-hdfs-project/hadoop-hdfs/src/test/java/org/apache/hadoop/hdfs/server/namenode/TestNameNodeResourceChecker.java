@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NameNodeResourceMonitor;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -123,7 +124,7 @@ public class TestNameNodeResourceChecker {
       long startMillis = System.currentTimeMillis();
       while (!cluster.getNameNode().isInSafeMode() &&
           System.currentTimeMillis() < startMillis + (60 * 1000)) {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       }
 
       assertTrue("NN should be in safe mode after resources crossed threshold",

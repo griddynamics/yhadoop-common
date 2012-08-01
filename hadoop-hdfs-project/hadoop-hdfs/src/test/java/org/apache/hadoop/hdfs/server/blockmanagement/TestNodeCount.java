@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.HeartbeatManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * Test if live nodes count per node is correct 
@@ -175,7 +176,7 @@ public class TestNodeCount extends TestCase {
     }
     if (cycleTime > 0) {
       try {
-        Thread.sleep(cycleTime);
+        ThreadUtils.sleep(cycleTime);
       } catch (InterruptedException ie) {
         //ignore
       }

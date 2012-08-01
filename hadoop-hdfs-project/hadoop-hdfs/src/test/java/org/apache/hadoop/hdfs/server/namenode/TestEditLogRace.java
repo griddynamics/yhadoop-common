@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 
 import static org.junit.Assert.*;
@@ -193,7 +194,7 @@ public class TestEditLogRace {
 
       for (int i = 0; i < NUM_ROLLS && caughtErr.get() == null; i++) {
         try {
-          Thread.sleep(20);
+          ThreadUtils.sleep(20);
         } catch (InterruptedException e) {}
 
         LOG.info("Starting roll " + i + ".");
@@ -272,7 +273,7 @@ public class TestEditLogRace {
 
       for (int i = 0; i < NUM_SAVE_IMAGE && caughtErr.get() == null; i++) {
         try {
-          Thread.sleep(20);
+          ThreadUtils.sleep(20);
         } catch (InterruptedException e) {}
 
 
@@ -389,7 +390,7 @@ public class TestEditLogRace {
             // Signal to main thread that the edit thread is in the racy section
             waitToEnterFlush.countDown();
             LOG.info("edit thread: sleeping for " + BLOCK_TIME + "secs");
-            Thread.sleep(BLOCK_TIME*1000);
+            ThreadUtils.sleep(BLOCK_TIME*1000);
             LOG.info("Going through to flush. This will allow the main thread to continue.");
           }
           invocation.callRealMethod();
@@ -482,7 +483,7 @@ public class TestEditLogRace {
             LOG.info("edit thread: Telling main thread we made it just before logSync...");
             waitToEnterSync.countDown();
             LOG.info("edit thread: sleeping for " + BLOCK_TIME + "secs");
-            Thread.sleep(BLOCK_TIME*1000);
+            ThreadUtils.sleep(BLOCK_TIME*1000);
             LOG.info("Going through to logSync. This will allow the main thread to continue.");
           }
           invocation.callRealMethod();

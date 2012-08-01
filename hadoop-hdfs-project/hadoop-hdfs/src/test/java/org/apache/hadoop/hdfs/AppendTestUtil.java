@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /** Utilities for append-related tests */ 
 public class AppendTestUtil {
@@ -78,7 +79,7 @@ public class AppendTestUtil {
 
   static void sleep(long ms) {
     try {
-      Thread.sleep(ms);
+      ThreadUtils.sleep(ms);
     } catch (InterruptedException e) {
       LOG.info("ms=" + ms, e);
     }

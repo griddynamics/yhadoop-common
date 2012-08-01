@@ -74,6 +74,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
@@ -593,7 +594,7 @@ public class TestBlockRecovery {
                 block.getBlock(), locations, block.getBlock()
                     .getGenerationStamp() + 1);
             synchronized (dataNode.data) {
-              Thread.sleep(2000);
+              ThreadUtils.sleep(2000);
               dataNode.initReplicaRecovery(recoveringBlock);
             }
           } catch (Exception e) {

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -112,7 +113,7 @@ public class TestDataNodeVolumeFailureReporting {
      * three seconds to be sure the datanodes have had a chance to
      * heartbeat their capacities.
      */
-    Thread.sleep(WAIT_FOR_HEARTBEATS);
+    ThreadUtils.sleep(WAIT_FOR_HEARTBEATS);
     final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
         ).getDatanodeManager();
 

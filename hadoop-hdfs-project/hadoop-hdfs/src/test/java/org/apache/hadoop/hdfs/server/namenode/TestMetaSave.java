@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Test;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -88,7 +89,7 @@ public class TestMetaSave {
 
     cluster.stopDataNode(1);
     // wait for namenode to discover that a datanode is dead
-    Thread.sleep(15000);
+    ThreadUtils.sleep(15000);
     namesystem.setReplication("/filestatus0", (short) 4);
 
     namesystem.metaSave("metasave.out.txt");

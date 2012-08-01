@@ -53,6 +53,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class provides some DFS administrative access.
@@ -388,7 +389,7 @@ public class DFSAdmin extends FsShell {
     if (waitExitSafe) {
       while (inSafeMode) {
         try {
-          Thread.sleep(5000);
+          ThreadUtils.sleep(5000);
         } catch (java.lang.InterruptedException e) {
           throw new IOException("Wait Interrupted");
         }

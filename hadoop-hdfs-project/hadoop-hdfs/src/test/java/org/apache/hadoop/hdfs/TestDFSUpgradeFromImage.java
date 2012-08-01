@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This tests data transfer protocol handling in the Datanode. It sends
@@ -292,7 +293,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
       while ( dfsClient.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET) ) {
         LOG.info("Waiting for SafeMode to be OFF.");
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException ignored) {}
       }
 

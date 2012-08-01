@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -183,12 +184,12 @@ public class TestDistributedFileSystem {
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //close
           out.close();
-          Thread.sleep(grace/4*3);
+          ThreadUtils.sleep(grace / 4 * 3);
           //within grace period
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           for(int i = 0; i < 3; i++) {
             if (dfs.dfs.getLeaseRenewer().isRunning()) {
-              Thread.sleep(grace/2);
+              ThreadUtils.sleep(grace/2);
             }
           }
           //passed grace period
@@ -215,7 +216,7 @@ public class TestDistributedFileSystem {
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //close file2
           out2.close();
-          Thread.sleep(grace/4*3);
+          ThreadUtils.sleep(grace/4*3);
           //within grace period
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
         }
@@ -224,7 +225,7 @@ public class TestDistributedFileSystem {
           //create file3
           final FSDataOutputStream out3 = dfs.create(filepaths[3]);
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
-          Thread.sleep(grace/4*3);
+          ThreadUtils.sleep(grace/4*3);
           //passed previous grace period, should still running
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //write something to file3
@@ -233,12 +234,12 @@ public class TestDistributedFileSystem {
           //close file3
           out3.close();
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
-          Thread.sleep(grace/4*3);
+          ThreadUtils.sleep(grace/4*3);
           //within grace period
           assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           for(int i = 0; i < 3; i++) {
             if (dfs.dfs.getLeaseRenewer().isRunning()) {
-              Thread.sleep(grace/2);
+              ThreadUtils.sleep(grace/2);
             }
           }
           //passed grace period

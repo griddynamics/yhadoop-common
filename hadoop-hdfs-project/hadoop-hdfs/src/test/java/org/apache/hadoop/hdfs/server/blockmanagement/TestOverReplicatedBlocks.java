@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.utils.ThreadUtils;
 
 public class TestOverReplicatedBlocks extends TestCase {
   /** Test processOverReplicatedBlock can handle corrupt replicas fine.
@@ -70,7 +71,7 @@ public class TestOverReplicatedBlocks extends TestCase {
       for(int i=0; !scanLog.delete(); i++) {
         assertTrue("Could not delete log file in one minute", i < 60);
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException ignored) {}
       }
       

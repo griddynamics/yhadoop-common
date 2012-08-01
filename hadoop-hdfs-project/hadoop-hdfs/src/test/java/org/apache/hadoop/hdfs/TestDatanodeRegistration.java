@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.DFSClient;
 import junit.framework.TestCase;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class tests that a file need not be closed before its
@@ -55,7 +56,7 @@ public class TestDatanodeRegistration extends TestCase {
       boolean gotHeartbeat = false;
       for (int i = 0; i < 10 && !gotHeartbeat; i++) {
         try {
-          Thread.sleep(i*1000);
+          ThreadUtils.sleep(i * 1000);
         } catch (InterruptedException ie) {}
 
         report = client.datanodeReport(DatanodeReportType.ALL);

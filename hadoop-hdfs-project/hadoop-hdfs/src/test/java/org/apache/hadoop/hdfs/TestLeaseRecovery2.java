@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -180,7 +181,7 @@ public class TestLeaseRecovery2 {
 
     while (!dfs.recoverLease(filepath)) {
       AppendTestUtil.LOG.info("sleep " + 5000 + "ms");
-      Thread.sleep(5000);
+      ThreadUtils.sleep(5000);
     }
   }
 
@@ -217,7 +218,7 @@ public class TestLeaseRecovery2 {
 
       if (!done) {
         AppendTestUtil.LOG.info("sleep " + 5000 + "ms");
-        try {Thread.sleep(5000);} catch (InterruptedException e) {}
+        try {ThreadUtils.sleep(5000);} catch (InterruptedException e) {}
       }
     }
     assertTrue(done);
@@ -280,7 +281,7 @@ public class TestLeaseRecovery2 {
     // wait for lease recovery to complete
     LocatedBlocks locatedBlocks;
     do {
-      Thread.sleep(SHORT_LEASE_PERIOD);
+      ThreadUtils.sleep(SHORT_LEASE_PERIOD);
       locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
         filestr, 0L, size);
     } while (locatedBlocks.isUnderConstruction());
@@ -369,7 +370,7 @@ public class TestLeaseRecovery2 {
 
         if (!done) {
           AppendTestUtil.LOG.info("sleep " + 5000 + "ms");
-          try {Thread.sleep(5000);} catch (InterruptedException e) {}
+          try {ThreadUtils.sleep(5000);} catch (InterruptedException e) {}
         }
       }
       assertTrue(done);
@@ -459,7 +460,7 @@ public class TestLeaseRecovery2 {
     cluster.setLeasePeriod(LONG_LEASE_PERIOD, SHORT_LEASE_PERIOD);
     
     // Make sure lease recovery begins.
-    Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 2);
+    ThreadUtils.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL * 2);
     
     assertEquals("lease holder should now be the NN", HdfsServerConstants.NAMENODE_LEASE_HOLDER,
         NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), fileStr));
@@ -483,7 +484,7 @@ public class TestLeaseRecovery2 {
     // wait for lease recovery to complete
     LocatedBlocks locatedBlocks;
     do {
-      Thread.sleep(SHORT_LEASE_PERIOD);
+      ThreadUtils.sleep(SHORT_LEASE_PERIOD);
       locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
         fileStr, 0L, size);
     } while (locatedBlocks.isUnderConstruction());

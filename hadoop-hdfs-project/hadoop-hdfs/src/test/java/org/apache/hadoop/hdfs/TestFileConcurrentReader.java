@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -128,7 +129,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
 
     while (!done) {
       try {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException e) {
       }
       done = true;

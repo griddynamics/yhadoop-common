@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * This class tests commands from DFSShell.
@@ -258,7 +259,8 @@ public class TestDFSShell extends TestCase {
   
                 firstTime = false;
                 copy2ndFileThread.start();
-                try {Thread.sleep(5000);} catch (InterruptedException e) {}
+                try {
+                    ThreadUtils.sleep(5000);} catch (InterruptedException e) {}
               }
             }
           }

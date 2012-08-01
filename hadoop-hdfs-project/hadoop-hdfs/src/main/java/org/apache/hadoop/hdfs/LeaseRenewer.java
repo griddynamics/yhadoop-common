@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * <p>
@@ -429,7 +430,7 @@ class LeaseRenewer {
   private void run(final int id) throws InterruptedException {
     for(long lastRenewed = System.currentTimeMillis();
         !Thread.interrupted();
-        Thread.sleep(getSleepPeriod())) {
+        ThreadUtils.sleep(getSleepPeriod())) {
       final long elapsed = System.currentTimeMillis() - lastRenewed;
       if (elapsed >= getRenewalTime()) {
         try {

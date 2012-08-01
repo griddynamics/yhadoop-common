@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -123,7 +124,7 @@ public class TestLargeDirectoryDelete {
               } finally {
                 mc.getNamesystem().writeUnlock();
               }
-              Thread.sleep(1);
+              ThreadUtils.sleep(1);
             }
           } catch (InterruptedException ex) {
             LOG.info("lockOperation exception ", ex);

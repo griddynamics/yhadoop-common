@@ -74,6 +74,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.utils.ThreadUtils;
 
 
 /****************************************************************
@@ -543,7 +544,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
           // This is used by unit test to trigger race conditions.
           if (artificialSlowdown != 0 && dfsClient.clientRunning) {
-            Thread.sleep(artificialSlowdown); 
+            ThreadUtils.sleep(artificialSlowdown);
           }
         } catch (Throwable e) {
           DFSClient.LOG.warn("DataStreamer Exception", e);
@@ -1122,7 +1123,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                 try {
                   DFSClient.LOG.warn("NotReplicatedYetException sleeping " + src
                       + " retries left " + retries);
-                  Thread.sleep(sleeptime);
+                  ThreadUtils.sleep(sleeptime);
                   sleeptime *= 2;
                 } catch (InterruptedException ie) {
                 }
@@ -1681,7 +1682,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
             throw new IOException(msg);
         }
         try {
-          Thread.sleep(400);
+          ThreadUtils.sleep(400);
           if (System.currentTimeMillis() - localstart > 5000) {
             DFSClient.LOG.info("Could not complete file " + src + " retrying...");
           }

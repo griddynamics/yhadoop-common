@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 
 /**
@@ -158,7 +159,7 @@ public class TestDatanodeDeath extends TestCase {
     while (!done) {
       attempt++;
       try {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
       BlockLocation[] locations = fileSys.getFileBlockLocations(
@@ -229,7 +230,7 @@ public class TestDatanodeDeath extends TestCase {
 
       while (running) {
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException e) {
           continue;
         }
@@ -376,7 +377,7 @@ public class TestDatanodeDeath extends TestCase {
       while (count-- > 0 && targets == null) {
         try {
           System.out.println("SimpleTest: Waiting for pipeline to be created.");
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException e) {
         }
         targets = dfstream.getPipeline();

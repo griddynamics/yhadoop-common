@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.balancer.Balancer;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.utils.ThreadUtils;
 
 
 /**
@@ -166,7 +167,7 @@ class DataXceiverServer implements Runnable {
         // then.
         LOG.warn("DataNode is out of memory. Will retry in 30 seconds.", ie);
         try {
-          Thread.sleep(30 * 1000);
+          ThreadUtils.sleep(30 * 1000);
         } catch (InterruptedException e) {
           // ignore
         }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.MetricsAsserts;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -106,7 +107,7 @@ public class TestNameNodeMetrics {
   private void updateMetrics() throws Exception {
     // Wait for metrics update (corresponds to dfs.namenode.replication.interval
     // for some block related metrics to get updated)
-    Thread.sleep(1000);
+    ThreadUtils.sleep(1000);
   }
 
   private void readFile(FileSystem fileSys,Path name) throws IOException {
@@ -151,7 +152,7 @@ public class TestNameNodeMetrics {
     
     // Wait for more than DATANODE_COUNT replication intervals to ensure all 
     // the blocks pending deletion are sent for deletion to the datanodes.
-    Thread.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
+    ThreadUtils.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
     updateMetrics();
     rb = getMetrics(NS_METRICS);
     assertGauge("FilesTotal", filesTotal, rb);

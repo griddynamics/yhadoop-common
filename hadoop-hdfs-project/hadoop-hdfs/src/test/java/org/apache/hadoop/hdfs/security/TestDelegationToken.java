@@ -46,6 +46,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
@@ -106,7 +107,7 @@ public class TestDelegationToken {
              new ByteArrayInputStream(tokenId)));
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
     LOG.info("Sleep to expire the token");
-	  Thread.sleep(6000);
+	  ThreadUtils.sleep(6000);
 	  //Token should be expired
 	  try {
 	    dtSecretManager.retrievePassword(identifier);
@@ -117,7 +118,7 @@ public class TestDelegationToken {
 	  }
 	  dtSecretManager.renewToken(token, "JobTracker");
 	  LOG.info("Sleep beyond the max lifetime");
-	  Thread.sleep(5000);
+	  ThreadUtils.sleep(5000);
 	  try {
   	  dtSecretManager.renewToken(token, "JobTracker");
   	  Assert.fail("should have been expired");

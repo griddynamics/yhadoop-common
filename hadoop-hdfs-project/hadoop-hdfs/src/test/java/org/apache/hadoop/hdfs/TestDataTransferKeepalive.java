@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -100,7 +101,7 @@ public class TestDataTransferKeepalive {
 
     // Sleep for a bit longer than the keepalive timeout
     // and make sure the xceiver died.
-    Thread.sleep(KEEPALIVE_TIMEOUT * 2);
+    ThreadUtils.sleep(KEEPALIVE_TIMEOUT * 2);
     assertXceiverCount(0);
     
     // The socket is still in the cache, because we don't
@@ -141,7 +142,7 @@ public class TestDataTransferKeepalive {
       stm.read();
       assertXceiverCount(1);
 
-      Thread.sleep(WRITE_TIMEOUT + 1000);
+      ThreadUtils.sleep(WRITE_TIMEOUT + 1000);
       // DN should time out in sendChunks, and this should force
       // the xceiver to exit.
       assertXceiverCount(0);
@@ -174,7 +175,7 @@ public class TestDataTransferKeepalive {
     assertEquals(5, client.socketCache.size());
     
     // Let all the xceivers timeout
-    Thread.sleep(1500);
+    ThreadUtils.sleep(1500);
     assertXceiverCount(0);
 
     // Client side still has the sockets cached

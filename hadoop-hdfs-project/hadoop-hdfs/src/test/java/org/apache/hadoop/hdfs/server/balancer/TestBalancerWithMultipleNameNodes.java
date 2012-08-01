@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -210,7 +211,7 @@ public class TestBalancerWithMultipleNameNodes {
 
   private static void sleep(long ms) {
     try {
-      Thread.sleep(ms);
+      ThreadUtils.sleep(ms);
     } catch(InterruptedException e) {
       LOG.error(e);
     }

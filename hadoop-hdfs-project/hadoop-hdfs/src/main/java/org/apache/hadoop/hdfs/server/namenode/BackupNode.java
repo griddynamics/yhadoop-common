@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * BackupNode.
@@ -292,7 +293,7 @@ public class BackupNode extends NameNode {
       } catch(SocketTimeoutException e) {  // name-node is busy
         LOG.info("Problem connecting to server: " + nnAddress);
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException ie) {}
       }
     }
@@ -341,7 +342,7 @@ public class BackupNode extends NameNode {
       } catch(SocketTimeoutException e) {  // name-node is busy
         LOG.info("Problem connecting to name-node: " + nnRpcAddress);
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException ie) {}
       }
     }

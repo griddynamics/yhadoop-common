@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -133,7 +134,7 @@ public class TestRefreshUserMappings {
     }
     
     // test time out
-    Thread.sleep(groupRefreshTimeoutSec*1100);
+    ThreadUtils.sleep(groupRefreshTimeoutSec * 1100);
     System.out.println("fourth attempt(after timeout), should be different:");
     List<String> g4 = groups.getGroups(user);
     g4.toArray(str_groups);

@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -96,7 +97,7 @@ public class TestLease {
       }
 
       // If aborted, the renewer should be empty. (no reference to clients)
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
       Assert.assertTrue(originalRenewer.isEmpty());
 
       // unstub

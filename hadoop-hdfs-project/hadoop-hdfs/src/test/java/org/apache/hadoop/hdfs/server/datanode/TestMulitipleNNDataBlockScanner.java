@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Test;
 
 
@@ -74,7 +75,7 @@ public class TestMulitipleNNDataBlockScanner {
           blocksScanned = dn.blockScanner.getBlocksScannedInLastRun(bpids[i]);
           LOG.info("Waiting for all blocks to be scanned for bpid=" + bpids[i]
               + "; Scanned so far=" + blocksScanned);
-          Thread.sleep(5000);
+          ThreadUtils.sleep(5000);
         }
       }
 
@@ -110,7 +111,7 @@ public class TestMulitipleNNDataBlockScanner {
       try {
         while (true) {
           dn.blockScanner.getBlocksScannedInLastRun(bpidToShutdown);
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         }
       } catch (IOException ex) {
         // Expected
@@ -129,7 +130,7 @@ public class TestMulitipleNNDataBlockScanner {
           blocksScanned = dn.blockScanner.getBlocksScannedInLastRun(bpids[i]);
           LOG.info("Waiting for all blocks to be scanned for bpid=" + bpids[i]
               + "; Scanned so far=" + blocksScanned);
-          Thread.sleep(5000);
+          ThreadUtils.sleep(5000);
         }
       }
     } finally {
@@ -147,7 +148,7 @@ public class TestMulitipleNNDataBlockScanner {
       DataNode dn = cluster.getDataNodes().get(0);
       for (int i = 0; i < 3; i++) {
         while (!dn.blockScanner.isInitialized(bpids[i])) {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         }
         long blocksScanned = 0;
         while (blocksScanned != 20) {
@@ -156,7 +157,7 @@ public class TestMulitipleNNDataBlockScanner {
             LOG.info("Waiting for all blocks to be scanned for bpid="
                 + bpids[i] + "; Scanned so far=" + blocksScanned);
           }
-          Thread.sleep(5000);
+          ThreadUtils.sleep(5000);
         }
       }
     } finally {

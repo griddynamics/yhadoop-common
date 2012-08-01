@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -86,7 +87,7 @@ public class TestInterDatanodeProtocol {
       if (sleep) {
         // sleep a bit
         try {
-          Thread.sleep(PING_INTERVAL + MIN_SLEEP_TIME);
+          ThreadUtils.sleep(PING_INTERVAL + MIN_SLEEP_TIME);
         } catch (InterruptedException e) {}
       }
       if (responseClass != null) {

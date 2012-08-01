@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Assert;
 
 /**
@@ -522,7 +523,7 @@ public class TestStartup extends TestCase {
       
       DatanodeInfo[] info = nn.getDatanodeReport(DatanodeReportType.LIVE);
       for (int i = 0 ; i < 5 && info.length != numDatanodes; i++) {
-        Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+        ThreadUtils.sleep(HEARTBEAT_INTERVAL * 1000);
         info = nn.getDatanodeReport(DatanodeReportType.LIVE);
       }
       assertEquals("Number of live nodes should be "+numDatanodes, numDatanodes, 

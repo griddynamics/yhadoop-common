@@ -25,6 +25,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Random;
 
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
 
@@ -216,7 +217,7 @@ public class TestListCorruptFileBlocks {
       while (!cluster.getNameNode().namesystem.isPopulatingReplQueues()) {
         try {
           LOG.info("waiting for replication queues");
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
         } catch (InterruptedException ignore) {
         }
       }
@@ -307,7 +308,7 @@ public class TestListCorruptFileBlocks {
         listCorruptFileBlocks("/corruptData", null);
       numCorrupt = corruptFileBlocks.size();
       while (numCorrupt < 3) {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
         corruptFileBlocks = namenode.getNamesystem()
             .listCorruptFileBlocks("/corruptData", null);
         numCorrupt = corruptFileBlocks.size();
@@ -412,7 +413,7 @@ public class TestListCorruptFileBlocks {
       corruptFileBlocks = dfs.listCorruptFileBlocks(new Path("/corruptData"));
       numCorrupt = countPaths(corruptFileBlocks);
       while (numCorrupt < 3) {
-        Thread.sleep(1000);
+        ThreadUtils.sleep(1000);
         corruptFileBlocks = dfs.listCorruptFileBlocks(new Path("/corruptData"));
         numCorrupt = countPaths(corruptFileBlocks);
         count++;
@@ -487,7 +488,7 @@ public class TestListCorruptFileBlocks {
         
        while (badFiles.size() < maxCorruptFileBlocks) {
         LOG.info("# of corrupt files is: " + badFiles.size());
-        Thread.sleep(10000);
+        ThreadUtils.sleep(10000);
         badFiles = namenode.getNamesystem().
           listCorruptFileBlocks("/srcdat2", null);
       }

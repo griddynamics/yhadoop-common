@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -252,7 +253,7 @@ public class TestDecommission {
       LOG.info("Waiting for node " + node + " to change state to "
           + state + " current state: " + node.getAdminState());
       try {
-        Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+        ThreadUtils.sleep(HEARTBEAT_INTERVAL * 1000);
       } catch (InterruptedException e) {
         // nothing
       }
@@ -314,7 +315,7 @@ public class TestDecommission {
       // Ensure transceiver count is same as that DN
       assertEquals(fsn.getTotalLoad(), node.getXceiverCount());
       
-      Thread.sleep(HEARTBEAT_INTERVAL * 1000); // Sleep heart beat interval
+      ThreadUtils.sleep(HEARTBEAT_INTERVAL * 1000); // Sleep heart beat interval
     }
   }
 
@@ -420,7 +421,7 @@ public class TestDecommission {
       int tries = 0;
       while (tries++ < 20) {
         try {
-          Thread.sleep(1000);
+          ThreadUtils.sleep(1000);
           if (checkFile(fileSys, file1, replicas, null, numDatanodes) == null) {
             break;
           }
@@ -523,7 +524,7 @@ public class TestDecommission {
       DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
       for (int i = 0 ; i < 5 && info.length != 0; i++) {
         LOG.info("Waiting for datanode to be marked dead");
-        Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+        ThreadUtils.sleep(HEARTBEAT_INTERVAL * 1000);
         info = client.datanodeReport(DatanodeReportType.LIVE);
       }
       assertEquals("Number of live nodes should be 0", 0, info.length);

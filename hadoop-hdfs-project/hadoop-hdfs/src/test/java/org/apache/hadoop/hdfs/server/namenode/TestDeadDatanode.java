@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -69,7 +70,7 @@ public class TestDeadDatanode {
         return;
       }
       LOG.info("Waiting for datanode " + nodeID + " to become " + state);
-      Thread.sleep(1000);
+      ThreadUtils.sleep(1000);
     }
     throw new TimeoutException("Timedout waiting for datanode reach state "
         + state);

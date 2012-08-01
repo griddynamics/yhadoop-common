@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -1390,7 +1391,7 @@ public class TestCheckpoint extends TestCase {
       // Brief sleep to make sure that the 2NN's IPC connection to the NN
       // is dropped.
       try {
-        Thread.sleep(100);
+        ThreadUtils.sleep(100);
       } catch (InterruptedException ie) {
       }
       

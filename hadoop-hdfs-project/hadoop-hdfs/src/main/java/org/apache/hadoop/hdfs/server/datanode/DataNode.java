@@ -151,6 +151,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.mortbay.util.ajax.JSON;
 
 
@@ -1141,7 +1142,7 @@ public class DataNode extends Configured
             break;
           }
           try {
-            Thread.sleep(sleepMs);
+            ThreadUtils.sleep(sleepMs);
           } catch (InterruptedException e) {}
           sleepMs = sleepMs * 3 / 2; // exponential backoff
           if (sleepMs > 1000) {
@@ -1627,7 +1628,7 @@ public class DataNode extends Configured
             && blockPoolManager.getAllNamenodeThreads().length == 0) {
           shouldRun = false;
         }
-        Thread.sleep(2000);
+        ThreadUtils.sleep(2000);
       } catch (InterruptedException ex) {
         LOG.warn("Received exception in Datanode#join: " + ex);
       }

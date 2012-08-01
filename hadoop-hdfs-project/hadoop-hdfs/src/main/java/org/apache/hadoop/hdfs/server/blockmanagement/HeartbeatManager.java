@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * Manage the heartbeats received from datanodes.
@@ -264,7 +265,7 @@ class HeartbeatManager implements DatanodeStatistics {
           LOG.error("Exception while checking heartbeat", e);
         }
         try {
-          Thread.sleep(5000);  // 5 seconds
+          ThreadUtils.sleep(5000);  // 5 seconds
         } catch (InterruptedException ie) {
         }
       }

@@ -52,6 +52,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.utils.ThreadUtils;
 
 /**
  * The class provides utilities for {@link Balancer} to access a NameNode
@@ -228,7 +229,7 @@ class NameNodeConnector {
           } catch (IOException e) {
             LOG.error("Failed to set keys", e);
           }
-          Thread.sleep(keyUpdaterInterval);
+          ThreadUtils.sleep(keyUpdaterInterval);
         }
       } catch (InterruptedException e) {
         LOG.info("InterruptedException in block key updater thread", e);

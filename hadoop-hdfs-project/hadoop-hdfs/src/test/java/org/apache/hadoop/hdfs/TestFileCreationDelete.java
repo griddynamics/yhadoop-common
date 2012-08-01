@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 
 public class TestFileCreationDelete extends junit.framework.TestCase {
@@ -76,7 +77,8 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       // restart cluster with the same namenode port as before.
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
-      try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
+      try {
+          ThreadUtils.sleep(2 * MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
                                                 .format(false)
                                                 .build();
@@ -85,7 +87,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
-      try {Thread.sleep(5000);} catch (InterruptedException e) {}
+      try {ThreadUtils.sleep(5000);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
                                                 .format(false)
                                                 .build();

@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.utils.ThreadUtils;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -178,7 +180,7 @@ public class TestSetTimes extends TestCase {
       }
       // shutdown cluster and restart
       cluster.shutdown();
-      try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
+      try {ThreadUtils.sleep(2 * MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
                                                 .format(false)
                                                 .build();

@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.junit.Test;
 
 public class TestProcessCorruptBlocks {
@@ -78,7 +79,7 @@ public class TestProcessCorruptBlocks {
 
       // wait for 3 seconds so that all block reports are processed.
       try {
-        Thread.sleep(3000);
+        ThreadUtils.sleep(3000);
       } catch (InterruptedException ignored) {
       }
 
@@ -184,7 +185,7 @@ public class TestProcessCorruptBlocks {
 
       // wait for 3 seconds so that all block reports are processed.
       try {
-        Thread.sleep(3000);
+        ThreadUtils.sleep(3000);
       } catch (InterruptedException ignored) {
       }
 
@@ -230,7 +231,7 @@ public class TestProcessCorruptBlocks {
 
       // wait for 3 seconds so that all block reports are processed.
       try {
-        Thread.sleep(3000);
+        ThreadUtils.sleep(3000);
       } catch (InterruptedException ignored) {
       }
 
@@ -241,7 +242,7 @@ public class TestProcessCorruptBlocks {
 
       // wait for 3 seconds so that all block reports are processed.
       try {
-        Thread.sleep(3000);
+        ThreadUtils.sleep(3000);
       } catch (InterruptedException ignored) {
       }
 
@@ -277,7 +278,7 @@ public class TestProcessCorruptBlocks {
         for (int i = 0; !scanLogFile.delete(); i++) {
           assertTrue("Could not delete log file in one minute", i < 60);
           try {
-            Thread.sleep(1000);
+            ThreadUtils.sleep(1000);
           } catch (InterruptedException ignored) {
           }
         }

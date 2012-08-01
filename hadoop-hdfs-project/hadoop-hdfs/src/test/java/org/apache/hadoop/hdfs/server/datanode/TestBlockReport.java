@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.utils.ThreadUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
@@ -715,7 +716,7 @@ public class TestBlockReport {
 
   private void waitTil(long waitPeriod) {
     try { //Wait til next re-scan
-      Thread.sleep(waitPeriod);
+      ThreadUtils.sleep(waitPeriod);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
