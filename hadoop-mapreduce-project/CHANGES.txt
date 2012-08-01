@@ -1,5 +1,8 @@
 Hadoop MapReduce Change Log
 
+    MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
+    bad (Jason Lowe via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -362,6 +365,19 @@ Release 0.23.3 - UNRELEASED
     ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
 
     MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
+
+    MAPREDUCE-4493. Distibuted Cache Compatability Issues (Robert Evans
+    via tgraves)
+
+    MAPREDUCE-4492. Configuring total queue capacity between 100.5 and 99.5 at
+    perticular level is sucessfull (Mayank Bansal via bobby)
+
+    MAPREDUCE-4457. mr job invalid transition TA_TOO_MANY_FETCH_FAILURE at 
+    FAILED  (Robert Evans via tgraves)
+
+    MAPREDUCE-4234. SortValidator.java is incompatible with multi-user or
+    parallel use (due to a /tmp file with static name) (Robert Evans via
+    jeagles)
 
 Release 0.23.2 - UNRELEASED
 
