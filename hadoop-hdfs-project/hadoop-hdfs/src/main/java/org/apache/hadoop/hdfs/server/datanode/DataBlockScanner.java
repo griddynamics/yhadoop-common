@@ -68,7 +68,7 @@ public class DataBlockScanner implements Runnable {
       //Sleep everytime except in the first interation.
       if (!firstRun) {
         try {
-          Thread.sleep(5000);
+          Thread.sleep(200);
         } catch (InterruptedException ex) {
           // Interrupt itself again to set the interrupt status
           blockScannerThread.interrupt();
@@ -105,7 +105,7 @@ public class DataBlockScanner implements Runnable {
         || (getBlockPoolSetSize() < datanode.getAllBpOs().length)
         || (getBlockPoolSetSize() < 1)) {
       try {
-        Thread.sleep(5000);
+        Thread.sleep(50);
       } catch (InterruptedException e) {
         blockScannerThread.interrupt();
         return;
@@ -170,7 +170,7 @@ public class DataBlockScanner implements Runnable {
       }
       LOG.warn("No block pool is up, going to wait");
       try {
-        Thread.sleep(5000);
+        Thread.sleep(200);
       } catch (InterruptedException ex) {
         LOG.warn("Received exception: " + ex);
         blockScannerThread.interrupt();

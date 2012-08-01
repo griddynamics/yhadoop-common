@@ -3243,7 +3243,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   class SafeModeMonitor implements Runnable {
     /** interval in msec for checking safe mode: {@value} */
-    private static final long recheckInterval = 1000;
+    private static final long recheckInterval = 200;
       
     /**
      */

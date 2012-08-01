@@ -206,7 +206,7 @@ class BPOfferService implements Runnable {
       }
       
       // try again in a second
-      sleepAndLogInterrupts(5000, "requesting version info from NN");
+      sleepAndLogInterrupts(100, "requesting version info from NN");
     }
     
     if (nsInfo != null) {

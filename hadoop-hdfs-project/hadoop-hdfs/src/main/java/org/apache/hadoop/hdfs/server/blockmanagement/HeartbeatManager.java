@@ -264,7 +264,7 @@ class HeartbeatManager implements DatanodeStatistics {
           LOG.error("Exception while checking heartbeat", e);
         }
         try {
-          Thread.sleep(5000);  // 5 seconds
+          Thread.sleep(200);  // 5 seconds
         } catch (InterruptedException ie) {
         }
       }

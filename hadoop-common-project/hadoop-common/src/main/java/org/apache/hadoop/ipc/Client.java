@@ -664,7 +664,7 @@ public class Client {
 
       // otherwise back off and retry
       try {
-        Thread.sleep(1000);
+        Thread.sleep(100);
       } catch (InterruptedException ignored) {}
       
       LOG.info("Retrying connect to server: " + server + 

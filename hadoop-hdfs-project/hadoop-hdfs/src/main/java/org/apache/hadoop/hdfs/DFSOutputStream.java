@@ -1581,7 +1581,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           break;
         }
         try {
-          dataQueue.wait(1000); // when we receive an ack, we notify on dataQueue
+          dataQueue.wait(100); // when we receive an ack, we notify on dataQueue
         } catch (InterruptedException ie) {
           throw new InterruptedIOException(
             "Interrupted while waiting for data to be acknowledged by pipeline");

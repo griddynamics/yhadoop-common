@@ -25,5 +25,26 @@
     <name>hadoop.security.authentication</name>
     <value>simple</value>
   </property>
+  <!-- Tune various HDFS timeouts to speed up test execution -->
+  <property>
+    <name>dfs.namenode.heartbeat.recheck-interval</name>
+    <value>200</value>
+  </property>
+  <property>
+    <name>dfs.heartbeat.interval</name>
+    <value>1</value>
+  </property>
+  <property>
+    <name>dfs.namenode.resource.check.interval</name>
+    <value>200</value>
+  </property>
+  <property>
+    <name>dfs.namenode.replication.pending.timeout-sec</name>
+    <value>1</value>
+  </property>
+  <property>
+    <name>dfs.namenode.replication.interval</name>
+    <value>1</value>
+  </property>
 
 </configuration>

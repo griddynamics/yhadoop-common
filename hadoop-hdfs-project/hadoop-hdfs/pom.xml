@@ -391,6 +391,13 @@
           </excludes>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!--<argLine>-Xmx1024m -agentlib:hprof=file=hprof.txt,cpu=times,lineno=y,depth=10</argLine>-->
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
