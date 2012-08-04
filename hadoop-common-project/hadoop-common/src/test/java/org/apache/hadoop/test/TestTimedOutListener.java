@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.test;
 
 import java.util.Map;
 
@@ -13,7 +13,6 @@ public class TestTimedOutListener extends RunListener {
 
   @Override
   public void testFailure(Failure failure) throws Exception {
-    System.err.println("Got failure '" + failure.getMessage() + "'");
     if (failure.getMessage().startsWith("test timed out after")) {
       System.err.println(buildThreadDump());
     }
