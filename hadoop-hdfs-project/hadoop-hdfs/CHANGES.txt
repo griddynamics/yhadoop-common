@@ -12,6 +12,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
+    HDFS-3258. Test for HADOOP-8144 (pseudoSortByDistance in
+    NetworkTopology for first rack local node). (Junping Du via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -89,6 +92,11 @@ Release 0.23.3 - UNRELEASED
     HDFS-3553. Hftp proxy tokens are broken (daryn)
 
     HDFS-3187. Upgrade guava to 11.0.2 (todd)
+
+    HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
+
+    HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
+    thread (Kihwal Lee via daryn)
 
 Release 0.23.2 - UNRELEASED
 
