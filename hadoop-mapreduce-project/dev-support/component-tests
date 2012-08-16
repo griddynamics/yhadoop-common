@@ -157,5 +157,4 @@ org.apache.hadoop.util.TestRunJar
 org.apache.hadoop.io.TestSequenceFileMergeProgress
 org.apache.hadoop.conf.TestNoDefaultsJobConf
 org.apache.hadoop.examples.terasort.TestTeraSort
-org.apache.hadoop.examples.TestWordStats
-
+org.apache.hadoop.examples.TestWordSta

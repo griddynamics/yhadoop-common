@@ -64,10 +64,3 @@ org.apache.hadoop.examples.pi.math.TestLongLong
 org.apache.hadoop.examples.pi.math.TestModular
 org.apache.hadoop.examples.pi.math.TestSummation
 org.apache.hadoop.examples.TestBaileyBorweinPlouffe
-
-
-
-
-
-
-
