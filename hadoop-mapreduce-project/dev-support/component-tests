@@ -93,7 +93,7 @@ org.apache.hadoop.mapreduce.lib.map.TestMultithreadedMapper
 org.apache.hadoop.mapreduce.lib.db.TestDataDrivenDBInputFormat
 org.apache.hadoop.mapreduce.lib.db.TestDBJob
 org.apache.hadoop.mapreduce.util.TestMRAsyncDiskService
-org.apache.hadoop.mapreduce.util.TestProcfsBasedProcessTree                                ˜
+org.apache.hadoop.mapreduce.util.TestProcfsBasedProcessTree
 org.apache.hadoop.mapreduce.security.token.delegation.TestDelegationToken
 org.apache.hadoop.mapreduce.lib.aggregate.TestMapReduceAggregates
 org.apache.hadoop.mapreduce.lib.fieldsel.TestMRFieldSelection
@@ -157,4 +157,4 @@ org.apache.hadoop.util.TestRunJar
 org.apache.hadoop.io.TestSequenceFileMergeProgress
 org.apache.hadoop.conf.TestNoDefaultsJobConf
 org.apache.hadoop.examples.terasort.TestTeraSort
-org.apache.hadoop.examples.TestWordSta
+org.apache.hadoop.examples.TestWordStats
