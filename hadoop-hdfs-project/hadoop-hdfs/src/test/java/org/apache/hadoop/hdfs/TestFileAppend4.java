@@ -25,10 +25,13 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -218,6 +221,8 @@ public class TestFileAppend4 {
    */
   @Test(timeout=60000)
   public void testCompleteOtherLeaseHoldersFile() throws Throwable {
+    cleanClusterDirs();
+
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
  
     try {
@@ -290,4 +295,12 @@ public class TestFileAppend4 {
       cluster.shutdown();
     }
   }
+
+    private void cleanClusterDirs() throws IOException {
+        Collection<String> dirNames = conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+        for (String dirName: dirNames) {
+            LOG.info(String.format("Cleaning dir: %s", dirName));
+            FileUtils.deleteDirectory(new File(dirName));
+        }
+    }
 }
