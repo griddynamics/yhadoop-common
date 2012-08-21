@@ -79,6 +79,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -171,8 +172,7 @@ public class DFSClient implements java.io.Closeable {
     final int maxBlockAcquireFailures;
     final int confTime;
     final int ioBufferSize;
-    final int checksumType;
-    final int bytesPerChecksum;
+    final ChecksumOpt defaultChecksumOpt;
     final int writePacketSize;
     final int socketTimeout;
     final int socketCacheCapacity;
@@ -197,9 +197,7 @@ public class DFSClient implements java.io.Closeable {
       ioBufferSize = conf.getInt(
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
-      checksumType = getChecksumType(conf);
-      bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
-          DFS_BYTES_PER_CHECKSUM_DEFAULT);
+      defaultChecksumOpt = getChecksumOptFromConf(conf);
       socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
           HdfsServerConstants.READ_TIMEOUT);
       /** dfs.write.packet.size is an internal config variable */
@@ -229,24 +227,46 @@ public class DFSClient implements java.io.Closeable {
           DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT);
     }
 
-    private int getChecksumType(Configuration conf) {
-      String checksum = conf.get(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
+    private DataChecksum.Type getChecksumType(Configuration conf) {
+      final String checksum = conf.get(
+          DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
           DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
-      if ("CRC32".equals(checksum)) {
-        return DataChecksum.CHECKSUM_CRC32;
-      } else if ("CRC32C".equals(checksum)) {
-        return DataChecksum.CHECKSUM_CRC32C;
-      } else if ("NULL".equals(checksum)) {
-        return DataChecksum.CHECKSUM_NULL;
-      } else {
-        LOG.warn("Bad checksum type: " + checksum + ". Using default.");
-        return DataChecksum.CHECKSUM_CRC32C;
+      try {
+        return DataChecksum.Type.valueOf(checksum);
+      } catch(IllegalArgumentException iae) {
+        LOG.warn("Bad checksum type: " + checksum + ". Using default "
+            + DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
+        return DataChecksum.Type.valueOf(
+            DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT); 
       }
     }
 
-    private DataChecksum createChecksum() {
-      return DataChecksum.newDataChecksum(
-          checksumType, bytesPerChecksum);
+    // Construct a checksum option from conf
+    private ChecksumOpt getChecksumOptFromConf(Configuration conf) {
+      DataChecksum.Type type = getChecksumType(conf);
+      int bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
+          DFS_BYTES_PER_CHECKSUM_DEFAULT);
+      return new ChecksumOpt(type, bytesPerChecksum);
+    }
+
+    // create a DataChecksum with the default option.
+    private DataChecksum createChecksum() throws IOException {
+      return createChecksum(null);
+    }
+
+    private DataChecksum createChecksum(ChecksumOpt userOpt) 
+        throws IOException {
+      // Fill in any missing field with the default.
+      ChecksumOpt myOpt = ChecksumOpt.processChecksumOpt(
+          defaultChecksumOpt, userOpt);
+      DataChecksum dataChecksum = DataChecksum.newDataChecksum(
+          myOpt.getChecksumType(),
+          myOpt.getBytesPerChecksum());
+      if (dataChecksum == null) {
+        throw new IOException("Invalid checksum type specified: "
+            + myOpt.getChecksumType().name());
+      }
+      return dataChecksum;
     }
   }
  
@@ -927,12 +947,13 @@ public class DFSClient implements java.io.Closeable {
     return create(src, FsPermission.getDefault(),
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
             : EnumSet.of(CreateFlag.CREATE), replication, blockSize, progress,
-        buffersize);
+        buffersize, null);
   }
 
   /**
    * Call {@link #create(String, FsPermission, EnumSet, boolean, short, 
-   * long, Progressable, int)} with <code>createParent</code> set to true.
+   * long, Progressable, int, ChecksumOpt)} with <code>createParent</code>
+   *  set to true.
    */
   public OutputStream create(String src, 
                              FsPermission permission,
@@ -940,10 +961,11 @@ public class DFSClient implements java.io.Closeable {
                              short replication,
                              long blockSize,
                              Progressable progress,
-                             int buffersize)
+                             int buffersize,
+                             ChecksumOpt checksumOpt)
       throws IOException {
     return create(src, permission, flag, true,
-        replication, blockSize, progress, buffersize);
+        replication, blockSize, progress, buffersize, checksumOpt);
   }
 
   /**
@@ -961,6 +983,7 @@ public class DFSClient implements java.io.Closeable {
    * @param blockSize maximum block size
    * @param progress interface for reporting client progress
    * @param buffersize underlying buffer size 
+   * @param checksumOpts checksum options
    * 
    * @return output stream
    * 
@@ -974,8 +997,8 @@ public class DFSClient implements java.io.Closeable {
                              short replication,
                              long blockSize,
                              Progressable progress,
-                             int buffersize)
-    throws IOException {
+                             int buffersize,
+                             ChecksumOpt checksumOpt) throws IOException {
     checkOpen();
     if (permission == null) {
       permission = FsPermission.getDefault();
@@ -986,7 +1009,7 @@ public class DFSClient implements java.io.Closeable {
     }
     final DFSOutputStream result = new DFSOutputStream(this, src, masked, flag,
         createParent, replication, blockSize, progress, buffersize,
-        dfsClientConf.createChecksum());
+        dfsClientConf.createChecksum(checksumOpt));
     beginFileLease(src, result);
     return result;
   }
@@ -1024,15 +1047,13 @@ public class DFSClient implements java.io.Closeable {
                              long blockSize,
                              Progressable progress,
                              int buffersize,
-                             int bytesPerChecksum)
+                             ChecksumOpt checksumOpt)
       throws IOException, UnresolvedLinkException {
     checkOpen();
     CreateFlag.validate(flag);
     DFSOutputStream result = primitiveAppend(src, flag, buffersize, progress);
     if (result == null) {
-      DataChecksum checksum = DataChecksum.newDataChecksum(
-          dfsClientConf.checksumType,
-          bytesPerChecksum);
+      DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = new DFSOutputStream(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
           checksum);
