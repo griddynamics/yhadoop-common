@@ -13,46 +13,78 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-project</artifactId>
+        <version>0.23.3-SNAPSHOT</version>
+        <relativePath>../hadoop-project</relativePath>
+    </parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
+    <artifactId>hadoop-hdfs-project</artifactId>
     <version>0.23.3-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
-  </parent>
-  <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-hdfs-project</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
-  <description>Apache Hadoop HDFS Project</description>
-  <name>Apache Hadoop HDFS Project</name>
-  <packaging>pom</packaging>
+    <description>Apache Hadoop HDFS Project</description>
+    <name>Apache Hadoop HDFS Project</name>
+    <packaging>pom</packaging>
 
-  <modules>
-    <module>hadoop-hdfs</module>
-    <module>hadoop-hdfs-httpfs</module>
-  </modules>
+    <modules>
+        <module>hadoop-hdfs</module>
+        <module>hadoop-hdfs-httpfs</module>
+    </modules>
 
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+    <properties>
+        <clover.snapshot.dir>${basedir}/.clover</clover.snapshot.dir>
+    </properties>
 
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>pom.xml</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>clover.optimize</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.atlassian.maven.plugins</groupId>
+                        <artifactId>maven-clover2-plugin</artifactId>
+                        <!--version>${cloverVersion}</version-->
+                        <configuration>
+                            <snapshot>${clover.snapshot.dir}/${groupId}-${artifactId}/clover.snapshot</snapshot>
+                            <singleCloverDatabase>true</singleCloverDatabase>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>clover</id>
+                                <goals>
+                                    <goal>setup</goal>
+                                    <goal>optimize</goal>
+                                    <goal>snapshot</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
