@@ -4,6 +4,8 @@ Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-7967. Need generalized multi-token filesystem support (daryn)
+
   NEW FEATURES
 
   IMPROVEMENTS
@@ -27,6 +29,15 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8242. AbstractDelegationTokenIdentifier: add getter methods
     for owner and realuser. (Colin Patrick McCabe via eli)
+
+    HADOOP-8700.  Use enum to define the checksum constants in DataChecksum.
+    (szetszwo)
+
+    HADOOP-8240. Add a new API to allow users to specify a checksum type
+    on FileSystem.create(..).  (Kihwal Lee via szetszwo)
+
+    HADOOP-8239. Add subclasses of MD5MD5CRC32FileChecksum to support file
+    checksum with CRC32C.  (Kihwal Lee via szetszwo)
 
   OPTIMIZATIONS
 
@@ -170,6 +181,12 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8695. TestPathData fails intermittently with JDK7 (Trevor
     Robinson via tgraves)
+
+    HADOOP-8611. Allow fall-back to the shell-based implementation when 
+    JNI-based users-group mapping fails (Robert Parker via bobby) 
+
+    HADOOP-8614. IOUtils#skipFully hangs forever on EOF. 
+    (Colin Patrick McCabe via eli)
 
 Release 0.23.2 - UNRELEASED 
 

@@ -32,8 +32,10 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.junit.BeforeClass;
@@ -123,6 +125,16 @@ public class TestFilterFileSystem {
         Progressable progress) {
       return null;
     }
+    public FSDataOutputStream create(Path f,
+        FsPermission permission,
+        EnumSet<CreateFlag> flags,
+        int bufferSize,
+        short replication,
+        long blockSize,
+        Progressable progress,
+        ChecksumOpt checksumOpt) throws IOException {
+      return null;
+    }
     public String getName() { return null; }
     public boolean delete(Path f) { return false; }
     public short getReplication(Path src) { return 0 ; }
@@ -170,6 +182,13 @@ public class TestFilterFileSystem {
     }
     public boolean cancelDeleteOnExit(Path f) throws IOException {
       return false;
+    }
+    public Token<?>[] addDelegationTokens(String renewer, Credentials creds)
+        throws IOException {
+      return null;
+    }
+    public String getScheme() {
+      return "dontcheck";
     }
   }
   
