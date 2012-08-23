@@ -36,6 +36,7 @@
     <mr.basedir>${basedir}</mr.basedir>
     <hadoop.component>yarn</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
+    <clover.snapshot.dir>${basedir}/.clover</clover.snapshot.dir>
   </properties>
 
   <modules>
@@ -273,6 +274,32 @@
         </plugins>
       </build>
     </profile>
+      <profile>
+          <id>clover.optimize</id>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>com.atlassian.maven.plugins</groupId>
+                      <artifactId>maven-clover2-plugin</artifactId>
+                      <!--version>${cloverVersion}</version-->
+                      <configuration>
+                          <snapshot>${clover.snapshot.dir}/${groupId}-${artifactId}/clover.snapshot</snapshot>
+                          <singleCloverDatabase>true</singleCloverDatabase>
+                      </configuration>
+                      <executions>
+                          <execution>
+                              <id>clover</id>
+                              <goals>
+                                  <goal>setup</goal>
+                                  <goal>optimize</goal>
+                                  <goal>snapshot</goal>
+                              </goals>
+                          </execution>
+                      </executions>
+                  </plugin>
+              </plugins>
+          </build>
+      </profile>
   </profiles>
 
 
