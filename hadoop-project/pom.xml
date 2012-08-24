@@ -1007,19 +1007,11 @@
                       </configuration>
                       <executions>
                           <execution>
-                              <id>setup</id>
-                              <phase>generate-sources</phase>
+                              <id>clover</id>
                               <goals>
                                   <goal>setup</goal>
                                   <goal>optimize</goal>
-                              </goals>
-                          </execution>
-                          <execution>
-                              <id>clover</id>
-                              <phase>test</phase>
-                              <goals>
                                   <goal>snapshot</goal>
-                                  <goal>clover</goal>
                               </goals>
                           </execution>
                       </executions>
