@@ -985,8 +985,6 @@
               </property>
           </activation>
           <properties>
-              <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
-              <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
               <clover.snapshot.dir>${project.basedir}/.clover</clover.snapshot.dir>
           </properties>
           <build>
@@ -996,16 +994,14 @@
                       <artifactId>maven-clover2-plugin</artifactId>
                       <configuration>
                           <snapshot>${clover.snapshot.dir}/${project.groupId}-${project.artifactId}-${project.version}-clover.snapshot</snapshot>
-                          <singleCloverDatabase>true</singleCloverDatabase>
                           <includesAllSourceRoots>true</includesAllSourceRoots>
+                          <!--singleCloverDatabase>true</singleCloverDatabase-->
                           <includes>
-                              <include>**.java</include>
-                              <include>pom.xml</include>
+                              <include>**/*.java</include>
                           </includes>
                       </configuration>
                       <executions>
                           <execution>
-                              <id>clover</id>
                               <goals>
                                   <goal>setup</goal>
                                   <goal>optimize</goal>
