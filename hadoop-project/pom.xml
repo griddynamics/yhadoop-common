@@ -975,7 +975,60 @@
         </plugins>
       </build>
     </profile>
-    <profile>
+
+      <profile>
+          <id>clover.optimized</id>
+          <activation>
+              <activeByDefault>false</activeByDefault>
+              <property>
+                  <name>clover.optimized</name>
+              </property>
+          </activation>
+          <properties>
+              <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
+              <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
+              <clover.snapshot.dir>${project.build.directory}/clover/</clover.snapshot.dir>
+          </properties>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>com.atlassian.maven.plugins</groupId>
+                      <artifactId>maven-clover2-plugin</artifactId>
+                      <configuration>
+                          <includesTestSourceRoots>true</includesTestSourceRoots>
+                          <licenseLocation>${cloverLicenseLocation}</licenseLocation>
+                          <cloverDatabase>${cloverDatabase}</cloverDatabase>
+                          <targetPercentage>50%</targetPercentage>
+                          <outputDirectory>${project.build.directory}/clover</outputDirectory>
+                          <generateHtml>true</generateHtml>
+                          <generateXml>true</generateXml>
+                          <snapshot>${clover.snapshot.dir}/${groupId}-${artifactId}-${version}-clover.snapshot</snapshot>
+                          <singleCloverDatabase>true</singleCloverDatabase>
+                      </configuration>
+                      <executions>
+                          <execution>
+                              <id>setup</id>
+                              <phase>generate-sources</phase>
+                              <goals>
+                                  <goal>setup</goal>
+                                  <goal>optimize</goal>
+                              </goals>
+                          </execution>
+                          <execution>
+                              <id>clover</id>
+                              <phase>test</phase>
+                              <goals>
+                                  <goal>snapshot</goal>
+                                  <goal>clover</goal>
+                              </goals>
+                          </execution>
+                      </executions>
+                  </plugin>
+              </plugins>
+          </build>
+      </profile>
+
+      <profile>
       <id>test-patch</id>
       <activation>
         <activeByDefault>false</activeByDefault>
