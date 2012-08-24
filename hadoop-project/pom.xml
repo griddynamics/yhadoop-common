@@ -977,11 +977,11 @@
     </profile>
 
       <profile>
-          <id>clover.optimize</id>
+          <id>clover.optimized</id>
           <activation>
               <activeByDefault>false</activeByDefault>
               <property>
-                  <name>clover.optimize</name>
+                  <name>clover.optimized</name>
               </property>
           </activation>
           <properties>
@@ -1002,7 +1002,7 @@
                           <outputDirectory>${project.build.directory}/clover</outputDirectory>
                           <generateHtml>true</generateHtml>
                           <generateXml>true</generateXml>
-                          <snapshot>${clover.snapshot.dir}/${project.groupId}-${project.artifactId}-${project.version}-clover.snapshot</snapshot>
+                          <snapshot>${clover.snapshot.dir}/${groupId}-${artifactId}-${version}-clover.snapshot</snapshot>
                           <singleCloverDatabase>true</singleCloverDatabase>
                       </configuration>
                       <executions>
