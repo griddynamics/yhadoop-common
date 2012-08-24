@@ -1005,7 +1005,7 @@
                       </configuration>
                       <executions>
                           <execution>
-                              <id>clover.optimize</id>
+                              <id>clover</id>
                               <goals>
                                   <goal>setup</goal>
                                   <goal>optimize</goal>
