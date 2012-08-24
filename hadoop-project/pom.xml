@@ -1011,13 +1011,13 @@
                               <phase>generate-sources</phase>
                               <goals>
                                   <goal>setup</goal>
+                                  <goal>optimize</goal>
                               </goals>
                           </execution>
                           <execution>
                               <id>clover</id>
                               <phase>test</phase>
                               <goals>
-                                  <goal>optimize</goal>
                                   <goal>snapshot</goal>
                                   <goal>clover</goal>
                               </goals>
