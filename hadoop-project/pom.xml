@@ -1002,9 +1002,16 @@
                       </configuration>
                       <executions>
                           <execution>
+                              <id>clover.optimize</id>
+                              <phase>process-test-classes</phase>
                               <goals>
-                                  <goal>setup</goal>
                                   <goal>optimize</goal>
+                              </goals>
+                          </execution>
+                          <execution>
+                              <id>clover.snapshot</id>
+                              <phase>test</phase>
+                              <goals>
                                   <goal>snapshot</goal>
                               </goals>
                           </execution>
