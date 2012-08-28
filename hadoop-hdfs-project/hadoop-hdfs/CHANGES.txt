@@ -19,6 +19,9 @@ Release 0.23.3 - UNRELEASED
     header when offset is specified and length is omitted.
     (Ravi Prakash via szetszwo)
 
+    HDFS-3853. Port MiniDFSCluster enableManagedDfsDirsRedundancy.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2421. Improve the concurrency of SerialNumberMap in NameNode.
@@ -107,6 +110,11 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3788. ByteRangeInputStream should not expect HTTP Content-Length header
     when chunked transfer-encoding is used.  (szetszwo)
+
+    HDFS-3841. Port HDFS-3835 to branch-0.23 (bobby via daryn)
+
+    HDFS-3177. Update DFSClient and DataXceiver to handle different checkum
+    types in file checksum computation.  (Kihwal Lee via daryn)
 
 Release 0.23.2 - UNRELEASED
 
