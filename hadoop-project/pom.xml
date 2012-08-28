@@ -949,7 +949,7 @@
             <configuration>
               <includesTestSourceRoots>true</includesTestSourceRoots>
               <licenseLocation>${cloverLicenseLocation}</licenseLocation>
-              <cloverDatabase>${cloverDatabase}</cloverDatabase>
+              <!--cloverDatabase>${cloverDatabase}</cloverDatabase-->
               <targetPercentage>50%</targetPercentage>
               <outputDirectory>${project.build.directory}/clover</outputDirectory>
               <generateHtml>true</generateHtml>
@@ -995,7 +995,7 @@
                       <configuration>
                           <snapshot>${clover.snapshot.dir}/${project.groupId}-${project.artifactId}-${project.version}-clover.snapshot</snapshot>
                           <includesAllSourceRoots>true</includesAllSourceRoots>
-                          <!--singleCloverDatabase>true</singleCloverDatabase-->
+                          <singleCloverDatabase>true</singleCloverDatabase>
                           <includes>
                               <include>**/*.java</include>
                           </includes>
