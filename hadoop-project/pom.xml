@@ -987,6 +987,7 @@
           <properties>
               <clover.snapshot.dir>${project.basedir}/.clover</clover.snapshot.dir>
               <clover.merged.db.dir>${project.build.directory}/clover</clover.merged.db.dir>
+              <clover.single.db>true</clover.single.db>
           </properties>
           <build>
               <plugins>
@@ -996,7 +997,7 @@
                       <configuration>
                           <snapshot>${clover.snapshot.dir}/${project.groupId}-${project.artifactId}-${project.version}-clover.snapshot</snapshot>
                           <includesAllSourceRoots>true</includesAllSourceRoots>
-                          <singleCloverDatabase>true</singleCloverDatabase>
+                          <singleCloverDatabase>${clover.single.db}</singleCloverDatabase>
                           <cloverMergeDatabase>${clover.merged.db.dir}/hadoop-merged-coverage.db</cloverMergeDatabase>
                           <includes>
                               <include>**/*.java</include>
