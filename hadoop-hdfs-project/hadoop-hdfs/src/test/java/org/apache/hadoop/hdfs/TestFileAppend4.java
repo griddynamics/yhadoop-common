@@ -219,10 +219,8 @@ public class TestFileAppend4 {
    * starts writing from that writer, and then has the old lease holder
    * call completeFile
    */
-  @Test(timeout=60000)
+  @Test(timeout=10000)
   public void testCompleteOtherLeaseHoldersFile() throws Throwable {
-    cleanClusterDirs();
-
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
  
     try {
@@ -295,12 +293,4 @@ public class TestFileAppend4 {
       cluster.shutdown();
     }
   }
-
-    private void cleanClusterDirs() throws IOException {
-        Collection<String> dirNames = conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
-        for (String dirName: dirNames) {
-            LOG.info(String.format("Cleaning dir: %s", dirName));
-            FileUtils.deleteDirectory(new File(dirName));
-        }
-    }
 }
