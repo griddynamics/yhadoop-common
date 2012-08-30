@@ -13,28 +13,33 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-main</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
-  <description>Apache Hadoop Main</description>
-  <name>Apache Hadoop Main</name>
-  <packaging>pom</packaging>
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-project</artifactId>
+        <version>0.23.3-SNAPSHOT</version>
+    </parent>
 
-  <modules>
-    <module>hadoop-project</module>
-    <module>hadoop-project-dist</module>
-    <module>hadoop-assemblies</module>
-    <module>hadoop-common-project</module>
-    <module>hadoop-hdfs-project</module>
-    <module>hadoop-yarn-project</module>
-    <module>hadoop-mapreduce-project</module>
-    <module>hadoop-tools</module>
-    <module>hadoop-dist</module>
-    <module>hadoop-client</module>
-    <module>hadoop-minicluster</module>
-  </modules>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-main</artifactId>
+    <version>0.23.3-SNAPSHOT</version>
+    <description>Apache Hadoop Main</description>
+    <name>Apache Hadoop Main</name>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>hadoop-project-dist</module>
+        <module>hadoop-assemblies</module>
+        <module>hadoop-common-project</module>
+        <module>hadoop-hdfs-project</module>
+        <module>hadoop-yarn-project</module>
+        <module>hadoop-mapreduce-project</module>
+        <module>hadoop-tools</module>
+        <module>hadoop-dist</module>
+        <module>hadoop-client</module>
+        <module>hadoop-minicluster</module>
+    </modules>
 </project>
