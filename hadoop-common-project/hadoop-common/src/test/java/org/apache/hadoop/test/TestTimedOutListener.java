@@ -1,5 +1,8 @@
 package org.apache.hadoop.test;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 
 import org.junit.runner.notification.Failure;
@@ -14,6 +17,8 @@ public class TestTimedOutListener extends RunListener {
   @Override
   public void testFailure(Failure failure) throws Exception {
     if (failure.getMessage().startsWith("test timed out after")) {
+      DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
+      System.err.println(String.format("Timestamp: %s", dateFormat.format(new Date())));
       System.err.println(buildThreadDump());
     }
   }
