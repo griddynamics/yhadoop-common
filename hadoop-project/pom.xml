@@ -1120,7 +1120,6 @@
             </activation>
             <properties>
                 <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
-                <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
             </properties>
             <build>
                 <plugins>
@@ -1130,7 +1129,6 @@
                         <configuration>
                             <includesTestSourceRoots>true</includesTestSourceRoots>
                             <licenseLocation>${cloverLicenseLocation}</licenseLocation>
-                            <!--cloverDatabase>${cloverDatabase}</cloverDatabase-->
                             <targetPercentage>50%</targetPercentage>
                             <outputDirectory>${project.build.directory}/clover</outputDirectory>
                             <generateHtml>true</generateHtml>
@@ -1166,8 +1164,7 @@
                 </property>
             </activation>
             <properties>
-                <clover.snapshot.dir>${project.basedir}/.clover</clover.snapshot.dir>
-                <clover.single.db>true</clover.single.db>
+                <clover.snapshot>${project.basedir}/.clover/clover.snapshot</clover.snapshot>
             </properties>
             <build>
                 <plugins>
@@ -1175,11 +1172,9 @@
                         <groupId>com.atlassian.maven.plugins</groupId>
                         <artifactId>maven-clover2-plugin</artifactId>
                         <configuration>
-                            <snapshot>
-                                ${clover.snapshot.dir}/${project.groupId}-${project.artifactId}-${project.version}-clover.snapshot
-                            </snapshot>
+                            <snapshot>${clover.snapshot}</snapshot>
                             <includesAllSourceRoots>true</includesAllSourceRoots>
-                            <singleCloverDatabase>${clover.single.db}</singleCloverDatabase>
+                            <singleCloverDatabase>true</singleCloverDatabase>
                         </configuration>
                         <executions>
                             <execution>
