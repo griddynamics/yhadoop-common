@@ -24,6 +24,7 @@ import java.util.Iterator;
 
 import junit.framework.Assert;
 
+import junit.framework.TestCase;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
 import org.junit.Before;
@@ -50,7 +51,7 @@ import static org.apache.hadoop.fs.FileContextTestHelper.*;
  * {@link FileContext} instance variable.
  * </p>
  */
-public abstract class FileContextURIBase {
+    public abstract class FileContextURIBase extends TestCase {
   private static final String basePath = System.getProperty("test.build.data",
   "build/test/data") + "/testContextURI";
   private static final Path BASE = new Path(basePath);

@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
+import junit.framework.TestCase;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -43,7 +44,7 @@ import org.junit.Test;
  * 
  * </p>
  */
-public abstract class FileContextUtilBase {
+public abstract class FileContextUtilBase extends TestCase {
   protected FileContext fc;
   
   {
