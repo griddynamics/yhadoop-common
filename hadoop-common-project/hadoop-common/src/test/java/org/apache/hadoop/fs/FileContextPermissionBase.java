@@ -25,6 +25,7 @@ import java.util.StringTokenizer;
 
 import junit.framework.Assert;
 
+import junit.framework.TestCase;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
@@ -55,7 +56,7 @@ import static org.junit.Assert.assertEquals;
  *     @AfterClass    public static void ClusterShutdownAtEnd()
  * </p>
  */
-public abstract class FileContextPermissionBase {  
+public abstract class FileContextPermissionBase extends TestCase {
   
   {
     try {

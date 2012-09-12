@@ -1,5 +1,7 @@
 package org.apache.hadoop.test;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -16,10 +18,12 @@ public class TestTimedOutListener extends RunListener {
 
   @Override
   public void testFailure(Failure failure) throws Exception {
-    if (failure.getMessage().startsWith("test timed out after")) {
+    if (failure!=null && failure.getMessage()!=null
+            && failure.getMessage().startsWith("test timed out after")) {
       DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
       System.err.println(String.format("Timestamp: %s", dateFormat.format(new Date())));
       System.err.println(buildThreadDump());
+      System.err.println("Detected deadlocks: " + buildDeadlockStatus());
     }
   }
 
@@ -42,5 +46,18 @@ public class TestTimedOutListener extends RunListener {
     }
     return dump.toString();
   }
-  
+
+    private static String buildDeadlockStatus() {
+        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+        long[] threadIds = threadBean.findMonitorDeadlockedThreads();
+        StringBuilder deadlockedThreads = new StringBuilder();
+        if(threadIds != null && threadIds.length > 0) {
+            for(long threadId : threadIds) {
+                deadlockedThreads.append(threadId).append(' ');
+            }
+        } else {
+            deadlockedThreads.append("NULL");
+        }
+        return deadlockedThreads.toString();
+    }
 }
