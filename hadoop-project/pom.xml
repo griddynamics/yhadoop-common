@@ -1093,6 +1093,7 @@
                             <outputDirectory>${project.build.directory}/clover</outputDirectory>
                             <generateHtml>true</generateHtml>
                             <generateXml>true</generateXml>
+                            <distributedCoverage/>
                         </configuration>
                         <executions>
                             <execution>
