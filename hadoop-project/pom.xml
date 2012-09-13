@@ -48,6 +48,8 @@
 
     <commons-daemon.version>1.0.3</commons-daemon.version>
 
+    <jacoco.version>0.5.10.201208310627</jacoco.version>
+
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
   </properties>
@@ -966,9 +968,12 @@
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.5.9.201207300726</version>
+            <version>${jacoco.version}</version>
             <configuration>
               <propertyName>jacocoArgLine</propertyName>
+              <includes>
+                <include>org.apache.hadoop.*</include>
+              </includes>
             </configuration>
             <executions>
               <execution>
