@@ -159,7 +159,7 @@
          <properties>
            <property>
              <name>listener</name>
-             <value>org.apache.hadoop.test.TestTimedOutListener</value>
+             <value>org.apache.hadoop.test.TimedOutTestsListener</value>
            </property>
          </properties>
        </configuration>
