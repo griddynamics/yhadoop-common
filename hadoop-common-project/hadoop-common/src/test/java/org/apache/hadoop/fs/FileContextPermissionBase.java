@@ -56,7 +56,7 @@ import static org.junit.Assert.assertEquals;
  *     @AfterClass    public static void ClusterShutdownAtEnd()
  * </p>
  */
-public abstract class FileContextPermissionBase extends TestCase {
+public abstract class FileContextPermissionBase {
   
   {
     try {
