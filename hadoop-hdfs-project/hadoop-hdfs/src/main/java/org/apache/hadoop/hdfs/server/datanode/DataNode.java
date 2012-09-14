@@ -410,11 +410,11 @@ public class DataNode extends Configured
            final AbstractList<File> dataDirs,
            final SecureResources resources) throws IOException {
     super(conf);
-
+   
     this.userWithLocalPathAccess = conf
         .get(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
     try {
-      confHostName = getHostName(conf);
+      confHostName = getHostName(conf) + "";
       hostName = confHostName;
       startDataNode(conf, dataDirs, resources);
     } catch (IOException ie) {
