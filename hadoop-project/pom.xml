@@ -50,6 +50,8 @@
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
+
+    <custom.surefire.timeout>899</custom.surefire.timeout>
   </properties>
 
   <dependencyManagement>
@@ -853,8 +855,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <forkMode>always</forkMode>
-          <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
+          <forkMode>pertest</forkMode>
+          <forkedProcessTimeoutInSeconds>${custom.surefire.timeout}</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m</argLine>
           <environmentVariables>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib</LD_LIBRARY_PATH>
