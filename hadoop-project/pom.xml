@@ -855,7 +855,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <forkMode>pertest</forkMode>
+          <forkMode>always</forkMode>
           <forkedProcessTimeoutInSeconds>${custom.surefire.timeout}</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m</argLine>
           <environmentVariables>
