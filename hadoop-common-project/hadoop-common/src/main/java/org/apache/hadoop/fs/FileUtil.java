@@ -88,6 +88,18 @@ public class FileUtil {
    *     are deleted.
    */
   public static boolean fullyDelete(File dir) {
+	if (!Path.WINDOWS) {
+      // all unix-like systems: fix permissions of the directory:
+	  try {
+		  String[] cmd = new String[] { "/bin/chmod", "-R", "+rX",  dir.getAbsolutePath() };
+		  Process process = Runtime.getRuntime().exec(cmd);
+		  int status = process.waitFor();
+		  System.out.println("Command ["+Arrays.toString(cmd)+"] finished with code "+status);
+	  } catch (Exception e) {
+		  e.printStackTrace(System.out);
+	  }
+	}
+	
     if (dir.delete()) {
       // dir is (a) normal file, (b) symlink to a file, (c) empty directory or
       // (d) symlink to a directory
