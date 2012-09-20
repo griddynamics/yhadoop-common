@@ -1017,6 +1017,68 @@
       </build>
     </profile>
     <profile>
+      <id>clover.optimize</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>clover.optimize</name>
+        </property>
+      </activation>
+      <properties>
+        <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
+        <clover.snapshot>${project.basedir}/.clover/clover.snapshot</clover.snapshot>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.atlassian.maven.plugins</groupId>
+            <artifactId>maven-clover2-plugin</artifactId>
+            <configuration>
+              <outputDirectory>${project.build.directory}/clover</outputDirectory>
+              <licenseLocation>${cloverLicenseLocation}</licenseLocation>
+              <snapshot>${clover.snapshot}</snapshot>
+              <includesAllSourceRoots>true</includesAllSourceRoots>
+              <singleCloverDatabase>true</singleCloverDatabase>
+              <instrumentation>method</instrumentation>
+            </configuration>
+            <executions>
+              <execution>
+                <id>clover</id>
+                <goals>
+                  <goal>setup</goal>
+                  <goal>optimize</goal>
+                  <goal>snapshot</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>groovy-maven-plugin</artifactId>
+            <version>1.4</version>
+            <executions>
+              <execution>
+                <phase>process-test-classes</phase>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <configuration>
+                  <source>
+                    def tests = project.properties['test'];
+                    log.info("Tests to run: " + tests);
+                    if (tests != null &amp;&amp; tests.length() == 0) {
+                      log.info("No tests to run");
+                      project.properties['skipTests'] = 'true';
+                    }
+                  </source>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin> 
+        </plugins>
+      </build>
+    </profile> 
+    <profile>
       <id>test-patch</id>
       <activation>
         <activeByDefault>false</activeByDefault>
