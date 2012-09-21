@@ -114,7 +114,7 @@
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m</argLine>
           <includes>
-            <include>**/Test*.java</include>
+            <include>**/TestA*.java</include>
           </includes>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
           <systemProperties>
