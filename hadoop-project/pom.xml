@@ -917,7 +917,7 @@
             <java.security.egd>file:///dev/urandom</java.security.egd>
           </systemPropertyVariables>
           <includes>
-            <include>**/TestA*.java</include>
+            <include>**/Test*.java</include>
           </includes>
           <excludes>
             <exclude>**/${test.exclude}.java</exclude>
