@@ -36,10 +36,12 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 
 import org.junit.Test;
+import org.junit.Ignore;
 import static org.junit.Assert.*;
 
 /**
  */
+@Ignore
 public class TestDistributedUpgrade {
   private static final Log LOG = LogFactory.getLog(TestDistributedUpgrade.class);
   private Configuration conf;
