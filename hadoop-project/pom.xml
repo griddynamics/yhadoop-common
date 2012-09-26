@@ -55,8 +55,42 @@
 
     <!-- Change to "2.12.1-FOO" to use the patched surefire/plexus plugin 
          (Note that the custom repository must be defined to use the patched version.) -->
-    <maven-surefire-plugin-version>2.12.1</maven-surefire-plugin-version>
+    <maven-surefire-plugin-version>2.12.1-FOO</maven-surefire-plugin-version>
   </properties>
+
+     <repositories>
+        <repository>
+          <id>patched-surefire-and-plexus-utils</id>
+          <name>patched-surefire-repo</name>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+            <checksumPolicy>warn</checksumPolicy>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+            <checksumPolicy>fail</checksumPolicy>
+          </snapshots>
+          <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+          <layout>default</layout>
+        </repository>
+      </repositories>
+
+      <pluginRepositories>
+        <pluginRepository>
+        <id>patched-surefire-and-plexus-utils</id>
+        <name>foo-plugins</name>
+        <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+        <layout>default</layout>
+        <snapshots>
+          <enabled>true</enabled>
+        </snapshots>
+        <releases>
+          <updatePolicy>always</updatePolicy>
+        </releases>
+        </pluginRepository>
+      </pluginRepositories>
 
   <dependencyManagement>
     <dependencies>
