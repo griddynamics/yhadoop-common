@@ -1152,7 +1152,6 @@
                                 <phase>test</phase>
                                 <goals>
                                     <goal>snapshot</goal>
-                                    <goal>merge</goal>
                                 </goals>
                             </execution>
                         </executions>
