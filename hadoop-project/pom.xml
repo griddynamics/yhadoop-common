@@ -1126,6 +1126,7 @@
             </activation>
             <properties>
                 <clover.snapshot>${project.basedir}/.clover/clover.snapshot</clover.snapshot>
+                <clover.db>${project.basedir}/target/clover.db</clover.db>
             </properties>
             <build>
                 <plugins>
@@ -1136,6 +1137,7 @@
                             <snapshot>${clover.snapshot}</snapshot>
                             <includesAllSourceRoots>true</includesAllSourceRoots>
                             <singleCloverDatabase>true</singleCloverDatabase>
+                            <cloverDatabase>${clover.db}</cloverDatabase>
                         </configuration>
                         <executions>
                             <execution>
@@ -1150,6 +1152,7 @@
                                 <phase>test</phase>
                                 <goals>
                                     <goal>snapshot</goal>
+                                    <goal>merge</goal>
                                 </goals>
                             </execution>
                         </executions>
