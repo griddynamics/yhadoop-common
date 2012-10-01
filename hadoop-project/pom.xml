@@ -982,6 +982,7 @@
                     <exclude>**/protocol/proto/*.java</exclude>
                     <exclude>**/compiler/generated/*.java</exclude>
                     <exclude>**/protobuf/*.java</exclude>
+                    <exclude>**/v2/proto/*.java</exclude>
               </excludes>
             </configuration>
             <executions>
