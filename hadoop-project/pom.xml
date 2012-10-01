@@ -975,6 +975,14 @@
               <outputDirectory>${project.build.directory}/clover</outputDirectory>
               <generateHtml>true</generateHtml>
               <generateXml>true</generateXml>
+              <excludes>
+                    <exclude>**/examples/*.java</exclude>
+                    <exclude>**/hamlet/*.java</exclude>
+                    <exclude>**/ha/proto/*.java</exclude>
+                    <exclude>**/protocol/proto/*.java</exclude>
+                    <exclude>**/compiler/generated/*.java</exclude>
+                    <exclude>**/protobuf/*.java</exclude>
+              </excludes>
             </configuration>
             <executions>
               <execution>
