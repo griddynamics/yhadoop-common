@@ -79,16 +79,20 @@
 
       <pluginRepositories>
         <pluginRepository>
-        <id>patched-surefire-and-plexus-utils</id>
-        <name>foo-plugins</name>
-        <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
-        <layout>default</layout>
-        <snapshots>
-          <enabled>true</enabled>
-        </snapshots>
-        <releases>
-          <updatePolicy>always</updatePolicy>
-        </releases>
+          <id>patched-surefire-and-plexus-utils</id>
+          <name>foo-plugins</name>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+            <checksumPolicy>warn</checksumPolicy>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+            <checksumPolicy>fail</checksumPolicy>
+          </snapshots>
+          <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+          <layout>default</layout>
         </pluginRepository>
       </pluginRepositories>
 
