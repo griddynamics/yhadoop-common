@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -191,5 +192,75 @@ public class TestHarFileSystem2 {
       System.out.println("ok: "+ioe);
     }
   }
+  
+  @Test
+  public void testNegativeHarFsModifications() throws Exception {
+    // all the modification methods of HarFS must lead to IOE.
+    final Path fooPath = new Path(rootPath, "foo/bar");
+    localFileSystem.createNewFile(fooPath);
+    try {
+      harFileSystem.create(fooPath, new FsPermission("+rwx"), true, 1024, (short)88, 1024, null);
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    try {
+      harFileSystem.setReplication(fooPath, (short)55);
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    try {
+      harFileSystem.delete(fooPath, true);
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    try {
+      harFileSystem.mkdirs(fooPath, new FsPermission("+rwx"));
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    final Path indexPath = new Path(harPath, "_index");
+    try {
+      harFileSystem.copyFromLocalFile(false, indexPath, fooPath);
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    try {
+      harFileSystem.startLocalOutput(fooPath, indexPath);
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    try {
+      harFileSystem.completeLocalOutput(fooPath, indexPath);
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    try {
+      harFileSystem.setOwner(fooPath, "user", "group");
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+    
+    try {
+      harFileSystem.setPermission(fooPath, new FsPermission("+x"));
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+  }  
   
 }
