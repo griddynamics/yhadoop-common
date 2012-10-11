@@ -2,14 +2,16 @@ package org.apache.hadoop.fs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -24,14 +26,15 @@ public class TestHarFileSystem2 {
   private static final Path rootPath = new Path(new File(ROOT_PATH).getAbsolutePath() + "/localfs");
   private static final Path harPath = new Path(rootPath, "path1/path2/my.har"); // NB: .har suffix is necessary
 
-  private static HarFileSystem harFileSystem;
-  private static Configuration conf;
+  private FileSystem localFileSystem;
+  private HarFileSystem harFileSystem;
+  private Configuration conf;
   
   /*
    * creates and returns fully initialized HarFileSystem  
    */
-  private static HarFileSystem createHarFileSysten(final Configuration conf) throws Exception {
-    final FileSystem localFileSystem = FileSystem.getLocal(conf);
+  private HarFileSystem createHarFileSysten(final Configuration conf) throws Exception {
+    localFileSystem = FileSystem.getLocal(conf);
     localFileSystem.initialize(new URI("file:///"), conf);
     localFileSystem.mkdirs(rootPath);
     localFileSystem.mkdirs(harPath);
@@ -42,24 +45,29 @@ public class TestHarFileSystem2 {
     localFileSystem.createNewFile(masterIndexPath);
       assertTrue(localFileSystem.exists(masterIndexPath));
     
-    // write Har version into the master index:
-    final FSDataOutputStream fsdos = localFileSystem.create(masterIndexPath);
-    try {
-      String versionString = HarFileSystem.VERSION + "\n";
-      fsdos.write(versionString.getBytes("UTF-8"));
-      fsdos.flush();
-    } finally {
-      fsdos.close();
-    }
-    
+    writeVersionToMasterIndexImpl(HarFileSystem.VERSION);
+      
     final HarFileSystem harFileSystem = new HarFileSystem(localFileSystem);
     final URI uri = new URI("har://" + harPath.toString()); 
     harFileSystem.initialize(uri, conf);
     return harFileSystem;
   }
   
-  @BeforeClass
-  public static void beforeClass() throws Exception {
+  private void writeVersionToMasterIndexImpl(int version) throws IOException {
+    final Path masterIndexPath = new Path(harPath, "_masterindex");
+    // write Har version into the master index:
+    final FSDataOutputStream fsdos = localFileSystem.create(masterIndexPath);
+    try {
+      String versionString = version + "\n";
+      fsdos.write(versionString.getBytes("UTF-8"));
+      fsdos.flush();
+    } finally {
+      fsdos.close();
+    }
+  }
+  
+  @Before
+  public void before() throws Exception {
     final File rootDirIoFile = new File(rootPath.toUri().getPath());
     rootDirIoFile.mkdirs();
     if (!rootDirIoFile.exists()) {
@@ -70,8 +78,8 @@ public class TestHarFileSystem2 {
     harFileSystem = createHarFileSysten(conf);
   }
   
-  @AfterClass
-  public static void afterClass() throws Exception {
+  @After
+  public void after() throws Exception {
     // close Har FS:
     final FileSystem harFS = harFileSystem;
     if (harFS != null) {
@@ -88,8 +96,10 @@ public class TestHarFileSystem2 {
     }
   }
   
+  // ======== Positive tests:
+  
   @Test
-  public void testHarFileSystemBasics() throws Exception {
+  public void testPositiveHarFileSystemBasics() throws Exception {
     // check Har version:
     assertEquals(HarFileSystem.VERSION, harFileSystem.getHarVersion());
 
@@ -111,16 +121,75 @@ public class TestHarFileSystem2 {
     assertEquals(workDirPath0, harFileSystem.getWorkingDirectory());
   }
   
-  // TODO: 
-  // 1) measure the coverage again with org.apache.hadoop.tools.TestHadoopArchives (hadoop-tools/hadoop-archives/ module) test;
-  // 2) after that, if the coverage is still not enough, test the following methods: 
-  // #listStatus()
-  // #makeQualified()
-  // #open(2)
-  // #copyToLocalFile()
-  // #getFileBlockLocations()
-//  @Test
-//  public void testRealHarFileSystemReadOperations() throws Exception {
-//  }
+  @Test
+  public void testPositiveNewHarFsOnTheSameUnderlyingFs() throws Exception {
+    // Init 2nd har file system on the same underlying FS, so the
+    // metadata gets reused:
+    final HarFileSystem hfs = new HarFileSystem(localFileSystem);
+    final URI uri = new URI("har://" + harPath.toString()); 
+    hfs.initialize(uri, new Configuration());
+    // the metadata should be reused from cache:
+    assertTrue(hfs.getMetadata() == harFileSystem.getMetadata());
+  }  
+  
+  @Test
+  public void testPositiveInitWithoutUnderlyingFS() throws Exception {
+    // Init HarFS with no constructor arg, so that the underlying FS object
+    // is created on demand or got from cache in #initialize() method.
+    final HarFileSystem hfs = new HarFileSystem();
+    final URI uri = new URI("har://" + harPath.toString()); 
+    hfs.initialize(uri, new Configuration());
+  }  
+
+  // ========== Negative:
+
+  @Test
+  public void testNegativeInitWithoutIndex() throws Exception {
+    // delete the index file:
+    final Path indexPath = new Path(harPath, "_index");
+    localFileSystem.delete(indexPath, false);
+    // now init the HarFs:
+    final HarFileSystem hfs = new HarFileSystem(localFileSystem);
+    final URI uri = new URI("har://" + harPath.toString());
+    try {
+      hfs.initialize(uri, new Configuration());
+      Assert.fail("Exception expected.");
+    } catch (IOException ioe) {
+      // ok
+    }
+  }  
+  
+  @Test
+  public void testNegativeGetHarVersionOnNotInitializedFS() throws Exception {
+    final HarFileSystem hfs = new HarFileSystem(localFileSystem);
+    try {
+      int version = hfs.getHarVersion();
+      Assert.fail("Exception expected, but got a Har version " + version + ".");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+  }  
+  
+  @Test
+  public void testNegativeInitWithAnUnsupportedVersion() throws Exception {
+    // NB: should wait at least 1 second to ensure the timestamp of the master index will change
+    // upon the writing, because Linux seems to update the file modification time with 1 second accuracy: 
+    Thread.sleep(1000);
+    // write an unsupported version:
+    writeVersionToMasterIndexImpl(7777);
+    // init the Har:
+    final HarFileSystem hfs = new HarFileSystem(localFileSystem);
+    
+    // the metadata should *not* be reused from cache:
+    assertFalse(hfs.getMetadata() == harFileSystem.getMetadata());
+    
+    final URI uri = new URI("har://" + harPath.toString());
+    try {
+      hfs.initialize(uri, new Configuration());
+      Assert.fail("IOException expected.");
+    } catch (IOException ioe) {
+      System.out.println("ok: "+ioe);
+    }
+  }
   
 }
