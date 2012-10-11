@@ -1,6 +1,57 @@
 Hadoop HDFS Change Log
 
-Release 0.23.3 - UNRELEASED
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
+    (Andy Isaacson via eli)
+
+    HDFS-3905. Secure cluster cannot use hftp to an insecure cluster
+    (Daryn Sharp via tgraves)
+
+    HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor
+    Robinson via tgraves)
+
+    HDFS-3824. TestHftpDelegationToken fails intermittently with JDK7 (Trevor
+    Robinson via tgraves)
+
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3860. HeartbeatManager#Monitor may wrongly hold the writelock of
+    namesystem. (Jing Zhao via atm)
+
+    HDFS-3831. Failure to renew tokens due to test-sources left in classpath
+    (jlowe via bobby)
+
+    HDFS-3922. namenode throws away blocks under construction on restart
+    (Kihwal Lee via daryn)
+
+    HDFS-3731. Release upgrade must handle blocks being written from 1.0
+    (Kihwal Lee via daryn)
+
+    HDFS-3373. FileContext HDFS implementation can leak socket caches (John
+    George via bobby)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 
@@ -115,6 +166,15 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3177. Update DFSClient and DataXceiver to handle different checkum
     types in file checksum computation.  (Kihwal Lee via daryn)
+
+    HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
+
+    HDFS-3873. Hftp assumes security is disabled if token fetch fails (daryn)
+
+    HDFS-3852. TestHftpDelegationToken is broken after HADOOP-8225 (daryn)
+
+    HDFS-3890. filecontext mkdirs doesn't apply umask as expected
+    (Tom Graves via daryn)
 
 Release 0.23.2 - UNRELEASED
 

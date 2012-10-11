@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.3-SNAPSHOT</version>
+    <version>0.23.5-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
+  <version>0.23.5-SNAPSHOT</version>
   <name>hadoop-mapreduce-client</name>
   <packaging>pom</packaging>
 
@@ -150,6 +150,18 @@
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${mr.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>
+       </configuration>
+     </plugin>
+     <plugin>
+       <groupId>org.apache.maven.plugins</groupId>
+       <artifactId>maven-surefire-plugin</artifactId>
+       <configuration>
+         <properties>
+           <property>
+             <name>listener</name>
+             <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+           </property>
+         </properties>
        </configuration>
      </plugin>
     </plugins>
