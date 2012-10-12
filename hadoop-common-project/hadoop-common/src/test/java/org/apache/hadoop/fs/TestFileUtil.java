@@ -323,10 +323,11 @@ public class TestFileUtil {
     Assert.assertFalse("The return value should have been false!", ret);
     Assert.assertTrue("The file file1 should not have been deleted!",
         new File(del, file1Name).exists());
-    Assert.assertTrue(
-        "The directory xsubdir should not have been deleted!",
+    // NB: the fullyDelete operation now chmods the directories, so it *should* delete the "xSubDir" folder:   
+    Assert.assertFalse(
+        "The directory xsubdir *should* have been deleted!",
         xSubDir.exists());
-    Assert.assertTrue("The file file2 should not have been deleted!",
+    Assert.assertFalse("The file file2 *should* have been deleted!",
         file2.exists());
     Assert.assertFalse("The directory ysubdir should have been deleted!",
         ySubDir.exists());

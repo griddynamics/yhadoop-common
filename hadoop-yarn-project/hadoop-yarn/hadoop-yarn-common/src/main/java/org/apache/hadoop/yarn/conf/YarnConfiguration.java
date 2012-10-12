@@ -111,18 +111,18 @@ public class YarnConfiguration extends Configuration {
   /** Miniumum memory request grant-able by the RM scheduler. */
   public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_MB =
     YARN_PREFIX + "scheduler.minimum-allocation-mb";
-  public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB = 128;
+  public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB = 1024;
 
   /** Maximum memory request grant-able by the RM scheduler. */
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_MB =
     YARN_PREFIX + "scheduler.maximum-allocation-mb";
-  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB = 10240;
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB = 8192;
 
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
     RM_PREFIX + "scheduler.client.thread-count";
   public static final int DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT = 50;
-  
+
   /** The address of the RM web application.*/
   public static final String RM_WEBAPP_ADDRESS = 
     RM_PREFIX + "webapp.address";
@@ -205,6 +205,8 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER = 
     RM_PREFIX + "scheduler.class";
  
+  public static final String DEFAULT_RM_SCHEDULER = 
+      "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler";
 
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
@@ -416,10 +418,13 @@ public class YarnConfiguration extends Configuration {
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
     NM_PREFIX + "container-monitor.interval-ms";
   public final static int DEFAULT_NM_CONTAINER_MON_INTERVAL_MS = 3000;
-  
+
   /** Class that calculates containers current resource utilization.*/
   public static final String NM_CONTAINER_MON_RESOURCE_CALCULATOR =
     NM_PREFIX + "container-monitor.resource-calculator.class";
+  /** Class that calculates process tree resource utilization.*/
+  public static final String NM_CONTAINER_MON_PROCESS_TREE =
+    NM_PREFIX + "container-monitor.process-tree.class";
 
   /**
    * Enable/Disable disks' health checker. Default is true.
