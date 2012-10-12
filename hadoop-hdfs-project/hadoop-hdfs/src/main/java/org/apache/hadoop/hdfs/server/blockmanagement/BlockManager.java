@@ -50,6 +50,9 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -1551,8 +1554,6 @@ public class BlockManager {
 
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getStorageID(), block)) {
-      assert storedBlock.findDatanode(dn) < 0 : "Block " + block
-        + " in invalidated blocks set should not appear in DN " + dn;
       return storedBlock;
     }
 
@@ -1577,7 +1578,7 @@ public class BlockManager {
     return storedBlock;
   }
 
-  /*
+  /**
    * The next two methods test the various cases under which we must conclude
    * the replica is corrupt, or under construction.  These are laid out
    * as switch statements, on the theory that it is easier to understand
@@ -2598,8 +2599,8 @@ public class BlockManager {
         } catch (IOException ie) {
           LOG.warn("ReplicationMonitor thread received exception. " , ie);
         } catch (Throwable t) {
-          LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
-          Runtime.getRuntime().exit(-1);
+          LOG.fatal("ReplicationMonitor thread received Runtime exception. ", t);
+          terminate(1);
         }
       }
     }
