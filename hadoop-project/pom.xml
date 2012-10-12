@@ -17,9 +17,14 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-main</artifactId>
+    <version>0.23.5-SNAPSHOT</version>
+  </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-project</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
+  <version>0.23.5-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -50,9 +55,41 @@
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
 
     <custom.surefire.timeout>899</custom.surefire.timeout>
+    <!-- Change to "2.12.1-FOO" to use the patched surefire/plexus plugin 
+         (Note that the custom repository must be defined to use the patched version.) -->
     <maven-surefire-plugin-version>2.12.1-FOO</maven-surefire-plugin-version>
-
   </properties>  
+
+     <repositories>
+        <repository>
+            <id>apache.snapshots.https</id>
+            <name>${distMgmtSnapshotsName}</name>
+            <url>${distMgmtSnapshotsUrl}</url>
+        </repository>
+        <repository>
+            <id>repository.jboss.org</id>
+            <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+          <id>patched-surefire-and-plexus-utils</id>
+          <name>patched-surefire-repo</name>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+            <checksumPolicy>warn</checksumPolicy>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>always</updatePolicy>
+            <checksumPolicy>fail</checksumPolicy>
+          </snapshots>
+          <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+          <layout>default</layout>
+        </repository>
+      </repositories>
 
       <pluginRepositories>
         <pluginRepository>
@@ -923,9 +960,10 @@
         <configuration>
           <forkMode>always</forkMode>
           <forkedProcessTimeoutInSeconds>${custom.surefire.timeout}</forkedProcessTimeoutInSeconds>
-          <argLine>-Xmx1024m</argLine>
+          <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
           <environmentVariables>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib</LD_LIBRARY_PATH>
+            <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
           <systemPropertyVariables>
 
@@ -1100,6 +1138,7 @@
       </activation>
       <properties>
         <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
+        <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
       </properties>
       <build>
         <plugins>
@@ -1110,10 +1149,23 @@
               <includesAllSourceRoots>true</includesAllSourceRoots>
               <includesTestSourceRoots>true</includesTestSourceRoots>
               <licenseLocation>${cloverLicenseLocation}</licenseLocation>
+              <cloverDatabase>${cloverDatabase}</cloverDatabase>
               <targetPercentage>50%</targetPercentage>
               <outputDirectory>${project.build.directory}/clover</outputDirectory>
               <generateHtml>true</generateHtml>
               <generateXml>true</generateXml>
+              <excludes>
+					<exclude>**/examples/**/*.java</exclude>
+					<exclude>**/hamlet/*.java</exclude>
+					<exclude>**/ha/proto/*.java</exclude>
+					<exclude>**/protocol/proto/*.java</exclude>
+					<exclude>**/compiler/generated/*.java</exclude>
+					<exclude>**/protobuf/*.java</exclude>
+					<exclude>**/v2/proto/*.java</exclude>
+					<exclude>**/yarn/proto/*.java</exclude>
+					<exclude>**/hadoop/yarn/ipc/*.java</exclude>
+					<exclude>**/yarn/server/resourcemanager/tools/*.java</exclude>                  
+              </excludes>
             </configuration>
             <executions>
               <execution>
@@ -1360,37 +1412,6 @@
             <url>scpexe://people.apache.org/www/hadoop.apache.org/docs/r${project.version}</url>
         </site>
     </distributionManagement>
-
-    <repositories>
-        <repository>
-            <id>apache.snapshots.https</id>
-            <name>${distMgmtSnapshotsName}</name>
-            <url>${distMgmtSnapshotsUrl}</url>
-        </repository>
-        <repository>
-            <id>repository.jboss.org</id>
-            <url>http://repository.jboss.org/nexus/content/groups/public/</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-          <id>patched-surefire-and-plexus-utils</id>
-          <name>patched-surefire-repo</name>
-          <releases>
-            <enabled>true</enabled>
-            <updatePolicy>always</updatePolicy>
-            <checksumPolicy>warn</checksumPolicy>
-          </releases>
-          <snapshots>
-            <enabled>true</enabled>
-            <updatePolicy>always</updatePolicy>
-            <checksumPolicy>fail</checksumPolicy>
-          </snapshots>
-          <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
-          <layout>default</layout>
-        </repository>
-    </repositories>
 
     <licenses>
         <license>

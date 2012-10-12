@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.3-SNAPSHOT</version>
+    <version>0.23.5-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-streaming</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
+  <version>0.23.5-SNAPSHOT</version>
   <description>Apache Hadoop MapReduce Streaming</description>
   <name>Apache Hadoop MapReduce Streaming</name>
   <packaging>jar</packaging>
@@ -140,6 +140,15 @@
          </archive>
         </configuration>
        </plugin>
+       <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+             <environmentVariables>
+                 <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
+             </environmentVariables>
+          </configuration>
+        </plugin>
     </plugins>
   </build>
 </project>

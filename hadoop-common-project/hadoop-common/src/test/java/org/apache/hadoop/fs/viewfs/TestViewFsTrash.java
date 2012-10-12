@@ -24,39 +24,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestTrash;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
   FileSystem fsView;
   Configuration conf;
 
-  static class TestLFS extends LocalFileSystem {
-    Path home;
-    TestLFS() throws IOException {
-      this(new Path(FileSystemTestHelper.TEST_ROOT_DIR));
-    }
-    TestLFS(Path home) throws IOException {
-      super();
-      this.home = home;
-    }
-    public Path getHomeDirectory() {
-      return home;
-    }
-  }
-
   @Before
   public void setUp() throws Exception {
-    fsTarget = FileSystem.getLocal(new Configuration());
+    conf = ViewFileSystemTestSetup.createConfig();
+    fsTarget = FileSystem.getLocal(conf);
     fsTarget.mkdirs(new Path(FileSystemTestHelper.
         getTestRootPath(fsTarget), "dir1"));
-    conf = ViewFileSystemTestSetup.createConfig();
     fsView = ViewFileSystemTestSetup.setupForViewFileSystem(conf, fsTarget);
     conf.set("fs.defaultFS", FsConstants.VIEWFS_URI.toString());
   }

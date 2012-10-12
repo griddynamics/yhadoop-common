@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.mapreduce.security;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -35,28 +34,33 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
-@SuppressWarnings("deprecation")
-@Ignore
 public class TestBinaryTokenFile {
 
+  private static final String KEY_HDFS_FOO_BAR = "HdfsFooBar";
+  private static final String KEY_SECURITY_TOKEN = "key-security-token-file";
+  
   // my sleep class
   static class MySleepMapper extends SleepJob.SleepMapper {
+    
     /**
      * attempts to access tokenCache as from client
      */
@@ -64,41 +68,38 @@ public class TestBinaryTokenFile {
     public void map(IntWritable key, IntWritable value, Context context)
     throws IOException, InterruptedException {
       // get token storage and a key
-      Credentials ts = context.getCredentials();
-      Collection<Token<? extends TokenIdentifier>> dts = ts.getAllTokens();
+      final Credentials credentials = context.getCredentials();
+      final Collection<Token<? extends TokenIdentifier>> dts = credentials.getAllTokens();
       
+      if (dts.size() != 1) { // only the job token 
+        throw new RuntimeException("tokens are not available: size = " + dts.size()); // fail the test
+      }  
       
-      if(dts.size() != 2) { // one job token and one delegation token
-        throw new RuntimeException("tokens are not available"); // fail the test
+      Token<? extends TokenIdentifier> dt = credentials.getToken(new Text(KEY_HDFS_FOO_BAR));
+      if (dt != null) {
+        throw new RuntimeException("This token should *not* be passed into the job context."); 
       }
       
-      Token<? extends TokenIdentifier> dt = ts.getToken(new Text("Hdfs"));
-      
-      //Verify that dt is same as the token in the file
-      String tokenFile = context.getConfiguration().get(
-          "mapreduce.job.credentials.binary");
+      final String tokenFile = context.getConfiguration().get(KEY_SECURITY_TOKEN);
+      if (tokenFile == null) {
+        throw new RuntimeException("Token file key ["+KEY_SECURITY_TOKEN+"] not found in the configuration.");
+      }
       Credentials cred = new Credentials();
       cred.readTokenStorageStream(new DataInputStream(new FileInputStream(
           tokenFile)));
-      for (Token<? extends TokenIdentifier> t : cred.getAllTokens()) {
-        if (!dt.equals(t)) {
-          throw new RuntimeException(
-              "Delegation token in job is not same as the token passed in file."
-                  + " tokenInFile=" + t + ", dt=" + dt);
-        }
-      }
+      Assert.assertNotNull("Token must be correctly read.", cred.getToken(new Text(KEY_HDFS_FOO_BAR)));
       
       super.map(key, value, context);
     }
   }
   
-  class MySleepJob extends SleepJob {
+  static class MySleepJob extends SleepJob {
     @Override
     public Job createJob(int numMapper, int numReducer, 
         long mapSleepTime, int mapSleepCount, 
         long reduceSleepTime, int reduceSleepCount) 
     throws IOException {
-      Job job =  super.createJob(numMapper, numReducer,
+      final Job job = super.createJob(numMapper, numReducer,
            mapSleepTime, mapSleepCount, 
           reduceSleepTime, reduceSleepCount);
       
@@ -113,58 +114,87 @@ public class TestBinaryTokenFile {
     // because security is disabled. Fetch delegation tokens
     // and store in binary token file.
       try {
-        Credentials cred1 = new Credentials();
-        Credentials cred2 = new Credentials();
+        final Credentials cred1 = new Credentials();
         TokenCache.obtainTokensForNamenodesInternal(cred1, new Path[] { p1 },
             job.getConfiguration());
-        for (Token<? extends TokenIdentifier> t : cred1.getAllTokens()) {
-          cred2.addToken(new Text("Hdfs"), t);
+        final Credentials cred2 = new Credentials();
+        for (Token<? extends TokenIdentifier> t: cred1.getAllTokens()) {
+          cred2.addToken(new Text(KEY_HDFS_FOO_BAR), t);
         }
         DataOutputStream os = new DataOutputStream(new FileOutputStream(
             binaryTokenFileName.toString()));
-        cred2.writeTokenStorageToStream(os);
-        os.close();
-        job.getConfiguration().set("mapreduce.job.credentials.binary",
+        try {
+          cred2.writeTokenStorageToStream(os);
+        } finally {
+          os.close();
+        }
+        job.getConfiguration().set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY,
             binaryTokenFileName.toString());
+        // NB: the MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY key now gets deleted from config, 
+        // so its not accessible in the log. So, we use another key to pass the file name into the job:  
+        job.getConfiguration().set(KEY_SECURITY_TOKEN, 
+            binaryTokenFileName.toString());
+        
+        // NB: now (after we set MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY key and written the 
+        // corresponding file) invoke this method one more time to populate the job's credentials with the same tokens:
+        TokenCache.obtainTokensForNamenodesInternal(job.getCredentials(), new Path[] { p1 },
+            job.getConfiguration());
+        
+        Assert.assertNotNull("Token must be deserialized and set into the job.getCredentials()", job.getCredentials().getToken(new Text(KEY_HDFS_FOO_BAR)));
       } catch (IOException e) {
+        e.printStackTrace(System.out);
         Assert.fail("Exception " + e);
       }
     }
   }
   
-  private static MiniMRCluster mrCluster;
+  private static MiniMRYarnCluster mrCluster;
   private static MiniDFSCluster dfsCluster;
+  
   private static final Path TEST_DIR = 
     new Path(System.getProperty("test.build.data","/tmp"));
   private static final Path binaryTokenFileName = new Path(TEST_DIR, "tokenFile.binary");
-  private static int numSlaves = 1;
-  private static JobConf jConf;
+  
+  private static final int numSlaves = 1; // num of data nodes
+  private static final int noOfNMs = 1;
+  
   private static Path p1;
   
   @BeforeClass
   public static void setUp() throws Exception {
-    Configuration conf = new Configuration();
-    dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);
-    jConf = new JobConf(conf);
-    mrCluster = new MiniMRCluster(0, 0, numSlaves, 
-        dfsCluster.getFileSystem().getUri().toString(), 1, null, null, null, 
-        jConf);
-
-    NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem()).startThreads();
-    FileSystem fs = dfsCluster.getFileSystem();
+    final Configuration conf = new Configuration();
     
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
+    conf.set(YarnConfiguration.RM_PRINCIPAL, "jt_id/" + SecurityUtil.HOSTNAME_PATTERN + "@APACHE.ORG");
+    
+    final MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
+    builder.checkExitOnShutdown(true);
+    builder.numDataNodes(numSlaves);
+    builder.format(true);
+    builder.racks(null);
+    dfsCluster = builder.build();
+    
+    mrCluster = new MiniMRYarnCluster(TestBinaryTokenFile.class.getName(), noOfNMs);
+    mrCluster.init(conf);
+    mrCluster.start();
+
+    NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem()).startThreads(); 
+    
+    FileSystem fs = dfsCluster.getFileSystem(); 
     p1 = new Path("file1");
     p1 = fs.makeQualified(p1);
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    if(mrCluster != null)
-      mrCluster.shutdown();
-    mrCluster = null;
-    if(dfsCluster != null)
+    if(mrCluster != null) {
+      mrCluster.stop();
+      mrCluster = null;
+    }
+    if(dfsCluster != null) {
       dfsCluster.shutdown();
-    dfsCluster = null;
+      dfsCluster = null;
+    }
   }
   
   /**
@@ -172,32 +202,25 @@ public class TestBinaryTokenFile {
    * @throws IOException
    */
   @Test
-  public void testBinaryTokenFile() throws IOException {
-    
-    System.out.println("running dist job");
-    
-    // make sure JT starts
-    jConf = mrCluster.createJobConf();
+  public void testBinaryTokenFile() throws Exception {
+    Configuration conf = mrCluster.getConfig();
     
     // provide namenodes names for the job to get the delegation tokens for
-    String nnUri = dfsCluster.getURI(0).toString();
-    jConf.set(MRJobConfig.JOB_NAMENODES, nnUri + "," + nnUri);
-    // job tracker principla id..
-    jConf.set(JTConfig.JT_USER_NAME, "jt_id");
+    final String nnUri = dfsCluster.getURI(0).toString();
+    conf.set(MRJobConfig.JOB_NAMENODES, nnUri + "," + nnUri);
     
     // using argument to pass the file name
-    String[] args = { 
+    final String[] args = { 
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
         };
-     
     int res = -1;
     try {
-      res = ToolRunner.run(jConf, new MySleepJob(), args);
+      res = ToolRunner.run(conf, new MySleepJob(), args);
     } catch (Exception e) {
-      System.out.println("Job failed with" + e.getLocalizedMessage());
+      System.out.println("Job failed with " + e.getLocalizedMessage());
       e.printStackTrace(System.out);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0", res, 0);
+    assertEquals("dist job res is not 0:", 0, res);
   }
 }

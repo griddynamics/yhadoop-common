@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>0.23.3-SNAPSHOT</version>
+    <version>0.23.5-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
+  <version>0.23.5-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-jobclient</name>
 
   <properties>
@@ -125,6 +125,7 @@
         <configuration>
           <environmentVariables>
             <JAVA_HOME>${java.home}</JAVA_HOME>
+            <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
           <additionalClasspathElements>
             <!-- workaround for JobConf#setJarByClass -->

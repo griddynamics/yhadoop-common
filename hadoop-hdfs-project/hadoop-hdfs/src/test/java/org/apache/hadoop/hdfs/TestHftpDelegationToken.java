@@ -23,6 +23,8 @@ import static
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import org.junit.Test;
@@ -41,6 +43,8 @@ public class TestHftpDelegationToken {
 
   @Test
   public void testHdfsDelegationToken() throws Exception {
+    SecurityUtilTestHelper.setTokenServiceUseIp(true);
+
     final Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -53,7 +57,7 @@ public class TestHftpDelegationToken {
        new Text("127.0.0.1:8020"));
     user.addToken(token);
     Token<?> token2 = new Token<TokenIdentifier>
-      (null, null, new Text("other token"), new Text("127.0.0.1:8020"));
+      (null, null, new Text("other token"), new Text("127.0.0.1:8021"));
     user.addToken(token2);
     assertEquals("wrong tokens in user", 2, user.getTokens().size());
     FileSystem fs = 
@@ -133,6 +137,53 @@ public class TestHftpDelegationToken {
     checkTokenSelection(fs, httpsPort+1, conf);
     
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 5);
+  }
+  
+
+  @Test
+  public void testInsecureRemoteCluster()  throws Exception {
+    final ServerSocket socket = new ServerSocket(0); // just reserve a port
+    socket.close();
+    Configuration conf = new Configuration();
+    URI fsUri = URI.create("hsftp://localhost:"+socket.getLocalPort());
+    assertNull(FileSystem.newInstance(fsUri, conf).getDelegationToken(null));
+  }
+
+  @Test
+  public void testSecureClusterError()  throws Exception {
+    final ServerSocket socket = new ServerSocket(0);
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        while (true) { // fetching does a few retries
+          try {
+            Socket s = socket.accept();
+            s.getOutputStream().write(1234);
+            s.shutdownOutput();
+          } catch (Exception e) {
+            break;
+          }
+        }
+      }
+    };
+    t.start();
+
+    try {
+      Configuration conf = new Configuration();
+      URI fsUri = URI.create("hsftp://localhost:"+socket.getLocalPort());
+      Exception ex = null;
+      try {
+        FileSystem.newInstance(fsUri, conf).getDelegationToken(null);
+      } catch (Exception e) {
+        ex = e;
+      }
+      assertNotNull(ex);
+      assertNotNull(ex.getCause());
+      assertEquals("Can't get service ticket for: host/localhost",
+                   ex.getCause().getMessage());
+    } finally {
+      t.interrupt();
+    }
   }
   
   private void checkTokenSelection(HftpFileSystem fs,
