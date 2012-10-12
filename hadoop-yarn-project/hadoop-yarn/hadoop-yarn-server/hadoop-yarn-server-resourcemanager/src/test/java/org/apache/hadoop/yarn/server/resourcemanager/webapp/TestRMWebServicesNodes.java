@@ -146,7 +146,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setHealthReport("test health report");
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null, null, null));
+        new ArrayList<ContainerStatus>(), null, null));
     rm.NMwaitForState(nm3.getNodeId(), RMNodeState.UNHEALTHY);
 
     ClientResponse response =
@@ -229,9 +229,9 @@ public class TestRMWebServicesNodes extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils
-          .checkStringMatch(
+          .checkStringContains(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState.BOGUSSTATE",
+              "org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState.BOGUSSTATE",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);
@@ -361,7 +361,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setHealthReport("test health report");
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null, null, null));
+        new ArrayList<ContainerStatus>(), null, null));
     rm.NMwaitForState(nm1.getNodeId(), RMNodeState.UNHEALTHY);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")

@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -81,6 +83,8 @@ public class TestRMWebServicesApps extends JerseyTest {
       bind(GenericExceptionHandler.class);
       Configuration conf = new Configuration();
       conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, 2);
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
+          ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       bind(RMContext.class).toInstance(rm.getRMContext());
@@ -275,9 +279,9 @@ public class TestRMWebServicesApps extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils
-          .checkStringMatch(
+          .checkStringContains(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState.INVALID_test",
+              "org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState.INVALID_test",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);
@@ -354,9 +358,9 @@ public class TestRMWebServicesApps extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils
-          .checkStringMatch(
+          .checkStringContains(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.api.records.FinalApplicationStatus.INVALID_test",
+              "org.apache.hadoop.yarn.api.records.FinalApplicationStatus.INVALID_test",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);
