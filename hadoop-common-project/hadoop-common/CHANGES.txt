@@ -1,6 +1,67 @@
 Hadoop Change Log
 
-Release 0.23.3 - UNRELEASED
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8755. Print thread dump when tests fail due to timeout. (Andrey
+    Klochkov via atm)
+
+    HADOOP-8789. Tests setLevel(Level.OFF) should be Level.ERROR.
+    (Andy Isaacson via eli)
+
+    HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
+    tests. (Ivan A. Veselovsky via atm)
+
+  OPTIMIZATIONS
+
+    HADOOP-8819. Incorrectly & is used instead of && in some file system 
+    implementations. (Brandon Li via suresh)
+
+  BUG FIXES
+
+    HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout
+    (default behavior in some bash setups (esp. Ubuntu))
+    (Chiristopher Berner and Andy Isaacson via harsh)
+
+    HADOOP-8791. Fix rm command documentation to indicte it deletes
+    files and not directories. (Jing Zhao via suresh)
+
+    HADOOP-8775. MR2 distcp permits non-positive value to -bandwidth option
+    which causes job never to complete. (Sandy Ryza via atm)
+
+    HADOOP-8310. FileContext#checkPath should handle URIs with no port. (atm)
+
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8822. relnotes.py was deleted post mavenization (bobby)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-8843. Old trash directories are never deleted on upgrade
+    from 1.x (jlowe)
+
+    HADOOP-8684. Deadlock between WritableComparator and WritableComparable.
+    (Jing Zhao via suresh)
+
+    HADOOP-8183. Stop using "mapred.used.genericoptions.parser" (harsh)
+
+    HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
+    (Steven Willis via suresh)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 
@@ -197,6 +258,12 @@ Release 0.23.3 - UNRELEASED
     bobby)
 
     HADOOP-8725. MR is broken when security is off (daryn via bobby)
+
+    HADOOP-8726. The Secrets in Credentials are not available to MR tasks
+    (daryn and Benoy Antony via bobby)
+
+    HADOOP-8727. Gracefully deprecate dfs.umaskmode in 2.x onwards (Harsh J
+    via bobby)
 
 Release 0.23.2 - UNRELEASED 
 

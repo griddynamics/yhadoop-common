@@ -1,16 +1,6 @@
-Hadoop MapReduce Change Log
+Hadoop YARN Change Log
 
-Trunk (unreleased changes)
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  BUG FIXES
-
-Branch-2 ( Unreleased changes )
+Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -18,9 +8,26 @@ Branch-2 ( Unreleased changes )
 
   IMPROVEMENTS
 
-  BUG FIXES
+    YARN-138. Ensure default values for minimum/maximum container sizes is 
+    sane. (harsh & sseth via acmurthy)
 
-Release 2.1.0-alpha - Unreleased
+    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
+    (sseth via acmurthy) 
+
+    YARN-116. Add the ability to change the RM include/exclude file without
+    a restart. (xieguiming and Harsh J via sseth)
+
+    YARN-28. Fixed TestCompositeService to not depend on test-order and thus
+    made it pass on JDK7 (Thomas Graves via vinodkv).
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+    
+    YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
+    (Ahmed Radwan via sseth)
+
+Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -28,9 +35,32 @@ Release 2.1.0-alpha - Unreleased
 
   IMPROVEMENTS
 
+  OPTIMIZATIONS
+
   BUG FIXES
 
-Release 0.23.3 - Unreleased
+    YARN-108. FSDownload can create cache directories with the wrong
+    permissions (Jason Lowe via bobby)
+
+    YARN-88. DefaultContainerExecutor can fail to set proper permissions.
+    (Jason Lowe via sseth)
+
+    YARN-42. Modify NM's non-aggregating logs' handler to stop properly so that
+    NMs don't get NPEs on startup errors. (Devaraj K via vinodkv)
+
+    YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
+    event at RUNNING state. (Siddharth Seth via vinodkv)
+
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
+    YARN-93. Diagnostics missing from applications that have finished but
+    failed (jlowe via bobby)
+
+    YARN-106. Nodemanager needs to set permissions of local directories (jlowe
+    via bobby)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 
@@ -60,3 +90,17 @@ Release 0.23.3 - Unreleased
 
     YARN-31. Fix TestDelegationTokenRenewer to not depend on test order so as to
     pass tests on jdk7. (Thomas Graves via vinodkv)
+
+    YARN-63. RMNodeImpl is missing valid transitions from the UNHEALTHY state
+    (Jason Lowe via bobby)
+
+    YARN-66. aggregated logs permissions not set properly (tgraves via bobby)
+
+    YARN-60. Fixed a bug in ResourceManager which causes all NMs to get NPEs and
+    thus causes all containers to be rejected. (vinodkv)
+
+    YARN-68. NodeManager will refuse to shutdown indefinitely due to container
+    log aggregation (daryn via bobby)
+
+    YARN-87. NM ResourceLocalizationService does not set permissions of local 
+    cache directories (Jason Lowe via tgraves)

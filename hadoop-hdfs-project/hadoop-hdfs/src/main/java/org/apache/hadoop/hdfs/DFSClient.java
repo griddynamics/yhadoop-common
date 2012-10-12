@@ -34,6 +34,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
@@ -178,6 +180,7 @@ public class DFSClient implements java.io.Closeable {
     final int writePacketSize;
     final int socketTimeout;
     final int socketCacheCapacity;
+    final long socketCacheExpiry;
     /** Wait time window (in msec) if BlockMissingException is caught */
     final int timeWindow;
     final int nCachedConnRetry;
@@ -212,6 +215,8 @@ public class DFSClient implements java.io.Closeable {
       taskId = conf.get("mapreduce.task.attempt.id", "NONMAPREDUCE");
       socketCacheCapacity = conf.getInt(DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY,
           DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT);
+      socketCacheExpiry = conf.getLong(DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
+          DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT);
       prefetchSize = conf.getLong(DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
           10 * defaultBlockSize);
       timeWindow = conf
@@ -336,7 +341,7 @@ public class DFSClient implements java.io.Closeable {
         nameNodeAddr.getHostName() + ":" + nameNodeAddr.getPort();
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
          DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
-    this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
+    this.socketCache = SocketCache.getInstance(dfsClientConf.socketCacheCapacity, dfsClientConf.socketCacheExpiry);
     if (nameNodeAddr != null && rpcNamenode == null) {
       this.rpcNamenode = DFSUtil.createRPCNamenode(nameNodeAddr, conf, ugi);
       this.namenode = DFSUtil.createNamenode(this.rpcNamenode);
@@ -399,7 +404,7 @@ public class DFSClient implements java.io.Closeable {
    *  until the first output stream is created. The same instance will
    *  be returned until all output streams are closed.
    */
-  public synchronized LeaseRenewer getLeaseRenewer() throws IOException {
+  public LeaseRenewer getLeaseRenewer() throws IOException {
       return LeaseRenewer.getInstance(authority, ugi, this);
   }
 
@@ -506,7 +511,6 @@ public class DFSClient implements java.io.Closeable {
   void abort() {
     clientRunning = false;
     closeAllFilesBeingWritten(true);
-    socketCache.clear();
     try {
       // remove reference to this client and stop the renewer,
       // if there is no more clients under the renewer.
@@ -551,7 +555,6 @@ public class DFSClient implements java.io.Closeable {
   public synchronized void close() throws IOException {
     if(clientRunning) {
       closeAllFilesBeingWritten(false);
-      socketCache.clear();
       clientRunning = false;
       getLeaseRenewer().closeClient(this);
       // close connections to the namenode
@@ -1686,33 +1689,28 @@ public class DFSClient implements java.io.Closeable {
    */
   public boolean mkdirs(String src, FsPermission permission,
       boolean createParent) throws IOException {
-    checkOpen();
     if (permission == null) {
       permission = FsPermission.getDefault();
     }
     FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
-    if(LOG.isDebugEnabled()) {
-      LOG.debug(src + ": masked=" + masked);
-    }
-    try {
-      return namenode.mkdirs(src, masked, createParent);
-    } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-                                     InvalidPathException.class,
-                                     FileAlreadyExistsException.class,
-                                     FileNotFoundException.class,
-                                     ParentNotDirectoryException.class,
-                                     SafeModeException.class,
-                                     NSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
-    }
+    return primitiveMkdir(src, masked, createParent);
   }
-  
+
   /**
    * Same {{@link #mkdirs(String, FsPermission, boolean)} except
    * that the permissions has already been masked against umask.
    */
   public boolean primitiveMkdir(String src, FsPermission absPermission)
+    throws IOException {
+    return primitiveMkdir(src, absPermission, true);
+  }
+
+  /**
+   * Same {{@link #mkdirs(String, FsPermission, boolean)} except
+   * that the permissions has already been masked against umask.
+   */
+  public boolean primitiveMkdir(String src, FsPermission absPermission, 
+    boolean createParent)
     throws IOException {
     checkOpen();
     if (absPermission == null) {
@@ -1724,15 +1722,20 @@ public class DFSClient implements java.io.Closeable {
       LOG.debug(src + ": masked=" + absPermission);
     }
     try {
-      return namenode.mkdirs(src, absPermission, true);
+      return namenode.mkdirs(src, absPermission, createParent);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     InvalidPathException.class,
+                                     FileAlreadyExistsException.class,
+                                     FileNotFoundException.class,
+                                     ParentNotDirectoryException.class,
+                                     SafeModeException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
                                      UnresolvedPathException.class);
     }
   }
-
+  
   /**
    * Get {@link ContentSummary} rooted at the specified directory.
    * @param path The string representation of the path

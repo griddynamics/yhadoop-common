@@ -1554,8 +1554,6 @@ public class BlockManager {
 
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getStorageID(), block)) {
-      assert storedBlock.findDatanode(dn) < 0 : "Block " + block
-        + " in invalidated blocks set should not appear in DN " + dn;
       return storedBlock;
     }
 
@@ -1580,7 +1578,7 @@ public class BlockManager {
     return storedBlock;
   }
 
-  /*
+  /**
    * The next two methods test the various cases under which we must conclude
    * the replica is corrupt, or under construction.  These are laid out
    * as switch statements, on the theory that it is easier to understand
