@@ -20,7 +20,8 @@
   <parent>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-project</artifactId>
-        <version>0.23.3-SNAPSHOT</version>
+        <version>0.23.5-SNAPSHOT</version>
+        <relativePath>hadoop-project/pom.xml</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
