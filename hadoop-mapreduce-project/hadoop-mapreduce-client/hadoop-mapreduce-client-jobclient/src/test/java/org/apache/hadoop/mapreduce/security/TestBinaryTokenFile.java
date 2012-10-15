@@ -146,8 +146,6 @@ public class TestBinaryTokenFile {
         } finally {
           os.close();
         }
-//        job.getConfiguration().set("mapreduce.job.credentials.binary",
-//            binaryTokenFileName.toString());
         job.getConfiguration().set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY,
             binaryTokenFileName.toString());
         // NB: the MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY key now gets deleted from config, 
