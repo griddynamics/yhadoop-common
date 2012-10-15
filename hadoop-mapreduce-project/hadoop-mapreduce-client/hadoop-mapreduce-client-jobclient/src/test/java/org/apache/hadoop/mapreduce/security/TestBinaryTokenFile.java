@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.mapreduce.security;
 
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -38,16 +39,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.SleepJob;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
-
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -55,51 +53,71 @@ import org.junit.Test;
 
 public class TestBinaryTokenFile {
 
-  private static final String KEY_HDFS_FOO_BAR = "HdfsFooBar";
   private static final String KEY_SECURITY_TOKEN = "key-security-token-file";
+  private static final String DELEGATION_TOKEN_KEY = "Hdfs";
   
   // my sleep class
   static class MySleepMapper extends SleepJob.SleepMapper {
-    
     /**
      * attempts to access tokenCache as from client
      */
     @Override
     public void map(IntWritable key, IntWritable value, Context context)
     throws IOException, InterruptedException {
-      // get token storage and a key
-      final Credentials credentials = context.getCredentials();
-      final Collection<Token<? extends TokenIdentifier>> dts = credentials.getAllTokens();
+      // get context token storage:
+      final Credentials contextCredentials = context.getCredentials();
       
-      if (dts.size() != 1) { // only the job token 
-        throw new RuntimeException("tokens are not available: size = " + dts.size()); // fail the test
-      }  
+      final Collection<Token<? extends TokenIdentifier>> contextTokenCollection = contextCredentials.getAllTokens();
+      for (Token<? extends TokenIdentifier> t : contextTokenCollection) {
+        System.out.println("Context token: [" + t + "]");
+      }
+      if (contextTokenCollection.size() != 2) { // one job token and one delegation token
+        throw new RuntimeException("Exactly 2 tokens are expected in the contextTokenCollection: " +
+        		"one job token and one delegation token, but was found " + contextTokenCollection.size() + " tokens."); // fail the test
+      }
       
-      Token<? extends TokenIdentifier> dt = credentials.getToken(new Text(KEY_HDFS_FOO_BAR));
-      if (dt != null) {
-        throw new RuntimeException("This token should *not* be passed into the job context."); 
+      final Token<? extends TokenIdentifier> dt = contextCredentials.getToken(new Text(DELEGATION_TOKEN_KEY));
+      if (dt == null) {
+        throw new RuntimeException("Token for key ["+DELEGATION_TOKEN_KEY+"] not found in the job context.");
+      }
+      
+      String tokenFile0 = context.getConfiguration().get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY);
+      if (tokenFile0 != null) {
+        throw new RuntimeException("Token file key ["+MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY+"] found in the configuration. It should have been removed from the configuration.");
       }
       
       final String tokenFile = context.getConfiguration().get(KEY_SECURITY_TOKEN);
       if (tokenFile == null) {
-        throw new RuntimeException("Token file key ["+KEY_SECURITY_TOKEN+"] not found in the configuration.");
+        throw new RuntimeException("Token file key ["+KEY_SECURITY_TOKEN+"] not found in the job configuration.");
       }
-      Credentials cred = new Credentials();
-      cred.readTokenStorageStream(new DataInputStream(new FileInputStream(
+      final Credentials binaryCredentials = new Credentials();
+      binaryCredentials.readTokenStorageStream(new DataInputStream(new FileInputStream(
           tokenFile)));
-      Assert.assertNotNull("Token must be correctly read.", cred.getToken(new Text(KEY_HDFS_FOO_BAR)));
+      final Collection<Token<? extends TokenIdentifier>> binaryTokenCollection = binaryCredentials.getAllTokens();
+      if (binaryTokenCollection.size() != 1) {
+        throw new RuntimeException("The token collection read from file ["+tokenFile+"] must have size = 1.");
+      }
+      for (Token<? extends TokenIdentifier> binTok: binaryTokenCollection) {
+        System.out.println("The token read from binary file: t = [" + binTok + "]");
+        // Verify that dt is same as the token in the file:
+        if (!dt.equals(binTok)) {
+          throw new RuntimeException(
+              "Delegation token in job is not same as the token passed in file:"
+                  + " tokenInFile=[" + binTok + "], dt=[" + dt + "].");
+        }
+      }
       
       super.map(key, value, context);
     }
   }
   
-  static class MySleepJob extends SleepJob {
+  class MySleepJob extends SleepJob {
     @Override
     public Job createJob(int numMapper, int numReducer, 
         long mapSleepTime, int mapSleepCount, 
         long reduceSleepTime, int reduceSleepCount) 
     throws IOException {
-      final Job job = super.createJob(numMapper, numReducer,
+      Job job =  super.createJob(numMapper, numReducer,
            mapSleepTime, mapSleepCount, 
           reduceSleepTime, reduceSleepCount);
       
@@ -114,12 +132,12 @@ public class TestBinaryTokenFile {
     // because security is disabled. Fetch delegation tokens
     // and store in binary token file.
       try {
-        final Credentials cred1 = new Credentials();
+        Credentials cred1 = new Credentials();
+        Credentials cred2 = new Credentials();
         TokenCache.obtainTokensForNamenodesInternal(cred1, new Path[] { p1 },
             job.getConfiguration());
-        final Credentials cred2 = new Credentials();
-        for (Token<? extends TokenIdentifier> t: cred1.getAllTokens()) {
-          cred2.addToken(new Text(KEY_HDFS_FOO_BAR), t);
+        for (Token<? extends TokenIdentifier> t : cred1.getAllTokens()) {
+          cred2.addToken(new Text(DELEGATION_TOKEN_KEY), t);
         }
         DataOutputStream os = new DataOutputStream(new FileOutputStream(
             binaryTokenFileName.toString()));
@@ -131,18 +149,10 @@ public class TestBinaryTokenFile {
         job.getConfiguration().set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY,
             binaryTokenFileName.toString());
         // NB: the MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY key now gets deleted from config, 
-        // so its not accessible in the log. So, we use another key to pass the file name into the job:  
+        // so it's not accessible in the job's config. So, we use another key to pass the file name into the job configuration:  
         job.getConfiguration().set(KEY_SECURITY_TOKEN, 
             binaryTokenFileName.toString());
-        
-        // NB: now (after we set MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY key and written the 
-        // corresponding file) invoke this method one more time to populate the job's credentials with the same tokens:
-        TokenCache.obtainTokensForNamenodesInternal(job.getCredentials(), new Path[] { p1 },
-            job.getConfiguration());
-        
-        Assert.assertNotNull("Token must be deserialized and set into the job.getCredentials()", job.getCredentials().getToken(new Text(KEY_HDFS_FOO_BAR)));
       } catch (IOException e) {
-        e.printStackTrace(System.out);
         Assert.fail("Exception " + e);
       }
     }
@@ -202,7 +212,7 @@ public class TestBinaryTokenFile {
    * @throws IOException
    */
   @Test
-  public void testBinaryTokenFile() throws Exception {
+  public void testBinaryTokenFile() throws IOException {
     Configuration conf = mrCluster.getConfig();
     
     // provide namenodes names for the job to get the delegation tokens for
