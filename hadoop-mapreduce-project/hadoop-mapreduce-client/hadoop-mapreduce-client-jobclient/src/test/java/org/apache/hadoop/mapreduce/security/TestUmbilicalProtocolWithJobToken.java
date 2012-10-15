@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doReturn;
@@ -43,7 +44,6 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.AnnotatedSecurityInfo;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -51,36 +51,30 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.log4j.Level;
+import org.junit.Ignore;
 import org.junit.Test;
 
-/** Unit tests for using Job Token over RPC. 
- * 
- * System properties required:
- * -Djava.security.krb5.conf=.../hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/target/test-classes/krb5.conf 
- * -Djava.net.preferIPv4Stack=true
- * */
+/** Unit tests for using Job Token over RPC. */
+@Ignore
 public class TestUmbilicalProtocolWithJobToken {
   private static final String ADDRESS = "0.0.0.0";
 
   public static final Log LOG = LogFactory
       .getLog(TestUmbilicalProtocolWithJobToken.class);
-  
+
+  private static Configuration conf;
+  static {
+    conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+  }
+
   static {
     ((Log4JLogger) Client.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) Server.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) SaslRpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) SaslRpcServer.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) SaslInputStream.LOG).getLogger().setLevel(Level.ALL);
-  }
-  
-  private static final Configuration conf;
-  static {
-    conf = new Configuration();
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    
-    UserGroupInformation.setConfiguration(conf);
-    
-    SecurityUtil.setSecurityInfoProviders(new AnnotatedSecurityInfo());
   }
 
   @Test
