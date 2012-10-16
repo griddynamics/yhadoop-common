@@ -102,15 +102,9 @@ public class TestHftpFileSystem {
   
   @AfterClass
   public static void tearDown() throws IOException {
-    if (hdfs != null) {
-      hdfs.close();
-    }
-    if (hftpFs != null) {
-      hftpFs.close();
-    }
-    if (cluster != null) {
-      cluster.shutdown();
-    }
+    hdfs.close();
+    hftpFs.close();
+    cluster.shutdown();
   }
 
   /**

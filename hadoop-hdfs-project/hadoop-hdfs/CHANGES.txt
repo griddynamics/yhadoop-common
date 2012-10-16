@@ -213,8 +213,6 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-3104. Add tests for HADOOP-8175. (Daryn Sharp via szetszwo)
 
-    HDFS-3582. Hook daemon process exit for testing. (eli)
-
   OPTIMIZATIONS
 
   BUG FIXES
