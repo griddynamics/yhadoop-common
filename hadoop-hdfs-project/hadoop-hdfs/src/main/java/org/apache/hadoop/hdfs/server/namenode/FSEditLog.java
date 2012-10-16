@@ -1108,7 +1108,7 @@ public class FSEditLog  {
       segmentStartsAtTxId = HdfsConstants.INVALID_TXID;
     }
 
-    private boolean isActive() {
+    boolean isActive() {
       return stream != null;
     }
 
