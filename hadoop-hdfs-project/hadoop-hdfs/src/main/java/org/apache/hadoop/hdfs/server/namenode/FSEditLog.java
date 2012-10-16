@@ -31,9 +31,6 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-
-import static org.apache.hadoop.util.ExitUtil.terminate;
-
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
@@ -105,6 +102,10 @@ public class FSEditLog  {
   // is an automatic sync scheduled?
   private volatile boolean isAutoSyncScheduled = false;
   
+  // Used to exit in the event of a failure to sync to all journals. It's a
+  // member variable so it can be swapped out for testing.
+  private Runtime runtime = Runtime.getRuntime();
+
   // these are statistics counters.
   private long numTransactions;        // number of transactions
   private long numTransactionsBatchedInSync;
@@ -439,19 +440,15 @@ public class FSEditLog  {
       // Prevent RuntimeException from blocking other log edit sync 
       synchronized (this) {
         if (sync) {
-          try {
-            if (badJournals.size() >= journals.size()) {
-              final String msg =
-                "Could not sync enough journals to persistent storage. "
-                + "Unsynced transactions: " + (txid - synctxid);
-              LOG.fatal(msg, new Exception());
-              terminate(1, msg);
-            }
-          } finally {
-            synctxid = syncStart;
-            // NB: do that if finally block because even if #terminate(2) called above, we must unlock the waiting threads:
-            isSyncRunning = false; 
+          if (badJournals.size() >= journals.size()) {
+            LOG.fatal("Could not sync any journal to persistent storage. " +
+                "Unsynced transactions: " + (txid - synctxid),
+                new Exception());
+            runtime.exit(1);
           }
+
+          synctxid = syncStart;
+          isSyncRunning = false;
         }
         this.notifyAll();
      }
@@ -721,6 +718,14 @@ public class FSEditLog  {
   @VisibleForTesting
   List<JournalAndStream> getJournals() {
     return journals;
+  }
+  
+  /**
+   * Used only by unit tests.
+   */
+  @VisibleForTesting
+  synchronized void setRuntimeForTesting(Runtime runtime) {
+    this.runtime = runtime;
   }
   
   /**
@@ -1108,7 +1113,7 @@ public class FSEditLog  {
       segmentStartsAtTxId = HdfsConstants.INVALID_TXID;
     }
 
-    boolean isActive() {
+    private boolean isActive() {
       return stream != null;
     }
 

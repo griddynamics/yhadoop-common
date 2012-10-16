@@ -53,9 +53,6 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
-
-import static org.apache.hadoop.util.ExitUtil.terminate;
-
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -339,7 +336,7 @@ public class SecondaryNameNode implements Runnable {
       } catch (IOException e) {
         LOG.error("Exception while getting login user", e);
         e.printStackTrace();
-        terminate(-1);
+        Runtime.getRuntime().exit(-1);
       }
       ugi.doAs(new PrivilegedAction<Object>() {
         @Override
@@ -388,9 +385,9 @@ public class SecondaryNameNode implements Runnable {
         LOG.error("Exception in doCheckpoint", e);
         e.printStackTrace();
       } catch (Throwable e) {
-        LOG.fatal("Throwable Exception in doCheckpoint", e);
+        LOG.error("Throwable Exception in doCheckpoint", e);
         e.printStackTrace();
-        terminate(1);
+        Runtime.getRuntime().exit(-1);
       }
     }
   }
@@ -596,7 +593,7 @@ public class SecondaryNameNode implements Runnable {
       //
       // This is a error returned by hadoop server. Print
       // out the first line of the error mesage, ignore the stack trace.
-      exitCode = 1;
+      exitCode = -1;
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
@@ -608,7 +605,7 @@ public class SecondaryNameNode implements Runnable {
       //
       // IO exception encountered locally.
       //
-      exitCode = 1;
+      exitCode = -1;
       LOG.error(cmd + ": " + e.getLocalizedMessage());
     } finally {
       // Does the RPC connection need to be closed?
@@ -636,8 +633,7 @@ public class SecondaryNameNode implements Runnable {
   public static void main(String[] argv) throws Exception {
     CommandLineOpts opts = SecondaryNameNode.parseArgs(argv);
     if (opts == null) {
-      LOG.fatal("Failed to parse options");
-      terminate(1);
+      System.exit(-1);
     }
     
     StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
@@ -646,7 +642,7 @@ public class SecondaryNameNode implements Runnable {
 
     if (opts.getCommand() != null) {
       int ret = secondary.processStartupCommand(opts);
-      terminate(ret);
+      System.exit(ret);
     }
 
     // Create a never ending deamon

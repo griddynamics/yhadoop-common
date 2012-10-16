@@ -19,9 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
@@ -30,19 +33,17 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.fail;
 
 public class TestEditLogJournalFailures {
 
   private int editsPerformed = 0;
+  private Configuration conf;
   private MiniDFSCluster cluster;
   private FileSystem fs;
+  private Runtime runtime;
 
   /**
    * Create the mini cluster for testing and sub in a custom runtime so that
@@ -50,30 +51,22 @@ public class TestEditLogJournalFailures {
    */
   @Before
   public void setUpMiniCluster() throws IOException {
-    setUpMiniCluster(new HdfsConfiguration(), true);
-  }
-  
-  private void setUpMiniCluster(Configuration conf, boolean manageNameDfsDirs)
-      throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-        .manageNameDfsDirs(manageNameDfsDirs).checkExitOnShutdown(false).build();
+    conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    
+    runtime = Runtime.getRuntime();
+    runtime = spy(runtime);
+    doNothing().when(runtime).exit(anyInt());
+    
+    cluster.getNameNode().getFSImage().getEditLog().setRuntimeForTesting(runtime);
   }
    
   @After
   public void shutDownMiniCluster() throws IOException {
-    if (fs != null) {
-      fs.close();
-    }
-    if (cluster != null) {
-      try {
-        cluster.shutdown();
-      } catch (ExitException ee) {
-        // Ignore ExitExceptions as the tests may result in the
-        // NameNode doing an immediate shutdown.
-      }
-    }
+    fs.close();
+    cluster.shutdown();
   }
    
   @Test
@@ -81,9 +74,11 @@ public class TestEditLogJournalFailures {
     assertTrue(doAnEdit());
     // Invalidate one edits journal.
     invalidateEditsDirAtIndex(0, true);
-    // The NN has not terminated (no ExitException thrown)    
+    // Make sure runtime.exit(...) hasn't been called at all yet.
+    assertExitInvocations(0);
     assertTrue(doAnEdit());
-    // The NN has not terminated (no ExitException thrown)
+    // A single journal failure should not result in a call to runtime.exit(...).
+    assertExitInvocations(0);
     assertFalse(cluster.getNameNode().isInSafeMode());
   }
    
@@ -93,17 +88,12 @@ public class TestEditLogJournalFailures {
     // Invalidate both edits journals.
     invalidateEditsDirAtIndex(0, true);
     invalidateEditsDirAtIndex(1, true);
-    // The NN has not terminated (no ExitException thrown)
-    try {
-      doAnEdit();
-      fail("The previous edit could not be synced to any persistent storage, "
-            + "should have halted the NN");
-    } catch (RemoteException re) {
-      assertTrue(re.toString().contains("ExitException"));
-      GenericTestUtils.assertExceptionContains(
-        "Could not sync enough journals to persistent storage. " +
-        "Unsynced transactions: 1", re);
-    }
+    // Make sure runtime.exit(...) hasn't been called at all yet.
+    assertExitInvocations(0);
+    assertTrue(doAnEdit());
+    // The previous edit could not be synced to any persistent storage, should
+    // have halted the NN.
+    assertExitInvocations(1);
   }
   
   @Test
@@ -111,9 +101,11 @@ public class TestEditLogJournalFailures {
     assertTrue(doAnEdit());
     // Invalidate one edits journal.
     invalidateEditsDirAtIndex(0, false);
-    // The NN has not terminated (no ExitException thrown)
+    // Make sure runtime.exit(...) hasn't been called at all yet.
+    assertExitInvocations(0);
     assertTrue(doAnEdit());
-    // A single journal failure should not result in a call to terminate
+    // A single journal failure should not result in a call to runtime.exit(...).
+    assertExitInvocations(0);
     assertFalse(cluster.getNameNode().isInSafeMode());
   }
 
@@ -149,6 +141,21 @@ public class TestEditLogJournalFailures {
   }
 
   /**
+   * Restore the journal at index <code>index</code> with the passed
+   * {@link EditLogOutputStream}.
+   * 
+   * @param index index of the journal to restore.
+   * @param elos the {@link EditLogOutputStream} to put at that index.
+   */
+  private void restoreEditsDirAtIndex(int index, EditLogOutputStream elos) {
+    FSImage fsimage = cluster.getNamesystem().getFSImage();
+    FSEditLog editLog = fsimage.getEditLog();
+
+    FSEditLog.JournalAndStream jas = editLog.getJournals().get(index);
+    jas.setCurrentStreamForTests(elos);
+  }
+
+  /**
    * Do a mutative metadata operation on the file system.
    * 
    * @return true if the operation was successful, false otherwise.
@@ -157,4 +164,13 @@ public class TestEditLogJournalFailures {
     return fs.mkdirs(new Path("/tmp", Integer.toString(editsPerformed++)));
   }
 
+  /**
+   * Make sure that Runtime.exit(...) has been called
+   * <code>expectedExits<code> number of times.
+   * 
+   * @param expectedExits the number of times Runtime.exit(...) should have been called.
+   */
+  private void assertExitInvocations(int expectedExits) {
+    verify(runtime, times(expectedExits)).exit(anyInt());
+  }
 }
