@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>2.0.3-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-api</artifactId>
-  <version>2.0.1-SNAPSHOT</version>
+  <version>2.0.3-SNAPSHOT</version>
   <name>hadoop-yarn-api</name>
 
   <properties>
@@ -69,6 +69,8 @@
                 <argument>src/main/proto/AM_RM_protocol.proto</argument>
                 <argument>src/main/proto/client_RM_protocol.proto</argument>
                 <argument>src/main/proto/container_manager.proto</argument>
+                <argument>src/main/proto/yarn_server_resourcemanager_service_protos.proto</argument>
+                <argument>src/main/proto/RMAdminProtocol.proto</argument>
               </arguments>
             </configuration>
             <goals>

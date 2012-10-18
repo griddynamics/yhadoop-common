@@ -1,8 +1,141 @@
 Hadoop HDFS Change Log
 
-Release 2.0.1-alpha - UNRELEASED
+Release 2.0.3-alpha - Unreleased
   
   INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
+    (Jaimin D Jetly and Jing Zhao via szetszwo)
+
+    HDFS-3912. Detect and avoid stale datanodes for writes.
+    (Jing Zhao via suresh)
+
+    HDFS-4059. Add number of stale DataNodes to metrics. (Jing Zhao via suresh)
+
+  IMPROVEMENTS
+  
+    HDFS-3925. Prettify PipelineAck#toString() for printing to a log
+    (Andrew Wang via todd)
+
+    HDFS-3939. NN RPC address cleanup. (eli)
+
+    HDFS-3373. Change DFSClient input stream socket cache to global static and
+    add a thread to cleanup expired cache entries. (John George via szetszwo)
+
+    HDFS-3896. Add descriptions for dfs.namenode.rpc-address and
+    dfs.namenode.servicerpc-address to hdfs-default.xml. (Jeff Lord via atm)
+
+    HDFS-3996. Add debug log removed in HDFS-3873 back. (eli)
+
+    HDFS-3916. libwebhdfs (C client) code cleanups.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3813. Log error message if security and WebHDFS are enabled but
+    principal/keytab are not configured. (Stephen Chu via atm)
+
+    HDFS-3483. Better error message when hdfs fsck is run against a ViewFS
+    config. (Stephen Fritz via atm)
+
+    HDFS-3682. MiniDFSCluster#init should provide more info when it fails.
+    (todd via eli)
+
+    HDFS-4008. TestBalancerWithEncryptedTransfer needs a timeout. (eli)
+
+    HDFS-4007. Rehabilitate bit-rotted unit tests under
+    hadoop-hdfs-project/hadoop-hdfs/src/test/unit/ 
+    (Colin Patrick McCabe via todd)
+
+    HDFS-4041. Hadoop HDFS Maven protoc calls must not depend on external
+    sh script. (Chris Nauroth via suresh)
+
+    HADOOP-8911. CRLF characters in source and text files.
+    (Raja Aluri via suresh)
+
+    HDFS-4037. Rename the getReplication() method in BlockCollection to
+    getBlockReplication(). (szetszwo)
+
+    HDFS-4036. Remove "throw UnresolvedLinkException" from
+    FSDirectory.unprotectedAddFile(..). (Jing Zhao via szetszwo)
+
+    HDFS-2946. HA: Put a cap on the number of completed edits files retained
+    by the NN. (atm)
+
+    HDFS-4029. GenerationStamp should use an AtomicLong. (eli)
+
+    HDFS-4068. DatanodeID and DatanodeInfo member should be private. (eli)
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+    HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
+    (Andy Isaacson via eli)
+
+    HDFS-3924. Multi-byte id in HdfsVolumeId. (Andrew Wang via atm)
+
+    HDFS-3936. MiniDFSCluster shutdown races with BlocksMap usage. (eli)
+
+    HDFS-3951. datanode web ui does not work over HTTPS when datanode is started in secure mode. (tucu)
+
+    HDFS-3949. NameNodeRpcServer#join should join on both client and
+    server RPC servers. (eli)
+
+    HDFS-3932. NameNode Web UI broken if the rpc-address is set to the wildcard.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3931. TestDatanodeBlockScanner#testBlockCorruptionPolicy2 is broken.
+    (Andy Isaacson via eli)
+
+    HDFS-3964. Make NN log of fs.defaultFS debug rather than info. (eli)
+
+    HDFS-3992. Method org.apache.hadoop.hdfs.TestHftpFileSystem.tearDown()
+    sometimes throws NPEs. (Ivan A. Veselovsky via atm)
+
+    HDFS-3753. Tests don't run with native libraries.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-4000. TestParallelLocalRead fails with "input ByteBuffers
+    must be direct buffers". (Colin Patrick McCabe via eli)
+
+    HDFS-3999. HttpFS OPEN operation expects len parameter, it should be length. (tucu)
+
+    HDFS-4006. TestCheckpoint#testSecondaryHasVeryOutOfDateImage
+    occasionally fails due to unexpected exit. (todd via eli)
+
+    HDFS-4018. testMiniDFSClusterWithMultipleNN is missing some
+    cluster cleanup. (eli)
+
+    HDFS-4020. TestRBWBlockInvalidation may time out. (eli)
+
+    HDFS-4021. Misleading error message when resources are low on the NameNode.
+    (Christopher Conner via atm)
+
+    HDFS-4044. Duplicate ChecksumType definition in HDFS .proto files.
+    (Binglin Chang via suresh)
+
+    HDFS-4049. Fix hflush performance regression due to nagling delays
+    (todd)
+
+    HDFS-3678. Edit log files are never being purged from 2NN. (atm)
+
+    HDFS-4058. DirectoryScanner may fail with IOOB if the directory
+    scanning threads return out of volume order. (eli)
+
+    HDFS-3985. Add timeouts to TestMulitipleNNDataBlockScanner. (todd via eli)
+
+    HDFS-4061. TestBalancer and TestUnderReplicatedBlocks need timeouts. (eli)
+
+    HDFS-3997. OfflineImageViewer incorrectly passes value of imageVersion when
+    visiting IS_COMPRESSED element. (Mithun Radhakrishnan via atm)
+
+    HDFS-4055. TestAuditLogs is flaky. (Binglin Chang via eli)
+
+Release 2.0.2-alpha - 2012-09-07 
+  
+  INCOMPATIBLE CHANGES
+
     HDFS-3446. HostsFileReader silently ignores bad includes/excludes
     (Matthew Jacobs via todd)
 
@@ -27,7 +160,16 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
 
+    HDFS-2793. Add an admin command to trigger an edit log roll. (todd)
+
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via suresh)
+    
   IMPROVEMENTS
+
+    HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak
+    via atm)
 
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
     logging is enabled. (atm)
@@ -236,6 +378,21 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3853. Port MiniDFSCluster enableManagedDfsDirsRedundancy
     option to branch-2. (Colin Patrick McCabe via eli)
 
+    HDFS-3871. Change NameNodeProxies to use RetryUtils.  (Arun C Murthy
+    via szetszwo)
+
+    HDFS-3887. Remove redundant chooseTarget methods in BlockPlacementPolicy.
+    (Jing Zhao via szetszwo)
+
+    HDFS-3888. Clean up BlockPlacementPolicyDefault.  (Jing Zhao via szetszwo)
+
+    HDFS-3907. Allow multiple users for local block readers. (eli)
+
+    HDFS-3510. Editlog pre-allocation is performed prior to writing edits
+    to avoid partial edits case disk out of space. (Colin McCabe via todd)
+
+    HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
@@ -251,6 +408,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-2421. Improve the concurrency of SerialNumberMap in NameNode.
     (Jing Zhao and Weiyan Wang via szetszwo)
+
+    HDFS-3866. HttpFS POM should have property where to download tomcat from (zero45 via tucu)
 
   BUG FIXES
 
@@ -525,6 +684,45 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3864. NN does not update internal file mtime for OP_CLOSE when reading
     from the edit log. (atm)
 
+    HDFS-3837. Fix DataNode.recoverBlock findbugs warning. (eli)
+
+    HDFS-3733. Audit logs should include WebHDFS access. (Andy Isaacson via 
+    eli)
+
+    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
+
+    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
+    read/write. (Brandon Li via suresh)
+
+    HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
+    (omalley)
+
+    HDFS-3879. Fix findbugs warning in TransferFsImage on branch-2. (eli)
+
+    HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
+    (Vinay via umamahesh)
+
+    HDFS-1490. TransferFSImage should timeout (Dmytro Molkov and Vinay via todd)
+
+    HDFS-3828. Block Scanner rescans blocks too frequently.
+    (Andy Isaacson via eli)
+
+    HDFS-3895. hadoop-client must include commons-cli (tucu)
+
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
+
+    HDFS-3664. BlockManager race when stopping active services.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3928. MiniDFSCluster should reset the first ExitException on shutdown. (eli)
+   
+    HDFS-3938. remove current limitations from HttpFS docs. (tucu)
+
+    HDFS-3944. Httpfs resolveAuthority() is not resolving host correctly. (tucu)
+
+    HDFS-3972. Trash emptier fails in secure HA cluster. (todd via eli)
+ 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -541,7 +739,8 @@ Release 2.0.1-alpha - UNRELEASED
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
 
-    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
+    HDFS-3902. TestDatanodeBlockScanner#testBlockCorruptionPolicy is broken.
+    (Andy Isaacson via eli)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -827,7 +1026,7 @@ Release 2.0.0-alpha - 05-23-2012
     (Brandon Li via szetszwo)
 
     HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
-    with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
+    with SPNEGO-based solution. (jghoman, omalley, tucu, and atm via eli)
 
     HDFS-3365. Enable users to disable socket caching in DFS client
     configuration (todd)
@@ -1381,7 +1580,43 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
-Release 0.23.3 - UNRELEASED
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor
+    Robinson via tgraves)
+
+    HDFS-3824. TestHftpDelegationToken fails intermittently with JDK7 (Trevor
+    Robinson via tgraves)
+
+    HDFS-3224. Bug in check for DN re-registration with different storage ID
+    (jlowe)
+
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3831. Failure to renew tokens due to test-sources left in classpath
+    (jlowe via bobby)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 
@@ -1438,6 +1673,15 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
     thread (Kihwal Lee via daryn)
+
+    HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
+
+    HDFS-3873. Hftp assumes security is disabled if token fetch fails (daryn)
+
+    HDFS-3852. TestHftpDelegationToken is broken after HADOOP-8225 (daryn)
+
+    HDFS-3890. filecontext mkdirs doesn't apply umask as expected
+    (Tom Graves via daryn)
 
 Release 0.23.2 - UNRELEASED
 

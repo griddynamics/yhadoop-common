@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,7 +38,6 @@ import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
@@ -491,9 +491,9 @@ public class NameNode {
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
-    LOG.info(getRole() + " up at: " + rpcServer.getRpcAddress());
+    LOG.info(getRole() + " RPC up at: " + rpcServer.getRpcAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
-      LOG.info(getRole() + " service server is up at: "
+      LOG.info(getRole() + " service RPC up at: "
           + rpcServer.getServiceRpcAddress());
     }
   }
@@ -513,7 +513,7 @@ public class NameNode {
     stopHttpServer();
   }
   
-  private void startTrashEmptier(Configuration conf) throws IOException {
+  private void startTrashEmptier(final Configuration conf) throws IOException {
     long trashInterval =
         conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT);
     if (trashInterval == 0) {
@@ -522,7 +522,18 @@ public class NameNode {
       throw new IOException("Cannot start tresh emptier with negative interval."
           + " Set " + FS_TRASH_INTERVAL_KEY + " to a positive value.");
     }
-    this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
+    
+    // This may be called from the transitionToActive code path, in which
+    // case the current user is the administrator, not the NN. The trash
+    // emptier needs to run as the NN. See HDFS-3972.
+    FileSystem fs = SecurityUtil.doAsLoginUser(
+        new PrivilegedExceptionAction<FileSystem>() {
+          @Override
+          public FileSystem run() throws IOException {
+            return FileSystem.get(conf);
+          }
+        });
+    this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
     this.emptier.start();
   }
@@ -619,7 +630,7 @@ public class NameNode {
    */
   public void join() {
     try {
-      this.rpcServer.join();
+      rpcServer.join();
     } catch (InterruptedException ie) {
       LOG.info("Caught interrupted exception ", ie);
     }
@@ -667,27 +678,31 @@ public class NameNode {
   }
 
   /**
-   * Returns the address on which the NameNodes is listening to.
-   * @return namenode rpc address
+   * @return NameNode RPC address
    */
   public InetSocketAddress getNameNodeAddress() {
     return rpcServer.getRpcAddress();
   }
-  
+
   /**
-   * Returns namenode service rpc address, if set. Otherwise returns
-   * namenode rpc address.
-   * @return namenode service rpc address used by datanodes
+   * @return NameNode RPC address in "host:port" string form
    */
-  public InetSocketAddress getServiceRpcAddress() {
-    return rpcServer.getServiceRpcAddress() != null ? rpcServer.getServiceRpcAddress() : rpcServer.getRpcAddress();
+  public String getNameNodeAddressHostPortString() {
+    return NetUtils.getHostPortString(rpcServer.getRpcAddress());
   }
 
   /**
-   * Returns the address of the NameNodes http server, 
-   * which is used to access the name-node web UI.
-   * 
-   * @return the http address.
+   * @return NameNode service RPC address if configured, the
+   *    NameNode RPC address otherwise
+   */
+  public InetSocketAddress getServiceRpcAddress() {
+    final InetSocketAddress serviceAddr = rpcServer.getServiceRpcAddress();
+    return serviceAddr == null ? rpcServer.getRpcAddress() : serviceAddr;
+  }
+
+  /**
+   * @return NameNode HTTP address, used by the Web UI, image transfer,
+   *    and HTTP-based file system clients like Hftp and WebHDFS
    */
   public InetSocketAddress getHttpAddress() {
     return httpServer.getHttpAddress();
@@ -1201,10 +1216,12 @@ public class NameNode {
           NAMESERVICE_SPECIFIC_KEYS);
     }
     
+    // If the RPC address is set use it to (re-)configure the default FS
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
       conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+      LOG.debug("Setting " + FS_DEFAULT_NAME_KEY + " to " + defaultUri.toString());
     }
   }
     
@@ -1226,8 +1243,9 @@ public class NameNode {
     try {
       StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
       NameNode namenode = createNameNode(argv, null);
-      if (namenode != null)
+      if (namenode != null) {
         namenode.join();
+      }
     } catch (Throwable e) {
       LOG.fatal("Exception in namenode join", e);
       terminate(1, e);

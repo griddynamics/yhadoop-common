@@ -169,6 +169,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
@@ -1056,7 +1057,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "setPermission", src, null, null);
       }
       throw e;
@@ -1085,7 +1086,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "setPermission", src, null, resultingStat);
     }
   }
@@ -1102,7 +1103,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "setOwner", src, null, null);
       }
       throw e;
@@ -1140,7 +1141,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "setOwner", src, null, resultingStat);
     }
   }
@@ -1157,6 +1158,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (blocks != null) {
       blockManager.getDatanodeManager().sortLocatedBlocks(
           clientMachine, blocks.getLocatedBlocks());
+      
+      LocatedBlock lastBlock = blocks.getLastLocatedBlock();
+      if (lastBlock != null) {
+        ArrayList<LocatedBlock> lastBlockList = new ArrayList<LocatedBlock>();
+        lastBlockList.add(lastBlock);
+        blockManager.getDatanodeManager().sortLocatedBlocks(
+                              clientMachine, lastBlockList);
+      }
     }
     return blocks;
   }
@@ -1175,7 +1184,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "open", src, null, null);
       }
       throw e;
@@ -1201,7 +1210,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         offset, length, doAccessTime, needBlockToken);  
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "open", src, null, null);
     }
     if (checkSafeMode && isInSafeMode()) {
@@ -1286,7 +1295,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getLoginUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "concat", Arrays.toString(srcs), target, null);
       }
       throw e;
@@ -1336,7 +1345,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getLoginUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "concat", Arrays.toString(srcs), target, resultingStat);
     }
   }
@@ -1387,7 +1396,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     si.add(trgInode);
-    short repl = trgInode.getReplication();
+    short repl = trgInode.getBlockReplication();
 
     // now check the srcs
     boolean endSrc = false; // final src file doesn't have to have full end block
@@ -1407,10 +1416,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       // check replication and blocks size
-      if(repl != srcInode.getReplication()) {
+      if(repl != srcInode.getBlockReplication()) {
         throw new IllegalArgumentException(src + " and " + target + " " +
             "should have same replication: "
-            + repl + " vs. " + srcInode.getReplication());
+            + repl + " vs. " + srcInode.getBlockReplication());
       }
 
       //boolean endBlock=false;
@@ -1453,7 +1462,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "setTimes", src, null, null);
       }
       throw e;
@@ -1480,7 +1489,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         if (auditLog.isInfoEnabled() && isExternalInvocation()) {
           final HdfsFileStatus stat = dir.getFileInfo(src, false);
           logAuditEvent(UserGroupInformation.getCurrentUser(),
-                        Server.getRemoteIp(),
+                        getRemoteIp(),
                         "setTimes", src, null, stat);
         }
       } else {
@@ -1502,7 +1511,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "createSymlink", link, target, null);
       }
       throw e;
@@ -1530,7 +1539,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "createSymlink", link, target, resultingStat);
     }
   }
@@ -1586,7 +1595,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "setReplication", src, null, null);
       }
       throw e;
@@ -1622,7 +1631,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     if (isFile && auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "setReplication", src, null, null);
     }
     return isFile;
@@ -1679,7 +1688,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "create", src, null, null);
       }
       throw e;
@@ -1704,7 +1713,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "create", src, null, stat);
     }
   }
@@ -1853,7 +1862,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       boolean writeToEditLog) throws IOException {
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                                     file.getLocalNameBytes(),
-                                    file.getReplication(),
+                                    file.getBlockReplication(),
                                     file.getModificationTime(),
                                     file.getPreferredBlockSize(),
                                     file.getBlocks(),
@@ -2002,7 +2011,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "append", src, null, null);
       }
       throw e;
@@ -2040,7 +2049,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "append", src, null, null);
     }
     return lb;
@@ -2167,7 +2176,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
-      replication = pendingFile.getReplication();
+      replication = pendingFile.getBlockReplication();
     } finally {
       writeUnlock();
     }
@@ -2411,7 +2420,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * them into invalidateBlocks.
    */
   private void checkReplicationFactor(INodeFile file) {
-    short numExpectedReplicas = file.getReplication();
+    short numExpectedReplicas = file.getBlockReplication();
     Block[] pendingBlocks = file.getBlocks();
     int nrBlocks = pendingBlocks.length;
     for (int i = 0; i < nrBlocks; i++) {
@@ -2506,7 +2515,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "rename", src, dst, null);
       }
       throw e;
@@ -2535,7 +2544,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "rename", src, dst, resultingStat);
     }
     return status;
@@ -2595,7 +2604,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       for (Rename option : options) {
         cmd.append(option.value()).append(" ");
       }
-      logAuditEvent(UserGroupInformation.getCurrentUser(), Server.getRemoteIp(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
                     cmd.toString(), src, dst, resultingStat);
     }
   }
@@ -2633,7 +2642,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "delete", src, null, null);
       }
       throw e;
@@ -2649,7 +2658,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean status = deleteInternal(src, recursive, true);
     if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "delete", src, null, null);
     }
     return status;
@@ -2787,8 +2796,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   HdfsFileStatus getFileInfo(String src, boolean resolveLink) 
     throws AccessControlException, UnresolvedLinkException,
-           StandbyException {
+           StandbyException, IOException {
+    HdfsFileStatus stat = null;
+
     readLock();
+
     try {
       checkOperation(OperationCategory.READ);
 
@@ -2798,10 +2810,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isPermissionEnabled) {
         checkTraverse(src);
       }
-      return dir.getFileInfo(src, resolveLink);
+      stat = dir.getFileInfo(src, resolveLink);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      getRemoteIp(),
+                      "getfileinfo", src, null, null);
+      }
+      throw e;
     } finally {
       readUnlock();
     }
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
+                    getRemoteIp(),
+                    "getfileinfo", src, null, null);
+    }
+    return stat;
   }
 
   /**
@@ -2814,7 +2839,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "mkdirs", src, null, null);
       }
       throw e;
@@ -2839,7 +2864,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
-                    Server.getRemoteIp(),
+                    getRemoteIp(),
                     "mkdirs", src, null, stat);
     }
     return status;
@@ -3114,7 +3139,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (diff > 0) {
       try {
         String path = leaseManager.findPath(fileINode);
-        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getReplication());
+        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getBlockReplication());
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
       }
@@ -3280,7 +3305,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } catch (AccessControlException e) {
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "listStatus", src, null, null);
       }
       throw e;
@@ -3304,7 +3329,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(UserGroupInformation.getCurrentUser(),
-                      Server.getRemoteIp(),
+                      getRemoteIp(),
                       "listStatus", src, null, null);
       }
       dl = dir.getListing(src, startAfter, needLocation);
@@ -4019,7 +4044,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return "Safe mode is OFF.";
       String leaveMsg = "";
       if (areResourcesLow()) {
-        leaveMsg = "Resources are low on NN. Safe mode must be turned off manually";
+        leaveMsg = "Resources are low on NN. " 
+        	+ "Please add or free up more resources then turn off safe mode manually.  "
+        	+ "NOTE:  If you turn off safe mode before adding resources, "
+        	+ "the NN will immediately return to safe mode.";
       } else {
         leaveMsg = "Safe mode will be turned off automatically";
       }
@@ -4383,6 +4411,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.JOURNAL);
+      checkSuperuserPrivilege();
       if (isInSafeMode()) {
         throw new SafeModeException("Log not rolled", safeMode);
       }
@@ -4632,6 +4661,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   public int getNumDeadDataNodes() {
     return getBlockManager().getDatanodeManager().getNumDeadDataNodes();
+  }
+  
+  @Override // FSNamesystemMBean
+  @Metric({"StaleDataNodes", 
+    "Number of datanodes marked stale due to delayed heartbeat"})
+  public int getNumStaleDataNodes() {
+    return getBlockManager().getDatanodeManager().getNumStaleNodes();
   }
 
   /**
@@ -5235,7 +5271,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * RPC call context even if the client exits.
    */
   private boolean isExternalInvocation() {
-    return Server.isRpcInvocation();
+    return Server.isRpcInvocation() || NamenodeWebHdfsMethods.isWebHdfsInvocation();
+  }
+
+  private static InetAddress getRemoteIp() {
+    InetAddress ip = Server.getRemoteIp();
+    if (ip != null) {
+      return ip;
+    }
+    return NamenodeWebHdfsMethods.getRemoteIp();
   }
   
   /**
@@ -5486,5 +5530,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   public void setNNResourceChecker(NameNodeResourceChecker nnResourceChecker) {
     this.nnResourceChecker = nnResourceChecker;
+  }
+
+  @Override
+  public boolean isAvoidingStaleDataNodesForWrite() {
+    return this.blockManager.getDatanodeManager()
+        .isAvoidingStaleDataNodesForWrite();
   }
 }

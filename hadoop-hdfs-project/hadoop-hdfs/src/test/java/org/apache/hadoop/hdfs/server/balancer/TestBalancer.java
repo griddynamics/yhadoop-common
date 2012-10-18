@@ -88,7 +88,7 @@ public class TestBalancer {
   /* create a file with a length of <code>fileLen</code> */
   static void createFile(MiniDFSCluster cluster, Path filePath, long fileLen,
       short replicationFactor, int nnIndex)
-  throws IOException {
+  throws IOException, InterruptedException, TimeoutException {
     FileSystem fs = cluster.getFileSystem(nnIndex);
     DFSTestUtil.createFile(fs, filePath, fileLen, 
         replicationFactor, r.nextLong());
@@ -100,7 +100,7 @@ public class TestBalancer {
    * whose used space to be <code>size</code>
    */
   private ExtendedBlock[] generateBlocks(Configuration conf, long size,
-      short numNodes) throws IOException {
+      short numNodes) throws IOException, InterruptedException, TimeoutException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numNodes).build();
     try {
       cluster.waitActive();
@@ -372,7 +372,7 @@ public class TestBalancer {
    * Test parse method in Balancer#Cli class with threshold value out of
    * boundaries.
    */
-  @Test
+  @Test(timeout=100000)
   public void testBalancerCliParseWithThresholdOutOfBoundaries() {
     String parameters[] = new String[] { "-threshold", "0" };
     String reason = "IllegalArgumentException is expected when threshold value"
@@ -394,7 +394,7 @@ public class TestBalancer {
   
   /** Test a cluster with even distribution, 
    * then a new empty node is added to the cluster*/
-  @Test
+  @Test(timeout=100000)
   public void testBalancer0() throws Exception {
     testBalancer0Internal(new HdfsConfiguration());
   }
@@ -406,7 +406,7 @@ public class TestBalancer {
   }
 
   /** Test unevenly distributed cluster */
-  @Test
+  @Test(timeout=100000)
   public void testBalancer1() throws Exception {
     testBalancer1Internal(new HdfsConfiguration());
   }
@@ -419,7 +419,7 @@ public class TestBalancer {
         new String[] {RACK0, RACK1});
   }
   
-  @Test
+  @Test(timeout=100000)
   public void testBalancer2() throws Exception {
     testBalancer2Internal(new HdfsConfiguration());
   }

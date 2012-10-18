@@ -364,11 +364,10 @@ public class BlockManager {
         replicationThread.join(3000);
       }
     } catch (InterruptedException ie) {
-    } finally {
-      if (pendingReplications != null) pendingReplications.stop();
-      blocksMap.close();
-      datanodeManager.close();
     }
+    datanodeManager.close();
+    pendingReplications.stop();
+    blocksMap.close();
   }
 
   /** @return the datanodeManager */
@@ -999,7 +998,7 @@ public class BlockManager {
 
     // Add this replica to corruptReplicas Map
     corruptReplicas.addToCorruptReplicasMap(b.corrupted, node, b.reason);
-    if (countNodes(b.stored).liveReplicas() >= bc.getReplication()) {
+    if (countNodes(b.stored).liveReplicas() >= bc.getBlockReplication()) {
       // the block is over-replicated so invalidate the replicas immediately
       invalidateBlock(b, node);
     } else if (namesystem.isPopulatingReplQueues()) {
@@ -1137,7 +1136,7 @@ public class BlockManager {
               continue;
             }
 
-            requiredReplication = bc.getReplication();
+            requiredReplication = bc.getBlockReplication();
 
             // get a source data-node
             containingNodes = new ArrayList<DatanodeDescriptor>();
@@ -1223,7 +1222,7 @@ public class BlockManager {
             neededReplications.decrementReplicationIndex(priority);
             continue;
           }
-          requiredReplication = bc.getReplication();
+          requiredReplication = bc.getBlockReplication();
 
           // do not schedule more if enough replicas is already pending
           NumberReplicas numReplicas = countNodes(block);
@@ -1316,8 +1315,9 @@ public class BlockManager {
       final HashMap<Node, Node> excludedNodes,
       final long blocksize) throws IOException {
     // choose targets for the new block to be allocated.
-    final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
-        src, numOfReplicas, client, excludedNodes, blocksize);
+    final DatanodeDescriptor targets[] = blockplacement.chooseTarget(src,
+        numOfReplicas, client, new ArrayList<DatanodeDescriptor>(), false,
+        excludedNodes, blocksize);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to "
           + targets.length + " nodes instead of minReplication (="
@@ -2090,7 +2090,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     }
 
     // handle underReplication/overReplication
-    short fileReplication = bc.getReplication();
+    short fileReplication = bc.getBlockReplication();
     if (!isNeededReplication(storedBlock, fileReplication, numCurrentReplica)) {
       neededReplications.remove(storedBlock, numCurrentReplica,
           num.decommissionedReplicas(), fileReplication);
@@ -2229,7 +2229,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       return MisReplicationResult.UNDER_CONSTRUCTION;
     }
     // calculate current replication
-    short expectedReplication = bc.getReplication();
+    short expectedReplication = bc.getBlockReplication();
     NumberReplicas num = countNodes(block);
     int numCurrentReplica = num.liveReplicas();
     // add to under-replicated queue if need to be
@@ -2728,7 +2728,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     while(it.hasNext()) {
       final Block block = it.next();
       BlockCollection bc = blocksMap.getBlockCollection(block);
-      short expectedReplication = bc.getReplication();
+      short expectedReplication = bc.getBlockReplication();
       NumberReplicas num = countNodes(block);
       int numCurrentReplica = num.liveReplicas();
       if (numCurrentReplica > expectedReplication) {
@@ -2874,7 +2874,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     if (bc == null) { // block does not belong to any file
       return 0;
     }
-    return bc.getReplication();
+    return bc.getBlockReplication();
   }
 
 

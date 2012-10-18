@@ -20,7 +20,6 @@ package org.apache.hadoop.metrics2.lib;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,6 +34,7 @@ import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Watches a stream of long values, maintaining online estimates of specific
@@ -60,8 +60,9 @@ public class MutableQuantiles extends MutableMetric {
   @VisibleForTesting
   protected Map<Quantile, Long> previousSnapshot = null;
 
-  private final ScheduledExecutorService scheduler = Executors
-      .newScheduledThreadPool(1);
+  private static final ScheduledExecutorService scheduler = Executors
+      .newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true)
+          .setNameFormat("MutableQuantiles-%d").build());
 
   /**
    * Instantiates a new {@link MutableQuantiles} for a metric that rolls itself
@@ -148,14 +149,8 @@ public class MutableQuantiles extends MutableMetric {
     @Override
     public void run() {
       synchronized (parent) {
-        try {
-          parent.previousCount = parent.estimator.getCount();
-          parent.previousSnapshot = parent.estimator.snapshot();
-        } catch (IOException e) {
-          // Couldn't get a new snapshot because the window was empty
-          parent.previousCount = 0;
-          parent.previousSnapshot = null;
-        }
+        parent.previousCount = parent.estimator.getCount();
+        parent.previousSnapshot = parent.estimator.snapshot();
         parent.estimator.clear();
       }
       parent.setChanged();

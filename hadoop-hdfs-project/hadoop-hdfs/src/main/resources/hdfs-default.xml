@@ -41,11 +41,34 @@
 </property>
 
 <property>
+  <name>dfs.namenode.rpc-address</name>
+  <value></value>
+  <description>
+    RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
+    the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
+    dfs.namenode.rpc-address.EXAMPLENAMESERVICE
+    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.servicerpc-address</name>
+  <value></value>
+  <description>
+    RPC address for HDFS Services communication. BackupNode, Datanodes and all other services should be
+    connecting to this address if it is configured. In the case of HA/Federation where multiple namenodes exist,
+    the name service id is added to the name e.g. dfs.namenode.servicerpc-address.ns1
+    dfs.namenode.rpc-address.EXAMPLENAMESERVICE
+    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+    If the value of this property is unset the value of dfs.namenode.rpc-address will be used as the default.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.secondary.http-address</name>
   <value>0.0.0.0:50090</value>
   <description>
     The secondary namenode http server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -54,7 +77,6 @@
   <value>0.0.0.0:50010</value>
   <description>
     The datanode server address and port for data transfer.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -63,7 +85,6 @@
   <value>0.0.0.0:50075</value>
   <description>
     The datanode http server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -72,7 +93,6 @@
   <value>0.0.0.0:50020</value>
   <description>
     The datanode ipc server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -87,7 +107,6 @@
   <value>0.0.0.0:50070</value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -636,6 +655,20 @@
   edits in order to start again.
   Typically each edit is on the order of a few hundred bytes, so the default
   of 1 million edits should be on the order of hundreds of MBs or low GBs.
+
+  NOTE: Fewer extra edits may be retained than value specified for this setting
+  if doing so would mean that more segments would be retained than the number
+  configured by dfs.namenode.max.extra.edits.segments.retained.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.max.extra.edits.segments.retained</name>
+  <value>10000</value>
+  <description>The maximum number of extra edit log segments which should be retained
+  beyond what is minimally necessary for a NN restart. When used in conjunction with
+  dfs.namenode.num.extra.edits.retained, this configuration property serves to cap
+  the number of extra edits files to a reasonable value.
   </description>
 </property>
 
@@ -958,6 +991,60 @@
 <property>
   <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>
   <value>${dfs.web.authentication.kerberos.principal}</value>
+</property>
+
+<property>
+  <name>dfs.namenode.check.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to check "stale" datanodes whose 
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. If this configuration 
+    parameter is set as true, the system will keep track 
+    of the number of stale datanodes. The stale datanodes will be 
+    moved to the end of the node list returned for reading. See
+    dfs.namenode.avoid.write.stale.datanode for details on how this 
+    affects writes. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.avoid.write.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid writing to "stale" datanodes whose 
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. If this configuration 
+    parameter and dfs.namenode.check.stale.datanode are both set as true, 
+    the writing will avoid using stale datanodes unless a high number 
+    of datanodes are marked as stale. See 
+    dfs.namenode.write.stale.datanode.ratio for details.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.stale.datanode.interval</name>
+  <value>30000</value>
+  <description>
+    Default time interval for marking a datanode as "stale", i.e., if 
+    the namenode has not received heartbeat msg from a datanode for 
+    more than this time interval, the datanode will be marked and treated 
+    as "stale" by default. The stale interval cannot be too small since 
+    otherwise this may cause too frequent change of stale states. 
+    We thus set a minimum stale interval value (the default value is 3 times 
+    of heartbeat interval) and guarantee that the stale interval cannot be less
+    than the minimum value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.write.stale.datanode.ratio</name>
+  <value>0.5f</value>
+  <description>
+    When the ratio of number stale datanodes to total datanodes marked
+    is greater than this ratio, stop avoiding writing to stale nodes so
+    as to prevent causing hotspots.
+  </description>
 </property>
 
 <property>

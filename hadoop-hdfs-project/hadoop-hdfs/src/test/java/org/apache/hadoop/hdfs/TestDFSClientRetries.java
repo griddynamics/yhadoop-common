@@ -778,7 +778,7 @@ public class TestDFSClientRetries {
   }
 
   /** Test client retry with namenode restarting. */
-  @Test
+  @Test(timeout=300000)
   public void testNamenodeRestart() throws Exception {
     namenodeRestartTest(new Configuration(), false);
   }
@@ -1037,8 +1037,7 @@ public class TestDFSClientRetries {
    * way. See HDFS-3067.
    */
   @Test
-  public void testRetryOnChecksumFailure()
-      throws UnresolvedLinkException, IOException {
+  public void testRetryOnChecksumFailure() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
       new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

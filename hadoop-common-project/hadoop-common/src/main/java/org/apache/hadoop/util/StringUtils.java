@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
+import com.google.common.net.InetAddresses;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -77,6 +78,9 @@ public class StringUtils {
    * @return the hostname to the first dot
    */
   public static String simpleHostname(String fullHostname) {
+    if (InetAddresses.isInetAddress(fullHostname)) {
+      return fullHostname;
+    }
     int offset = fullHostname.indexOf('.');
     if (offset != -1) {
       return fullHostname.substring(0, offset);
@@ -604,7 +608,8 @@ public class StringUtils {
             "  build = " + VersionInfo.getUrl() + " -r "
                          + VersionInfo.getRevision()  
                          + "; compiled by '" + VersionInfo.getUser()
-                         + "' on " + VersionInfo.getDate()}
+                         + "' on " + VersionInfo.getDate(),
+            "  java = " + System.getProperty("java.version") }
         )
       );
 
