@@ -507,8 +507,6 @@
                     <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
                       <arg line="VERBOSE=1"/>
                     </exec>
-                    <!-- IV: this is a temporary workaround to provide correct version-less hadoop library file "libhadoop.so" instead of the missing symlink: -->
-                    <copy file="${project.build.directory}/native/target/usr/local/lib/libhadoop.so.1.0.0" tofile="${project.build.directory}/native/target/usr/local/lib/libhadoop.so" failonerror="false"/>
                   </target>
                 </configuration>
               </execution>
