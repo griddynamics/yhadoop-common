@@ -66,6 +66,11 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4068. DatanodeID and DatanodeInfo member should be private. (eli)
 
+    HDFS-4073. Two minor improvements to FSDirectory.  (Jing Zhao via szetszwo)
+
+    HDFS-4074. Remove the unused default constructor from INode.  (Brandon Li
+    via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -131,6 +136,9 @@ Release 2.0.3-alpha - Unreleased
     visiting IS_COMPRESSED element. (Mithun Radhakrishnan via atm)
 
     HDFS-4055. TestAuditLogs is flaky. (Binglin Chang via eli)
+
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
   
