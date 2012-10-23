@@ -126,6 +126,13 @@ public class TestLinuxContainerExecutorWithMocks {
         StringUtils.join(",", dirsHandler.getLocalDirs()),
         StringUtils.join(",", dirsHandler.getLogDirs())),
         readMockParams());
+
+		Configuration conf = mockExec.getConf();
+		conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, "/bin/sh");
+		mockExec.setConf(conf);
+		ret = mockExec.launchContainer(container, scriptPath, tokensPath, appSubmitter, appId, workDir, dirsHandler.getLocalDirs(), dirsHandler.getLogDirs());
+		assertEquals(127, ret);
+  
   }
 
   @Test
