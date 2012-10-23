@@ -54,7 +54,7 @@
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
 
-    <maven-surefire-plugin-version>2.12.1-FOO</maven-surefire-plugin-version>
+    <maven-surefire-plugin-version>2.12.3-GD</maven-surefire-plugin-version>
   </properties>
 
      <repositories>
