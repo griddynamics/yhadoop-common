@@ -9,6 +9,3 @@
 target
 hadoop-hdfs-project/hadoop-hdfs/downloads
 hadoop-hdfs-project/hadoop-hdfs-httpfs/downloads
-hadoop-common-project/hadoop-common/build
-hadoop-hdfs-project/hadoop-hdfs/build
-hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/.clover
