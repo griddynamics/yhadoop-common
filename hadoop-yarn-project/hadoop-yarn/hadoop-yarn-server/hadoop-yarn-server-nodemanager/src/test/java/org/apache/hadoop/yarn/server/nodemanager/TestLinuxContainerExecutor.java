@@ -271,11 +271,16 @@ public class TestLinuxContainerExecutor {
   }
   @Test
   public void testInit() throws Exception {
-	  Assert.assertEquals(1, 1);
 	  Configuration config= new Configuration();
 	  config.set("yarn.nodemanager.linux-container-executor.path", "echo");
-	  //yarn.nodemanager.linux-container-executor.path
 	  LinuxContainerExecutor executer= new LinuxContainerExecutor();
+	  executer.setConf(config);
+	  executer.init();
+	  
+	  // try to get exception
+	   config= new Configuration();
+	  config.set("yarn.nodemanager.linux-container-executor.path", "/bin/sh");
+	  executer= new LinuxContainerExecutor();
 	  executer.setConf(config);
 	  executer.init();
   }
