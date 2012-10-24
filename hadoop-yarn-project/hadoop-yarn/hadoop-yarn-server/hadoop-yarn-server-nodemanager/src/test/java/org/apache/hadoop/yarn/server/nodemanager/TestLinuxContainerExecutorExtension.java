@@ -32,12 +32,11 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -45,8 +44,6 @@ import org.junit.Test;
 
 
 public class TestLinuxContainerExecutorExtension {
-  private static final Log LOG = LogFactory
-      .getLog(TestLinuxContainerExecutorExtension.class);
   
   private static File workSpace = new File("target",
       TestLinuxContainerExecutorExtension.class.getName() + "-workSpace");
@@ -55,7 +52,7 @@ public class TestLinuxContainerExecutorExtension {
   @Test
   public void testInit() throws Exception {
 	  Configuration config= new Configuration();
-	  String tmpExecFile=writeScriptLoclgizeFile();
+	  String tmpExecFile=writeScriptFile();
 	  config.set("yarn.nodemanager.linux-container-executor.path", tmpExecFile);
 	  
 	  LinuxContainerExecutor executer= new LinuxContainerExecutor();
@@ -74,14 +71,19 @@ public class TestLinuxContainerExecutorExtension {
 	  config.set("yarn.nodemanager.linux-container-executor.path", "/bin/sh");
 	  LinuxContainerExecutor executer= new LinuxContainerExecutor();
 	  executer.setConf(config);
+	  try{
 	  executer.init();
+	  }catch(IOException e){
+		  ExitCodeException parent=(ExitCodeException)e.getCause();
+		  Assert.assertEquals(parent.getExitCode(), 2);
+	  }
 	// should be born IOException !  
 	
   }
 	@SuppressWarnings("unchecked")
 	@Test
 	public void testStartLocalizer() throws Exception {
-		 String shFile=writeScriptLoclgizeFile();
+		 String shFile=writeScriptFile();
 		
 		 
 		 LinuxContainerExecutor executer = new LinuxContainerExecutor();
@@ -123,7 +125,7 @@ public class TestLinuxContainerExecutorExtension {
 		commandfile.delete();
 	}
 	
-	 private String writeScriptLoclgizeFile() throws IOException {
+	 private String writeScriptFile() throws IOException {
 		    File f = File.createTempFile("TestLinuxLocalizeContainerExecutor", ".sh");
 		    f.deleteOnExit();
 		    PrintWriter p = new PrintWriter(new FileOutputStream(f));
