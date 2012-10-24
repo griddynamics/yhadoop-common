@@ -38,8 +38,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestCapacitySchedulerExtention {
-  private static final Log LOG = LogFactory.getLog(TestCapacitySchedulerExtention.class);
+public class TestCapacitySchedulerExtension {
+  private static final Log LOG = LogFactory.getLog(TestCapacitySchedulerExtension.class);
   
   private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
   private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";

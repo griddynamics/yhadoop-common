@@ -44,12 +44,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Reso
 import org.junit.Test;
 
 
-public class TestLinuxContainerExecutorExtention {
+public class TestLinuxContainerExecutorExtension {
   private static final Log LOG = LogFactory
-      .getLog(TestLinuxContainerExecutorExtention.class);
+      .getLog(TestLinuxContainerExecutorExtension.class);
   
   private static File workSpace = new File("target",
-      TestLinuxContainerExecutorExtention.class.getName() + "-workSpace");
+      TestLinuxContainerExecutorExtension.class.getName() + "-workSpace");
   
   
   @Test
