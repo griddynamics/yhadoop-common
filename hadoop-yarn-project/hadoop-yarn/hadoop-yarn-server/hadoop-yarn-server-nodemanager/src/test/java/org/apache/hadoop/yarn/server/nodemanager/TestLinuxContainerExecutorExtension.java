@@ -50,193 +50,196 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestLinuxContainerExecutorExtension {
-	 
-	private static File workSpace = new File("target", TestLinuxContainerExecutorExtension.class.getName() + "-workSpace");
-	private LinuxContainerExecutor exec = null;
-	private String appSubmitter = null;
-	private LocalDirsHandlerService dirsHandler;
 
-	@Before
-	public void setup() throws Exception {
-		FileContext files = FileContext.getLocalFSFileContext();
-		Path workSpacePath = new Path(workSpace.getAbsolutePath());
-		files.mkdir(workSpacePath, null, true);
-		workSpace.setReadable(true, false);
-		workSpace.setExecutable(true, false);
-		workSpace.setWritable(true, false);
-		File localDir = new File(workSpace.getAbsoluteFile(), "localDir");
-		files.mkdir(new Path(localDir.getAbsolutePath()), new FsPermission("777"), false);
-		File logDir = new File(workSpace.getAbsoluteFile(), "logDir");
-		files.mkdir(new Path(logDir.getAbsolutePath()), new FsPermission("777"), false);
-	
-		Configuration conf = new Configuration(true);
+  private static File workSpace = new File("target", TestLinuxContainerExecutorExtension.class.getName() + "-workSpace");
+  private LinuxContainerExecutor exec = null;
+  private String appSubmitter = null;
+  private LocalDirsHandlerService dirsHandler;
 
-		conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, "/bin/sh");
-		exec = new LinuxContainerExecutor();
-		exec.setConf(conf);
-		conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
-		conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.getAbsolutePath());
-		dirsHandler = new LocalDirsHandlerService();
-		dirsHandler.init(conf);
-	
-		appSubmitter = System.getProperty("application.submitter");
-		if (appSubmitter == null || appSubmitter.isEmpty()) {
-			appSubmitter = "nobody";
-		}
-	}
+  @Before
+  public void setup() throws Exception {
+    FileContext files = FileContext.getLocalFSFileContext();
+    Path workSpacePath = new Path(workSpace.getAbsolutePath());
+    files.mkdir(workSpacePath, null, true);
+    workSpace.setReadable(true, false);
+    workSpace.setExecutable(true, false);
+    workSpace.setWritable(true, false);
+    File localDir = new File(workSpace.getAbsoluteFile(), "localDir");
+    files.mkdir(new Path(localDir.getAbsolutePath()), new FsPermission("777"), false);
+    File logDir = new File(workSpace.getAbsoluteFile(), "logDir");
+    files.mkdir(new Path(logDir.getAbsolutePath()), new FsPermission("777"), false);
 
-	@After
-	public void tearDown() throws Exception {
-		FileContext.getLocalFSFileContext().delete(new Path(workSpace.getAbsolutePath()), true);
-	}
+    Configuration conf = new Configuration(true);
 
-	@Test
-	public void testInit() throws Exception {
-		Configuration config = new Configuration();
-		String tmpExecFile = writeScriptFile();
-		config.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, tmpExecFile);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, "/bin/sh");
+    exec = new LinuxContainerExecutor();
+    exec.setConf(conf);
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.getAbsolutePath());
+    dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
 
-		LinuxContainerExecutor executer = new LinuxContainerExecutor();
-		executer.setConf(config);
-		executer.init();
-		File tmpFile = new File("--checksetup");
-		List<String> commandLine = FileUtils.readLines(tmpFile);
-		Assert.assertEquals(commandLine.size(), 1);
-		Assert.assertEquals(commandLine.get(0), "--checksetup");
+    appSubmitter = System.getProperty("application.submitter");
+    if (appSubmitter == null || appSubmitter.isEmpty()) {
+      appSubmitter = "nobody";
+    }
+  }
 
-	}
+  @After
+  public void tearDown() throws Exception {
+    FileContext.getLocalFSFileContext().delete(new Path(workSpace.getAbsolutePath()), true);
+  }
 
-	@Test
-	public void testInitException() throws Exception {
-		Configuration config = new Configuration();
-		config.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, "/bin/sh");
+  @Test
+  public void testInit() throws Exception {
+    Configuration config = new Configuration();
+    String tmpExecFile = writeScriptFile();
+    config.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, tmpExecFile);
 
-		LinuxContainerExecutor executer = new LinuxContainerExecutor();
-		executer.setConf(config);
-		try {
-			executer.init();
-			Assert.fail();
-		} catch (IOException e) {
-			ExitCodeException parent = (ExitCodeException) e.getCause();
-			Assert.assertEquals(parent.getExitCode(), 2);
-		}
+    LinuxContainerExecutor executer = new LinuxContainerExecutor();
+    executer.setConf(config);
+    executer.init();
+    File tmpFile = new File("--checksetup");
+    List<String> commandLine = FileUtils.readLines(tmpFile);
+    Assert.assertEquals(commandLine.size(), 1);
+    Assert.assertEquals(commandLine.get(0), "--checksetup");
 
-	}
+  }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void testStartLocalizer() throws Exception {
-		String shFile = writeScriptFile();
+  @Test
+  public void testInitException() throws Exception {
+    Configuration config = new Configuration();
+    config.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, "/bin/sh");
 
-		LinuxContainerExecutor executer = new LinuxContainerExecutor();
-		Configuration conf = new Configuration(true);
-		conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, shFile);
-		executer = new LinuxContainerExecutor();
-		executer.setConf(conf);
-		conf.set(YarnConfiguration.NM_LOCAL_DIRS, workSpace.getAbsoluteFile().getAbsolutePath());
-		conf.set(YarnConfiguration.NM_LOG_DIRS, workSpace.getAbsoluteFile().getAbsolutePath());
-		LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
-		dirsHandler.init(conf);
+    LinuxContainerExecutor executer = new LinuxContainerExecutor();
+    executer.setConf(config);
+    try {
+      executer.init();
+      Assert.fail();
+    } catch (IOException e) {
+      ExitCodeException parent = (ExitCodeException) e.getCause();
+      Assert.assertEquals(parent.getExitCode(), 2);
+    }
 
-		Path nmPrivateCTokensPath = dirsHandler.getLocalPathForWrite(ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
-				+ String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, "en"));
-		InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", 8040);
-		File tmpFile = File.createTempFile("test", "txt");
-		List<String> lastArgument = Arrays.asList(tmpFile.getAbsolutePath());
+  }
 
-		executer.startLocalizer(nmPrivateCTokensPath, address, "test", "application_0", "12345", lastArgument, Collections.EMPTY_LIST);
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testStartLocalizer() throws Exception {
+    String shFile = writeScriptFile();
 
-		List<String> commandLine = FileUtils.readLines(tmpFile);
-		Assert.assertEquals(commandLine.size(), 1);
+    LinuxContainerExecutor executer = new LinuxContainerExecutor();
+    Configuration conf = new Configuration(true);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, shFile);
+    executer = new LinuxContainerExecutor();
+    executer.setConf(conf);
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, workSpace.getAbsoluteFile().getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, workSpace.getAbsoluteFile().getAbsolutePath());
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
 
-		String[] parameters = commandLine.get(0).split(" ");
-		Assert.assertEquals(parameters.length, 16);
-		Assert.assertEquals(parameters[0], "test");
-		Assert.assertEquals(parameters[2], "application_0");
-		Assert.assertEquals(parameters[6], "-classpath");
-		Assert.assertEquals(parameters[5].indexOf("java") > 0, true);
-		Assert.assertEquals(parameters[10], "test");
-		Assert.assertEquals(parameters[11], "application_0");
-		Assert.assertEquals(parameters[12], "12345");
-		Assert.assertEquals(parameters[13], "localhost");
-		Assert.assertEquals(parameters[14], "8040");
+    Path nmPrivateCTokensPath = dirsHandler.getLocalPathForWrite(ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
+        + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, "en"));
+    InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", 8040);
+    File tmpFile = File.createTempFile("test", "txt");
+    List<String> lastArgument = Arrays.asList(tmpFile.getAbsolutePath());
 
-		tmpFile.delete();
-		File commandfile = new File(shFile);
-		commandfile.delete();
-	}
+    executer.startLocalizer(nmPrivateCTokensPath, address, "test", "application_0", "12345", lastArgument, Collections.EMPTY_LIST);
 
-	private String writeScriptFile() throws IOException {
-		File f = File.createTempFile("TestLinuxLocalizeContainerExecutor", ".sh");
-		f.deleteOnExit();
-		PrintWriter p = new PrintWriter(new FileOutputStream(f));
-		p.println("#!/bin/sh");
-		p.println("eval \"last=\\${$#}\"");
-		p.println("echo $@ >$last");
+    List<String> commandLine = FileUtils.readLines(tmpFile);
+    Assert.assertEquals(commandLine.size(), 1);
 
-		p.println();
-		p.close();
-		FsPermission permission = FsPermission.getDefault();
-		FileContext files = FileContext.getLocalFSFileContext();
+    String[] parameters = commandLine.get(0).split(" ");
+    Assert.assertEquals(parameters.length, 16);
+    Assert.assertEquals(parameters[0], "test");
+    Assert.assertEquals(parameters[2], "application_0");
+    Assert.assertEquals(parameters[6], "-classpath");
+    Assert.assertEquals(parameters[5].indexOf("java") > 0, true);
+    Assert.assertEquals(parameters[10], "test");
+    Assert.assertEquals(parameters[11], "application_0");
+    Assert.assertEquals(parameters[12], "12345");
+    Assert.assertEquals(parameters[13], "localhost");
+    Assert.assertEquals(parameters[14], "8040");
 
-		files.setPermission(new Path(f.getAbsolutePath()), permission);
+    tmpFile.delete();
+    File commandfile = new File(shFile);
+    commandfile.delete();
+  }
 
-		return f.getAbsolutePath();
-	}
+  private String writeScriptFile() throws IOException {
+    File f = File.createTempFile("TestLinuxLocalizeContainerExecutor", ".sh");
+    f.deleteOnExit();
+    PrintWriter p = new PrintWriter(new FileOutputStream(f));
+    p.println("#!/bin/sh");
+    p.println("eval \"last=\\${$#}\"");
+    p.println("echo $@ >$last");
 
-	@Test
-	public void testErrorLauncher() throws IOException  {
-		int result=runAndBlock("/bin/badcommand");
-		Assert.assertEquals(result, 127);
-	}
-	private int runAndBlock( String cmd) throws IOException {
-		String appId = "APP_" + getNextId();
-		ContainerId cId=getNextContainerId();
-		Container container = mock(Container.class);
-		ContainerLaunchContext context = mock(ContainerLaunchContext.class);
-		HashMap<String, String> env = new HashMap<String, String>();
+    p.println();
+    p.close();
+    FsPermission permission = FsPermission.getDefault();
+    FileContext files = FileContext.getLocalFSFileContext();
 
-		when(container.getContainerID()).thenReturn(cId);
-		when(container.getLaunchContext()).thenReturn(context);
+    files.setPermission(new Path(f.getAbsolutePath()), permission);
 
-		when(context.getEnvironment()).thenReturn(env);
+    return f.getAbsolutePath();
+  }
 
-		String script = writeScriptFile(cmd);
+  @Test
+  public void testErrorLauncher() throws IOException {
+    int result = runAndBlock("/bin/badcommand");
+    Assert.assertEquals(result, 127);
+  }
 
-		Path scriptPath = new Path(script);
-		Path tokensPath = new Path("/dev/null");
-		Path workDir = new Path(workSpace.getAbsolutePath());
-		Path pidFile = new Path(workDir, "pid.txt");
+  private int runAndBlock(String cmd) throws IOException {
+    String appId = "APP_" + getNextId();
+    ContainerId cId = getNextContainerId();
+    Container container = mock(Container.class);
+    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
+    HashMap<String, String> env = new HashMap<String, String>();
 
-		exec.activateContainer(cId, pidFile);
-		return exec.launchContainer(container, scriptPath, tokensPath, appSubmitter, appId, workDir, dirsHandler.getLocalDirs(), dirsHandler.getLogDirs());
-	}
-	 private ContainerId getNextContainerId() {
-		    ContainerId cId = mock(ContainerId.class);
-		    String id = "CONTAINER_"+getNextId();
-		    when(cId.toString()).thenReturn(id);
-		    return cId;
-		  }
-	private String writeScriptFile(String... cmd) throws IOException {
-		File f = File.createTempFile("TestLinuxContainerExecutor", ".sh");
-		f.deleteOnExit();
-		PrintWriter p = new PrintWriter(new FileOutputStream(f));
-		p.println("#!/bin/sh");
-		p.print("exec");
-		for (String part : cmd) {
-			p.print(" '");
-			p.print(part.replace("\\", "\\\\").replace("'", "\\'"));
-			p.print("'");
-		}
-		p.println();
-		p.close();
-		return f.getAbsolutePath();
-	}
+    when(container.getContainerID()).thenReturn(cId);
+    when(container.getLaunchContext()).thenReturn(context);
 
-	private int id = 0;
+    when(context.getEnvironment()).thenReturn(env);
 
-	private synchronized int getNextId() {
-		id += 1;
-		return id;
-	}
+    String script = writeScriptFile(cmd);
+
+    Path scriptPath = new Path(script);
+    Path tokensPath = new Path("/dev/null");
+    Path workDir = new Path(workSpace.getAbsolutePath());
+    Path pidFile = new Path(workDir, "pid.txt");
+
+    exec.activateContainer(cId, pidFile);
+    return exec.launchContainer(container, scriptPath, tokensPath, appSubmitter, appId, workDir, dirsHandler.getLocalDirs(), dirsHandler.getLogDirs());
+  }
+
+  private ContainerId getNextContainerId() {
+    ContainerId cId = mock(ContainerId.class);
+    String id = "CONTAINER_" + getNextId();
+    when(cId.toString()).thenReturn(id);
+    return cId;
+  }
+
+  private String writeScriptFile(String... cmd) throws IOException {
+    File f = File.createTempFile("TestLinuxContainerExecutor", ".sh");
+    f.deleteOnExit();
+    PrintWriter p = new PrintWriter(new FileOutputStream(f));
+    p.println("#!/bin/sh");
+    p.print("exec");
+    for (String part : cmd) {
+      p.print(" '");
+      p.print(part.replace("\\", "\\\\").replace("'", "\\'"));
+      p.print("'");
+    }
+    p.println();
+    p.close();
+    return f.getAbsolutePath();
+  }
+
+  private int id = 0;
+
+  private synchronized int getNextId() {
+    id += 1;
+    return id;
+  }
 }
