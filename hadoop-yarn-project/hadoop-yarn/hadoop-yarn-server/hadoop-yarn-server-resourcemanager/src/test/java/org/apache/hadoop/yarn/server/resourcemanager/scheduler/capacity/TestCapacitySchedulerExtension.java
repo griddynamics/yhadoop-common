@@ -102,7 +102,6 @@ public class TestCapacitySchedulerExtension {
 
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a", "b" });
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
 
     conf.setCapacity(A, A_CAPACITY);
     conf.setCapacity(B, B_CAPACITY);
