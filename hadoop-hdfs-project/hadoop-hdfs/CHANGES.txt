@@ -79,6 +79,10 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4107. Add utility methods for casting INode to INodeFile and
     INodeFileUnderConstruction. (szetszwo)
 
+    HDFS-4112. A few improvements on INodeDirectory include adding a utility
+    method for casting; avoiding creation of new empty lists; cleaning up 
+    some code and rewriting some javadoc. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -153,6 +157,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3948. Do not use hflush in TestWebHDFS.testNamenodeRestart() since the
     out stream returned by WebHdfsFileSystem does not support it. (Jing Zhao
     via szetszwo)
+
+    HDFS-3616. Fix a ConcurrentModificationException bug that BP actor threads
+    may not be shutdown properly in DataNode.  (Jing Zhao via szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
   
