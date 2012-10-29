@@ -24,7 +24,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce</artifactId>
   <version>2.0.3-SNAPSHOT</version>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
   <name>hadoop-mapreduce</name>
   <url>http://hadoop.apache.org/mapreduce/</url>
 
