@@ -228,10 +228,6 @@
               <name>listener</name>
               <value>org.apache.hadoop.test.TimedOutTestsListener</value>
             </property>
-            <property>
-                <name>testSourceDirectory</name>
-                <value>src/test/mapred</value>
-            </property>
           </properties>
         </configuration>
       </plugin>

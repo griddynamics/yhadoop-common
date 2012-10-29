@@ -40,7 +40,7 @@
   <property name="year" value="2009"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
-  <property name="mapred.src.dir" value="${src.dir}/java"/> 
+  <property name="mapred.src.dir" value="/src/main/java"/>
   <property name="examples.dir" value="${basedir}/src/examples"/>
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
@@ -534,19 +534,19 @@
      <mkdir dir="${test.concat.data}"/>
      <delete dir="${test.debug.data}"/>
      <mkdir dir="${test.debug.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testscript.txt" todir="${test.debug.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.tar" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.tgz" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.tar.gz" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/concat.bz2" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/concat.gz" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testCompressThenConcat.txt.bz2" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testCompressThenConcat.txt.gz" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testConcatThenCompress.txt.bz2" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testConcatThenCompress.txt.gz" todir="${test.concat.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/testscript.txt" todir="${test.debug.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/test.tar" todir="${test.cache.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/test.tgz" todir="${test.cache.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/test.tar.gz" todir="${test.cache.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/concat.bz2" todir="${test.concat.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/concat.gz" todir="${test.concat.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/testCompressThenConcat.txt.bz2" todir="${test.concat.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/testCompressThenConcat.txt.gz" todir="${test.concat.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/testConcatThenCompress.txt.bz2" todir="${test.concat.data}"/>
+     <copy file="/src/test/java/org/apache/hadoop/mapred/testConcatThenCompress.txt.gz" todir="${test.concat.data}"/>
   </target>
 
   <macrodef name="macro-compile-test">
@@ -994,7 +994,7 @@
          <param name="-apiname" value="hadoop-mapred ${version}"/>
          <param name="${jdiff.stability}"/>
        </doclet>
-       <packageset dir="src/java"/>
+       <packageset dir="src/main/java"/>
        <packageset dir="src/tools"/>
        <packageset dir="${tools.src}"/>
        <classpath >
@@ -1028,7 +1028,7 @@
          <param name="${jdiff.stability}"/>
          <param name="${jdiff.compatibility}"/>
        </doclet>
-       <packageset dir="src/java"/>
+       <packageset dir="src/main/java"/>
        <packageset dir="src/tools"/>
        <packageset dir="${tools.src}"/>
        <classpath >

@@ -23,14 +23,10 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedList;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.lang.Thread;
@@ -56,8 +52,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.util.Progressable;
 
 import org.apache.hadoop.raid.protocol.PolicyInfo;
@@ -75,7 +69,7 @@ public abstract class RaidNode implements RaidProtocol {
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
-    Configuration.addDefaultResource("mapred-default.xml");
+    Configuration.addDefaultResource("src/main/resources/mapred-default.xml");
     Configuration.addDefaultResource("mapred-site.xml");
   }
   public static final Log LOG = LogFactory.getLog( "org.apache.hadoop.raid.RaidNode");
