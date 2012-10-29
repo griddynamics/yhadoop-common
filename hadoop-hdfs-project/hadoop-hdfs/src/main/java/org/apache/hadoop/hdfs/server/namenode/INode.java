@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,7 +41,8 @@ import com.google.common.primitives.SignedBytes;
  */
 @InterfaceAudience.Private
 abstract class INode implements Comparable<byte[]> {
-  /*
+  static final List<INode> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<INode>());
+  /**
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.
    *  if this encoding is changed, implicitly getFileInfo and listStatus in
@@ -94,13 +97,6 @@ abstract class INode implements Comparable<byte[]> {
     long combine(long bits, long record) {
       return (record & ~MASK) | (bits << OFFSET);
     }
-  }
-
-  protected INode() {
-    name = null;
-    parent = null;
-    modificationTime = 0;
-    accessTime = 0;
   }
 
   INode(PermissionStatus permissions, long mTime, long atime) {

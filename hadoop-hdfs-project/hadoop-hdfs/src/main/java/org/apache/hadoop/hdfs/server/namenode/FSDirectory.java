@@ -290,13 +290,18 @@ public class FSDirectory implements Closeable {
     try {
       newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
     } catch (IOException e) {
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug(
+            "DIR* FSDirectory.unprotectedAddFile: exception when add " + path
+                + " to the file system", e);
+      }
       return null;
     }
     return newNode;
   }
 
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
-      INode newNode, boolean propagateModTime) throws UnresolvedLinkException {
+      INode newNode, boolean propagateModTime) {
     // NOTE: This does not update space counts for parents
     INodeDirectory newParent = null;
     writeLock();
@@ -691,7 +696,7 @@ public class FSDirectory implements Closeable {
         throw new FileAlreadyExistsException(error);
       }
       List<INode> children = dstInode.isDirectory() ? 
-          ((INodeDirectory) dstInode).getChildrenRaw() : null;
+          ((INodeDirectory) dstInode).getChildren() : null;
       if (children != null && children.size() != 0) {
         error = "rename cannot overwrite non empty destination directory "
             + dst;
@@ -961,7 +966,7 @@ public class FSDirectory implements Closeable {
     int i = 0;
     int totalBlocks = 0;
     for(String src : srcs) {
-      INodeFile srcInode = getFileINode(src);
+      INodeFile srcInode = (INodeFile)getINode(src);
       allSrcInodes[i++] = srcInode;
       totalBlocks += srcInode.blocks.length;  
     }
@@ -1014,34 +1019,20 @@ public class FSDirectory implements Closeable {
     return true;
   }
   
-  /** Return if a directory is empty or not **/
-  boolean isDirEmpty(String src) throws UnresolvedLinkException {
-    boolean dirNotEmpty = true;
-    if (!isDir(src)) {
-      return true;
-    }
+  /**
+   * @return true if the path is a non-empty directory; otherwise, return false.
+   */
+  boolean isNonEmptyDirectory(String path) throws UnresolvedLinkException {
     readLock();
     try {
-      INode targetNode = rootDir.getNode(src, false);
-      assert targetNode != null : "should be taken care in isDir() above";
-      if (((INodeDirectory)targetNode).getChildren().size() != 0) {
-        dirNotEmpty = false;
+      final INode inode = rootDir.getNode(path, false);
+      if (inode == null || !inode.isDirectory()) {
+        //not found or not a directory
+        return false;
       }
+      return ((INodeDirectory)inode).getChildrenList().size() != 0;
     } finally {
       readUnlock();
-    }
-    return dirNotEmpty;
-  }
-
-  boolean isEmpty() {
-    try {
-      return isDirEmpty("/");
-    } catch (UnresolvedLinkException e) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("/ cannot be a symlink");
-      }
-      assert false : "/ cannot be a symlink";
-      return true;
     }
   }
 
@@ -1166,7 +1157,7 @@ public class FSDirectory implements Closeable {
                 targetNode, needLocation)}, 0);
       }
       INodeDirectory dirInode = (INodeDirectory)targetNode;
-      List<INode> contents = dirInode.getChildren();
+      List<INode> contents = dirInode.getChildrenList();
       int startChild = dirInode.nextChild(startAfter);
       int totalNumChildren = contents.size();
       int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
@@ -1226,24 +1217,12 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Get {@link INode} associated with the file.
-   */
-  INodeFile getFileINode(String src) throws UnresolvedLinkException {
-    INode inode = getINode(src);
-    if (inode == null || inode.isDirectory())
-      return null;
-    assert !inode.isLink();
-    return (INodeFile) inode;
-  }
-  
-  /**
    * Get {@link INode} associated with the file / directory.
    */
   INode getINode(String src) throws UnresolvedLinkException {
     readLock();
     try {
-      INode iNode = rootDir.getNode(src, true);
-      return iNode;
+      return rootDir.getNode(src, true);
     } finally {
       readUnlock();
     }
@@ -1690,7 +1669,7 @@ public class FSDirectory implements Closeable {
       }
       if (maxDirItems != 0) {
         INodeDirectory parent = (INodeDirectory)pathComponents[pos-1];
-        int count = parent.getChildren().size();
+        int count = parent.getChildrenList().size();
         if (count >= maxDirItems) {
           throw new MaxDirectoryItemsExceededException(maxDirItems, count);
         }
@@ -1839,7 +1818,7 @@ public class FSDirectory implements Closeable {
      * INode. using 'parent' is not currently recommended. */
     nodesInPath.add(dir);
 
-    for (INode child : dir.getChildren()) {
+    for (INode child : dir.getChildrenList()) {
       if (child.isDirectory()) {
         updateCountForINodeWithQuota((INodeDirectory)child, 
                                      counts, nodesInPath);

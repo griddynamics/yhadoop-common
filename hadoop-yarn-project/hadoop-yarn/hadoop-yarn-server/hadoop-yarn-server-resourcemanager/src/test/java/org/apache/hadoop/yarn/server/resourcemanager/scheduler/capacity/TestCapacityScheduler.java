@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
@@ -220,8 +221,7 @@ public class TestCapacityScheduler {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
-    
+
     conf.setCapacity(A, A_CAPACITY);
     conf.setCapacity(B, B_CAPACITY);
     
@@ -250,7 +250,8 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf)));
+      null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     conf.setCapacity(A, 80f);
@@ -347,7 +348,8 @@ public class TestCapacityScheduler {
     conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
 
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf)));
+      null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMTokenSecretManagerInRM()));
   }
 
   @Test
@@ -357,8 +359,9 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(csConf);
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
-    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(csConf)));
+    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null,
+      null, null, new RMContainerTokenSecretManager(csConf),
+      new ClientToAMTokenSecretManagerInRM()));
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
     RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
@@ -375,4 +378,43 @@ public class TestCapacityScheduler {
 
     Assert.assertEquals(4 * GB, cs.getClusterResources().getMemory());
   }
+
+  @Test
+  public void testRefreshQueuesWithNewQueue() throws Exception {
+    CapacityScheduler cs = new CapacityScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    cs.setConf(new YarnConfiguration());
+    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
+      null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMTokenSecretManagerInRM()));
+    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+
+    // Add a new queue b4
+    String B4 = B + ".b4";
+    float B4_CAPACITY = 10;
+    
+    B3_CAPACITY -= B4_CAPACITY;
+    try {
+      conf.setCapacity(A, 80f);
+      conf.setCapacity(B, 20f);
+      conf.setQueues(B, new String[] {"b1", "b2", "b3", "b4"});
+      conf.setCapacity(B1, B1_CAPACITY);
+      conf.setCapacity(B2, B2_CAPACITY);
+      conf.setCapacity(B3, B3_CAPACITY);
+      conf.setCapacity(B4, B4_CAPACITY);
+      cs.reinitialize(conf,null);
+      checkQueueCapacities(cs, 80f, 20f);
+      
+      // Verify parent for B4
+      CSQueue rootQueue = cs.getRootQueue();
+      CSQueue queueB = findQueue(rootQueue, B);
+      CSQueue queueB4 = findQueue(queueB, B4);
+
+      assertEquals(queueB, queueB4.getParent());
+    } finally {
+      B3_CAPACITY += B4_CAPACITY;
+    }
+  }
+
 }

@@ -23,6 +23,8 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    YARN-145. Add a Web UI to the fair share scheduler. (Sandy Ryza via tomwhite)
+
   IMPROVEMENTS
 
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
@@ -64,6 +66,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8911. CRLF characters in source and text files.
     (Raja Aluri via suresh)
 
+    YARN-136. Make ClientToAMTokenSecretManager part of RMContext (Vinod Kumar
+    Vavilapalli via sseth)
 
   OPTIMIZATIONS
 
@@ -83,6 +87,14 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-150. Fixes AppRejectedTransition does not unregister a rejected
     app-attempt from the ApplicationMasterService (Bikas Saha via sseth)
+
+    YARN-140. Add capacity-scheduler-default.xml to provide a default set of
+    configurations for the capacity scheduler. (ahmed via tucu)
+
+    YARN-179. Fix some unit test failures. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-181. Fixed eclipse settings broken by capacity-scheduler.xml move via
+    YARN-140. (Siddharth Seth via vinodkv)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -157,6 +169,23 @@ Release 0.23.5 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-163. Retrieving container log via NM webapp can hang with multibyte
+    characters in log (jlowe via bobby)
+
+    YARN-174. Modify NodeManager to pass the user's configuration even when
+    rebooting. (vinodkv)
+
+    YARN-177. CapacityScheduler - adding a queue while the RM is running has 
+    wacky results (acmurthy vai tgraves)
+
+    YARN-178. Fix custom ProcessTree instance creation (Radim Kolar via bobby)
+
+    YARN-180. Capacity scheduler - containers that get reserved create 
+    container token to early (acmurthy and bobby)
+
+    YARN-139. Interrupted Exception within AsyncDispatcher leads to user
+    confusion. (Vinod Kumar Vavilapalli via jlowe)
 
 Release 0.23.4 - UNRELEASED
 

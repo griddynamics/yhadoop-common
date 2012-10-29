@@ -150,6 +150,8 @@ Trunk (Unreleased)
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
 
+    HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -229,6 +231,18 @@ Trunk (Unreleased)
 
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
+
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
+
+    HDFS-4067. TestUnderReplicatedBlocks intermittently fails due to 
+    ReplicaAlreadyExistsException. (Jing Zhao via suresh)
+
+    HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
+    (Trevor Robinson via suresh)
+
+    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
+    lastDeletedReport should be volatile. (Jing Zhao via suresh)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
@@ -388,7 +402,7 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4037. Rename the getReplication() method in BlockCollection to
     getBlockReplication(). (szetszwo)
 
-    HDFS-4036. Remove "throw UnresolvedLinkException" from
+    HDFS-4036. Remove "throws UnresolvedLinkException" from
     FSDirectory.unprotectedAddFile(..). (Jing Zhao via szetszwo)
 
     HDFS-2946. HA: Put a cap on the number of completed edits files retained
@@ -397,6 +411,28 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4029. GenerationStamp should use an AtomicLong. (eli)
 
     HDFS-4068. DatanodeID and DatanodeInfo member should be private. (eli)
+
+    HDFS-4073. Two minor improvements to FSDirectory.  (Jing Zhao via szetszwo)
+
+    HDFS-4074. Remove the unused default constructor from INode.  (Brandon Li
+    via szetszwo)
+
+    HDFS-4053. Increase the default block size. (eli)
+
+    HDFS-4088. Remove "throws QuotaExceededException" from an
+    INodeDirectoryWithQuota constructor. (szetszwo)
+
+    HDFS-4099. Clean up replication code and add more javadoc. (szetszwo)
+
+    HDFS-4107. Add utility methods for casting INode to INodeFile and
+    INodeFileUnderConstruction. (szetszwo)
+
+    HDFS-4112. A few improvements on INodeDirectory include adding a utility
+    method for casting; avoiding creation of new empty lists; cleaning up 
+    some code and rewriting some javadoc. (szetszwo)
+
+    HDFS-4121. Add namespace declarations in hdfs .proto files for languages 
+    other than java. (Binglin Chang via suresh)
 
   OPTIMIZATIONS
 
@@ -466,6 +502,19 @@ Release 2.0.3-alpha - Unreleased
     visiting IS_COMPRESSED element. (Mithun Radhakrishnan via atm)
 
     HDFS-4055. TestAuditLogs is flaky. (Binglin Chang via eli)
+
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
+
+    HDFS-4022. Replication not happening for appended block.
+    (Vinay via umamahesh)
+
+    HDFS-3948. Do not use hflush in TestWebHDFS.testNamenodeRestart() since the
+    out stream returned by WebHdfsFileSystem does not support it. (Jing Zhao
+    via szetszwo)
+
+    HDFS-3616. Fix a ConcurrentModificationException bug that BP actor threads
+    may not be shutdown properly in DataNode.  (Jing Zhao via szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1863,6 +1912,9 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-3224. Bug in check for DN re-registration with different storage ID
     (jlowe)
+
+    HDFS-4090. getFileChecksum() result incompatible when called against
+    zero-byte files. (Kihwal Lee via daryn)
 
 Release 0.23.4 - UNRELEASED
 

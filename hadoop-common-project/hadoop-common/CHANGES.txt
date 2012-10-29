@@ -126,6 +126,9 @@ Trunk (Unreleased)
 
     HADOOP-8920. Add more javadoc to metrics2 related classes. (suresh)
 
+    HADOOP-8776. Provide an option in test-patch that can enable/disable
+    compiling native code. (Chris Nauroth via suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -325,6 +328,11 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8931. Add Java version to startup message. (eli)
 
+    HADOOP-8925. Remove the packaging. (eli)
+
+    HADOOP-8985. Add namespace declarations in .proto files for languages 
+    other than java. (Binglin Chan via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -370,7 +378,16 @@ Release 2.0.3-alpha - Unreleased
     (rkanter via tucu)
 
     HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
-    doesn't match decompressed size. (Slavik Krassovsky via suresh)
+    doesn't match decompressed size. (Andy Isaacson via suresh)
+
+    HADOOP-8948. TestFileUtil.testGetDU fails on Windows due to incorrect
+    assumption of line separator. (Chris Nauroth via suresh)
+
+    HADOOP-8951. RunJar to fail with user-comprehensible error 
+    message if jar missing. (stevel via suresh)
+
+    HADOOP-8713. TestRPCCompatibility fails intermittently with JDK7
+    (Trevor Robinson via tgraves)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1070,7 +1087,7 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
-    HADOOP-8923. JNI-based user-group mapping modules can be too chatty on 
+    HADOOP-8932. JNI-based user-group mapping modules can be too chatty on 
     lookup failures. (Kihwal Lee via suresh)
 
     HADOOP-8930. Cumulative code coverage calculation (Andrey Klochkov via
@@ -1082,6 +1099,12 @@ Release 0.23.5 - UNRELEASED
 
     HADOOP-8906. paths with multiple globs are unreliable. (Daryn Sharp via
     jlowe)
+
+    HADOOP-8811. Compile hadoop native library in FreeBSD (Radim Kolar via
+    bobby)
+
+    HADOOP-8962. RawLocalFileSystem.listStatus fails when a child filename
+    contains a colon (jlowe via bobby)
 
 Release 0.23.4 - UNRELEASED
 
