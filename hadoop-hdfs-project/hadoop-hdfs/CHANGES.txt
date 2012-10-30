@@ -152,6 +152,9 @@ Trunk (Unreleased)
 
     HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
 
+    HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
+    returningmore than INode array. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -349,6 +352,9 @@ Trunk (Unreleased)
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
+
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
 
   NEW FEATURES
 
@@ -758,6 +764,9 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3907. Allow multiple users for local block readers. (eli)
 
     HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
+    
+    HDFS-3920. libwebdhfs string processing and using strerror consistently
+    to handle all errors. (Jing Zhao via suresh)
 
   OPTIMIZATIONS
 
