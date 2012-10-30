@@ -16,12 +16,15 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
+ * This test class checks basic operations with {@link HarFileSystem} including various initialization cases,
+ * getters, and modification methods. 
+ *  
  * NB: to run this test from an IDE make sure the 
  * folder "hadoop-common-project/hadoop-common/src/main/resources/" is added as a source path.
  * This will allow the system to pick up the "core-default.xml" and "META-INF/services/..." resources 
  * from the class-path in the runtime.
  */
-public class TestHarFileSystem2 {
+public class TestHarFileSystemBasics {
 
   private static final String ROOT_PATH = System.getProperty("test.build.data", "build/test/data");
   private static final Path rootPath = new Path(new File(ROOT_PATH).getAbsolutePath() + "/localfs");
