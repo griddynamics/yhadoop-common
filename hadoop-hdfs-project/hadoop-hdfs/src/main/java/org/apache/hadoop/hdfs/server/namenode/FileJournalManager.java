@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -77,6 +78,22 @@ class FileJournalManager implements JournalManager {
   @Override 
   public void close() throws IOException {}
   
+  @Override
+  public void format(NamespaceInfo ns) throws IOException {
+    // Formatting file journals is done by the StorageDirectory
+    // format code, since they may share their directory with
+    // checkpoints, etc.
+    throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public boolean hasSomeData() {
+    // Formatting file journals is done by the StorageDirectory
+    // format code, since they may share their directory with
+    // checkpoints, etc.
+    throw new UnsupportedOperationException();
+  }
+
   @Override
   synchronized public EditLogOutputStream startLogSegment(long txid) 
       throws IOException {
@@ -238,12 +255,6 @@ class FileJournalManager implements JournalManager {
   static void addStreamsToCollectionFromFiles(Collection<EditLogFile> elfs,
       Collection<EditLogInputStream> streams, long fromTxId, boolean inProgressOk) {
     for (EditLogFile elf : elfs) {
-      if (elf.lastTxId < fromTxId) {
-        LOG.debug("passing over " + elf + " because it ends at " +
-            elf.lastTxId + ", but we only care about transactions " +
-            "as new as " + fromTxId);
-        continue;
-      }
       if (elf.isInProgress()) {
         if (!inProgressOk) {
           LOG.debug("passing over " + elf + " because it is in progress " +
@@ -257,6 +268,13 @@ class FileJournalManager implements JournalManager {
               elf + ".  Skipping.", e);
           continue;
         }
+      }
+      if (elf.lastTxId < fromTxId) {
+        assert elf.lastTxId != HdfsConstants.INVALID_TXID;
+        LOG.debug("passing over " + elf + " because it ends at " +
+            elf.lastTxId + ", but we only care about transactions " +
+            "as new as " + fromTxId);
+        continue;
       }
       EditLogFileInputStream elfis = new EditLogFileInputStream(elf.getFile(),
             elf.getFirstTxId(), elf.getLastTxId(), elf.isInProgress());

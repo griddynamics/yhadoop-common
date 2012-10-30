@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
 
 
@@ -225,7 +226,7 @@ public abstract class Storage extends StorageInfo {
    * One of the storage directories.
    */
   @InterfaceAudience.Private
-  public static class StorageDirectory {
+  public static class StorageDirectory implements FormatConfirmable {
     final File root;              // root directory
     final boolean useLock;        // flag to enable storage lock
     final StorageDirType dirType; // storage dir type
@@ -430,7 +431,7 @@ public abstract class Storage extends StorageInfo {
         if (!root.exists()) {
           // storage directory does not exist
           if (startOpt != StartupOption.FORMAT) {
-            LOG.info("Storage directory " + rootPath + " does not exist.");
+            LOG.info("Storage directory " + rootPath + " does not exist");
             return StorageState.NON_EXISTENT;
           }
           LOG.info(rootPath + " does not exist. Creating ...");
@@ -439,7 +440,7 @@ public abstract class Storage extends StorageInfo {
         }
         // or is inaccessible
         if (!root.isDirectory()) {
-          LOG.info(rootPath + "is not a directory.");
+          LOG.info(rootPath + "is not a directory");
           return StorageState.NON_EXISTENT;
         }
         if (!root.canWrite()) {
@@ -536,34 +537,34 @@ public abstract class Storage extends StorageInfo {
       switch(curState) {
       case COMPLETE_UPGRADE:  // mv previous.tmp -> previous
         LOG.info("Completing previous upgrade for storage directory " 
-                 + rootPath + ".");
+                 + rootPath);
         rename(getPreviousTmp(), getPreviousDir());
         return;
       case RECOVER_UPGRADE:   // mv previous.tmp -> current
         LOG.info("Recovering storage directory " + rootPath
-                 + " from previous upgrade.");
+                 + " from previous upgrade");
         if (curDir.exists())
           deleteDir(curDir);
         rename(getPreviousTmp(), curDir);
         return;
       case COMPLETE_ROLLBACK: // rm removed.tmp
         LOG.info("Completing previous rollback for storage directory "
-                 + rootPath + ".");
+                 + rootPath);
         deleteDir(getRemovedTmp());
         return;
       case RECOVER_ROLLBACK:  // mv removed.tmp -> current
         LOG.info("Recovering storage directory " + rootPath
-                 + " from previous rollback.");
+                 + " from previous rollback");
         rename(getRemovedTmp(), curDir);
         return;
       case COMPLETE_FINALIZE: // rm finalized.tmp
         LOG.info("Completing previous finalize for storage directory "
-                 + rootPath + ".");
+                 + rootPath);
         deleteDir(getFinalizedTmp());
         return;
       case COMPLETE_CHECKPOINT: // mv lastcheckpoint.tmp -> previous.checkpoint
         LOG.info("Completing previous checkpoint for storage directory " 
-                 + rootPath + ".");
+                 + rootPath);
         File prevCkptDir = getPreviousCheckpoint();
         if (prevCkptDir.exists())
           deleteDir(prevCkptDir);
@@ -571,7 +572,7 @@ public abstract class Storage extends StorageInfo {
         return;
       case RECOVER_CHECKPOINT:  // mv lastcheckpoint.tmp -> current
         LOG.info("Recovering storage directory " + rootPath
-                 + " from failed checkpoint.");
+                 + " from failed checkpoint");
         if (curDir.exists())
           deleteDir(curDir);
         rename(getLastCheckpointTmp(), curDir);
@@ -580,6 +581,32 @@ public abstract class Storage extends StorageInfo {
         throw new IOException("Unexpected FS state: " + curState);
       }
     }
+    
+    /**
+     * @return true if the storage directory should prompt the user prior
+     * to formatting (i.e if the directory appears to contain some data)
+     * @throws IOException if the SD cannot be accessed due to an IO error
+     */
+    @Override
+    public boolean hasSomeData() throws IOException {
+      // Its alright for a dir not to exist, or to exist (properly accessible)
+      // and be completely empty.
+      if (!root.exists()) return false;
+      
+      if (!root.isDirectory()) {
+        // a file where you expect a directory should not cause silent
+        // formatting
+        return true;
+      }
+      
+      if (FileUtil.listFiles(root).length == 0) {
+        // Empty dir can format without prompt.
+        return false;
+      }
+      
+      return true;
+    }
+
 
     /**
      * Lock storage to provide exclusive access.
@@ -600,7 +627,7 @@ public abstract class Storage extends StorageInfo {
       FileLock newLock = tryLock();
       if (newLock == null) {
         String msg = "Cannot lock storage " + this.root 
-          + ". The directory is already locked.";
+          + ". The directory is already locked";
         LOG.info(msg);
         throw new IOException(msg);
       }
@@ -771,6 +798,68 @@ public abstract class Storage extends StorageInfo {
       throw new IOException(msg); 
     }
     
+  }
+  
+  /**
+   * Iterate over each of the {@link FormatConfirmable} objects,
+   * potentially checking with the user whether it should be formatted.
+   * 
+   * If running in interactive mode, will prompt the user for each
+   * directory to allow them to format anyway. Otherwise, returns
+   * false, unless 'force' is specified.
+   * 
+   * @param force format regardless of whether dirs exist
+   * @param interactive prompt the user when a dir exists
+   * @return true if formatting should proceed
+   * @throws IOException if some storage cannot be accessed
+   */
+  public static boolean confirmFormat(
+      Iterable<? extends FormatConfirmable> items,
+      boolean force, boolean interactive) throws IOException {
+    for (FormatConfirmable item : items) {
+      if (!item.hasSomeData())
+        continue;
+      if (force) { // Don't confirm, always format.
+        System.err.println(
+            "Data exists in " + item + ". Formatting anyway.");
+        continue;
+      }
+      if (!interactive) { // Don't ask - always don't format
+        System.err.println(
+            "Running in non-interactive mode, and data appears to exist in " +
+            item + ". Not formatting.");
+        return false;
+      }
+      if (!ToolRunner.confirmPrompt("Re-format filesystem in " + item + " ?")) {
+        System.err.println("Format aborted in " + item);
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Interface for classes which need to have the user confirm their
+   * formatting during NameNode -format and other similar operations.
+   * 
+   * This is currently a storage directory or journal manager.
+   */
+  @InterfaceAudience.Private
+  public interface FormatConfirmable {
+    /**
+     * @return true if the storage seems to have some valid data in it,
+     * and the user should be required to confirm the format. Otherwise,
+     * false.
+     * @throws IOException if the storage cannot be accessed at all.
+     */
+    public boolean hasSomeData() throws IOException;
+    
+    /**
+     * @return a string representation of the formattable item, suitable
+     * for display to the user inside a prompt
+     */
+    public String toString();
   }
   
   /**

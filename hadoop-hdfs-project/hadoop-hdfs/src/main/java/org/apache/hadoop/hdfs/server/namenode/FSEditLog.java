@@ -40,12 +40,14 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -301,7 +303,7 @@ public class FSEditLog implements LogsPurgeable {
       endCurrentLogSegment(true);
     }
     
-    if (!journalSet.isEmpty()) {
+    if (journalSet != null && !journalSet.isEmpty()) {
       try {
         journalSet.close();
       } catch (IOException ioe) {
@@ -310,6 +312,39 @@ public class FSEditLog implements LogsPurgeable {
     }
 
     state = State.CLOSED;
+  }
+
+
+  /**
+   * Format all configured journals which are not file-based.
+   * 
+   * File-based journals are skipped, since they are formatted by the
+   * Storage format code.
+   */
+  void formatNonFileJournals(NamespaceInfo nsInfo) throws IOException {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
+        "Bad state: %s", state);
+    
+    for (JournalManager jm : journalSet.getJournalManagers()) {
+      if (!(jm instanceof FileJournalManager)) {
+        jm.format(nsInfo);
+      }
+    }
+  }
+  
+  List<FormatConfirmable> getFormatConfirmables() {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
+        "Bad state: %s", state);
+
+    List<FormatConfirmable> ret = Lists.newArrayList();
+    for (final JournalManager jm : journalSet.getJournalManagers()) {
+      // The FJMs are confirmed separately since they are also
+      // StorageDirectories
+      if (!(jm instanceof FileJournalManager)) {
+        ret.add(jm);
+      }
+    }
+    return ret;
   }
 
   /**
@@ -845,7 +880,7 @@ public class FSEditLog implements LogsPurgeable {
    * in the new log.
    */
   synchronized long rollEditLog() throws IOException {
-    LOG.info("Rolling edit logs.");
+    LOG.info("Rolling edit logs");
     endCurrentLogSegment(true);
     
     long nextTxId = getLastWrittenTxId() + 1;
@@ -950,7 +985,10 @@ public class FSEditLog implements LogsPurgeable {
       minTxIdToKeep <= curSegmentTxId :
       "cannot purge logs older than txid " + minTxIdToKeep +
       " when current segment starts at " + curSegmentTxId;
-
+    if (minTxIdToKeep == 0) {
+      return;
+    }
+    
     // This could be improved to not need synchronization. But currently,
     // journalSet is not threadsafe, so we need to synchronize this method.
     try {
@@ -1206,8 +1244,9 @@ public class FSEditLog implements LogsPurgeable {
 
     try {
       Constructor<? extends JournalManager> cons
-        = clazz.getConstructor(Configuration.class, URI.class);
-      return cons.newInstance(conf, uri);
+        = clazz.getConstructor(Configuration.class, URI.class,
+            NamespaceInfo.class);
+      return cons.newInstance(conf, uri, storage.getNamespaceInfo());
     } catch (Exception e) {
       throw new IllegalArgumentException("Unable to construct journal, "
                                          + uri, e);
