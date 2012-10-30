@@ -138,20 +138,6 @@ public class FileUtil {
     return deletionSucceeded;
   }
 
-  /**
-   * Recursively delete a directory.
-   * 
-   * @param fs {@link FileSystem} on which the path is present
-   * @param dir directory to recursively delete 
-   * @throws IOException
-   * @deprecated Use {@link FileSystem#delete(Path, boolean)}
-   */
-  @Deprecated
-  public static void fullyDelete(FileSystem fs, Path dir) 
-  throws IOException {
-    fs.delete(dir, true);
-  }
-
   //
   // If the destination is a subdirectory of the source, then
   // generate exception
@@ -303,7 +289,6 @@ public class FileUtil {
     } finally {
       out.close();
     }
-    
 
     if (deleteSource) {
       return srcFS.delete(srcDir, true);
@@ -346,40 +331,6 @@ public class FileUtil {
     }
     if (deleteSource) {
       return FileUtil.fullyDelete(src);
-    } else {
-      return true;
-    }
-  }
-
-  /** Copy FileSystem files to local files. */
-  public static boolean copy(FileSystem srcFS, Path src, 
-                             File dst, boolean deleteSource,
-                             Configuration conf) throws IOException {
-    FileStatus filestatus = srcFS.getFileStatus(src);
-    return copy(srcFS, filestatus, dst, deleteSource, conf);
-  }
-
-  /** Copy FileSystem files to local files. */
-  private static boolean copy(FileSystem srcFS, FileStatus srcStatus,
-                              File dst, boolean deleteSource,
-                              Configuration conf) throws IOException {
-    Path src = srcStatus.getPath();
-    if (srcStatus.isDirectory()) {
-      if (!dst.mkdirs()) {
-        return false;
-      }
-      FileStatus contents[] = srcFS.listStatus(src);
-      for (int i = 0; i < contents.length; i++) {
-        copy(srcFS, contents[i],
-             new File(dst, contents[i].getPath().getName()),
-             deleteSource, conf);
-      }
-    } else {
-      InputStream in = srcFS.open(src);
-      IOUtils.copyBytes(in, new FileOutputStream(dst), conf);
-    }
-    if (deleteSource) {
-      return srcFS.delete(src, true);
     } else {
       return true;
     }
@@ -593,18 +544,6 @@ public class FileUtil {
   }
 
   /**
-   * Class for creating hardlinks.
-   * Supports Unix, Cygwin, WindXP.
-   * @deprecated Use {@link org.apache.hadoop.fs.HardLink}
-   */
-  @Deprecated
-  public static class HardLink extends org.apache.hadoop.fs.HardLink { 
-    // This is a stub to assist with coordinated change between
-    // COMMON and HDFS projects.  It will be removed after the
-    // corresponding change is committed to HDFS.
-  }
-
-  /**
    * Create a soft link between a src and destination
    * only on a local disk. HDFS does not support this
    * @param target the target for symlink 
@@ -666,28 +605,6 @@ public class FileUtil {
       }
     }
     return shExec.getExitCode();
-  }
-  
-  /**
-   * Create a tmp file for a base file.
-   * @param basefile the base file of the tmp
-   * @param prefix file name prefix of tmp
-   * @param isDeleteOnExit if true, the tmp will be deleted when the VM exits
-   * @return a newly created tmp file
-   * @exception IOException If a tmp file cannot created
-   * @see java.io.File#createTempFile(String, String, File)
-   * @see java.io.File#deleteOnExit()
-   */
-  public static final File createLocalTempFile(final File basefile,
-                                               final String prefix,
-                                               final boolean isDeleteOnExit)
-    throws IOException {
-    File tmp = File.createTempFile(prefix + basefile.getName(),
-                                   "", basefile.getParentFile());
-    if (isDeleteOnExit) {
-      tmp.deleteOnExit();
-    }
-    return tmp;
   }
 
   /**
