@@ -27,7 +27,7 @@ import "hdfs.proto";
 
 message VersionProto {
   required int32 layoutVersion = 1;
-  optional NamespaceInfoProto namespaceInfo = 2;
+  optional hadoop.hdfs.NamespaceInfoProto namespaceInfo = 2;
 }
 
 message EditLogLedgerProto {
