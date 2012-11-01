@@ -581,6 +581,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol
     for Job, Task and TaskAttempt. (Siddarth Seth via vinodkv) 
 
+    MAPREDUCE-4752. Reduce MR AM memory usage through String Interning (Robert
+    Evans via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -616,6 +619,9 @@ Release 0.23.5 - UNRELEASED
     requests slowly to avoid HADOOP-8942. (Jason Lowe via vinodkv)
 
     MAPREDUCE-4748. Invalid event: T_ATTEMPT_SUCCEEDED at SUCCEEDED. (jlowe)
+
+    MAPREDUCE-4724. job history web ui applications page should be sorted to
+    display last app first (tgraves via bobby)
 
 Release 0.23.4 - UNRELEASED
 
