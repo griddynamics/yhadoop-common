@@ -20,12 +20,16 @@ package org.apache.hadoop.mapreduce.security.token;
 
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,18 +46,17 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * unit test - 
- * tests addition/deletion/cancelation of renewals of delegation tokens
+ * tests addition/deletion/cancellation of renewals of delegation tokens
  *
  */
-@Ignore
 public class TestDelegationTokenRenewal {
   private static final Log LOG = 
       LogFactory.getLog(TestDelegationTokenRenewal.class);
@@ -61,6 +64,41 @@ public class TestDelegationTokenRenewal {
   private static final Text KIND = 
     new Text("TestDelegationTokenRenewal.Token");
 
+  private static class IteratorAdapterEnumeration<T> implements Enumeration<T> {
+    private final Iterator<T> it;
+    public IteratorAdapterEnumeration(Iterator<T> it0) {
+      it = it0;
+    }
+    @Override
+    public boolean hasMoreElements() {
+      return it.hasNext();
+    }
+    @Override
+    public T nextElement() {
+      return it.next();
+    }
+  }
+  
+  private static class MyRenewerClassLoader extends ClassLoader {
+    public MyRenewerClassLoader(ClassLoader parent) {
+      super(parent);
+    }
+    @Override
+    protected Enumeration<URL> findResources(String name) throws IOException {
+      if (("META-INF/services/" + TokenRenewer.class.getName()).equals(name)) {
+        final String resourceShortName = "/META-INF_services_org.apache.hadoop.security.token.TokenRenewer";
+        final URL url = getClass().getResource(resourceShortName);
+        if (url == null) {
+          throw new IllegalStateException("Class ["+getClass().getName()+"]: cannot find resource ["+resourceShortName+"]. " +
+          		"Please check the test execution classpath: the .../resources/ folder must be included into there.");
+        }
+        Collection<URL> c = Collections.singletonList(url);
+        return new IteratorAdapterEnumeration<URL>(c.iterator());
+      }
+      return super.findResources(name);
+    }
+  }
+  
   public static class Renewer extends TokenRenewer {
     private static int counter = 0;
     private static Token<?> lastRenewed = null;
@@ -242,6 +280,20 @@ public class TestDelegationTokenRenewal {
    */
   @Test
   public void testDTRenewal () throws Exception {
+    final ClassLoader origCl = Thread.currentThread().getContextClassLoader();
+    try {
+      ClassLoader myCl = new MyRenewerClassLoader(getClass().getClassLoader()); 
+      Thread.currentThread().setContextClassLoader(myCl);
+      // NB: here we create an object of class Token just to cause initialization 
+      // of all its static fields, including Token#renewers. This causes
+      // ServiceLoader.load(TokenRenewer.class) to execute, which, in turn, loads our custom
+      // org.apache.hadoop.mapreduce.security.token.TestDelegationTokenRenewal$Renewer implementation
+      // of the TokenRenewer service interface:
+      new Token<TokenIdentifier>();
+    } finally {
+      Thread.currentThread().setContextClassLoader(origCl);
+    } 
+    
     MyFS dfs = (MyFS)FileSystem.get(conf);
     LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+conf.hashCode());
     // Test 1. - add three tokens - make sure exactly one get's renewed
