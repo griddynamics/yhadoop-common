@@ -118,13 +118,13 @@
   <property name="test.temp.dir" value="${env.TEMP}" />
   <property name="test.conf.dir" value="${build.dir}/test/conf" />
 
-  <property name="test.tools.input.dir" value="${basedir}/src/test/tools/data" />
+  <property name="test.tools.input.dir" value="/src/test/tools/data" />
 
   <property name="test.mapred.build.classes" value="${test.build.dir}/mapred/classes"/>
-  <property name="test.mapred.commit.tests.file" value="${test.src.dir}/commit-tests" />
-  <property name="test.mapred.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
-  <property name="test.mapred.all.tests.file" value="${test.src.dir}/all-tests" />
-  <property name="test.exclude.file" value="${test.src.dir}/empty-file" />
+  <property name="test.mapred.commit.tests.file" value="/commit-tests" />
+  <property name="test.mapred.smoke.tests.file" value="/smoke-tests" />
+  <property name="test.mapred.all.tests.file" value="/all-tests" />
+  <property name="test.exclude.file" value="/empty-file" />
 
   <property name="librecordio.test.dir" value="${test.build.dir}/librecordio"/>
   <property name="web.src.dir" value="${basedir}/src/web"/>
@@ -534,19 +534,19 @@
      <mkdir dir="${test.concat.data}"/>
      <delete dir="${test.debug.data}"/>
      <mkdir dir="${test.debug.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testscript.txt" todir="${test.debug.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.tar" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.tgz" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/test.tar.gz" todir="${test.cache.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/concat.bz2" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/concat.gz" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testCompressThenConcat.txt.bz2" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testCompressThenConcat.txt.gz" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testConcatThenCompress.txt.bz2" todir="${test.concat.data}"/>
-     <copy file="${test.src.dir}/mapred/org/apache/hadoop/mapred/testConcatThenCompress.txt.gz" todir="${test.concat.data}"/>
+     <copy file="/org/apache/hadoop/mapred/testscript.txt" todir="${test.debug.data}"/>
+     <copy file="/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
+     <copy file="/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
+     <copy file="/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
+     <copy file="/org/apache/hadoop/mapred/test.tar" todir="${test.cache.data}"/>
+     <copy file="/org/apache/hadoop/mapred/test.tgz" todir="${test.cache.data}"/>
+     <copy file="/org/apache/hadoop/mapred/test.tar.gz" todir="${test.cache.data}"/>
+     <copy file="/org/apache/hadoop/mapred/concat.bz2" todir="${test.concat.data}"/>
+     <copy file="/org/apache/hadoop/mapred/concat.gz" todir="${test.concat.data}"/>
+     <copy file="/org/apache/hadoop/mapred/testCompressThenConcat.txt.bz2" todir="${test.concat.data}"/>
+     <copy file="/org/apache/hadoop/mapred/testCompressThenConcat.txt.gz" todir="${test.concat.data}"/>
+     <copy file="/org/apache/hadoop/mapred/testConcatThenCompress.txt.bz2" todir="${test.concat.data}"/>
+     <copy file="/org/apache/hadoop/mapred/testConcatThenCompress.txt.gz" todir="${test.concat.data}"/>
   </target>
 
   <macrodef name="macro-compile-test">
@@ -623,9 +623,9 @@
       <mkdir dir="@{test.dir}/data"/>
       <delete dir="@{test.dir}/logs"/>
       <mkdir dir="@{test.dir}/logs"/>
-      <copy file="${test.src.dir}/hadoop-policy.xml" 
+      <copy file="/hadoop-policy.xml"
         todir="@{test.dir}/extraconf" />
-      <copy file="${test.src.dir}/fi-site.xml"
+      <copy file="/fi-site.xml"
         todir="@{test.dir}/extraconf" />
       <junit showoutput="${test.output}"
         printsummary="${test.junit.printsummary}"
@@ -810,7 +810,7 @@
  <property name="findbugs.home" value=""/>
   <target name="findbugs" depends="check-for-findbugs, all-jars" if="findbugs.present" description="Run findbugs if present">
     <property name="findbugs.out.dir" value="${test.build.dir}/findbugs"/>
-    <property name="findbugs.exclude.file" value="${test.src.dir}/findbugsExcludeFile.xml"/>
+    <property name="findbugs.exclude.file" value="/findbugsExcludeFile.xml"/>
     <property name="findbugs.report.htmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.html"/>
     <property name="findbugs.report.xmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.xml"/>
     <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"
@@ -873,7 +873,7 @@
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
-      overview="${mapred.src.dir}/overview.html"
+      overview="/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc.dev}"
       author="true"
@@ -934,7 +934,7 @@
        unless="javadoc.is.uptodate">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
-      overview="${mapred.src.dir}/overview.html"
+      overview="/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc}"
       author="true"

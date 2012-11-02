@@ -41,6 +41,7 @@
   <modules>
     <module>hadoop-mapreduce-client</module>
     <module>hadoop-mapreduce-examples</module>
+    <module>hadoop-mapreduce2</module>
   </modules>
 
   <dependencies>
