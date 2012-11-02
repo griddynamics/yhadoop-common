@@ -41,6 +41,7 @@
   <modules>
     <module>hadoop-mapreduce-client</module>
     <module>hadoop-mapreduce-examples</module>
+    <module>hadoop-mapreduce2</module>
   </modules>
 
   <dependencies>
@@ -320,7 +321,7 @@
         <groupId>com.atlassian.maven.plugins</groupId>
         <artifactId>maven-clover2-plugin</artifactId>
         <!-- until we have reporting management cf. MSITE-443 -->
-        <version>3.0.2</version>
+        <version>3.0.5</version>
       </plugin>
     </plugins>
   </reporting>
