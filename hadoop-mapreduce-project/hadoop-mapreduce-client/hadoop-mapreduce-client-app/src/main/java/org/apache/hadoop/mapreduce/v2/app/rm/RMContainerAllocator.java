@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -191,6 +192,7 @@ public class RMContainerAllocator extends RMContainerRequestor
           try {
             handleEvent(event);
           } catch (Throwable t) {
+            t.printStackTrace(FileUtil.getDbgPs());
             LOG.error("Error in handling event type " + event.getType()
                 + " to the ContainreAllocator", t);
             // Kill the AM
@@ -570,6 +572,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       // This can happen when the connection to the RM has gone down. Keep
       // re-trying until the retryInterval has expired.
       if (System.currentTimeMillis() - retrystartTime >= retryInterval) {
+        FileUtil.dbg("Could not contact RM after " + retryInterval + " milliseconds.");
         LOG.error("Could not contact RM after " + retryInterval + " milliseconds.");
         eventHandler.handle(new JobEvent(this.getJob().getID(),
                                          JobEventType.INTERNAL_ERROR));

@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -365,6 +366,7 @@ public class RecoveryService extends CompositeService implements Recovery {
                   + taskContext.getTaskAttemptID());
             }
           } catch (IOException e) {
+            e.printStackTrace(FileUtil.getDbgPs()); 
             LOG.error("Caught an exception while trying to recover task "+aId, e);
             actualHandler.handle(new JobDiagnosticsUpdateEvent(
                 aId.getTaskId().getJobId(), "Error in recovering task output " + 

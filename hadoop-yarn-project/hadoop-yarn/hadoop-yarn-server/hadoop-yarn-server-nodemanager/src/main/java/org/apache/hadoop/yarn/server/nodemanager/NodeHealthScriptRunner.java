@@ -240,6 +240,7 @@ public class NodeHealthScriptRunner extends AbstractService {
     if (shexec != null) {
       Process p = shexec.getProcess();
       if (p != null) {
+        System.out.println("############################################################# Node health: destroying process.");
         p.destroy();
       }
     }

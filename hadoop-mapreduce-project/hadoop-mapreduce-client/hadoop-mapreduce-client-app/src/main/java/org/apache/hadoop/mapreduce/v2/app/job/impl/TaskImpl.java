@@ -679,7 +679,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       
       //raise the event to job so that it adds the completion event to its
       //data structures
-      eventHandler.handle(new JobTaskAttemptCompletedEvent(tce));
+      JobTaskAttemptCompletedEvent e = new JobTaskAttemptCompletedEvent(tce);
+      LOG.info("####### submitting the JobTaskAttemptCompletedEvent:" + e 
+          + ", attemptId = " + attemptId + ", status = " + status);
+      eventHandler.handle(e);
     }
   }
 

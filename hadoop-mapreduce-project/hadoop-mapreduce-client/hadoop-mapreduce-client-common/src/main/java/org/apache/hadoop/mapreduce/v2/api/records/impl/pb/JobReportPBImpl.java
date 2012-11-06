@@ -113,7 +113,9 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements
     if (!p.hasJobState()) {
       return null;
     }
-    return convertFromProtoFormat(p.getJobState());
+    JobState js = convertFromProtoFormat(p.getJobState());
+    System.out.println("%%%%%% js = " + js);
+    return js;
   }
 
   @Override

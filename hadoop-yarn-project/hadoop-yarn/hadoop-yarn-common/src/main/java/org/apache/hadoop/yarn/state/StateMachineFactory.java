@@ -26,6 +26,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Graph;
 
 /**
@@ -297,11 +300,17 @@ final public class StateMachineFactory
           = transitionMap.get(eventType);
       if (transition != null) {
         return transition.doTransition(operand, oldState, event, eventType);
+      } else {
+        LOG.warn("transition is null for event type ["+eventType+"]");
       }
+    } else {
+      LOG.warn("transitionMap is null for old state ["+oldState+"]");
     }
     throw new InvalidStateTransitonException(oldState, eventType);
   }
 
+  private static final Log LOG = LogFactory.getLog(StateMachineFactory.class);
+  
   private synchronized void maybeMakeStateMachineTable() {
     if (stateMachineTable == null) {
       makeStateMachineTable();

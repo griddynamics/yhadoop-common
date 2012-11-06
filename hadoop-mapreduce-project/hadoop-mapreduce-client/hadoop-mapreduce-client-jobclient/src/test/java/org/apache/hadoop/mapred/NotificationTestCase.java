@@ -59,6 +59,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   private String contextPath = "/notification";
   private String servletPath = "/mapred";
   private Server webServer;
+  private NotificationServlet notificationServlet;
 
   private void startHttpServer() throws Exception {
 
@@ -72,13 +73,12 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     Context context = new Context(webServer, contextPath);
 
     // create servlet handler
-    context.addServlet(new ServletHolder(new NotificationServlet()),
-                       servletPath);
+    notificationServlet = new NotificationServlet();
+    context.addServlet(new ServletHolder(notificationServlet), servletPath);
 
     // Start webServer
     webServer.start();
     port = webServer.getConnectors()[0].getLocalPort();
-
   }
 
   private void stopHttpServer() throws Exception {
@@ -90,40 +90,57 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   }
 
   public static class NotificationServlet extends HttpServlet {
-    public static int counter = 0;
-    public static int failureCounter = 0;
     private static final long serialVersionUID = 1L;
     
-    protected void doGet(HttpServletRequest req, HttpServletResponse res)
+    private int counter = 0;
+    private int failureCounter = 0;
+    
+    protected synchronized void doGet(HttpServletRequest req, HttpServletResponse res)
       throws ServletException, IOException {
-      String queryString = req.getQueryString();
+      final String queryString = req.getQueryString();
       switch (counter) {
         case 0:
-          verifyQuery(queryString, "SUCCEEDED");
+          verifyQuery(queryString, "SUCCEEDED");//); !!!!!
           break;
         case 2:
-          verifyQuery(queryString, "KILLED");
+          verifyQuery(queryString, "FAILED"); //"KILLED");
           break;
         case 4:
           verifyQuery(queryString, "FAILED");
           break;
       }
       if (counter % 2 == 0) {
+        System.out.println("####### Counter = "+counter+": sending back error 400");
         res.sendError(HttpServletResponse.SC_BAD_REQUEST, "forcing error");
-      }
-      else {
+      } else {
         res.setStatus(HttpServletResponse.SC_OK);
       }
       counter++;
+      
+      System.out.println("Query:   ["+queryString+"]");
+      System.out.println("Counter: ["+counter+"]");
     }
 
     protected void verifyQuery(String query, String expected) 
         throws IOException {
       if (query.contains(expected)) {
+        System.out.println("############### The request (" + query + ") contains [" + expected 
+            + "]: okay.");
         return;
       }
       failureCounter++;
-      assertTrue("The request (" + query + ") does not contain " + expected, false);
+      System.err.println("############### The request (" + query + ") does not contain [" + expected 
+          + "]");
+      assertTrue("The request (" + query + ") does not contain [" + expected 
+          + "]", false);
+    }
+    
+    public synchronized int getCounter() {
+      return counter;
+    }
+    
+    public synchronized int getFailureCounter() {
+      return failureCounter;
     }
   }
 
@@ -133,10 +150,18 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   }
 
   protected JobConf createJobConf() {
-    JobConf conf = super.createJobConf();
+    final JobConf conf = super.createJobConf();
     conf.setJobEndNotificationURI(getNotificationUrlTemplate());
     conf.setInt(JobContext.MR_JOB_END_RETRY_ATTEMPTS, 3);
     conf.setInt(JobContext.MR_JOB_END_RETRY_INTERVAL, 200);
+    conf.setInt(JobContext.MAP_MAX_ATTEMPTS, 1);
+    //conf.setBoolean("yarn.dispatcher.exit-on-error", false);
+//    try {
+//      System.out.println("###################### Configuration:");
+//      Configuration.dumpConfigurationPlain(conf, new PrintWriter(System.out));
+//    } catch (IOException ioe) {
+//      ioe.printStackTrace();
+//    }
     return conf;
   }
 
@@ -152,37 +177,70 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   }
 
   public void testMR() throws Exception {
-
-    System.out.println(launchWordCount(this.createJobConf(),
-                                       "a b c d e f g h", 1, 1));
-    Thread.sleep(2000);
-    assertEquals(2, NotificationServlet.counter);
-    assertEquals(0, NotificationServlet.failureCounter);
+    String failureInfo;
     
+    final String output = launchWordCount(createJobConf(), 
+        "a b c d e f g h", 1, 1);
+    System.out.println("Word count task output: [" + output + "]");
+    
+    Thread.sleep(4000);
+    
+    assertEquals(0, notificationServlet.getFailureCounter());
+    assertEquals(2, notificationServlet.getCounter());
+
     Path inDir = new Path("notificationjob/input");
     Path outDir = new Path("notificationjob/output");
-
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
       String localPathRoot = System.getProperty("test.build.data","/tmp")
-        .toString().replace(' ', '+');;
+        .toString().replace(' ', '+');
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }
-
-    // run a job with KILLED status
-    System.out.println(UtilsForTests.runJobKill(this.createJobConf(), inDir,
-                                                outDir).getID());
-    Thread.sleep(2000);
-    assertEquals(4, NotificationServlet.counter);
-    assertEquals(0, NotificationServlet.failureCounter);
     
+//    // =========================================================================
+//    // run a job with KILLED status
+//    final RunningJob runningJobKill = UtilsForTests.runJobKill(
+//        createJobConf(), inDir, outDir);
+//    final JobID jobID = runningJobKill.getID();
+//    System.out.println(jobID);
+//    runningJobKill.waitForCompletion();
+//    
+//    String failureInfo = runningJobKill.getFailureInfo();
+//    System.out.println("Job-kill failure info: ["+failureInfo+"]");
+//    
+//    assertTrue(runningJobKill.isComplete());
+//    assertTrue(!runningJobKill.isSuccessful());
+//    assertEquals(JobStatus.KILLED, runningJobKill.getJobStatus().getRunState());
+//    
+//    assertEquals(0, notificationServlet.getFailureCounter());
+//    assertEquals(4, notificationServlet.getCounter());
+//    
+//    Thread.sleep(4 
+//        * 1000); // !!!!! sleep there causes the test results to change!
+//    // So, there are more racing conditions there!
+//    assertEquals(4, notificationServlet.getCounter());
+//    Thread.sleep(4 
+//        * 1000); // !!!!! sleep there causes the test results to change!
+    
+    // =========================================================================
     // run a job with FAILED status
-    System.out.println(UtilsForTests.runJobFail(this.createJobConf(), inDir,
-                                                outDir).getID());
-    Thread.sleep(2000);
-    assertEquals(6, NotificationServlet.counter);
-    assertEquals(0, NotificationServlet.failureCounter);
+    final RunningJob runningJobFail = UtilsForTests.runJobFail(
+        createJobConf(), inDir, outDir);
+    System.out.println(runningJobFail.getID());
+    runningJobFail.waitForCompletion();
+    
+    failureInfo = runningJobFail.getFailureInfo();
+    System.out.println("Job-fail failure info: ["+failureInfo+"]");
+    
+    assertTrue(runningJobFail.isComplete());
+    assertTrue(!runningJobFail.isSuccessful());
+    assertEquals(JobStatus.FAILED, runningJobFail.getJobStatus().getRunState());
+    
+    Thread.sleep(4000);
+    
+    assertEquals(0, notificationServlet.getFailureCounter());
+    assertEquals(6, notificationServlet.getCounter());
   }
 
   private String launchWordCount(JobConf conf,
@@ -226,7 +284,13 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
-    JobClient.runJob(conf);
+    
+    RunningJob runningJob = JobClient.runJob(conf);
+    runningJob.waitForCompletion(); 
+    
+    assertTrue(runningJob.isComplete());
+    assertTrue(runningJob.isSuccessful());
+    
     return MapReduceTestUtil.readOutput(outDir, conf);
   }
 

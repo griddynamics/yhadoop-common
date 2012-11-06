@@ -27,6 +27,7 @@ import java.net.URL;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.mortbay.log.Log;
@@ -158,9 +159,17 @@ public class JobEndNotifier implements Configurable {
       userUrl = userUrl.replace(JOB_ID, jobReport.getJobId().toString());
     }
     if (userUrl.contains(JOB_STATUS)) {
-      userUrl = userUrl.replace(JOB_STATUS, jobReport.getJobState().toString());
+      String stat = jobReport.getJobState().toString();
+      if ("ERROR".equals(stat)) {
+        new Throwable().printStackTrace(FileUtil.getDbgPs());
+        FileUtil.getDbgPs().flush();
+      }
+      userUrl = userUrl.replace(JOB_STATUS, stat);
     }
 
+    System.out.println("$$$$$$$$$$$$$$$$ notif url = ["+userUrl+"]");
+    FileUtil.dbg("##### " + JobEndNotifier.class.getName() + ": uri = " + userUrl);
+    
     // Create the URL, ensure sanity
     try {
       urlToNotify = new URL(userUrl);

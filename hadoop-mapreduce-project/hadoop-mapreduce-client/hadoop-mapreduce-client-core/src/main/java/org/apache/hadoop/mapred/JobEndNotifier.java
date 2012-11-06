@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileUtil;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -113,6 +114,7 @@ public class JobEndNotifier {
             (status.getRunState() == JobStatus.FAILED) ? "FAILED" : "KILLED";
         uri = uri.replace("$jobStatus", statusStr);
       }
+      System.out.println("$$$$$$$$ notification uri: ["+uri+"]");
       notification = new JobEndStatusInfo(uri, retryAttempts, retryInterval);
     }
     return notification;
@@ -131,6 +133,7 @@ public class JobEndNotifier {
   }
 
   private static int httpNotification(String uri) throws IOException {
+    FileUtil.dbg("##### " + JobEndNotifier.class.getName() + ": uri = " + uri);
     URI url = new URI(uri, false);
     HttpClient m_client = new HttpClient();
     HttpMethod method = new GetMethod(url.getEscapedURI());

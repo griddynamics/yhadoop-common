@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -74,6 +75,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
             return;
           }
           if (event != null) {
+            FileUtil.dbg("dispatchuing event : " + event);
             dispatch(event);
           }
         }
@@ -169,6 +171,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   class GenericEventHandler implements EventHandler<Event> {
     public void handle(Event event) {
+      FileUtil.dbg("Handliong event: " + event);
+      new Throwable().printStackTrace(FileUtil.getDbgPs());
       /* all this method does is enqueue all the events onto the queue */
       int qSize = eventQueue.size();
       if (qSize !=0 && qSize %1000 == 0) {

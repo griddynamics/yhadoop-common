@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.jobhistory;
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.JobID;
 
 /**
@@ -48,6 +49,11 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
     datum.finishTime = finishTime;
     datum.finishedMaps = finishedMaps;
     datum.finishedReduces = finishedReduces;
+    FileUtil.dbg("JobUnsuccessfulCompletionEvent<init>, status = " + status);
+    if ("ERROR".equals(status)) {
+      new Throwable().printStackTrace(FileUtil.getDbgPs());
+      FileUtil.getDbgPs().flush();
+    }
     datum.jobStatus = new Utf8(status);
   }
 

@@ -644,6 +644,7 @@ public class UtilsForTests {
     while (!job.isComplete()) {
       try {
         if (sleepCount > 300) { // 30 seconds
+          System.err.println("###################################################### Job didn't finish in 30 seconds.");
           throw new IOException("Job didn't finish in 30 seconds");
         }
         Thread.sleep(100);

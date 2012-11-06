@@ -48,7 +48,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.StringTokenizer;
+import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
@@ -2143,9 +2145,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         dumpGenerator.writeStartObject();
         dumpGenerator.writeStringField("key", (String) item.getKey());
         dumpGenerator.writeStringField("value", 
-                                       config.get((String) item.getKey()));
+                                       config.get((String) item.getKey()) + "\n");
         dumpGenerator.writeBooleanField("isFinal",
-                                        config.finalParameters.contains(item.getKey()));
+                                        config.finalParameters.contains(item.getKey()) );
         String[] resources = config.updatingResource.get(item.getKey());
         String resource = UNKNOWN_RESOURCE;
         if(resources != null && resources.length > 0) {
@@ -2158,6 +2160,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     dumpGenerator.writeEndArray();
     dumpGenerator.writeEndObject();
     dumpGenerator.flush();
+  }
+  
+  public static void dumpConfigurationPlain(final Configuration config,
+      final Writer out) throws IOException {
+    synchronized (config) {
+      SortedMap<Object,Object> sm = new TreeMap<Object,Object>();
+      sm.putAll(config.getProps());
+      for (Map.Entry<Object,Object> item: sm.entrySet()) {
+        boolean isFinal = config.finalParameters.contains(item.getKey());
+        out.write("["+item.getKey()+"] = ["+item.getValue()+"]" + (isFinal ? " (final)" : "") );
+        
+        final String[] resources = config.updatingResource.get(item.getKey());
+        if(resources != null && resources.length > 0) {
+          out.write(", resource = ["+resources[0]+"]");
+        }
+        out.write("\n");
+      }
+    }
+    out.flush();
   }
   
   /**

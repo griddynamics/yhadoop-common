@@ -577,6 +577,7 @@ public class JobHistoryEventHandler extends AbstractService
         summary.setFirstReduceTaskLaunchTime(rtase.getStartTime());
       break;
     case JOB_FINISHED:
+      System.out.println("$$$$$$$$$$$$$$$ job finished: status = " + summary.getJobStatus());
       JobFinishedEvent jfe = (JobFinishedEvent) event;
       summary.setJobFinishTime(jfe.getFinishTime());
       summary.setNumFinishedMaps(jfe.getFinishedMaps());

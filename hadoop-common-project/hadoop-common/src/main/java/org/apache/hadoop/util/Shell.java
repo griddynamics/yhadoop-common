@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -130,7 +131,8 @@ abstract public class Shell {
   }
 
   /** Run a command */
-  private void runCommand() throws IOException { 
+  private void runCommand() throws IOException {
+    System.out.println("####### command = ["+Arrays.toString(getExecString())+"]");
     ProcessBuilder builder = new ProcessBuilder(getExecString());
     Timer timeOutTimer = null;
     ShellTimeoutTimerTask timeoutTimerTask = null;
@@ -141,6 +143,7 @@ abstract public class Shell {
       builder.environment().putAll(this.environment);
     }
     if (dir != null) {
+      System.out.println("####### dir = ["+dir.getAbsolutePath()+"]");
       builder.directory(this.dir);
     }
     
@@ -162,31 +165,41 @@ abstract public class Shell {
     
     // read error and input streams as this would free up the buffers
     // free the error stream buffer
-    Thread errThread = new Thread() {
+    final Thread errThread = new Thread() {
       @Override
       public void run() {
         try {
-          String line = errReader.readLine();
-          while((line != null) && !isInterrupted()) {
-            errMsg.append(line);
-            errMsg.append(System.getProperty("line.separator"));
-            line = errReader.readLine();
+          //String line = errReader.readLine();
+          int ch;
+          while(!isInterrupted()) {
+            ch = errReader.read();
+            if (ch < 0) {
+              break;
+            } else {
+              errMsg.append((char)ch);
+            }
+//            errMsg.append(line);
+//            errMsg.append(System.getProperty("line.separator"));
+//            line = errReader.readLine();
           }
         } catch(IOException ioe) {
           LOG.warn("Error reading the error stream", ioe);
         }
       }
     };
-    try {
-      errThread.start();
-    } catch (IllegalStateException ise) { }
+    errThread.start();
     try {
       parseExecResult(inReader); // parse the output
       // clear the input stream buffer
-      String line = inReader.readLine();
-      while(line != null) { 
+      String line;
+      while (true) { 
         line = inReader.readLine();
-      }
+        if (line == null) {
+          break;
+        } else {
+          System.out.println(line);
+        }
+      } 
       // wait for the process to finish and check the exit code
       exitCode  = process.waitFor();
       try {
@@ -199,10 +212,16 @@ abstract public class Shell {
       //the timeout thread handling
       //taken care in finally block
       if (exitCode != 0) {
+        System.err.println("error: ["+errMsg+"], exit code = " + exitCode);
         throw new ExitCodeException(exitCode, errMsg.toString());
       }
     } catch (InterruptedException ie) {
+      ie.printStackTrace();
       throw new IOException(ie.toString());
+//    } catch (Exception e) {
+//      System.err.println("############################ error: ["+e+"]");
+//      e.printStackTrace();
+//      throw new RuntimeException(e);
     } finally {
       if (timeOutTimer != null) {
         timeOutTimer.cancel();
@@ -221,11 +240,23 @@ abstract public class Shell {
       } catch (IOException ioe) {
         LOG.warn("Error while closing the error stream", ioe);
       }
-      process.destroy();
+      if (isAlive() == null) {
+        System.out.println("################################################################## DESTROYING PROCESS in finally");
+        process.destroy();
+      }
       lastTime = Time.now();
     }
   }
 
+  protected final Integer isAlive() {
+    try {
+      int exitValue = process.exitValue();
+      return Integer.valueOf(exitValue);
+    } catch (IllegalThreadStateException itse) {
+      return null; // process is not yet finished. 
+    }
+  }
+  
   /** return an array containing the command name & its parameters */ 
   protected abstract String[] getExecString();
   
@@ -333,6 +364,10 @@ abstract public class Shell {
       char[] buf = new char[512];
       int nRead;
       while ( (nRead = lines.read(buf, 0, buf.length)) > 0 ) {
+        // DBG:
+        StringBuilder sb = new StringBuilder().append(buf, 0, nRead);
+        System.out.println("out: ["+sb+"]");
+        
         output.append(buf, 0, nRead);
       }
     }
@@ -380,6 +415,7 @@ abstract public class Shell {
    * 
    */
   private void setTimedOut() {
+    System.out.println("########################### Shell#setTimeout()");
     this.timedOut.set(true);
   }
   
@@ -447,6 +483,7 @@ abstract public class Shell {
         //if not just destroy it.
         if (p != null && !shell.completed.get()) {
           shell.setTimedOut();
+          System.out.println("################################################## Destroying the task process.");
           p.destroy();
         }
       }

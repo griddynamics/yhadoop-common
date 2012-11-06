@@ -186,6 +186,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         return ExitCode.TERMINATED.getExitCode();
       }
     } catch (IOException e) {
+      e.printStackTrace();
       if (null == shExec) {
         return -1;
       }

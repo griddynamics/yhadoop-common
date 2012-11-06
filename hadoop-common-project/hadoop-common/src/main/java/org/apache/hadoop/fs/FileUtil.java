@@ -754,5 +754,26 @@ public class FileUtil {
                 + dir.toString());
     }
     return fileNames;
-  }  
+  }
+  
+  private static PrintStream dbgPs;
+  
+  static {
+    try {
+      FileOutputStream fos = new FileOutputStream("/tmp/foo", true);
+      dbgPs = new PrintStream(fos);
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+  }
+  
+  public static PrintStream getDbgPs() {
+    return dbgPs;
+  }
+  
+  public static void dbg(String s) {
+    dbgPs.println(s);
+    dbgPs.flush();
+  }
+  
 }

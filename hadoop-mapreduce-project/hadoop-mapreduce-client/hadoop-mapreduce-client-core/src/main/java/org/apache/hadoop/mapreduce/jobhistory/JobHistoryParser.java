@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -346,6 +347,7 @@ public class JobHistoryParser {
     info.finishedMaps = event.getFinishedMaps();
     info.finishedReduces = event.getFinishedReduces();
     info.jobStatus = StringInterner.weakIntern(event.getStatus());
+    FileUtil.dbg("info: set status from event = " + event.getStatus());
   }
 
   private void handleJobFinishedEvent(JobFinishedEvent event) {
