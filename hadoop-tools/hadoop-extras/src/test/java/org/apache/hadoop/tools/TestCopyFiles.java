@@ -57,7 +57,7 @@ import org.junit.Ignore;
 /**
  * A JUnit test for copying files recursively.
  */
-@Ignore
+
 public class TestCopyFiles extends TestCase {
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
