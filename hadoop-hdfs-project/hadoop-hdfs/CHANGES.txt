@@ -146,10 +146,13 @@ Trunk (Unreleased)
     HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
 
     HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
-    returningmore than INode array. (Jing Zhao via suresh)
+    returning more than INode array. (Jing Zhao via suresh)
 
     HDFS-4129. Add utility methods to dump NameNode in memory tree for 
     testing. (szetszwo via suresh)
+
+    HDFS-4151. Change the methods in FSDirectory to pass INodesInPath instead
+    of INode[] as a parameter. (szetszwo)
 
   OPTIMIZATIONS
 
@@ -447,6 +450,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4143. Change blocks to private in INodeFile and renames isLink() to
     isSymlink() in INode. (szetszwo)
+
+    HDFS-4046. Rename ChecksumTypeProto enum NULL since it is illegal in
+    C/C++. (Binglin Chang via suresh)
 
   OPTIMIZATIONS
 
