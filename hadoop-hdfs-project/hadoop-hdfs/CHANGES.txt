@@ -17,6 +17,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4059. Add number of stale DataNodes to metrics. (Jing Zhao via suresh)
 
+    HDFS-4155. libhdfs implementation of hsync API (Liang Xie via todd)
+
   IMPROVEMENTS
   
     HDFS-3925. Prettify PipelineAck#toString() for printing to a log
@@ -198,6 +200,11 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4132. When libwebhdfs is not enabled, nativeMiniDfsClient frees
     uninitialized memory (Colin Patrick McCabe via todd)
+
+    HDFS-1331. dfs -test should work like /bin/test (Andy Isaacson via daryn)
+
+    HDFS-3979. For hsync, datanode should wait for the local sync to complete
+    before sending ack. (Lars Hofhansl via szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
   
@@ -1659,6 +1666,8 @@ Release 0.23.5 - UNRELEASED
   IMPROVEMENTS
 
   OPTIMIZATIONS
+
+    HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
 
   BUG FIXES
 
