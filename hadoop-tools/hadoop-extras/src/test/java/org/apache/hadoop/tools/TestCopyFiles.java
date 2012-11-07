@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.tools.DistCpV1;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.junit.Ignore;
@@ -57,7 +56,7 @@ import org.junit.Ignore;
 /**
  * A JUnit test for copying files recursively.
  */
-@Ignore
+
 public class TestCopyFiles extends TestCase {
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
