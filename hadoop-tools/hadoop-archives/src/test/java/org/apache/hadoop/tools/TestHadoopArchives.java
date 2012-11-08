@@ -27,14 +27,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.HarFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
@@ -42,11 +43,15 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * test {@link HadoopArchives}
  */
-public class TestHadoopArchives extends TestCase {
+public class TestHadoopArchives {
 
   public static final String HADOOP_ARCHIVES_JAR = JarFinder.getJar(HadoopArchives.class);
 
@@ -62,34 +67,54 @@ public class TestHadoopArchives extends TestCase {
   private static final String inputDir = "input";
 
   private Path inputPath;
+  private final List<String> fileList = new ArrayList<String>();
   private MiniDFSCluster dfscluster;
   private MiniMRCluster mapred;
   private FileSystem fs;
   private Path archivePath;
   
-  static private Path createFile(Path dir, String filename, FileSystem fs
+  static private String createFile(Path root, FileSystem fs, String... dirsAndFile 
       ) throws IOException {
-    final Path f = new Path(dir, filename);
-    final FSDataOutputStream out = fs.create(f); 
-    out.write(filename.getBytes());
-    out.close();
-    return f;
+    String fileBaseName = dirsAndFile[dirsAndFile.length - 1]; 
+    return createFile(root, fs, fileBaseName.getBytes("UTF-8"), dirsAndFile);
   }
   
-  protected void setUp() throws Exception {
-    super.setUp();
+  static private String createFile(Path root, FileSystem fs, byte[] fileContent, String... dirsAndFile
+      ) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    for (String segment: dirsAndFile) {
+      if (sb.length() > 0) {
+        sb.append(Path.SEPARATOR);  
+      }
+      sb.append(segment);
+    }
+    final Path f = new Path(root, sb.toString());
+    final FSDataOutputStream out = fs.create(f);
+    try {
+      out.write(fileContent);
+    } finally {
+      out.close();
+    }
+    return sb.toString();
+  }
+    
+  @Before
+  public void setUp() throws Exception {
+    fileList.clear();
     dfscluster = new MiniDFSCluster(new Configuration(), 2, true, null);
     fs = dfscluster.getFileSystem();
     mapred = new MiniMRCluster(2, fs.getUri().toString(), 1);
     inputPath = new Path(fs.getHomeDirectory(), inputDir); 
     archivePath = new Path(fs.getHomeDirectory(), "archive");
+    fs.delete(inputPath, true);
     fs.mkdirs(inputPath);
-    createFile(inputPath, "a", fs);
-    createFile(inputPath, "b", fs);
-    createFile(inputPath, "c", fs);
+    fileList.add(createFile(inputPath, fs, "a"));
+    fileList.add(createFile(inputPath, fs, "b"));
+    fileList.add(createFile(inputPath, fs, "c"));
   }
-  
-  protected void tearDown() throws Exception {
+
+  @After
+  public void tearDown() throws Exception {
     try {
       if (mapred != null) {
         mapred.shutdown();
@@ -100,16 +125,15 @@ public class TestHadoopArchives extends TestCase {
     } catch(Exception e) {
       System.err.println(e);
     }
-    super.tearDown();
   }
-  
    
+  @Test
   public void testRelativePath() throws Exception {
     fs.delete(archivePath, true);
 
     final Path sub1 = new Path(inputPath, "dir1");
     fs.mkdirs(sub1);
-    createFile(sub1, "a", fs);
+    createFile(inputPath, fs, sub1.getName(), "a");
     final Configuration conf = mapred.createJobConf();
     final FsShell shell = new FsShell(conf);
 
@@ -139,21 +163,22 @@ public class TestHadoopArchives extends TestCase {
     }
   }
 
+  @Test
   public void testPathWithSpaces() throws Exception {
     fs.delete(archivePath, true);
 
     //create files/directories with spaces
-    createFile(inputPath, "c c", fs);
+    createFile(inputPath, fs, "c c");
     final Path sub1 = new Path(inputPath, "sub 1");
     fs.mkdirs(sub1);
-    createFile(sub1, "file x y z", fs);
-    createFile(sub1, "file", fs);
-    createFile(sub1, "x", fs);
-    createFile(sub1, "y", fs);
-    createFile(sub1, "z", fs);
+    createFile(sub1, fs, "file x y z");
+    createFile(sub1, fs, "file");
+    createFile(sub1, fs, "x");
+    createFile(sub1, fs, "y");
+    createFile(sub1, fs, "z");
     final Path sub2 = new Path(inputPath, "sub 1 with suffix");
     fs.mkdirs(sub2);
-    createFile(sub2, "z", fs);
+    createFile(sub2, fs, "z");
     final Configuration conf = mapred.createJobConf();
     final FsShell shell = new FsShell(conf);
 
@@ -183,7 +208,6 @@ public class TestHadoopArchives extends TestCase {
       final List<String> harPaths = lsr(shell, prefix + harName);
       assertEquals(originalPaths, harPaths);
     }
-
   }
 
   private static List<String> lsr(final FsShell shell, String dir
@@ -222,5 +246,99 @@ public class TestHadoopArchives extends TestCase {
     Collections.sort(paths);
     System.out.println("lsr paths = " + paths.toString().replace(", ", ",\n  "));
     return paths;
+  }
+  
+  @Test
+  public void testReadFileContent() throws Exception {
+    fs.delete(archivePath, true);
+
+    fileList.add(createFile(inputPath, fs, "c c"));
+    final Path sub1 = new Path(inputPath, "sub 1");
+    fs.mkdirs(sub1);
+    fileList.add(createFile(inputPath, fs, sub1.getName(), "file x y z"));
+    fileList.add(createFile(inputPath, fs, sub1.getName(), "file"));
+    fileList.add(createFile(inputPath, fs, sub1.getName(), "x"));
+    fileList.add(createFile(inputPath, fs, sub1.getName(), "y"));
+    fileList.add(createFile(inputPath, fs, sub1.getName(), "z"));
+    final Path sub2 = new Path(inputPath, "sub 1 with suffix");
+    fs.mkdirs(sub2);
+    fileList.add(createFile(inputPath, fs, sub2.getName(), "z"));
+    // Generate a big binary file content:
+    final byte[] binContent = prepareBin();
+    fileList.add(createFile(inputPath, fs, binContent, sub2.getName(), "bin"));
+
+    final String inputPathStr = inputPath.toUri().getPath();
+    System.out.println("inputPathStr = " + inputPathStr);
+
+    final URI uri = fs.getUri();
+    final String prefix = "har://hdfs-" + uri.getHost() + ":" + uri.getPort()
+        + archivePath.toUri().getPath() + Path.SEPARATOR;
+
+    final String harName = "foo.har";
+    final String fullHarPathStr = prefix + harName;
+    final String[] args = { "-archiveName", harName, "-p", inputPathStr, "*",
+        archivePath.toString() };
+    System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
+        HADOOP_ARCHIVES_JAR);
+    final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
+    assertEquals(0, ToolRunner.run(har, args));
+
+    // Create fresh HarFs:
+    final HarFileSystem harFileSystem = new HarFileSystem(fs);
+    try {
+      final URI harUri = new URI(fullHarPathStr);
+      harFileSystem.initialize(harUri, fs.getConf());
+      // now read the file content and compare it against the expected:
+      int readFileCount = 0;
+      for (final String pathStr0 : fileList) {
+        final Path path = new Path(fullHarPathStr + Path.SEPARATOR + pathStr0);
+        final String baseName = path.getName();
+        final FileStatus status = harFileSystem.getFileStatus(path);
+        if (status.isFile()) {
+          // read the file:
+          final FSDataInputStream fsdis = harFileSystem.open(path);
+          final byte[] bb = readFully(fsdis, true/* close */);
+          if ("bin".equals(baseName)) {
+            assertArrayEquals(binContent, bb);
+          } else {
+            String actual = new String(bb, "UTF-8");
+            assertEquals(baseName, actual);
+          }
+          readFileCount++;
+        }
+      }
+      assertEquals(fileList.size(), readFileCount);
+    } finally {
+      harFileSystem.close();
+    }
+  }
+  
+  private static byte[] readFully(FSDataInputStream fsdis, boolean close) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+      int b;
+      while (true) {
+        b = fsdis.read();
+        if (b < 0) {
+          break;
+        } else {
+          baos.write(b);
+        }
+      }
+      baos.close();
+      return baos.toByteArray();
+    } finally {
+      if (close) {
+        fsdis.close();
+      }
+    }
+  }
+  
+  private static byte[] prepareBin() {
+    byte[] bb = new byte[77777];
+    for (int i=0; i<bb.length; i++) {
+      bb[i] = (byte)(i * 37);
+    }
+    return bb;
   }
 }
