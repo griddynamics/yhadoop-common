@@ -386,7 +386,7 @@ public class TestHadoopArchives {
           if (readIntoBuffer == buffer.length) {
             // buffer is full, need to clean the buffer.
             // drop the buffered data to baos:
-            baos.write(buffer, 0, buffer.length);
+            baos.write(buffer);
             // reset the counter to start reading to the buffer beginning:
             readIntoBuffer = 0;
           } else if (readIntoBuffer > buffer.length) {
