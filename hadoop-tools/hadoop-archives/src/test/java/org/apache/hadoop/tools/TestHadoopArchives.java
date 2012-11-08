@@ -147,7 +147,6 @@ public class TestHadoopArchives {
     fs.mkdirs(sub1);
     createFile(inputPath, fs, sub1.getName(), "a");
     final Configuration conf = miniMRClientCluster.getConfig();
-    //final Configuration conf = mapred.createJobConf();
     final FsShell shell = new FsShell(conf);
 
     final List<String> originalPaths = lsr(shell, "input");
@@ -168,7 +167,7 @@ public class TestHadoopArchives {
       };
       System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
       final Configuration conf2 = miniMRClientCluster.getConfig();
-      final HadoopArchives har = new HadoopArchives(conf2/*mapred.createJobConf()*/);
+      final HadoopArchives har = new HadoopArchives(conf2);
       assertEquals(0, ToolRunner.run(har, args));
 
       //compare results
@@ -195,7 +194,6 @@ public class TestHadoopArchives {
     createFile(sub2, fs, "z");
     
     final Configuration conf = miniMRClientCluster.getConfig();
-    //final Configuration conf = mapred.createJobConf();
     final FsShell shell = new FsShell(conf);
 
     final String inputPathStr = inputPath.toUri().getPath();
@@ -218,7 +216,7 @@ public class TestHadoopArchives {
       };
       System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
       final Configuration conf2 = miniMRClientCluster.getConfig();
-      final HadoopArchives har = new HadoopArchives(/*mapred.createJobConf()*/conf2);
+      final HadoopArchives har = new HadoopArchives(conf2);
       assertEquals(0, ToolRunner.run(har, args));
 
       //compare results
