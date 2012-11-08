@@ -39,7 +39,8 @@ import org.apache.hadoop.fs.HarFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.MiniMRClientCluster;
+import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
@@ -67,11 +68,11 @@ public class TestHadoopArchives {
   private static final String inputDir = "input";
 
   private Path inputPath;
+  private Path archivePath;
   private final List<String> fileList = new ArrayList<String>();
   private MiniDFSCluster dfscluster;
-  private MiniMRCluster mapred;
   private FileSystem fs;
-  private Path archivePath;
+  private MiniMRClientCluster miniMRClientCluster;
   
   static private String createFile(Path root, FileSystem fs, String... dirsAndFile 
       ) throws IOException {
@@ -101,9 +102,19 @@ public class TestHadoopArchives {
   @Before
   public void setUp() throws Exception {
     fileList.clear();
-    dfscluster = new MiniDFSCluster(new Configuration(), 2, true, null);
+    
+    final Configuration configuration = new Configuration(); 
+    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(configuration);
+    builder.numDataNodes(2);
+    builder.format(true);
+    builder.racks(null);
+    dfscluster = builder.build();
+    
     fs = dfscluster.getFileSystem();
-    mapred = new MiniMRCluster(2, fs.getUri().toString(), 1);
+    
+    miniMRClientCluster 
+      = MiniMRClientClusterFactory.create(getClass(), 1, configuration);
+    
     inputPath = new Path(fs.getHomeDirectory(), inputDir); 
     archivePath = new Path(fs.getHomeDirectory(), "archive");
     fs.delete(inputPath, true);
@@ -116,14 +127,15 @@ public class TestHadoopArchives {
   @After
   public void tearDown() throws Exception {
     try {
-      if (mapred != null) {
-        mapred.shutdown();
+      if (miniMRClientCluster != null) {
+        miniMRClientCluster.stop();
       }
       if (dfscluster != null) {
         dfscluster.shutdown();
       }
     } catch(Exception e) {
       System.err.println(e);
+      throw e;
     }
   }
    
@@ -134,7 +146,8 @@ public class TestHadoopArchives {
     final Path sub1 = new Path(inputPath, "dir1");
     fs.mkdirs(sub1);
     createFile(inputPath, fs, sub1.getName(), "a");
-    final Configuration conf = mapred.createJobConf();
+    final Configuration conf = miniMRClientCluster.getConfig();
+    //final Configuration conf = mapred.createJobConf();
     final FsShell shell = new FsShell(conf);
 
     final List<String> originalPaths = lsr(shell, "input");
@@ -154,7 +167,8 @@ public class TestHadoopArchives {
           "archive"
       };
       System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
-      final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
+      final Configuration conf2 = miniMRClientCluster.getConfig();
+      final HadoopArchives har = new HadoopArchives(conf2/*mapred.createJobConf()*/);
       assertEquals(0, ToolRunner.run(har, args));
 
       //compare results
@@ -179,7 +193,9 @@ public class TestHadoopArchives {
     final Path sub2 = new Path(inputPath, "sub 1 with suffix");
     fs.mkdirs(sub2);
     createFile(sub2, fs, "z");
-    final Configuration conf = mapred.createJobConf();
+    
+    final Configuration conf = miniMRClientCluster.getConfig();
+    //final Configuration conf = mapred.createJobConf();
     final FsShell shell = new FsShell(conf);
 
     final String inputPathStr = inputPath.toUri().getPath();
@@ -201,7 +217,8 @@ public class TestHadoopArchives {
           archivePath.toString()
       };
       System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
-      final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
+      final Configuration conf2 = miniMRClientCluster.getConfig();
+      final HadoopArchives har = new HadoopArchives(/*mapred.createJobConf()*/conf2);
       assertEquals(0, ToolRunner.run(har, args));
 
       //compare results
@@ -266,6 +283,7 @@ public class TestHadoopArchives {
     // Generate a big binary file content:
     final byte[] binContent = prepareBin();
     fileList.add(createFile(inputPath, fs, binContent, sub2.getName(), "bin"));
+    fileList.add(createFile(inputPath, fs, new byte[0], sub2.getName(), "zero-length"));
 
     final String inputPathStr = inputPath.toUri().getPath();
     System.out.println("inputPathStr = " + inputPathStr);
@@ -280,7 +298,8 @@ public class TestHadoopArchives {
         archivePath.toString() };
     System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
         HADOOP_ARCHIVES_JAR);
-    final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
+    final Configuration conf = miniMRClientCluster.getConfig();
+    final HadoopArchives har = new HadoopArchives(conf);
     assertEquals(0, ToolRunner.run(har, args));
 
     // Create fresh HarFs:
@@ -296,12 +315,17 @@ public class TestHadoopArchives {
         final FileStatus status = harFileSystem.getFileStatus(path);
         if (status.isFile()) {
           // read the file:
-          final FSDataInputStream fsdis = harFileSystem.open(path);
-          final byte[] bb = readFully(fsdis, true/* close */);
+          final FSDataInputStream fsdis1 = harFileSystem.open(path);
+          final byte[] actualContent1 = readAllSimple(fsdis1, true/* close */);
+          final FSDataInputStream fsdis2 = harFileSystem.open(path);
+          final byte[] actualContent2 = readAllWithBuffer(fsdis2, true/* close */);
+          assertArrayEquals(actualContent1, actualContent2);
           if ("bin".equals(baseName)) {
-            assertArrayEquals(binContent, bb);
+            assertArrayEquals(binContent, actualContent1);
+          } else if ("zero-length".equals(baseName)) {
+            assertEquals(0, actualContent1.length);
           } else {
-            String actual = new String(bb, "UTF-8");
+            String actual = new String(actualContent1, "UTF-8");
             assertEquals(baseName, actual);
           }
           readFileCount++;
@@ -313,8 +337,8 @@ public class TestHadoopArchives {
     }
   }
   
-  private static byte[] readFully(FSDataInputStream fsdis, boolean close) throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+  private static byte[] readAllSimple(FSDataInputStream fsdis, boolean close) throws IOException {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try {
       int b;
       while (true) {
@@ -333,11 +357,59 @@ public class TestHadoopArchives {
       }
     }
   }
+
+  private static byte[] readAllWithBuffer(FSDataInputStream fsdis, boolean close)
+      throws IOException {
+    try {
+      final int available = fsdis.available();
+      final byte[] buffer;
+      final ByteArrayOutputStream baos;
+      if (available < 0) {
+        buffer = new byte[1024];
+        baos = new ByteArrayOutputStream(buffer.length * 2);
+      } else {
+        buffer = new byte[available + 1];
+        baos = new ByteArrayOutputStream(available);
+      }
+      int readIntoBuffer = 0;
+      int read; 
+      while (true) {
+        read = fsdis.read(buffer, readIntoBuffer, buffer.length - readIntoBuffer);
+        if (read < 0) {
+          // end of stream:
+          if (readIntoBuffer > 0) {
+            baos.write(buffer, 0, readIntoBuffer);
+          }
+          return baos.toByteArray();
+        } else {
+          readIntoBuffer += read;
+          if (readIntoBuffer == buffer.length) {
+            // buffer is full, need to clean the buffer.
+            // drop the buffered data to baos:
+            baos.write(buffer, 0, buffer.length);
+            // reset the counter to start reading to the buffer beginning:
+            readIntoBuffer = 0;
+          } else if (readIntoBuffer > buffer.length) {
+            throw new IOException("Read more than the buffer length: "
+                + readIntoBuffer + ", bugger length = " + buffer.length);
+          }
+        }
+      }
+    } finally {
+      if (close) {
+        fsdis.close();
+      }
+    }
+  }
   
   private static byte[] prepareBin() {
     byte[] bb = new byte[77777];
     for (int i=0; i<bb.length; i++) {
-      bb[i] = (byte)(i * 37);
+      // Generate unique values, as possible:
+      double d = Math.log(i + 2);
+      long bits = Double.doubleToLongBits(d);
+      byte b = (byte)bits;
+      bb[i] = b;
     }
     return bb;
   }
