@@ -102,9 +102,19 @@ public class TestHadoopArchives {
   @Before
   public void setUp() throws Exception {
     fileList.clear();
+
+    final Configuration configuration = new Configuration();
     
-    final Configuration configuration = new Configuration(); 
+    // NB: the following lines are copied from patch attached to
+    //   https://issues.apache.org/jira/browse/OOZIE-1029:
+    // ====================================================
+    // Scheduler properties required for YARN to work
+    configuration.set("yarn.scheduler.capacity.root.queues", "default");
+    configuration.set("yarn.scheduler.capacity.root.default.capacity", "100");
+    // ====================================================
+    
     MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(configuration);
+    builder.checkExitOnShutdown(true);
     builder.numDataNodes(2);
     builder.format(true);
     builder.racks(null);
