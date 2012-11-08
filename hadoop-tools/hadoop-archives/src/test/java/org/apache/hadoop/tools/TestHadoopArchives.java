@@ -406,8 +406,7 @@ public class TestHadoopArchives {
       // Generate unique values, as possible:
       double d = Math.log(i + 2);
       long bits = Double.doubleToLongBits(d);
-      byte b = (byte)bits;
-      bb[i] = b;
+      bb[i] = (byte)bits;
     }
     return bb;
   }
