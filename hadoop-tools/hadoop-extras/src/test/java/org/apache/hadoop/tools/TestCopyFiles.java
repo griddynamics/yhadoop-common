@@ -57,7 +57,7 @@ import org.junit.Ignore;
 /**
  * A JUnit test for copying files recursively.
  */
-@Ignore
+//@Ignore
 public class TestCopyFiles extends TestCase {
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
@@ -735,7 +735,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
-  public void testMapCount() throws Exception {
+  public void tesMapCount() throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
