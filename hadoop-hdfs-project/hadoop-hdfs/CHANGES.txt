@@ -111,6 +111,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4046. Rename ChecksumTypeProto enum NULL since it is illegal in
     C/C++. (Binglin Chang via suresh)
 
+    HDFS-4048. Use ERROR instead of INFO for volume failure logs.
+    (Stephen Chu via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -205,6 +208,14 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3979. For hsync, datanode should wait for the local sync to complete
     before sending ack. (Lars Hofhansl via szetszwo)
+
+    HDFS-3810. Implement format() for BKJM (Ivan Kelly via umamahesh)
+
+    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
+    startup. (Junping Du via todd)
+
+    HDFS-4138. BackupNode startup fails due to uninitialized edit log.
+    (Kihwal Lee via shv)
 
 Release 2.0.2-alpha - 2012-09-07 
   
@@ -1669,6 +1680,8 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
 
+    HDFS-3990.  NN's health report has severe performance problems (daryn)
+
   BUG FIXES
 
     HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor
@@ -1682,12 +1695,6 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-4090. getFileChecksum() result incompatible when called against
     zero-byte files. (Kihwal Lee via daryn)
-
-    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
-    startup. (Junping Du via todd)
-
-    HDFS-4138. BackupNode startup fails due to uninitialized edit log.
-    (Kihwal Lee via shv)
 
 Release 0.23.4 - UNRELEASED
 
