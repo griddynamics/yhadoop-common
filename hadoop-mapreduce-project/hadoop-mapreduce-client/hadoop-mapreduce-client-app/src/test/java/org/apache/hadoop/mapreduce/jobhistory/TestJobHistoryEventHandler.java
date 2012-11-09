@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -30,12 +29,15 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -51,7 +53,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.verification.VerificationMode;
 
 public class TestJobHistoryEventHandler {
 
@@ -283,12 +284,8 @@ public class TestJobHistoryEventHandler {
   }
 
   private JobHistoryEvent getEventToEnqueue(JobId jobId) {
-    JobHistoryEvent toReturn = Mockito.mock(JobHistoryEvent.class);
-    HistoryEvent he = Mockito.mock(HistoryEvent.class);
-    Mockito.when(he.getEventType()).thenReturn(EventType.JOB_STATUS_CHANGED);
-    Mockito.when(toReturn.getHistoryEvent()).thenReturn(he);
-    Mockito.when(toReturn.getJobID()).thenReturn(jobId);
-    return toReturn;
+    HistoryEvent toReturn= new JobStatusChangedEvent(new JobID(jobId.getId()+"", jobId.getId()), "change status");
+    return new JobHistoryEvent(jobId, toReturn);
   }
 
   @Test
@@ -333,6 +330,13 @@ public class TestJobHistoryEventHandler {
     jheh.setForcejobCompletion(true);
     for(int i=0; i < numEvents; ++i) {
       events[i] = getEventToEnqueue(jobId);
+      JobStatusChanged status= (JobStatusChanged)events[i].getHistoryEvent().getDatum();
+      Object o1=status.get(0);
+      Object o2=status.get(1);
+      Assert.assertEquals(o1.toString(), ((JobStatusChangedEvent)events[i].getHistoryEvent()).getJobId().toString());
+      Assert.assertEquals(o2.toString(), ((JobStatusChangedEvent)events[i].getHistoryEvent()).getStatus().toString());
+      Assert.assertNotNull(o2);
+      checkStatus(o1.toString());
       jheh.handle(events[i]);
     }
     jheh.stop();
@@ -342,6 +346,17 @@ public class TestJobHistoryEventHandler {
     assertTrue("Last event handled wasn't JobUnsuccessfulCompletionEvent",
         jheh.lastEventHandled.getHistoryEvent()
         instanceof JobUnsuccessfulCompletionEvent);
+  }
+  // check format og job id. Should be 'job_nnn_nnn'
+  private void checkStatus(String s){
+    s.startsWith("job");
+    String[] parts=s.split("_");
+    Assert.assertEquals(parts.length, 3);
+    Assert.assertEquals(parts.length, 3);
+    Integer.parseInt(parts[1]);
+    Integer.parseInt(parts[2]);
+      
+    
   }
 }
 

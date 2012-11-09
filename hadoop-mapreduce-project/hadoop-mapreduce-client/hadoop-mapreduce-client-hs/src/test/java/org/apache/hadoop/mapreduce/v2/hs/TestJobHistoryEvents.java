@@ -66,9 +66,20 @@ public class TestJobHistoryEvents {
      * Use HistoryContext to read logged events and verify the number of 
      * completed maps 
     */
+    LOG.info("sssssss");
+    LOG.error("srtttsssss");
+    System.out.println("wwwwwws");
     HistoryContext context = new JobHistory();
     ((JobHistory)context).init(conf);
-    Job parsedJob = context.getJob(jobId);
+    ((JobHistory)context).start();
+    Assert.assertTrue( context.getStartTime()>0);
+    Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STARTED);
+    
+    
+    ((JobHistory)context).stop();
+    Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STOPPED);
+      Job parsedJob = context.getJob(jobId);
+    
     Assert.assertEquals("CompletedMaps not correct", 2,
         parsedJob.getCompletedMaps());
     Assert.assertEquals(System.getProperty("user.name"), parsedJob.getUserName());

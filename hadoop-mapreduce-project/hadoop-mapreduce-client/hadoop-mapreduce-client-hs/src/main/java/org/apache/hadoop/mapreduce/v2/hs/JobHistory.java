@@ -161,6 +161,8 @@ public class JobHistory extends AbstractService implements HistoryContext {
 
   public JobHistory() {
     super(JobHistory.class.getName());
+    LOG.info("jobinit!");
+    System.out.println("jobinit!");
   }
 
   @Override
