@@ -76,6 +76,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9015. Standardize creation of SaslRpcServers (daryn via bobby)
 
+    HADOOP-9021. Enforce configured SASL method on the server (daryn via
+    bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -856,6 +859,9 @@ Release 0.23.5 - UNRELEASED
     contains a colon (jlowe via bobby)
 
     HADOOP-8986. Server$Call object is never released after it is sent (bobby)
+
+    HADOOP-9022. Hadoop distcp tool fails to copy file if -m 0 specified
+    (Jonathan Eagles vai bobby)
 
 Release 0.23.4 - UNRELEASED
 
