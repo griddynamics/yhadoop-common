@@ -83,6 +83,8 @@ public class TestLinuxContainerExecutorWithMocks {
     String executorPath = f.getAbsolutePath();
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, executorPath);
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, "file:///bin/echo");
+    conf.set(YarnConfiguration.NM_LOG_DIRS, "file:///dev/null");
     mockExec = new LinuxContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
