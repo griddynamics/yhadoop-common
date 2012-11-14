@@ -51,13 +51,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.DistCpV1;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.junit.Ignore;
 
 
 /**
  * A JUnit test for copying files recursively.
  */
-@Ignore
+
 public class TestCopyFiles extends TestCase {
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
@@ -735,7 +734,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
-  public void testMapCount() throws Exception {
+  public void teMapCount() throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
