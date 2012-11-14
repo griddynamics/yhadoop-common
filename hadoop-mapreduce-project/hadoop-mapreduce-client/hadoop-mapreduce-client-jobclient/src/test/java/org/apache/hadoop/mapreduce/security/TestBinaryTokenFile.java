@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ToolRunner;
@@ -53,7 +54,7 @@ import org.junit.Test;
 
 public class TestBinaryTokenFile {
 
-  private static final String KEY_SECURITY_TOKEN = "key-security-token-file";
+  private static final String KEY_SECURITY_TOKEN_FILE_NAME = "key-security-token-file";
   private static final String DELEGATION_TOKEN_KEY = "Hdfs";
   
   // my sleep class
@@ -72,8 +73,9 @@ public class TestBinaryTokenFile {
         System.out.println("Context token: [" + t + "]");
       }
       if (contextTokenCollection.size() != 2) { // one job token and one delegation token
+        // fail the test:
         throw new RuntimeException("Exactly 2 tokens are expected in the contextTokenCollection: " +
-        		"one job token and one delegation token, but was found " + contextTokenCollection.size() + " tokens."); // fail the test
+        		"one job token and one delegation token, but was found " + contextTokenCollection.size() + " tokens.");
       }
       
       final Token<? extends TokenIdentifier> dt = contextCredentials.getToken(new Text(DELEGATION_TOKEN_KEY));
@@ -86,9 +88,9 @@ public class TestBinaryTokenFile {
         throw new RuntimeException("Token file key ["+MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY+"] found in the configuration. It should have been removed from the configuration.");
       }
       
-      final String tokenFile = context.getConfiguration().get(KEY_SECURITY_TOKEN);
+      final String tokenFile = context.getConfiguration().get(KEY_SECURITY_TOKEN_FILE_NAME);
       if (tokenFile == null) {
-        throw new RuntimeException("Token file key ["+KEY_SECURITY_TOKEN+"] not found in the job configuration.");
+        throw new RuntimeException("Token file key ["+KEY_SECURITY_TOKEN_FILE_NAME+"] not found in the job configuration.");
       }
       final Credentials binaryCredentials = new Credentials();
       binaryCredentials.readTokenStorageStream(new DataInputStream(new FileInputStream(
@@ -97,14 +99,31 @@ public class TestBinaryTokenFile {
       if (binaryTokenCollection.size() != 1) {
         throw new RuntimeException("The token collection read from file ["+tokenFile+"] must have size = 1.");
       }
-      for (Token<? extends TokenIdentifier> binTok: binaryTokenCollection) {
-        System.out.println("The token read from binary file: t = [" + binTok + "]");
-        // Verify that dt is same as the token in the file:
-        if (!dt.equals(binTok)) {
-          throw new RuntimeException(
+      final Token<? extends TokenIdentifier> binTok = binaryTokenCollection.iterator().next(); 
+      System.out.println("The token read from binary file: t = [" + binTok + "]");
+      // Verify that dt is same as the token in the file:
+      if (!dt.equals(binTok)) {
+        throw new RuntimeException(
               "Delegation token in job is not same as the token passed in file:"
                   + " tokenInFile=[" + binTok + "], dt=[" + dt + "].");
-        }
+      }
+      
+      // Now test the user tokens.
+      final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      // Print all the UGI tokens for diagnostic purposes:
+      final Collection<Token<? extends TokenIdentifier>> ugiTokenCollection = ugi.getTokens();
+      for (Token<? extends TokenIdentifier> t: ugiTokenCollection) {
+        System.out.println("UGI token: [" + t + "]");
+      }
+      final Token<? extends TokenIdentifier> ugiToken 
+        = ugi.getCredentials().getToken(new Text(DELEGATION_TOKEN_KEY));
+      if (ugiToken == null) {
+        throw new RuntimeException("Token for key ["+DELEGATION_TOKEN_KEY+"] not found among the UGI tokens.");
+      }
+      if (!ugiToken.equals(binTok)) {
+        throw new RuntimeException(
+              "UGI token is not same as the token passed in binary file:"
+                  + " tokenInBinFile=[" + binTok + "], ugiTok=[" + ugiToken + "].");
       }
       
       super.map(key, value, context);
@@ -150,7 +169,7 @@ public class TestBinaryTokenFile {
             binaryTokenFileName.toString());
         // NB: the MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY key now gets deleted from config, 
         // so it's not accessible in the job's config. So, we use another key to pass the file name into the job configuration:  
-        job.getConfiguration().set(KEY_SECURITY_TOKEN, 
+        job.getConfiguration().set(KEY_SECURITY_TOKEN_FILE_NAME, 
             binaryTokenFileName.toString());
       } catch (IOException e) {
         Assert.fail("Exception " + e);
