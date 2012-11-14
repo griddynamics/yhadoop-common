@@ -277,6 +277,9 @@ Trunk (Unreleased)
 
     HADOOP-8974. TestDFVariations fails on Windows. (Chris Nauroth via suresh)
 
+    HADOOP-9037. Bug in test-patch.sh and precommit build process (Kihwal Lee
+    via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -363,6 +366,8 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9021. Enforce configured SASL method on the server (daryn via
     bobby)
+
+    HADOO-8998. set Cache-Control no-cache header on all dynamic content. (tucu)
 
   OPTIMIZATIONS
 
