@@ -117,6 +117,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-1322. Document umask in DistributedFileSystem#mkdirs javadocs.
     (Colin Patrick McCabe via eli)
 
+    HDFS-4038. Override toString() for BookKeeperEditLogInputStream.
+    (Vinay via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -228,6 +231,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3921. NN will prematurely consider blocks missing when entering active
     state while still in safe mode. (atm)
+
+    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
+    lastDeletedReport should be volatile. (Jing Zhao via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1696,6 +1702,9 @@ Release 0.23.5 - UNRELEASED
     HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
 
     HDFS-3990.  NN's health report has severe performance problems (daryn)
+
+    HDFS-4181.  LeaseManager tries to double remove and prints extra messages
+    (Kihwal Lee via daryn)
 
   BUG FIXES
 
