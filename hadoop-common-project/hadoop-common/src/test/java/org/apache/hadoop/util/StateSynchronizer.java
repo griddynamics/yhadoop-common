@@ -25,13 +25,13 @@ import static java.lang.System.out;
  * to reliably synchronize various threads when each of them
  * achieves certain state.
  * The emum of the possible states is to be set as the class parameter.
- * The initial state can to be set in the constructor. If not set, the 
+ * The initial state can be set in the constructor. If not set, the 
  * synchronizer initialized with null state.
  * 
  * This implementation ignores {@link InterruptedException}s: if a thread 
  * blocked in any method of this class, it will not return from there if 
  * that thread is {@link Thread#interrupt()}-ed: the blockage will continue
- * the wait condition is met.
+ * until the waiting condition is met.
  */
 public class StateSynchronizer<T extends Enum<?>> {
   
