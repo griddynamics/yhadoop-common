@@ -50,12 +50,14 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
    */
   private static class RenewAction<T extends FileSystem & Renewable>
       implements Delayed {
+    private final long renewCycleDurationMillis;
     /** when should the renew happen */
     private long renewalTime;
     /** a weak reference to the file system so that it can be garbage collected */
     private final WeakReference<T> weakFs;
 
-    private RenewAction(final T fs) {
+    private RenewAction(long renewCycleMillis, final T fs) {
+      renewCycleDurationMillis = renewCycleMillis;
       this.weakFs = new WeakReference<T>(fs);
       updateRenewalTime();
     }
@@ -93,7 +95,7 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
      * @param newTime the new time
      */
     private void updateRenewalTime() {
-      renewalTime = RENEW_CYCLE + System.currentTimeMillis();
+      renewalTime = renewCycleDurationMillis + System.currentTimeMillis();
     }
 
     /**
@@ -135,8 +137,8 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
 
   /** Wait for 95% of a day between renewals */
   private static final int RENEW_CYCLE = 24 * 60 * 60 * 950;
-
-  private DelayQueue<RenewAction<T>> queue = new DelayQueue<RenewAction<T>>();
+  
+  private final DelayQueue<RenewAction<T>> queue = new DelayQueue<RenewAction<T>>();
 
   public DelegationTokenRenewer(final Class<T> clazz) {
     super(clazz.getSimpleName() + "-" + DelegationTokenRenewer.class.getSimpleName());
@@ -145,8 +147,16 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
 
   /** Add a renew action to the queue. */
   public void addRenewAction(final T fs) {
-    queue.add(new RenewAction<T>(fs));
+    long renewCycleMillis = getRenewCycleDurationMillis();
+    queue.add(new RenewAction<T>(renewCycleMillis, fs));
   }
+
+  /*
+   * Allow to change the renew cycle duration in unit-tests. 
+   */
+  protected long getRenewCycleDurationMillis() {
+    return RENEW_CYCLE;
+  } 
 
   @Override
   public void run() {
