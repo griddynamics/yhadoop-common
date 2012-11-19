@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 /**
  * This test case tests the symlink creation
@@ -69,11 +70,27 @@ public class TestMultipleCachefiles
     MiniDFSCluster dfs = null; 
     try{
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = 
+        new MiniDFSCluster
+         .Builder(conf)
+         .checkExitOnShutdown(true)
+         .numDataNodes(1)
+         .format(true)
+         .racks(null)
+         .build();
+
       FileSystem fileSys = dfs.getFileSystem();
       String namenode = fileSys.getUri().toString();
 
-      mr  = new MiniMRCluster(1, namenode, 3);
+      conf.set(CapacitySchedulerConfiguration.PREFIX
+          + CapacitySchedulerConfiguration.ROOT + "."
+          + CapacitySchedulerConfiguration.QUEUES, "default");
+      conf.set(CapacitySchedulerConfiguration.PREFIX
+          + CapacitySchedulerConfiguration.ROOT + ".default."
+          + CapacitySchedulerConfiguration.CAPACITY, "100");
+
+      final JobConf jobConf = new JobConf(conf);
+      mr  = new MiniMRCluster(0,0, 1, namenode, 3, null, null, null, jobConf);
 
       List<String> args = new ArrayList<String>();
       for (Map.Entry<String, String> entry : mr.createJobConf()) {
