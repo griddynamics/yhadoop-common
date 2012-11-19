@@ -159,6 +159,11 @@ Trunk (Unreleased)
 
     HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
 
+    HDFS-3935. Add JournalNode to the start/stop scripts (Andy Isaacson via todd)
+
+    HDFS-4206. Change the fields in INode and its subclasses to private.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -247,6 +252,9 @@ Trunk (Unreleased)
 
     HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
     (Binglin Chang via suresh)
+
+    HDFS-4105. The SPNEGO user for secondary namenode should use the web 
+    keytab. (Arpit Gupta via jitendra)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
@@ -599,6 +607,15 @@ Release 2.0.3-alpha - Unreleased
     (umamahesh)
 
     HDFS-4100. Fix all findbug security warings. (Liang Xie via eli)
+
+    HDFS-3507. DFS#isInSafeMode needs to execute only on Active NameNode.
+    (Vinay via atm)
+
+    HDFS-4156. Seeking to a negative position should throw an IOE.
+    (Eli Reisman via eli)
+
+    HDFS-4171. WebHDFS and HttpFs should accept only valid Unix user 
+    names. (tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 

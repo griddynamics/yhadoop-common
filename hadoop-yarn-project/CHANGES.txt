@@ -101,6 +101,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-169. Update log4j.appender.EventCounter to use
     org.apache.hadoop.log.metrics.EventCounter (Anthony Rojas via tomwhite)
 
+    YARN-184. Remove unnecessary locking in fair scheduler, and address 
+    findbugs excludes. (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -168,6 +171,12 @@ Release 0.23.6 - UNRELEASED
 
     YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
     bobby)
+
+    YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
+    (jeagles via bobby)
+
+    YARN-151. Browser thinks RM main page JS is taking too long 
+    (Ravi Prakash via bobby)
 
 Release 0.23.5 - UNRELEASED
 
