@@ -31,6 +31,7 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -98,6 +99,14 @@ public class TestStreamingTaskLog {
       File scriptFile = createScript(
           testDir.toString() + "/testTaskLog.sh");
       conf.setBoolean(JTConfig.JT_PERSIST_JOBSTATUS, false);
+      
+      conf.set(CapacitySchedulerConfiguration.PREFIX
+          + CapacitySchedulerConfiguration.ROOT + "."
+          + CapacitySchedulerConfiguration.QUEUES, "default");
+      conf.set(CapacitySchedulerConfiguration.PREFIX
+          + CapacitySchedulerConfiguration.ROOT + ".default."
+          + CapacitySchedulerConfiguration.CAPACITY, "100");
+      
       mr = new MiniMRCluster(numSlaves, fs.getUri().toString(), 1, null, null, conf);
 
       writeInputFile(fs, inputPath);

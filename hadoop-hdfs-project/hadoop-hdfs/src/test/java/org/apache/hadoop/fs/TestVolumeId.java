@@ -45,9 +45,9 @@ public class TestVolumeId {
     
     testEq(true, id2, id2copy2);
     
-    testEq3(true, id2, id2copy1, id2copy2);
+    testEqMany(true, id2, id2copy1, id2copy2);
     
-    testEq3(false, id1, id2, id3);
+    testEqMany(false, id1, id2, id3);
   }
   
   private void testEq(final boolean eq, VolumeId id1, VolumeId id2) {
@@ -90,14 +90,20 @@ public class TestVolumeId {
     }
   }
   
-  private void testEq3(final boolean eq, VolumeId id1, VolumeId id2, VolumeId id3) {
-    testEq(eq, id1, id2);
-    testEq(eq, id2, id3);
-    testEq(eq, id1, id3);
-    
-    // comparison relationship must be acyclic:
-    int cycleSum = sign(id1.compareTo(id2)) + sign(id2.compareTo(id3)) + sign(id3.compareTo(id1));
-    assertTrue(Math.abs(cycleSum) < 3);
+  private void testEqMany(final boolean eq, VolumeId... volumeIds) {
+    VolumeId vidNext;
+    int sum = 0;
+    for (int i=0; i<volumeIds.length; i++) {
+      if (i == volumeIds.length - 1) {
+        vidNext = volumeIds[0];
+      } else {
+        vidNext = volumeIds[i + 1];
+      }
+      testEq(eq, volumeIds[i], vidNext);
+      sum += sign(volumeIds[i].compareTo(vidNext));
+    }
+    // the comparison relationship must always be acyclic:
+    assertTrue(sum < volumeIds.length);
   }
   
 }

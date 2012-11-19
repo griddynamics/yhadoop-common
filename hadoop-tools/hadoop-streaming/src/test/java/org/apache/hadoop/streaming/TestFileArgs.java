@@ -26,7 +26,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.After;
 import org.junit.Before;
 
@@ -51,10 +53,25 @@ public class TestFileArgs extends TestStreaming
   {
     // Set up mini cluster
     conf = new Configuration();
-    dfs = new MiniDFSCluster(conf, 1, true, null);
+    dfs = 
+      new MiniDFSCluster
+        .Builder(conf)
+        .checkExitOnShutdown(true)
+        .numDataNodes(1)
+        .format(true)
+        .racks(null)
+        .build();
     fileSys = dfs.getFileSystem();
     namenode = fileSys.getUri().getAuthority();
-    mr  = new MiniMRCluster(1, namenode, 1);
+    
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + "."
+        + CapacitySchedulerConfiguration.QUEUES, "default");
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".default."
+        + CapacitySchedulerConfiguration.CAPACITY, "100");
+    JobConf jobConf = new JobConf(conf);
+    mr  = new MiniMRCluster(0,0, 1, namenode, 1, null, null, null, jobConf);
 
     map = LS_PATH;
     FileSystem.setDefaultUri(conf, "hdfs://" + namenode);
