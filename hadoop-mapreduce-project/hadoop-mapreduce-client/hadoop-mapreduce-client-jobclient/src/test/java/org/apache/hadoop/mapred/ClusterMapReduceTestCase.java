@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -50,6 +51,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
    *
    * @throws Exception
    */
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
 
@@ -74,7 +76,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
     if (dfsCluster == null) {
       JobConf conf = new JobConf();
       if (props != null) {
-        for (Map.Entry entry : props.entrySet()) {
+        for (Map.Entry<Object,Object> entry: props.entrySet()) {
           conf.set((String) entry.getKey(), (String) entry.getValue());
         }
       }
@@ -82,12 +84,26 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
       .format(reformatDFS).racks(null).build();
 
       ConfigurableMiniMRCluster.setConfiguration(props);
+      
+      setIfAbsent(conf, CapacitySchedulerConfiguration.PREFIX
+          + CapacitySchedulerConfiguration.ROOT + "."
+          + CapacitySchedulerConfiguration.QUEUES, "default");
+      setIfAbsent(conf, CapacitySchedulerConfiguration.PREFIX
+          + CapacitySchedulerConfiguration.ROOT + ".default."
+          + CapacitySchedulerConfiguration.CAPACITY, "100");
+      
       //noinspection deprecation
       mrCluster = new ConfigurableMiniMRCluster(2,
           getFileSystem().getUri().toString(), 1, conf);
     }
   }
 
+  private static void setIfAbsent(JobConf conf, String key, String value) {
+    if (conf.get(key) == null) {
+      conf.set(key, value);
+    }
+  }
+  
   private static class ConfigurableMiniMRCluster extends MiniMRCluster {
     private static Properties config;
 
@@ -101,17 +117,18 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
       super(0,0, numTaskTrackers, namenode, numDir, null, null, null, conf);
     }
 
+    @Override
     public JobConf createJobConf() {
-      JobConf conf = super.createJobConf();
+      final JobConf conf = super.createJobConf();
       if (config != null) {
-        for (Map.Entry entry : config.entrySet()) {
+        for (Map.Entry<Object,Object> entry : config.entrySet()) {
           conf.set((String) entry.getKey(), (String) entry.getValue());
         }
       }
       return conf;
     }
   }
-
+  
   /**
    * Stops the cluster within a testcase.
    * <p/>
