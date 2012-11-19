@@ -238,6 +238,24 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4139. fuse-dfs RO mode still allows file truncation.
     (Colin Patrick McCabe via eli)    
 
+    HDFS-4104. dfs -test -d prints inappropriate error on nonexistent directory
+    (Andy Isaacson via daryn)
+
+    HDFS-3623. BKJM: zkLatchWaitTimeout hard coded to 6000. Make use of ZKSessionTimeout instead.
+    (umamahesh)
+
+    HDFS-3507. DFS#isInSafeMode needs to execute only on Active NameNode.
+    (Vinay via atm)
+
+    HDFS-4105. The SPNEGO user for secondary namenode should use the web
+    keytab. (Arpit Gupta via jitendra)
+
+    HDFS-4156. Seeking to a negative position should throw an IOE.
+    (Eli Reisman via eli)
+
+    HDFS-4171. WebHDFS and HttpFs should accept only valid Unix user 
+    names. (tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -1689,6 +1707,18 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1728,7 +1758,10 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-4182. SecondaryNameNode leaks NameCache entries (bobby)
 
-Release 0.23.4 - UNRELEASED
+    HDFS-4186. logSync() is called with the write lock held while releasing
+    lease (Kihwal Lee via daryn)
+
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 
