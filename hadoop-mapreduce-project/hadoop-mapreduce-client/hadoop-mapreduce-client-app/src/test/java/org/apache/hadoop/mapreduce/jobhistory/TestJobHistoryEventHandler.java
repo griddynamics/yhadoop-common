@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -50,9 +51,11 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.NewJobWeightBooster;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.verification.VerificationMode;
 
 public class TestJobHistoryEventHandler {
 
@@ -284,7 +287,12 @@ public class TestJobHistoryEventHandler {
   }
 
   private JobHistoryEvent getEventToEnqueue(JobId jobId) {
+//    JobHistoryEvent toReturn = Mockito.mock(JobHistoryEvent.class);
+    HistoryEvent he = Mockito.mock(HistoryEvent.class);
     HistoryEvent toReturn= new JobStatusChangedEvent(new JobID(jobId.getId()+"", jobId.getId()), "change status");
+    Mockito.when(he.getEventType()).thenReturn(EventType.JOB_STATUS_CHANGED);
+//    Mockito.when(toReturn.getHistoryEvent()).thenReturn(he);
+//    Mockito.when(toReturn.getJobID()).thenReturn(jobId);
     return new JobHistoryEvent(jobId, toReturn);
   }
 
