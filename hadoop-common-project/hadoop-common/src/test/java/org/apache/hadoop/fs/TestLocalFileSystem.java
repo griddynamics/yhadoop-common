@@ -292,8 +292,7 @@ public class TestLocalFileSystem {
     assertTrue(dir2.exists() && dir2.canWrite());
     
     final String dataFileName = "corruptedData";
-    final File dataFile = new File(dir2, dataFileName);
-    final Path dataPath = new Path(dataFile.toURI());
+    final Path dataPath = new Path(new File(dir2, dataFileName).toURI());
     final Path checksumPath = fileSys.getChecksumFile(dataPath);
     final FSDataOutputStream fsdos = fileSys.create(dataPath);
     try {
@@ -301,12 +300,12 @@ public class TestLocalFileSystem {
     } finally {
       fsdos.close();
     }
-    assertTrue(dataFile.exists());
-    final long dataFileLength = dataFile.length();
+    assertTrue(fileSys.pathToFile(dataPath).exists());
+    final long dataFileLength = fileSys.getFileStatus(dataPath).getLen();
     assertTrue(dataFileLength > 0);
     
     // check the the checksum file is created and not empty:
-    assertTrue(new File(checksumPath.toUri()).exists());
+    assertTrue(fileSys.pathToFile(checksumPath).exists());
     final long checksumFileLength = fileSys.getFileStatus(checksumPath).getLen();
     assertTrue(checksumFileLength > 0);
     
@@ -322,9 +321,9 @@ public class TestLocalFileSystem {
     assertTrue(!retryIsNecessary);
     
     // the data file should be moved:
-    assertTrue(!dataFile.exists());
+    assertTrue(!fileSys.pathToFile(dataPath).exists());
     // the checksum file should be moved:
-    assertTrue(!new File(checksumPath.toUri()).exists());
+    assertTrue(!fileSys.pathToFile(checksumPath).exists());
     
     // check that the files exist in the new location where they were moved:
     File[] dir1files = dir1.listFiles(new FileFilter() {
