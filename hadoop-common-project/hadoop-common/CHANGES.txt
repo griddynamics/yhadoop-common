@@ -373,6 +373,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9035. Generalize setup of LoginContext (daryn via bobby)
 
+    HADOOP-9042. Add a test for umask in FileSystemContractBaseTest.
+    (Colin McCabe via eli)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -1138,6 +1141,9 @@ Release 0.23.6 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9072. Hadoop-Common-0.23-Build Fails to build in Jenkins 
+    (Robert Parker via tgraves)
 
 Release 0.23.5 - UNRELEASED
 
