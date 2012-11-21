@@ -47,6 +47,9 @@ public class HdfsVolumeId implements VolumeId {
 
   @Override
   public int compareTo(VolumeId arg0) {
+    if (arg0 == null) {
+      return 1;
+    }
     return hashCode() - arg0.hashCode();
   }
 

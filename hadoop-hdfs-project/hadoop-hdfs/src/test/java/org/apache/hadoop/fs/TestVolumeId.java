@@ -31,7 +31,7 @@ public class TestVolumeId {
     testEq(true, id2, id2);
     testEq(false, id1, id2);
 
-    final VolumeId id3 = new HdfsVolumeId(new byte[] { (byte)-1, (byte)-1 }, true);
+    final VolumeId id3 = new HdfsVolumeId(new byte[] { (byte)1, (byte)0 }, true);
     testEq(true, id3, id3);
     testEq(false, id1, id3);
     
@@ -64,12 +64,19 @@ public class TestVolumeId {
     assertEquals(eq, id1.equals(id2));
     assertEquals(eq, id2.equals(id1));
     
+    // null comparison:
+    assertFalse(id1.equals(null));
+    assertFalse(id2.equals(null));
     
     // compareTo:
     assertEquals(eq, 0 == id1.compareTo(id2));
     assertEquals(eq, 0 == id2.compareTo(id1));
     // compareTo must be antisymmetric:
     assertEquals(sign(id1.compareTo(id2)), -sign(id2.compareTo(id1)));
+    
+    // compare with null should never return 0 to be consistent with #equals(): 
+    assertTrue(id1.compareTo(null) != 0);
+    assertTrue(id2.compareTo(null) != 0);
     
     // check that hash codes did not change:
     assertEquals(h1, id1.hashCode());
