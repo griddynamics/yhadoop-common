@@ -27,6 +27,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
@@ -287,21 +288,15 @@ public class TestJobHistoryEventHandler {
   }
 
   private JobHistoryEvent getEventToEnqueue(JobId jobId) {
-//    JobHistoryEvent toReturn = Mockito.mock(JobHistoryEvent.class);
-    HistoryEvent he = Mockito.mock(HistoryEvent.class);
     HistoryEvent toReturn= new JobStatusChangedEvent(new JobID(jobId.getId()+"", jobId.getId()), "change status");
-    Mockito.when(he.getEventType()).thenReturn(EventType.JOB_STATUS_CHANGED);
-//    Mockito.when(toReturn.getHistoryEvent()).thenReturn(he);
-//    Mockito.when(toReturn.getJobID()).thenReturn(jobId);
     return new JobHistoryEvent(jobId, toReturn);
   }
-
   @Test
   /**
    * Tests that in case of SIGTERM, the JHEH stops without processing its event
    * queue (because we must stop quickly lest we get SIGKILLed) and processes
    * a JobUnsuccessfulEvent for jobs which were still running (so that they may
-   * show up in the JobHistoryServer)
+   * show up in the JobHistoryServer) and test JobStatusChangedEvent
    */
   public void testSigTermedFunctionality() throws IOException {
     AppContext mockedContext = Mockito.mock(AppContext.class);
@@ -313,6 +308,7 @@ public class TestJobHistoryEventHandler {
 
     //Submit 4 events and check that they're handled in the absence of a signal
     final int numEvents = 4;
+    
     JobHistoryEvent events[] = new JobHistoryEvent[numEvents];
     for(int i=0; i < numEvents; ++i) {
       events[i] = getEventToEnqueue(jobId);

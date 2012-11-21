@@ -25,7 +25,6 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
@@ -66,9 +65,6 @@ public class TestJobHistoryEvents {
      * Use HistoryContext to read logged events and verify the number of 
      * completed maps 
     */
-    LOG.info("sssssss");
-    LOG.error("srtttsssss");
-    System.out.println("wwwwwws");
     HistoryContext context = new JobHistory();
     ((JobHistory)context).init(conf);
     ((JobHistory)context).start();
