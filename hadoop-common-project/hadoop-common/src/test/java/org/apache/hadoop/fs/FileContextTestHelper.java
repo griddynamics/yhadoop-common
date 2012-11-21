@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.util.EnumSet;
@@ -32,8 +33,18 @@ import org.junit.Assert;
  */
 public final class FileContextTestHelper {
   // The test root is relative to the <wd>/build/test/data by default
-  public static final String TEST_ROOT_DIR = 
-    System.getProperty("test.build.data", "build/test/data") + "/test";
+  public static final String TEST_ROOT_DIR = calculateTestRootDir();
+  
+  private static String calculateTestRootDir() {
+    String x = System.getProperty("test.build.data", "build/test/data") + "/test";
+    File f = new File(x);
+    if (!f.isAbsolute()) {
+      // absolutize the path:
+      x = f.getAbsolutePath();
+    }
+    return x;
+  }
+  
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final int DEFAULT_NUM_BLOCKS = 2;
   private static String absTestRootDir = null;
