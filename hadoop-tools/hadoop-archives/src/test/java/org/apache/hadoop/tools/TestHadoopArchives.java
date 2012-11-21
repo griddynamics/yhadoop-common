@@ -77,6 +77,8 @@ public class TestHadoopArchives extends TestCase {
   }
   
   protected void setUp() throws Exception {
+
+
     super.setUp();
     dfscluster = new MiniDFSCluster(new Configuration(), 2, true, null);
     fs = dfscluster.getFileSystem();
