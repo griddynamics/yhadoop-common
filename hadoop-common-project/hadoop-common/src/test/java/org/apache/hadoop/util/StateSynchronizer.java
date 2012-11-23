@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.util;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
@@ -25,13 +26,13 @@ import static java.lang.System.out;
  * to reliably synchronize various threads when each of them
  * achieves certain state.
  * The emum of the possible states is to be set as the class parameter.
- * The initial state can be set in the constructor. If not set, the 
+ * The initial state can to be set in the constructor. If not set, the 
  * synchronizer initialized with null state.
  * 
  * This implementation ignores {@link InterruptedException}s: if a thread 
  * blocked in any method of this class, it will not return from there if 
  * that thread is {@link Thread#interrupt()}-ed: the blockage will continue
- * until the waiting condition is met.
+ * the wait condition is met.
  */
 public class StateSynchronizer<T extends Enum<?>> {
   
@@ -191,7 +192,58 @@ public class StateSynchronizer<T extends Enum<?>> {
       lock.unlock();
     }
   }  
-  
+
+  /**
+   * Invokes some code in sync with the synchronizer (this way, the state cannot
+   * change while the operation is in progress), then waits for a sequence of 
+   * states to be achieved. It's assumed that the invoked callable initiates some
+   * activity that later should cause the state to change, for example, it may 
+   * start a new thread or a new process.     
+   * @param callable the operation to be invoked synchronously. 
+   * @param expectedStatesAfter the sequence of states that is expected after
+   *  the operation is finished.
+   * @return the result returned by the callable.
+   * @throws Exception thrown by the callable
+   */
+  public <X> X invokeAndWaitForStateSequence(final Callable<X> callable, final Iterable<T> expectedStatesAfter) throws Exception {
+    lock.lock();
+    try {
+      final X x = callable.call();
+      // Now sequentially wait for each state in the chain:
+      for (T expectedState: expectedStatesAfter) {
+        while (state.get() != expectedState) {
+          // NB: ignore interrupts
+          stateChangedCondition.awaitUninterruptibly();
+        }
+      }
+      return x;
+    } finally {
+      lock.unlock();
+    }
+  }  
+
+  public boolean invokeAndWaitForStateSequence(final Callable<?> callable, 
+      final Iterable<T> expectedStatesAfter, 
+      final long timeoutMillis) throws Exception {
+    if (!tryLockWithTimeout(timeoutMillis + System.currentTimeMillis())) {
+      return false;
+    }
+    try {
+      // NB: the callable result is unused in this case:
+      callable.call();
+      // Now sequentially wait for each state in the chain with 
+      // timeout 'timeoutMillis':
+      for (final T expectedState: expectedStatesAfter) {
+        long finish = timeoutMillis + System.currentTimeMillis();
+        if (!waitForStateImpl(finish, expectedState)) {
+          return false;
+        }
+      }
+      return true;
+    } finally {
+      lock.unlock();
+    }
+  }  
   
   /**
    * Blocks no longer than 'timeoutMillis' until the new state is achieved.  
@@ -201,28 +253,50 @@ public class StateSynchronizer<T extends Enum<?>> {
    */
   public boolean waitForState(T expectedState, long timeoutMillis) {
     final long finish = System.currentTimeMillis() + timeoutMillis;
-    lock.lock();
-    try {
-      while (true) {
-        if (state.get() == expectedState) {
-          return true;
-        }
-        long toWait = finish - System.currentTimeMillis();
-        if (toWait > 0) {
-          try {
-            if (!stateChangedCondition.await(toWait, TimeUnit.MILLISECONDS)) {
-              return false; // timeout.
-            }
-          } catch (InterruptedException ie) {
-            // ignore it.
-          } 
-        } else {
-          return false; // timeout.
-        }
+    if (tryLockWithTimeout(finish)) {
+      try {
+        return waitForStateImpl(finish, expectedState);
+      } finally {
+        lock.unlock();
       }
-    } finally {
-      lock.unlock();
+    } else {
+      return false;
     }
-  }  
+  }
+  
+  private boolean tryLockWithTimeout(final long finish) {
+    long timeoutMillis;
+    while (true) {
+      timeoutMillis = finish - System.currentTimeMillis();
+      if (timeoutMillis < 0) {
+        return false; // timeout
+      }
+      try {
+        return lock.tryLock(timeoutMillis, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException ie) {
+        // ignore 
+      }
+    }
+  }
+  
+  private boolean waitForStateImpl(long finishMillis, T expectedState) {
+    while (true) {
+      if (state.get() == expectedState) {
+        return true;
+      }
+      long toWait = finishMillis - System.currentTimeMillis();
+      if (toWait > 0) {
+        try {
+          if (!stateChangedCondition.await(toWait, TimeUnit.MILLISECONDS)) {
+            return false; // timeout.
+          }
+        } catch (InterruptedException ie) {
+          // ignore it.
+        } 
+      } else {
+        return false; // timeout.
+      }
+    }
+  }
   
 }
