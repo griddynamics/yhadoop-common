@@ -120,4 +120,27 @@ public class TestEventes {
     tsf.put(index, template.subSequence(0, template.length()-1));
     Assert.assertEquals(tsf.get(index),template.subSequence(0, template.length()-1));
   }
+  @Test
+  public void testTaskUpdated() throws Exception {
+    JobID jid = new JobID("001", 1);
+    TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
+    TaskUpdatedEvent test= new TaskUpdatedEvent(tid, 1234L);
+    Assert.assertEquals(test.getTaskId().toString(),tid.toString());
+    Assert.assertEquals(test.getFinishTime(),1234L);
+    TaskUpdated tu=(TaskUpdated)test.getDatum();
+    //test get
+    CharSequence taskId=(CharSequence)tu.get(0);
+  
+    Assert.assertEquals(tu.get(1),1234L);
+
+    Assert.assertEquals(tu.get(0).toString(),"task_001_0001_r_000002");
+
+    // test put
+    tu.put(1, 12L);
+    Assert.assertEquals(tu.get(1),12L);
+    testCharSequence(tu,0,taskId);
+    
+       
+  }
+   
 }
