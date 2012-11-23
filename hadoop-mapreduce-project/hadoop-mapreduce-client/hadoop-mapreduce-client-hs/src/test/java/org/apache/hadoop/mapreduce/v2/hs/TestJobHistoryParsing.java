@@ -207,16 +207,7 @@ public class TestJobHistoryParsing {
     HistoryFileInfo fileInfo = jobHistory.getJobFileInfo(jobId);
     JobInfo jobInfo;
     long numFinishedMaps;
-    try {
-      System.setOut(new PrintStream(outContent));
-
-      HistoryViewer viewer = new HistoryViewer(fc.makeQualified(
-          fileInfo.getHistoryFile()).toString(), conf, true);
-      viewer.print();
-    } finally {
-      System.setOut(null);
-
-    }
+   
     synchronized (fileInfo) {
       Path historyFilePath = fileInfo.getHistoryFile();
       FSDataInputStream in = null;
@@ -299,9 +290,6 @@ public class TestJobHistoryParsing {
     // Assert at taskAttempt level
     for (TaskInfo taskInfo : allTasks.values()) { 
       
-      String test= taskInfo.getTaskStatus()+" "+taskInfo.getTaskType()+" task list for "+taskInfo.getTaskId().getJobID();
-      Assert.assertTrue(outContent.toString().indexOf(test)>0);
-      Assert.assertTrue(outContent.toString().indexOf(taskInfo.getTaskId().toString())>0);
       int taskAttemptCount = taskInfo.getAllTaskAttempts().size();
       Assert
           .assertEquals("total number of task attempts ", 1, taskAttemptCount);
@@ -331,6 +319,25 @@ public class TestJobHistoryParsing {
               taskAttemptInfo.getRackname(), RACK_NAME);
         }
       }
+    }
+    
+    // test output for HistoryViewer
+    PrintStream stdps=System.out;
+    try {
+      System.setOut(new PrintStream(outContent));
+      HistoryViewer viewer = new HistoryViewer(fc.makeQualified(
+          fileInfo.getHistoryFile()).toString(), conf, true);
+      viewer.print();
+      
+      for (TaskInfo taskInfo : allTasks.values()) { 
+        
+        String test=  (taskInfo.getTaskStatus()==null?"":taskInfo.getTaskStatus())+" "+taskInfo.getTaskType()+" task list for "+taskInfo.getTaskId().getJobID();
+        Assert.assertTrue(outContent.toString().indexOf(test)>0);
+        Assert.assertTrue(outContent.toString().indexOf(taskInfo.getTaskId().toString())>0);
+      }
+    } finally {
+      System.setOut(stdps);
+
     }
   }
 
