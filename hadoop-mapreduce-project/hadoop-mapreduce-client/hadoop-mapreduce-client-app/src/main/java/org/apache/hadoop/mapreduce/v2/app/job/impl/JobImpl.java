@@ -68,6 +68,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -347,6 +348,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobStateInternal.FAILED, JobStateInternal.FAILED,
               EnumSet.of(JobEventType.JOB_KILL, 
                   JobEventType.JOB_UPDATED_NODES,
+                  JobEventType.JOB_TASK_COMPLETED,
+                  JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
+                  JobEventType.JOB_MAP_TASK_RESCHEDULED,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE))
 
           // Transitions from KILLED state
@@ -708,7 +712,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    * The only entry point to change the Job.
    */
   public void handle(JobEvent event) {
-    LOG.debug("Processing " + event.getJobId() + " of type " + event.getType());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processing " + event.getJobId() + " of type "
+          + event.getType());
+    }
     try {
       writeLock.lock();
       JobStateInternal oldState = getInternalState();
@@ -826,6 +833,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         break;
       case SUCCEEDED:
         metrics.completedJob(this);
+        break;
+      default:
+        throw new IllegalArgumentException("Illegal job state: " + finalState);
     }
     return finalState;
   }
@@ -1304,6 +1314,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       case REDUCE:
         this.finalReduceCounters.incrAllCounters(counters);
         break;
+      default:
+        throw new IllegalStateException("Task type neither map nor reduce: " + 
+            t.getType());
       }
       this.fullCounters.incrAllCounters(counters);
     }
@@ -1409,16 +1422,22 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         fetchFailures = (fetchFailures == null) ? 1 : (fetchFailures+1);
         job.fetchFailuresMapping.put(mapId, fetchFailures);
         
-        //get number of running reduces
-        int runningReduceTasks = 0;
+        //get number of shuffling reduces
+        int shufflingReduceTasks = 0;
         for (TaskId taskId : job.reduceTasks) {
-          if (TaskState.RUNNING.equals(job.tasks.get(taskId).getState())) {
-            runningReduceTasks++;
+          Task task = job.tasks.get(taskId);
+          if (TaskState.RUNNING.equals(task.getState())) {
+            for(TaskAttempt attempt : task.getAttempts().values()) {
+              if(attempt.getReport().getPhase() == Phase.SHUFFLE) {
+                shufflingReduceTasks++;
+                break;
+              }
+            }
           }
         }
         
-        float failureRate = runningReduceTasks == 0 ? 1.0f : 
-          (float) fetchFailures / runningReduceTasks;
+        float failureRate = shufflingReduceTasks == 0 ? 1.0f : 
+          (float) fetchFailures / shufflingReduceTasks;
         // declare faulty if fetch-failures >= max-allowed-failures
         boolean isMapFaulty =
             (failureRate >= MAX_ALLOWED_FETCH_FAILURES_FRACTION);

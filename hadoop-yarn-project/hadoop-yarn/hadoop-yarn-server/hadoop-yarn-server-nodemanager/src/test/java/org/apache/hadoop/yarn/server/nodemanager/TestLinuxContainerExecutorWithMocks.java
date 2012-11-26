@@ -168,7 +168,7 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testContainerLaunchError() throws IOException {
 
     // reinitialize executer
-    File f = new File("./src/test/resources/mock-cpntainer-executer-with-error");
+    File f = new File("./src/test/resources/mock-container-executer-with-error");
     if (!f.canExecute()) {
       f.setExecutable(true);
     }
