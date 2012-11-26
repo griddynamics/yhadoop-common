@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.security.token.delegation;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -34,14 +36,14 @@ import static org.junit.Assert.*;
  */
 public class TestDelegationTokenRenewer {
 
-  private static final long renewIntervalMillis = 1000L; 
+  // custom review interval:
+  private static final long renewIntervalMillis = 1000L;
   
-  static final StateSynchronizer<RenewState> sync = new StateSynchronizer<RenewState>();
+  final StateSynchronizer<RenewState> sync = new StateSynchronizer<RenewState>();
   
   private enum RenewState {
     created,                      // objects are created.
     renewerThreadStarted,         // method #run() started  
-    renewActionAdded,
     renewStartAllowed,            // signal to the Token to start update 
                                   // the renew counter
     renewedOneTime,
@@ -54,21 +56,25 @@ public class TestDelegationTokenRenewer {
   static class CountingRenewsToken extends Token<TokenIdentifier> {
     private int renewCount;
     private volatile long countLastUpdatedTimeMillis;
+    private final StateSynchronizer<RenewState> syncronizer;
+    public CountingRenewsToken(StateSynchronizer<RenewState> s) {
+      syncronizer = s;
+    }
     @Override
     public long renew(Configuration conf) throws IOException,
         InterruptedException {
       if (renewCount == 0) {
         // before the 1st renew block here 
         // waiting for signal from the main thread:
-        sync.waitForState(RenewState.renewStartAllowed);
+        syncronizer.waitForState(RenewState.renewStartAllowed);
       }
       renewCount++;
       countLastUpdatedTimeMillis = System.currentTimeMillis();
       if (renewCount == 1) {
-        assertTrue(sync.compareAndSetState(
+        assertTrue(syncronizer.compareAndSetState(
             RenewState.renewStartAllowed, RenewState.renewedOneTime));
       } else if (renewCount == 3) {
-        assertTrue(sync.compareAndSetState(
+        assertTrue(syncronizer.compareAndSetState(
             RenewState.renewedOneTime, RenewState.renewedThreeTimes));
       } 
       // NB: the returned value should not anyhow directly affect the 
@@ -97,20 +103,34 @@ public class TestDelegationTokenRenewer {
   } 
   
   @Test
-  public void testDelegationTokenRenewer() throws Exception {
+  /*
+   * Checks token addition, renewals, and implicit removal when the 
+   * corresponding file system gets no longer used.
+   */
+  public void testImplicitTokenEvaporation() throws Exception {
+    testImpl(true);
+  }
+
+  @Test
+  /*
+   * Checks token addition, renewals, and explicit removal.
+   */
+  public void testExplicitTokenRemoval() throws Exception {
+    testImpl(false);
+  }
+  
+  /*
+   * This is the test implementation that allows some variance in the
+   * behavior: if 'disposeFs' is true, the renewing is terminated with
+   * loosing reference to the file system object. Otherwise, the renewing process
+   * id terminated by removing the token with    
+   */
+  private void testImpl(final boolean disposeFs) throws Exception {
+    // set up a custom renew interval:
+    DelegationTokenRenewer.renewCycle = renewIntervalMillis;
     
-    final DelegationTokenRenewer<SimpleRenewableFileSystem> dtr = 
-        new DelegationTokenRenewer<SimpleRenewableFileSystem>(SimpleRenewableFileSystem.class) {
-      @Override
-      protected long getRenewCycleDurationMillis() {
-        // non-default interval suitable for test:
-        return renewIntervalMillis;
-      }
-      @Override
-      public void addRenewAction(SimpleRenewableFileSystem fs) {
-        super.addRenewAction(fs);
-        assertTrue(sync.compareAndSetState(RenewState.renewerThreadStarted, RenewState.renewActionAdded));
-      }
+    final DelegationTokenRenewer dtr = 
+        new DelegationTokenRenewer(SimpleRenewableFileSystem.class) {
       @Override
       public void run() {
         sync.waitForStateAndSet(RenewState.created, RenewState.renewerThreadStarted);
@@ -121,17 +141,20 @@ public class TestDelegationTokenRenewer {
         }
       }
     };
+    // set the singleton instance to the custom object: 
+    DelegationTokenRenewer.INSTANCE = dtr;
 
     assertTrue(sync.compareAndSetState(null, RenewState.created));
-    
-    // Let's follow the production usage pattern -- the DelegationTokenRenewer 
-    // thread is normally started in the very beginning:
-    dtr.start();
+
+    final DelegationTokenRenewer renewerSingleton = DelegationTokenRenewer.getInstance();
+    assertTrue(renewerSingleton == dtr);
     
     try {
       final CountingRenewsToken countingRenewsToken 
-        = new CountingRenewsToken();
-      SimpleRenewableFileSystem simpleRenewableFileSystem 
+        = new CountingRenewsToken(sync);
+      final SimpleRenewableFileSystem[] simpleRenewableFileSystemContainer = 
+          new SimpleRenewableFileSystem[] { null };
+      simpleRenewableFileSystemContainer[0] 
         = new SimpleRenewableFileSystem(countingRenewsToken) {
         @Override
         protected void finalize() throws Throwable {
@@ -140,19 +163,18 @@ public class TestDelegationTokenRenewer {
         }
       };
       Configuration conf = new Configuration();
-      Path path = new Path("file:///foo/moo/zoo"); 
-      simpleRenewableFileSystem.initialize(path.toUri(), conf);
-
-      // ensure the thread is running now:
-      sync.waitForState(RenewState.renewerThreadStarted);
+      Path path = new Path("file:///foo/moo/zoo");
+      simpleRenewableFileSystemContainer[0].initialize(path.toUri(), conf);
       
-      // this will cause transition to the state "renewActionAdded": 
-      dtr.addRenewAction(simpleRenewableFileSystem);
+      // This will cause transition to the state "renewActionAdded": 
+      renewerSingleton.addRenewAction(simpleRenewableFileSystemContainer[0]);
+      
+      sync.waitForState(RenewState.renewerThreadStarted);
       
       // signal using transition to "renewStartAllowed" and
       // wait for further transitions to happen:
       assertTrue(sync.compareAndSetAndWaitForStateSequence(
-          RenewState.renewActionAdded, 
+          RenewState.renewerThreadStarted, 
           RenewState.renewStartAllowed, 
             Arrays.asList(
               new RenewState[] { 
@@ -174,8 +196,9 @@ public class TestDelegationTokenRenewer {
             }
             countAge = System.currentTimeMillis() 
                 - countingRenewsToken.getCountLastUpdatedTimeMillis();
-            if (countAge > 5000L) {
-              // No token update in 5s: looks like the token updates are stopped:
+            if (countAge > 5 * renewIntervalMillis) {
+              // No token update in 5 renew periods - 
+              // looks like the token updates are stopped:
               sync.setState(RenewState.tokenRenewalsAreStopped);
               break;
             }
@@ -186,34 +209,60 @@ public class TestDelegationTokenRenewer {
       
       // check that the renewal attempts are still happening: 
       assertFalse(sync.waitForState(RenewState.tokenRenewalsAreStopped, 10 * 1000L));
-
-      // now null the file-system reference causing the updates to stop:
-      simpleRenewableFileSystem = null;
-      System.gc();
-
-      // wait while fs object GC-ed:
-      sync.waitForState(RenewState.fsFinalized);
-
-      // check that the token renewals are stopped:
-      assertTrue(sync.waitForState(RenewState.tokenRenewalsAreStopped, 30 * 1000L));
-      lastRenewAgeCheckerThread.join();
+      if (disposeFs) {
+        assertTrue(sync.invokeAndWaitForStateSequence(new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            // null the file-system reference causing the updates to stop:
+            simpleRenewableFileSystemContainer[0] = null;
+            System.gc();
+            return null;
+          }
+        }, Arrays.asList(new RenewState[] { 
+          // wait while fs object GC-ed:
+          RenewState.fsFinalized,
+          // after that the token renewals should be stopped:
+          RenewState.tokenRenewalsAreStopped }),
+          30 * 1000L/* timeout for each state*/));
+      } else {
+        assertTrue(sync.invokeAndWaitForStateSequence(new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            // remove the token for this FS:
+            boolean rm = renewerSingleton.removeRenewAction(simpleRenewableFileSystemContainer[0]);
+            assertTrue(rm);
+            return null;
+          }
+        },
+        // after that the token renewals should be stopped:
+        Collections.singletonList(RenewState.tokenRenewalsAreStopped), 
+        30 * 1000L));
+      }
+      // join renew checker thread:
+      lastRenewAgeCheckerThread.join(30000);
+      assertTrue(!lastRenewAgeCheckerThread.isAlive());
       
-      // now stop the token renewal thread (there is no other way to do that): 
-      dtr.interrupt();
-      
-      // now the thread should finish, so wait for that:
-      sync.waitForState(RenewState.renewerThreadIsAboutToFinish);
+      assertTrue(sync.invokeAndWaitForStateSequence(new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            // now stop the token renewal thread (there is no other way to do that): 
+            renewerSingleton.interrupt();
+            return null;
+          }
+        }, 
+        Collections.singletonList(RenewState.renewerThreadIsAboutToFinish), 
+          30 * 1000));
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
     } finally {
       // must guarantee to join the daemon thread 
       // to avoid its influence to other tests:
-      if (dtr.isAlive()) {
-        dtr.interrupt();
-        dtr.join();
+      if (renewerSingleton.isAlive()) {
+        renewerSingleton.interrupt();
+        renewerSingleton.join(30 * 1000);
+        assertTrue(!renewerSingleton.isAlive());
       }
     }
   }
-  
 }
