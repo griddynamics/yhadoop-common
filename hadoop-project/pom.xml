@@ -52,8 +52,8 @@
     <test.build.data>${test.build.dir}</test.build.data>
 
     <custom.surefire.timeout>899</custom.surefire.timeout>
-    <fork.mode>perthread</fork.mode>
-    <thread.count>10<thread.count/>
+    <fork.mode>always</fork.mode>
+    <thread.count>10</thread.count>
 
     <!-- Changed version to use the patched surefire/plexus plugin
          (Note that the custom repository must be defined to use the patched version.) -->
