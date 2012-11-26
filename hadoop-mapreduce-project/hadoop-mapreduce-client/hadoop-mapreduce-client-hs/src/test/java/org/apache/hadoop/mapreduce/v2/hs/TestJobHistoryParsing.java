@@ -80,10 +80,12 @@ public class TestJobHistoryParsing {
 
   private static final String RACK_NAME = "/MyRackName";
 
+  private  ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+
   public static class MyResolver implements DNSToSwitchMapping {
     @Override
     public List<String> resolve(List<String> names) {
-      return Arrays.asList(new String[] { RACK_NAME });
+      return Arrays.asList(new String[]{RACK_NAME});
     }
   }
 
@@ -103,7 +105,7 @@ public class TestJobHistoryParsing {
       LOG.info("FINISHED testHistoryParsing()");
     }
   }
-
+  
   @Test
   public void testHistoryParsingWithParseErrors() throws Exception {
     LOG.info("STARTING testHistoryParsingWithParseErrors()");
@@ -113,20 +115,18 @@ public class TestJobHistoryParsing {
       LOG.info("FINISHED testHistoryParsingWithParseErrors()");
     }
   }
-
-  private static String getJobSummary(FileContext fc, Path path)
-      throws IOException {
+  
+  private static String getJobSummary(FileContext fc, Path path) throws IOException {
     Path qPath = fc.makeQualified(path);
     FSDataInputStream in = fc.open(qPath);
     String jobSummaryString = in.readUTF();
     in.close();
     return jobSummaryString;
   }
-
-  private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-
+  
   private void checkHistoryParsing(final int numMaps, final int numReduces,
-      final int numSuccessfulMaps) throws Exception {
+      final int numSuccessfulMaps) 
+  throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.USER_NAME, System.getProperty("user.name"));
     long amStartTimeEst = System.currentTimeMillis();
@@ -134,8 +134,9 @@ public class TestJobHistoryParsing {
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         MyResolver.class, DNSToSwitchMapping.class);
     RackResolver.init(conf);
-    MRApp app = new MRAppWithHistory(numMaps, numReduces, true, this.getClass()
-        .getName(), true);
+    MRApp app = 
+        new MRAppWithHistory(numMaps, numReduces, true, 
+            this.getClass().getName(), true);
     app.submit(conf);
     Job job = app.getContext().getAllJobs().values().iterator().next();
     JobId jobId = job.getID();
@@ -147,7 +148,7 @@ public class TestJobHistoryParsing {
 
     String jobhistoryDir = JobHistoryUtils
         .getHistoryIntermediateDoneDirForUser(conf);
-
+    
     FileContext fc = null;
     try {
       fc = FileContext.getFileContext(conf);
@@ -155,7 +156,7 @@ public class TestJobHistoryParsing {
       LOG.info("Can not get FileContext", ioe);
       throw (new Exception("Can not get File Context"));
     }
-
+    
     if (numMaps == numSuccessfulMaps) {
       String summaryFileName = JobHistoryUtils
           .getIntermediateSummaryFileName(jobId);
@@ -180,22 +181,20 @@ public class TestJobHistoryParsing {
           Long.parseLong(jobSummaryElements.get("submitTime")) != 0);
       Assert.assertTrue("launchTime should not be 0",
           Long.parseLong(jobSummaryElements.get("launchTime")) != 0);
+      Assert.assertTrue("firstMapTaskLaunchTime should not be 0",
+          Long.parseLong(jobSummaryElements.get("firstMapTaskLaunchTime")) != 0);
       Assert
-          .assertTrue(
-              "firstMapTaskLaunchTime should not be 0",
-              Long.parseLong(jobSummaryElements.get("firstMapTaskLaunchTime")) != 0);
-      Assert
-          .assertTrue("firstReduceTaskLaunchTime should not be 0",
-              Long.parseLong(jobSummaryElements
-                  .get("firstReduceTaskLaunchTime")) != 0);
+      .assertTrue(
+          "firstReduceTaskLaunchTime should not be 0",
+          Long.parseLong(jobSummaryElements.get("firstReduceTaskLaunchTime")) != 0);
       Assert.assertTrue("finishTime should not be 0",
           Long.parseLong(jobSummaryElements.get("finishTime")) != 0);
       Assert.assertEquals("Mismatch in num map slots", numSuccessfulMaps,
           Integer.parseInt(jobSummaryElements.get("numMaps")));
       Assert.assertEquals("Mismatch in num reduce slots", numReduces,
           Integer.parseInt(jobSummaryElements.get("numReduces")));
-      Assert.assertEquals("User does not match",
-          System.getProperty("user.name"), jobSummaryElements.get("user"));
+      Assert.assertEquals("User does not match", System.getProperty("user.name"),
+          jobSummaryElements.get("user"));
       Assert.assertEquals("Queue does not match", "default",
           jobSummaryElements.get("queue"));
       Assert.assertEquals("Status does not match", "SUCCEEDED",
@@ -207,8 +206,8 @@ public class TestJobHistoryParsing {
     HistoryFileInfo fileInfo = jobHistory.getJobFileInfo(jobId);
     JobInfo jobInfo;
     long numFinishedMaps;
-   
-    synchronized (fileInfo) {
+    
+    synchronized(fileInfo) {
       Path historyFilePath = fileInfo.getHistoryFile();
       FSDataInputStream in = null;
       LOG.info("JobHistoryFile is: " + historyFilePath);
@@ -225,11 +224,11 @@ public class TestJobHistoryParsing {
       if (numMaps == numSuccessfulMaps) {
         reader = realReader;
       } else {
-        final AtomicInteger numFinishedEvents = new AtomicInteger(0); // Hack!
+        final AtomicInteger numFinishedEvents = new AtomicInteger(0);  // Hack!
         Mockito.when(reader.getNextEvent()).thenAnswer(
             new Answer<HistoryEvent>() {
-              public HistoryEvent answer(InvocationOnMock invocation)
-                  throws IOException {
+              public HistoryEvent answer(InvocationOnMock invocation) 
+              throws IOException {
                 HistoryEvent event = realReader.getNextEvent();
                 if (event instanceof TaskFinishedEvent) {
                   numFinishedEvents.incrementAndGet();
@@ -241,20 +240,22 @@ public class TestJobHistoryParsing {
                   throw new IOException("test");
                 }
               }
-            });
+            }
+        );
       }
 
       jobInfo = parser.parse(reader);
 
-      numFinishedMaps = computeFinishedMaps(jobInfo, numMaps, numSuccessfulMaps);
+      numFinishedMaps = 
+        computeFinishedMaps(jobInfo, numMaps, numSuccessfulMaps);
 
       if (numFinishedMaps != numMaps) {
         Exception parseException = parser.getParseException();
-        Assert.assertNotNull("Didn't get expected parse exception",
+        Assert.assertNotNull("Didn't get expected parse exception", 
             parseException);
       }
     }
-
+    
     Assert.assertEquals("Incorrect username ", System.getProperty("user.name"),
         jobInfo.getUsername());
     Assert.assertEquals("Incorrect jobName ", "test", jobInfo.getJobname());
@@ -262,7 +263,7 @@ public class TestJobHistoryParsing {
         jobInfo.getJobQueueName());
     Assert
         .assertEquals("incorrect conf path", "test", jobInfo.getJobConfPath());
-    Assert.assertEquals("incorrect finishedMap ", numSuccessfulMaps,
+    Assert.assertEquals("incorrect finishedMap ", numSuccessfulMaps, 
         numFinishedMaps);
     Assert.assertEquals("incorrect finishedReduces ", numReduces,
         jobInfo.getFinishedReduces());
@@ -270,8 +271,8 @@ public class TestJobHistoryParsing {
         jobInfo.getUberized());
     Map<TaskID, TaskInfo> allTasks = jobInfo.getAllTasks();
     int totalTasks = allTasks.size();
-    Assert.assertEquals("total number of tasks is incorrect  ",
-        (numMaps + numReduces), totalTasks);
+    Assert.assertEquals("total number of tasks is incorrect  ", 
+        (numMaps+numReduces), totalTasks);
 
     // Verify aminfo
     Assert.assertEquals(1, jobInfo.getAMInfos().size());
@@ -288,8 +289,7 @@ public class TestJobHistoryParsing {
 
     ContainerId fakeCid = BuilderUtils.newContainerId(-1, -1, -1, -1);
     // Assert at taskAttempt level
-    for (TaskInfo taskInfo : allTasks.values()) { 
-      
+    for (TaskInfo taskInfo : allTasks.values()) {
       int taskAttemptCount = taskInfo.getAllTaskAttempts().size();
       Assert
           .assertEquals("total number of task attempts ", 1, taskAttemptCount);
@@ -302,7 +302,8 @@ public class TestJobHistoryParsing {
 
     // Deep compare Job and JobInfo
     for (Task task : job.getTasks().values()) {
-      TaskInfo taskInfo = allTasks.get(TypeConverter.fromYarn(task.getID()));
+      TaskInfo taskInfo = allTasks.get(
+          TypeConverter.fromYarn(task.getID()));
       Assert.assertNotNull("TaskInfo not found", taskInfo);
       for (TaskAttempt taskAttempt : task.getAttempts().values()) {
         TaskAttemptInfo taskAttemptInfo = taskInfo.getAllTaskAttempts().get(
@@ -313,10 +314,10 @@ public class TestJobHistoryParsing {
         if (numMaps == numSuccessfulMaps) {
           Assert.assertEquals(MRApp.NM_HOST, taskAttemptInfo.getHostname());
           Assert.assertEquals(MRApp.NM_PORT, taskAttemptInfo.getPort());
-
+          
           // Verify rack-name
-          Assert.assertEquals("rack-name is incorrect",
-              taskAttemptInfo.getRackname(), RACK_NAME);
+          Assert.assertEquals("rack-name is incorrect", taskAttemptInfo
+              .getRackname(), RACK_NAME);
         }
       }
     }
@@ -358,125 +359,126 @@ public class TestJobHistoryParsing {
     }
     return numFinishedMaps;
   }
-
+  
   @Test
   public void testHistoryParsingForFailedAttempts() throws Exception {
     LOG.info("STARTING testHistoryParsingForFailedAttempts");
     try {
-      Configuration conf = new Configuration();
-      conf.setClass(
-          CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-          MyResolver.class, DNSToSwitchMapping.class);
-      RackResolver.init(conf);
-      MRApp app = new MRAppWithHistoryWithFailedAttempt(2, 1, true, this
-          .getClass().getName(), true);
-      app.submit(conf);
-      Job job = app.getContext().getAllJobs().values().iterator().next();
-      JobId jobId = job.getID();
-      app.waitForState(job, JobState.SUCCEEDED);
+    Configuration conf = new Configuration();
+    conf
+        .setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            MyResolver.class, DNSToSwitchMapping.class);
+    RackResolver.init(conf);
+    MRApp app = new MRAppWithHistoryWithFailedAttempt(2, 1, true, this.getClass().getName(),
+        true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+    JobId jobId = job.getID();
+    app.waitForState(job, JobState.SUCCEEDED);
+    
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
 
-      // make sure all events are flushed
-      app.waitForState(Service.STATE.STOPPED);
+    String jobhistoryDir = JobHistoryUtils
+        .getHistoryIntermediateDoneDirForUser(conf);
+    JobHistory jobHistory = new JobHistory();
+    jobHistory.init(conf);
 
-      String jobhistoryDir = JobHistoryUtils
-          .getHistoryIntermediateDoneDirForUser(conf);
-      JobHistory jobHistory = new JobHistory();
-      jobHistory.init(conf);
+    JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
+        .getJobIndexInfo();
+    String jobhistoryFileName = FileNameIndexUtils
+        .getDoneFileName(jobIndexInfo);
 
-      JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
-          .getJobIndexInfo();
-      String jobhistoryFileName = FileNameIndexUtils
-          .getDoneFileName(jobIndexInfo);
+    Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
+    FSDataInputStream in = null;
+    FileContext fc = null;
+    try {
+      fc = FileContext.getFileContext(conf);
+      in = fc.open(fc.makeQualified(historyFilePath));
+    } catch (IOException ioe) {
+      LOG.info("Can not open history file: " + historyFilePath, ioe);
+      throw (new Exception("Can not open History File"));
+    }
 
-      Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
-      FSDataInputStream in = null;
-      FileContext fc = null;
-      try {
-        fc = FileContext.getFileContext(conf);
-        in = fc.open(fc.makeQualified(historyFilePath));
-      } catch (IOException ioe) {
-        LOG.info("Can not open history file: " + historyFilePath, ioe);
-        throw (new Exception("Can not open History File"));
-      }
-
-      JobHistoryParser parser = new JobHistoryParser(in);
-      JobInfo jobInfo = parser.parse();
-      Exception parseException = parser.getParseException();
-      Assert.assertNull("Caught an expected exception " + parseException,
-          parseException);
-      int noOffailedAttempts = 0;
-      Map<TaskID, TaskInfo> allTasks = jobInfo.getAllTasks();
-      for (Task task : job.getTasks().values()) {
-        TaskInfo taskInfo = allTasks.get(TypeConverter.fromYarn(task.getID()));
-        for (TaskAttempt taskAttempt : task.getAttempts().values()) {
-          TaskAttemptInfo taskAttemptInfo = taskInfo.getAllTaskAttempts().get(
-              TypeConverter.fromYarn((taskAttempt.getID())));
-          // Verify rack-name for all task attempts
-          Assert.assertEquals("rack-name is incorrect",
-              taskAttemptInfo.getRackname(), RACK_NAME);
-          if (taskAttemptInfo.getTaskStatus().equals("FAILED")) {
-            noOffailedAttempts++;
-          }
+    JobHistoryParser parser = new JobHistoryParser(in);
+    JobInfo jobInfo = parser.parse();
+    Exception parseException = parser.getParseException();
+    Assert.assertNull("Caught an expected exception " + parseException, 
+        parseException);
+    int noOffailedAttempts = 0;
+    Map<TaskID, TaskInfo> allTasks = jobInfo.getAllTasks();
+    for (Task task : job.getTasks().values()) {
+      TaskInfo taskInfo = allTasks.get(TypeConverter.fromYarn(task.getID()));
+      for (TaskAttempt taskAttempt : task.getAttempts().values()) {
+        TaskAttemptInfo taskAttemptInfo = taskInfo.getAllTaskAttempts().get(
+            TypeConverter.fromYarn((taskAttempt.getID())));
+        // Verify rack-name for all task attempts
+        Assert.assertEquals("rack-name is incorrect", taskAttemptInfo
+            .getRackname(), RACK_NAME);
+        if (taskAttemptInfo.getTaskStatus().equals("FAILED")) {
+          noOffailedAttempts++;
         }
       }
-      Assert.assertEquals("No of Failed tasks doesn't match.", 2,
-          noOffailedAttempts);
+    }
+    Assert.assertEquals("No of Failed tasks doesn't match.", 2, noOffailedAttempts);
     } finally {
       LOG.info("FINISHED testHistoryParsingForFailedAttempts");
     }
   }
-
+  
   @Test
   public void testCountersForFailedTask() throws Exception {
     LOG.info("STARTING testCountersForFailedTask");
     try {
-      Configuration conf = new Configuration();
-      conf.setClass(
-          CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-          MyResolver.class, DNSToSwitchMapping.class);
-      RackResolver.init(conf);
-      MRApp app = new MRAppWithHistoryWithFailedTask(2, 1, true, this
-          .getClass().getName(), true);
-      app.submit(conf);
-      Job job = app.getContext().getAllJobs().values().iterator().next();
-      JobId jobId = job.getID();
-      app.waitForState(job, JobState.FAILED);
+    Configuration conf = new Configuration();
+    conf
+        .setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            MyResolver.class, DNSToSwitchMapping.class);
+    RackResolver.init(conf);
+    MRApp app = new MRAppWithHistoryWithFailedTask(2, 1, true,
+        this.getClass().getName(), true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+    JobId jobId = job.getID();
+    app.waitForState(job, JobState.FAILED);
 
-      // make sure all events are flushed
-      app.waitForState(Service.STATE.STOPPED);
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
 
-      String jobhistoryDir = JobHistoryUtils
-          .getHistoryIntermediateDoneDirForUser(conf);
-      JobHistory jobHistory = new JobHistory();
-      jobHistory.init(conf);
+    String jobhistoryDir = JobHistoryUtils
+        .getHistoryIntermediateDoneDirForUser(conf);
+    JobHistory jobHistory = new JobHistory();
+    jobHistory.init(conf);
 
-      JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
-          .getJobIndexInfo();
-      String jobhistoryFileName = FileNameIndexUtils
-          .getDoneFileName(jobIndexInfo);
+    JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
+        .getJobIndexInfo();
+    String jobhistoryFileName = FileNameIndexUtils
+        .getDoneFileName(jobIndexInfo);
 
-      Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
-      FSDataInputStream in = null;
-      FileContext fc = null;
-      try {
-        fc = FileContext.getFileContext(conf);
-        in = fc.open(fc.makeQualified(historyFilePath));
-      } catch (IOException ioe) {
-        LOG.info("Can not open history file: " + historyFilePath, ioe);
-        throw (new Exception("Can not open History File"));
-      }
+    Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
+    FSDataInputStream in = null;
+    FileContext fc = null;
+    try {
+      fc = FileContext.getFileContext(conf);
+      in = fc.open(fc.makeQualified(historyFilePath));
+    } catch (IOException ioe) {
+      LOG.info("Can not open history file: " + historyFilePath, ioe);
+      throw (new Exception("Can not open History File"));
+    }
 
-      JobHistoryParser parser = new JobHistoryParser(in);
-      JobInfo jobInfo = parser.parse();
-      Exception parseException = parser.getParseException();
-      Assert.assertNull("Caught an expected exception " + parseException,
-          parseException);
-      for (Map.Entry<TaskID, TaskInfo> entry : jobInfo.getAllTasks().entrySet()) {
-        TaskId yarnTaskID = TypeConverter.toYarn(entry.getKey());
-        CompletedTask ct = new CompletedTask(yarnTaskID, entry.getValue());
-        Assert.assertNotNull("completed task report has null counters", ct
-            .getReport().getCounters());
-      }
+    JobHistoryParser parser = new JobHistoryParser(in);
+    JobInfo jobInfo = parser.parse();
+    Exception parseException = parser.getParseException();
+    Assert.assertNull("Caught an expected exception " + parseException,
+        parseException);
+    for (Map.Entry<TaskID,TaskInfo> entry : jobInfo.getAllTasks().entrySet()) {
+      TaskId yarnTaskID = TypeConverter.toYarn(entry.getKey());
+      CompletedTask ct = new CompletedTask(yarnTaskID, entry.getValue());
+      Assert.assertNotNull("completed task report has null counters",
+          ct.getReport().getCounters());
+    }
     } finally {
       LOG.info("FINISHED testCountersForFailedTask");
     }
@@ -486,52 +488,54 @@ public class TestJobHistoryParsing {
   public void testScanningOldDirs() throws Exception {
     LOG.info("STARTING testScanningOldDirs");
     try {
-      Configuration conf = new Configuration();
-      conf.setClass(
-          CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-          MyResolver.class, DNSToSwitchMapping.class);
-      RackResolver.init(conf);
-      MRApp app = new MRAppWithHistory(1, 1, true, this.getClass().getName(),
-          true);
-      app.submit(conf);
-      Job job = app.getContext().getAllJobs().values().iterator().next();
-      JobId jobId = job.getID();
-      LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
-      app.waitForState(job, JobState.SUCCEEDED);
+    Configuration conf = new Configuration();
+    conf
+        .setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            MyResolver.class, DNSToSwitchMapping.class);
+    RackResolver.init(conf);
+    MRApp app =
+        new MRAppWithHistory(1, 1, true,
+            this.getClass().getName(), true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+    JobId jobId = job.getID();
+    LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
+    app.waitForState(job, JobState.SUCCEEDED);
 
-      // make sure all events are flushed
-      app.waitForState(Service.STATE.STOPPED);
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
 
-      HistoryFileManagerForTest hfm = new HistoryFileManagerForTest();
-      hfm.init(conf);
-      HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
-      Assert.assertNotNull("Unable to locate job history", fileInfo);
+    HistoryFileManagerForTest hfm = new HistoryFileManagerForTest();
+    hfm.init(conf);
+    HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
+    Assert.assertNotNull("Unable to locate job history", fileInfo);
 
-      // force the manager to "forget" the job
-      hfm.deleteJobFromJobListCache(fileInfo);
-      final int msecPerSleep = 10;
-      int msecToSleep = 10 * 1000;
-      while (fileInfo.isMovePending() && msecToSleep > 0) {
-        Assert.assertTrue(!fileInfo.didMoveFail());
-        msecToSleep -= msecPerSleep;
-        Thread.sleep(msecPerSleep);
-      }
-      Assert.assertTrue("Timeout waiting for history move", msecToSleep > 0);
+    // force the manager to "forget" the job
+    hfm.deleteJobFromJobListCache(fileInfo);
+    final int msecPerSleep = 10;
+    int msecToSleep = 10 * 1000;
+    while (fileInfo.isMovePending() && msecToSleep > 0) {
+      Assert.assertTrue(!fileInfo.didMoveFail());
+      msecToSleep -= msecPerSleep;
+      Thread.sleep(msecPerSleep);
+    }
+    Assert.assertTrue("Timeout waiting for history move", msecToSleep > 0);
 
-      fileInfo = hfm.getFileInfo(jobId);
-      Assert.assertNotNull("Unable to locate old job history", fileInfo);
-    } finally {
+    fileInfo = hfm.getFileInfo(jobId);
+    Assert.assertNotNull("Unable to locate old job history", fileInfo);
+   } finally {
       LOG.info("FINISHED testScanningOldDirs");
     }
   }
 
   static class MRAppWithHistoryWithFailedAttempt extends MRAppWithHistory {
 
-    public MRAppWithHistoryWithFailedAttempt(int maps, int reduces,
-        boolean autoComplete, String testName, boolean cleanOnStart) {
+    public MRAppWithHistoryWithFailedAttempt(int maps, int reduces, boolean autoComplete,
+        String testName, boolean cleanOnStart) {
       super(maps, reduces, autoComplete, testName, cleanOnStart);
     }
-
+    
     @SuppressWarnings("unchecked")
     @Override
     protected void attemptLaunched(TaskAttemptId attemptID) {
@@ -547,8 +551,8 @@ public class TestJobHistoryParsing {
 
   static class MRAppWithHistoryWithFailedTask extends MRAppWithHistory {
 
-    public MRAppWithHistoryWithFailedTask(int maps, int reduces,
-        boolean autoComplete, String testName, boolean cleanOnStart) {
+    public MRAppWithHistoryWithFailedTask(int maps, int reduces, boolean autoComplete,
+        String testName, boolean cleanOnStart) {
       super(maps, reduces, autoComplete, testName, cleanOnStart);
     }
 

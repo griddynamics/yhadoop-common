@@ -66,6 +66,7 @@ public class TestJobHistoryEvents {
      * completed maps 
     */
     HistoryContext context = new JobHistory();
+    // test start and stop states
     ((JobHistory)context).init(conf);
     ((JobHistory)context).start();
     Assert.assertTrue( context.getStartTime()>0);

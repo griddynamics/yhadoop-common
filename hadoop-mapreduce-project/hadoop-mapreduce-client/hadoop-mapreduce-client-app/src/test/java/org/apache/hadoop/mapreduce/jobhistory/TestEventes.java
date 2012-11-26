@@ -31,7 +31,10 @@ import org.junit.Test;
 
 public class TestEventes {
 
-
+/**
+ * test TaskAttemptFinishedEvent and TaskAttemptFinished
+ * @throws Exception
+ */
   @Test
   public void testTaskAttemptFinishedEvent() throws Exception {
 
@@ -92,7 +95,10 @@ public class TestEventes {
 
     
   }
-  
+  /**
+   * test JobPriorityChangeEvent and JobPriorityChange
+   * @throws Exception
+   */
 
   @Test
   public void testJobPriorityChange() throws Exception {
@@ -116,10 +122,16 @@ public class TestEventes {
 
   }
   
+ 
   private void testCharSequence(IndexedRecord tsf ,int index, CharSequence template){
     tsf.put(index, template.subSequence(0, template.length()-1));
     Assert.assertEquals(tsf.get(index),template.subSequence(0, template.length()-1));
   }
+
+  /**
+   * test TaskUpdatedEvent and TaskUpdated
+   * @throws Exception
+   */
   @Test
   public void testTaskUpdated() throws Exception {
     JobID jid = new JobID("001", 1);

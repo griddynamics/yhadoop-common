@@ -28,10 +28,10 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 
 import junit.framework.Assert;
 
+import org.apache.avro.generic.IndexedRecord;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -336,17 +336,16 @@ public class TestJobHistoryEventHandler {
         // test getMethod
       CharSequence o1= (CharSequence)status.get(0);
       CharSequence o2=(CharSequence)status.get(1);
-      
+      // test jobId
       Assert.assertEquals(o1.toString(), ((JobStatusChangedEvent)events[i].getHistoryEvent()).getJobId().toString());
+      // test jobStatus
       Assert.assertEquals(o2.toString(), ((JobStatusChangedEvent)events[i].getHistoryEvent()).getStatus().toString());
       Assert.assertNotNull(o2);
       checkStatus(o1.toString());
       // test put method
       
-      status.put(0,  o1.subSequence(0, o1.length()-1));
-      Assert.assertEquals(status.get(0), o1.subSequence(0, o1.length()-1));
-     status.put(1,  o2.subSequence(0, o2.length()-1));
-      Assert.assertEquals(status.get(1), o2.subSequence(0, o2.length()-1));
+      testCharSequence(status,0,o1);
+      testCharSequence(status,1,o2);
       
       jheh.handle(events[i]);
     }
@@ -376,7 +375,7 @@ public class TestJobHistoryEventHandler {
     
     CharSequence jobStatus = (CharSequence) juc.get(4);
     Assert.assertEquals(jobStatus.toString(), "KILLED");
-        // test put method
+        // test of put and get methods  
     juc.put(0, jobid.subSequence(0, jobid.length()-1));
     Assert.assertEquals(juc.get(0).toString(), jobid.subSequence(0, jobid.length()-1));
     juc.put(1, 1L);
@@ -390,7 +389,7 @@ public class TestJobHistoryEventHandler {
 
   }
  
-  // check format og job id. Should be 'job_nnn_nnn'
+  //  format of job id test. Should be 'job_nnn_nnn'
   private void checkStatus(String s){
     s.startsWith("job");
     String[] parts=s.split("_");
@@ -400,6 +399,10 @@ public class TestJobHistoryEventHandler {
     Integer.parseInt(parts[2]);
       
     
+  }
+  private void testCharSequence(IndexedRecord tsf ,int index, CharSequence template){
+    tsf.put(index, template.subSequence(0, template.length()-1));
+    Assert.assertEquals(tsf.get(index),template.subSequence(0, template.length()-1));
   }
 }
 
@@ -455,4 +458,5 @@ class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
     this.lastEventHandled = event;
     this.eventsHandled++;
   }
+  
 }

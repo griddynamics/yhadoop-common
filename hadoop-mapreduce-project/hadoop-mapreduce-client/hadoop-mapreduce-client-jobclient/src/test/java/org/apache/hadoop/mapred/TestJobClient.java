@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.TestMRJobClient;
 import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.Tool;
 import org.junit.Ignore;
-//@Ignore
+@Ignore
 public class TestJobClient extends TestMRJobClient {
   
   private String runJob() throws Exception {
