@@ -38,10 +38,10 @@ public class DelegationTokenRenewer
   /** The renewable interface used by the renewer. */
   public interface Renewable {
     /** @return the renew token. */
-    public Token<?> getRenewToken();
+    Token<?> getRenewToken();
 
     /** Set delegation token. */
-    public <T extends TokenIdentifier> void setDelegationToken(Token<T> token);
+    <T extends TokenIdentifier> void setDelegationToken(Token<T> token);
   }
 
   /**
@@ -50,12 +50,15 @@ public class DelegationTokenRenewer
    */
   private static class RenewAction<T extends FileSystem & Renewable>
       implements Delayed {
+    //private final long renewCycleDurationMillis;
     /** when should the renew happen */
     private long renewalTime;
     /** a weak reference to the file system so that it can be garbage collected */
     private final WeakReference<T> weakFs;
 
     private RenewAction(final T fs) {
+    //private RenewAction(long renewCycleMillis, final T fs) {
+    //  renewCycleDurationMillis = renewCycleMillis;
       this.weakFs = new WeakReference<T>(fs);
       updateRenewalTime();
     }
@@ -137,49 +140,60 @@ public class DelegationTokenRenewer
   private static final int RENEW_CYCLE = 24 * 60 * 60 * 950; 
 
   @InterfaceAudience.Private
-  protected static int renewCycle = RENEW_CYCLE;
+  protected static long renewCycle = RENEW_CYCLE;
 
   /** Queue to maintain the RenewActions to be processed by the {@link #run()} */
-  private volatile DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
+  private final DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
+  private boolean started = false;
   
   /**
    * Create the singleton instance. However, the thread can be started lazily in
    * {@link #addRenewAction(FileSystem)}
+   * 
+   * The attribute has package visibility for testing purposes only. Normally it 
+   * should never be assigned outside of this class.
    */
-  private static DelegationTokenRenewer INSTANCE = null;
+  static DelegationTokenRenewer INSTANCE = null;
 
-  private DelegationTokenRenewer(final Class<? extends FileSystem> clazz) {
+  protected DelegationTokenRenewer(final Class<? extends FileSystem> clazz) {
     super(clazz.getSimpleName() + "-" + DelegationTokenRenewer.class.getSimpleName());
     setDaemon(true);
   }
-
+  
   public static synchronized DelegationTokenRenewer getInstance() {
     if (INSTANCE == null) {
       INSTANCE = new DelegationTokenRenewer(FileSystem.class);
     }
     return INSTANCE;
   }
-
+  
   /** Add a renew action to the queue. */
   public synchronized <T extends FileSystem & Renewable> void addRenewAction(final T fs) {
     queue.add(new RenewAction<T>(fs));
-    if (!isAlive()) {
+    if (!started) {
+      // NB: !isAlive() should not be used there
+      // since isAlive() == false if the thread is already finished.
+      started = true;
       start();
     }
   }
 
-  /** Remove the associated renew action from the queue */
-  public synchronized <T extends FileSystem & Renewable> void removeRenewAction(
+  /** Remove the associated renew action from the queue.
+   * Note that only one RenewAction is removed,
+   * so, if there are several RenewAction-s associated to the same file-system,
+   * only one of them will be removed. 
+   */
+  public synchronized <T extends FileSystem & Renewable> boolean removeRenewAction(
       final T fs) {
-    for (RenewAction<?> action : queue) {
+    for (RenewAction<?> action: queue) {
       if (action.weakFs.get() == fs) {
-        queue.remove(action);
-        return;
+        boolean removed = queue.remove(action);
+        return removed;
       }
     }
+    return false;
   }
 
-  @SuppressWarnings("static-access")
   @Override
   public void run() {
     for(;;) {
@@ -195,8 +209,8 @@ public class DelegationTokenRenewer
       } catch (InterruptedException ie) {
         return;
       } catch (Exception ie) {
-        action.weakFs.get().LOG.warn("Failed to renew token, action=" + action,
-            ie);
+        FileSystem.LOG.warn("Failed to renew token, action=" + action,
+          ie);
       }
     }
   }
