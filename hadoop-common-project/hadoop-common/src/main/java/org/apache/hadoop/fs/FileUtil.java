@@ -87,33 +87,61 @@ public class FileUtil {
    * (4) If dir is a normal directory, then dir and all its contents recursively
    *     are deleted.
    */
-  public static boolean fullyDelete(File dir) {
-    if (dir.delete()) {
+  public static boolean fullyDelete(final File dir) {
+    if (deleteImpl(dir, false)) {
       // dir is (a) normal file, (b) symlink to a file, (c) empty directory or
       // (d) symlink to a directory
       return true;
     }
-
     // handle nonempty directory deletion
     if (!fullyDeleteContents(dir)) {
       return false;
     }
-    return dir.delete();
+    return deleteImpl(dir, true);
+  }
+  
+  /*
+   * Pure-Java implementation of "chmod +rwx f".
+   */
+  private static void grantPermissions(final File f) {
+      f.setExecutable(true);
+      f.setReadable(true);
+      f.setWritable(true);
   }
 
+  private static boolean deleteImpl(final File f, final boolean doComment) {
+    if (f == null) {
+      System.out.println("WARN: f is null");
+      return false;
+    }
+    final boolean wasDeleted = f.delete();
+    if (wasDeleted) {
+      return true;
+    }
+    final boolean ex = f.exists();
+    if (doComment && ex) {
+      System.out.println("WARN: failed to delete file or dir ["
+          + f.getAbsolutePath() + "] -- it still exists.");
+    }
+    return !ex;
+  }
+  
   /**
    * Delete the contents of a directory, not the directory itself.  If
    * we return false, the directory may be partially-deleted.
    * If dir is a symlink to a directory, all the contents of the actual
    * directory pointed to by dir will be deleted.
    */
-  public static boolean fullyDeleteContents(File dir) {
+  public static boolean fullyDeleteContents(final File dir) {
+    // to be able to list the dir and delete files from it
+    // we must grant the dir permissions: 
+    grantPermissions(dir);
     boolean deletionSucceeded = true;
-    File contents[] = dir.listFiles();
+    final File[] contents = dir.listFiles();
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
-          if (!contents[i].delete()) {// normal file or symlink to another file
+          if (!deleteImpl(contents[i], true)) {// normal file or symlink to another file
             deletionSucceeded = false;
             continue; // continue deletion of other files/dirs under dir
           }
@@ -121,7 +149,7 @@ public class FileUtil {
           // Either directory or symlink to another directory.
           // Try deleting the directory as this might be a symlink
           boolean b = false;
-          b = contents[i].delete();
+          b = deleteImpl(contents[i], false);
           if (b){
             //this was indeed a symlink or an empty directory
             continue;
@@ -130,7 +158,7 @@ public class FileUtil {
           // fullydelete handle it.
           if (!fullyDelete(contents[i])) {
             deletionSucceeded = false;
-            continue; // continue deletion of other files/dirs under dir
+            // continue deletion of other files/dirs under dir
           }
         }
       }

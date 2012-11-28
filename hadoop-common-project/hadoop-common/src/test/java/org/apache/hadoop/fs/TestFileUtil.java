@@ -270,9 +270,11 @@ public class TestFileUtil {
   }
 
   private File xSubDir = new File(del, "xsubdir");
+  private File xSubSubDir = new File(xSubDir, "xsubsubdir");
   private File ySubDir = new File(del, "ysubdir");
   static String file1Name = "file1";
   private File file2 = new File(xSubDir, "file2");
+  private File file22 = new File(xSubSubDir, "file22");
   private File file3 = new File(ySubDir, "file3");
   private File zlink = new File(del, "zlink");
   
@@ -286,10 +288,14 @@ public class TestFileUtil {
    *                       |
    *    .---------------------------------------,
    *    |            |              |           |
-   *  file1(!w)   xsubdir(-w)   ysubdir(+w)   zlink
-   *                 |              |
-   *               file2          file3
-   *
+   *  file1(!w)   xsubdir(-rwx)   ysubdir(+w)   zlink
+   *              |  |              |
+   *              | file2(-rwx)   file3
+   *              |
+   *            xsubsubdir(-rwx) 
+   *              |
+   *             file22(-rwx)
+   *             
    * @throws IOException
    */
   private void setupDirsAndNonWritablePermissions() throws IOException {
@@ -302,7 +308,16 @@ public class TestFileUtil {
 
     xSubDir.mkdirs();
     file2.createNewFile();
-    xSubDir.setWritable(false);
+    
+    xSubSubDir.mkdirs();
+    file22.createNewFile();
+    
+    revokePermissions(file22);
+    revokePermissions(xSubSubDir);
+    
+    revokePermissions(file2);
+    revokePermissions(xSubDir);
+    
     ySubDir.mkdirs();
     file3.createNewFile();
 
@@ -314,19 +329,24 @@ public class TestFileUtil {
     FileUtil.symLink(tmpFile.toString(), zlink.toString());
   }
   
+  private static void revokePermissions(final File f) {
+     f.setWritable(false);
+     f.setReadable(false);
+     f.setExecutable(false);
+  }
+  
   // Validates the return value.
-  // Validates the existence of directory "xsubdir" and the file "file1"
-  // Sets writable permissions for the non-deleted dir "xsubdir" so that it can
-  // be deleted in tearDown().
+  // Validates the existence of the file "file1"
   private void validateAndSetWritablePermissions(boolean ret) {
     xSubDir.setWritable(true);
     Assert.assertFalse("The return value should have been false!", ret);
     Assert.assertTrue("The file file1 should not have been deleted!",
         new File(del, file1Name).exists());
-    Assert.assertTrue(
-        "The directory xsubdir should not have been deleted!",
+    // NB: the fullyDelete operation now chmods the directories, so it *should* delete the "xSubDir" folder:   
+    Assert.assertFalse(
+        "The directory xsubdir *should* have been deleted!",
         xSubDir.exists());
-    Assert.assertTrue("The file file2 should not have been deleted!",
+    Assert.assertFalse("The file file2 *should* have been deleted!",
         file2.exists());
     Assert.assertFalse("The directory ysubdir should have been deleted!",
         ySubDir.exists());
@@ -388,7 +408,10 @@ public class TestFileUtil {
      */
     @Override
     public File[] listFiles() {
-      File[] files = super.listFiles();
+      final File[] files = super.listFiles();
+      if (files == null) {
+         return null;
+      }
       List<File> filesList = Arrays.asList(files);
       Collections.sort(filesList);
       File[] myFiles = new MyFile[files.length];
