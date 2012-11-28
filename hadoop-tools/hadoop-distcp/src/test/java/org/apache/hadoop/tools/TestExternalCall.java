@@ -69,10 +69,12 @@ public class TestExternalCall {
   public void tearDown() {
     System.setSecurityManager(securityManager);
   }
-
-   @Test
-  public void testCleanup() {
-    try {
+/**
+ * test methods run end execute of DistCp class. silple copy file
+ * @throws Exception 
+ */
+  @Test
+  public void testCleanup() throws Exception {
 
       Configuration conf = getConf();
 
@@ -82,20 +84,13 @@ public class TestExternalCall {
       Path soure = createFile("tmp.txt");
       Path target = createFile("target.txt");
 
-      try {
-        DistCp distcp = new DistCp(conf, null);
-        String[] arg = new String[2];
-        arg[1] = target.toString();
-        arg[0] = soure.toString();
-        distcp.run(arg);
-        Assert.assertTrue(fs.exists(target));
-      } catch (IOException t) {
+      DistCp distcp = new DistCp(conf, null);
+      String[] arg = { soure.toString(), target.toString() };
 
-      }
-    } catch (Exception e) {
-      LOG.error("Exception encountered ", e);
-      Assert.fail("testCleanup failed " + e.getMessage());
-    }
+      distcp.run(arg);
+      Assert.assertTrue(fs.exists(target));
+
+  
   }
 
   private Path createFile(String fname) throws IOException {
@@ -110,37 +105,33 @@ public class TestExternalCall {
     return result;
   }
 
+  /**
+   * test main method of DistCp. Method should to call System.exit().
+   * 
+   */
   @Test
-  public void testCleanupTestViaToolRunner() {
+  public void testCleanupTestViaToolRunner() throws IOException, InterruptedException {
 
+    Configuration conf = getConf();
+
+    Path stagingDir = JobSubmissionFiles.getStagingDir(new Cluster(conf), conf);
+    stagingDir.getFileSystem(conf).mkdirs(stagingDir);
+   
+    Path soure = createFile("tmp.txt");
+    Path target = createFile("target.txt");
     try {
 
-      Configuration conf = getConf();
+      String[] arg = {target.toString(),soure.toString()};
+      DistCp.main(arg);
+      Assert.fail();
 
-      Path stagingDir = JobSubmissionFiles.getStagingDir(new Cluster(conf),
-          conf);
-      stagingDir.getFileSystem(conf).mkdirs(stagingDir);
-
-      Path soure = createFile("tmp.txt");
-      Path target = createFile("target.txt");
-      try {
-
-        String[] arg = new String[2];
-        arg[1] = soure.toString();
-        arg[0] = target.toString();
-        DistCp.main(arg);
-        Assert.fail();
-    
-      } catch (ExitException t) {
-        Assert.assertTrue(fs.exists(target));
-        Assert.assertEquals(t.status, 0);
-        Assert.assertEquals(
-            stagingDir.getFileSystem(conf).listStatus(stagingDir).length, 0);
-      }
-    } catch (Exception e) {
-      LOG.error("Exception encountered ", e);
-      Assert.fail("testCleanup failed " + e.getMessage());
+    } catch (ExitException t) {
+      Assert.assertTrue(fs.exists(target));
+      Assert.assertEquals(t.status, 0);
+      Assert.assertEquals(
+          stagingDir.getFileSystem(conf).listStatus(stagingDir).length, 0);
     }
+
   }
 
   private SecurityManager securityManager;
