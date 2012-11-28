@@ -45,4 +45,9 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
     FileContext fc1 = FileContext.getLocalFSFileContext();
     Assert.assertTrue(fc1 != fc);
   }
+  
+  @Override
+  protected boolean listCorruptedBlocksSupported() {
+    return false;
+  }
 }
