@@ -18,17 +18,17 @@ package org.apache.hadoop.security.authentication.util;
  * limitations under the License.
  */
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
-import sun.security.krb5.Config;
-import sun.security.krb5.KrbException;
 
 /**
  * This class implements parsing and handling of Kerberos principal names. In
@@ -39,6 +39,8 @@ import sun.security.krb5.KrbException;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class KerberosName {
+  private static final Logger LOG = LoggerFactory.getLogger(KerberosNameTrunk.class);
+
   /** The first component of the name */
   private final String serviceName;
   /** The second component of the name. It may be null. */
@@ -77,13 +79,12 @@ public class KerberosName {
   private static List<Rule> rules;
 
   private static String defaultRealm;
-  private static Config kerbConf;
 
   static {
     try {
-      kerbConf = Config.getInstance();
-      defaultRealm = kerbConf.getDefaultRealm();
-    } catch (KrbException ke) {
+      defaultRealm = KerberosUtil.getDefaultRealm();
+    } catch (Exception ke) {
+        LOG.debug("Kerberos krb5 configuration not found, setting default realm to empty");
         defaultRealm="";
     }
   }
@@ -285,7 +286,7 @@ public class KerberosName {
      * @param params first element is the realm, second and later elements are
      *        are the components of the name "a/b@FOO" -> {"FOO", "a", "b"}
      * @return the short name if this rule applies or null
-     * @throws IOException throws if something is wrong with the rules
+     * @throws java.io.IOException throws if something is wrong with the rules
      */
     String apply(String[] params) throws IOException {
       String result = null;
@@ -355,7 +356,7 @@ public class KerberosName {
    * Get the translation of the principal name into an operating system
    * user name.
    * @return the short name
-   * @throws IOException
+   * @throws java.io.IOException
    */
   public String getShortName() throws IOException {
     String[] params;
