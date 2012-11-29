@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The {@link org.apache.hadoop.security.authentication.client.KerberosAuthenticatorTrunk} implements the Kerberos SPNEGO authentication sequence.
+ * The {@link org.apache.hadoop.security.authentication.client.KerberosAuthenticator} implements the Kerberos SPNEGO authentication sequence.
  * <p/>
  * It uses the default principal for the Kerberos cache (normally set via kinit).
  * <p/>
@@ -48,7 +48,7 @@ import java.util.Map;
 public class KerberosAuthenticator implements Authenticator {
 
   private static Logger LOG = LoggerFactory.getLogger(
-      KerberosAuthenticatorTrunk.class);
+      KerberosAuthenticator.class);
 
   /**
    * HTTP header used by the SPNEGO server endpoint during an authentication sequence.

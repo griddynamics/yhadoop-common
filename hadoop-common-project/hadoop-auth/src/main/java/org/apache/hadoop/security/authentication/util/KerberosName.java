@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class KerberosName {
-  private static final Logger LOG = LoggerFactory.getLogger(KerberosNameTrunk.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KerberosName.class);
 
   /** The first component of the name */
   private final String serviceName;
