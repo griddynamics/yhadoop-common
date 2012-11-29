@@ -63,6 +63,7 @@ public class TestDelegationTokenRenewer {
     private int renewCount;
     private volatile long countLastUpdatedTimeMillis;
     private final StateSynchronizer<RenewState> syncronizer;
+    public volatile boolean cancelled = false;
     public CountingRenewsToken(StateSynchronizer<RenewState> s) {
       syncronizer = s;
     }
@@ -89,6 +90,10 @@ public class TestDelegationTokenRenewer {
     }
     long getCountLastUpdatedTimeMillis() {
       return countLastUpdatedTimeMillis;
+    }
+    @Override
+    public void cancel(Configuration conf) {
+      cancelled = true;
     }
   }
   
@@ -239,6 +244,9 @@ public class TestDelegationTokenRenewer {
             boolean rm = renewerSingleton.removeRenewAction(simpleRenewableFileSystemContainer[0]);
             out.println("Action removed: " + rm);
             assertTrue(rm);
+            // check that the token is cancelled:
+            assertTrue("The token is not cancelled.", 
+                countingRenewsToken.cancelled);
             return null;
           }
         },
@@ -261,6 +269,20 @@ public class TestDelegationTokenRenewer {
         }, 
         Collections.singletonList(RenewState.renewerThreadIsAboutToFinish), 
           30 * renewIntervalMillis));
+      
+      // wait for the renewer thread to finish:
+      renewerSingleton.join(30 * renewIntervalMillis);
+      assertTrue(!renewerSingleton.isAlive());
+      // try to add an action 
+      final SimpleRenewableFileSystem fs2 = 
+          new SimpleRenewableFileSystem(new Token<TokenIdentifier>());
+      try {
+        renewerSingleton.addRenewAction(fs2);
+        assertTrue("IllegalStateException expected upon a token addition " +
+        		"if the renewer is already terminated.", false);
+      } catch (IllegalStateException ise) {
+        // okay
+      }
     } catch (Exception e) {
       e.printStackTrace(out);
       throw e;

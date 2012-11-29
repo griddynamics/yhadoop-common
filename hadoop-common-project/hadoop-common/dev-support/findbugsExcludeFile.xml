@@ -291,10 +291,20 @@
        <Field name="previousSnapshot" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+     
      <!--
        The method uses a generic type T that extends two other types
        T1 and T2. Findbugs complains of a cast from T1 to T2.
      -->
+     <Match>
+       <Class name="org.apache.hadoop.fs.DelegationTokenRenewer" />
+       <Method name="removeRenewAction" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     
+     <!-- The return value of method java.util.concurrent.locks.Condition.awaitNanos(long) 
+       "may be used as the argument to a subsequent call ... to finish waiting out the desired time".
+       In our case this is not needed: -->
      <Match>
        <Class name="org.apache.hadoop.fs.DelegationTokenRenewer$BlockingPeekDelayQueue" />
        <Method name="blockingPeek" />

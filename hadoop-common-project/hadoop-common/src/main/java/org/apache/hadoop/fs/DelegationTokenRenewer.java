@@ -29,6 +29,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -42,6 +44,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class DelegationTokenRenewer
     extends Thread {
+  private static final Log LOG = LogFactory
+      .getLog(DelegationTokenRenewer.class);
   /** The renewable interface used by the renewer. */
   public interface Renewable {
     /** @return the renew token. */
@@ -59,8 +63,8 @@ public class DelegationTokenRenewer
   private static class BlockingPeekDelayQueue<T extends Delayed> 
       implements Iterable<T> {
     
-    private final Lock lock0 = new ReentrantLock();
-    private final Condition available0 = lock0.newCondition();
+    private final Lock queueLock = new ReentrantLock();
+    private final Condition queueContentChangedCondition = queueLock.newCondition();
     private final DelayQueue<T> dq = new DelayQueue<T>(); 
     
     public BlockingPeekDelayQueue() {
@@ -73,17 +77,17 @@ public class DelegationTokenRenewer
      * @throws InterruptedException if the caller thread is interrupted.
      */
     public T blockingPeek() throws InterruptedException {
-      final Lock lock = this.lock0;
+      final Lock lock = queueLock;
       lock.lockInterruptibly();
       try {
         while (true) {
           final T first = dq.peek();
           if (first == null) {
-            available0.await();
+            queueContentChangedCondition.await();
           } else {
             long delay = first.getDelay(TimeUnit.NANOSECONDS);
             if (delay > 0) {
-              available0.awaitNanos(delay);
+              queueContentChangedCondition.awaitNanos(delay);
             } else {
               return first;
             }
@@ -95,13 +99,13 @@ public class DelegationTokenRenewer
     }
     
     public boolean add(T t) {
-      Lock lock = lock0;
+      Lock lock = queueLock;
       lock.lock();
       try {
         final boolean added = dq.add(t);
         // NB: added is always true, so
         // don't put if() there:
-        available0.signalAll();
+        queueContentChangedCondition.signalAll();
         return added;
       } finally {
         lock.unlock();
@@ -109,12 +113,12 @@ public class DelegationTokenRenewer
     }
     
     public boolean remove(T t) {
-      Lock lock = lock0;
+      Lock lock = queueLock;
       lock.lock();
       try {
         final boolean removed = dq.remove(t);
         if (removed) {
-          available0.signalAll();
+          queueContentChangedCondition.signalAll();
         }
         return removed;
       } finally {
@@ -123,12 +127,12 @@ public class DelegationTokenRenewer
     }
     
     public T poll() {
-      Lock lock = lock0;
+      Lock lock = queueLock;
       lock.lock();
       try {
         final T t = dq.poll();
         if (t != null) {
-          available0.signalAll();
+          queueContentChangedCondition.signalAll();
         }
         return t;
       } finally {
@@ -274,28 +278,48 @@ public class DelegationTokenRenewer
    * Implementation note: looks like currently this method does not need
    * to be synchronized because there are no restrictions on the element
    * addition.   
-   * TODO: should we reject the addition if an action for 
-   * this 'fs' is already present in the queue?
    */
   public <T extends FileSystem & Renewable> void addRenewAction(final T fs) {
-    final RenewAction<T> renewAction = new RenewAction<T>(fs); 
-    queue.add(renewAction);
+    // start the thread if not already started:
     if (renewerThreadStarted.compareAndSet(false, true)) {
       start();
     }
+    // check if the thread is already dead:
+    final State threadState = getState();
+    if (threadState == State.TERMINATED) {
+      throw new IllegalStateException("Token cannot be added if the Renewer " +
+      		"thread has already been terminated."); 
+    }
+    // now add the renew action to the queue:
+    final RenewAction<T> renewAction = new RenewAction<T>(fs); 
+    queue.add(renewAction);
   }
   
-  /** Remove the associated renew action from the queue.
+  /** 
+   * Remove the associated renew action from the queue.
+   * 
    * Note that only one RenewAction is removed,
    * so, if there are several RenewAction-s associated to the same file-system,
    * only one of them will be removed. 
+   * 
+   * @throws IOException
    */
   public synchronized <T extends FileSystem & Renewable> boolean removeRenewAction(
-      final T fs) {
-    // NB: here we iterate over a snapshot iterator obtained on the queue
-    // at the moment of the iterator creation
+      final T fs) throws IOException {
+    if (fs == null) {
+      throw new NullPointerException("fs");
+    }
     for (RenewAction<?> action: queue) {
       if (action.weakFs.get() == fs) {
+        try {
+          fs.getRenewToken().cancel(fs.getConf());
+        } catch (InterruptedException ie) {
+          LOG.error("Interrupted while canceling token for " + fs.getUri()
+              + " filesystem");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(ie.getStackTrace());
+          }
+        }
         final boolean removed = queue.remove(action);
         return removed;
       }
