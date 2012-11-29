@@ -82,8 +82,8 @@ import org.xml.sax.helpers.XMLReaderFactory;
 @InterfaceStability.Evolving
 public class HftpFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable {
-  private static final DelegationTokenRenewer<HftpFileSystem> dtRenewer
-      = new DelegationTokenRenewer<HftpFileSystem>(HftpFileSystem.class);
+  private static final DelegationTokenRenewer dtRenewer
+      = DelegationTokenRenewer.getInstance();
   
   static {
     HttpURLConnection.setFollowRedirects(true);
