@@ -296,8 +296,8 @@
        T1 and T2. Findbugs complains of a cast from T1 to T2.
      -->
      <Match>
-       <Class name="org.apache.hadoop.fs.DelegationTokenRenewer" />
-       <Method name="removeRenewAction" />
-       <Bug pattern="BC_UNCONFIRMED_CAST" />
+       <Class name="org.apache.hadoop.fs.DelegationTokenRenewer$BlockingPeekDelayQueue" />
+       <Method name="blockingPeek" />
+       <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
      </Match>
  </FindBugsFilter>

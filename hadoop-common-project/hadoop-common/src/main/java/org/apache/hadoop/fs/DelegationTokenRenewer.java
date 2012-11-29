@@ -20,16 +20,21 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.Iterator;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A daemon thread that waits for the next file system to renew.
@@ -37,18 +42,106 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 public class DelegationTokenRenewer
     extends Thread {
-  private static final Log LOG = LogFactory
-      .getLog(DelegationTokenRenewer.class);
-
   /** The renewable interface used by the renewer. */
   public interface Renewable {
     /** @return the renew token. */
-    public Token<?> getRenewToken();
+    Token<?> getRenewToken();
 
     /** Set delegation token. */
-    public <T extends TokenIdentifier> void setDelegationToken(Token<T> token);
+    <T extends TokenIdentifier> void setDelegationToken(Token<T> token);
   }
 
+  /**
+   * Class duplicating (partially) {@link DelayQueue} functionality with the
+   * only added method {@link #blockingPeek()}, which is a "non-removing
+   * #take()" or "blocking #peek()".
+   */
+  private static class BlockingPeekDelayQueue<T extends Delayed> 
+      implements Iterable<T> {
+    
+    private final Lock lock0 = new ReentrantLock();
+    private final Condition available0 = lock0.newCondition();
+    private final DelayQueue<T> dq = new DelayQueue<T>(); 
+    
+    public BlockingPeekDelayQueue() {
+    }
+    
+    /**
+     * Blocks the caller thread until an element with the expired delay
+     * is available, and returns it, but does not remove it from the queue. 
+     * @return the expired element, never null. 
+     * @throws InterruptedException if the caller thread is interrupted.
+     */
+    public T blockingPeek() throws InterruptedException {
+      final Lock lock = this.lock0;
+      lock.lockInterruptibly();
+      try {
+        while (true) {
+          final T first = dq.peek();
+          if (first == null) {
+            available0.await();
+          } else {
+            long delay = first.getDelay(TimeUnit.NANOSECONDS);
+            if (delay > 0) {
+              available0.awaitNanos(delay);
+            } else {
+              return first;
+            }
+          }
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+    
+    public boolean add(T t) {
+      Lock lock = lock0;
+      lock.lock();
+      try {
+        final boolean added = dq.add(t);
+        // NB: added is always true, so
+        // don't put if() there:
+        available0.signalAll();
+        return added;
+      } finally {
+        lock.unlock();
+      }
+    }
+    
+    public boolean remove(T t) {
+      Lock lock = lock0;
+      lock.lock();
+      try {
+        final boolean removed = dq.remove(t);
+        if (removed) {
+          available0.signalAll();
+        }
+        return removed;
+      } finally {
+        lock.unlock();
+      }
+    }
+    
+    public T poll() {
+      Lock lock = lock0;
+      lock.lock();
+      try {
+        final T t = dq.poll();
+        if (t != null) {
+          available0.signalAll();
+        }
+        return t;
+      } finally {
+        lock.unlock();
+      }
+    }
+    
+    @Override
+    public Iterator<T> iterator() {
+      return dq.iterator();
+    }
+  }
+  
   /**
    * An action that will renew and replace the file system's delegation 
    * tokens automatically.
@@ -91,7 +184,7 @@ public class DelegationTokenRenewer
       }
       return compareTo((Delayed)that) == 0;
     }
-
+    
     /**
      * Set a new time for the renewal.
      * It can only be called when the action is not in the queue.
@@ -108,7 +201,7 @@ public class DelegationTokenRenewer
      */
     private boolean renew() throws IOException, InterruptedException {
       final T fs = weakFs.get();
-      final boolean b = fs != null;
+      final boolean b = (fs != null);
       if (b) {
         synchronized(fs) {
           try {
@@ -142,79 +235,107 @@ public class DelegationTokenRenewer
   private static final int RENEW_CYCLE = 24 * 60 * 60 * 950; 
 
   @InterfaceAudience.Private
-  protected static int renewCycle = RENEW_CYCLE;
+  protected static long renewCycle = RENEW_CYCLE;
 
-  /** Queue to maintain the RenewActions to be processed by the {@link #run()} */
-  private volatile DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
+  /** Queue to maintain the RenewActions to be processed by the {@link #run()} */ 
+  private final BlockingPeekDelayQueue<RenewAction<?>> queue = new BlockingPeekDelayQueue<RenewAction<?>>();
+  private final AtomicBoolean renewerThreadStarted = new AtomicBoolean(false);
   
   /**
    * Create the singleton instance. However, the thread can be started lazily in
    * {@link #addRenewAction(FileSystem)}
+   * 
+   * The attribute has package visibility for testing purposes only. Normally it 
+   * should never be assigned outside of this class.
    */
-  private static DelegationTokenRenewer INSTANCE = null;
+  @VisibleForTesting
+  static DelegationTokenRenewer INSTANCE = null;
 
-  private DelegationTokenRenewer(final Class<? extends FileSystem> clazz) {
+  protected DelegationTokenRenewer(final Class<? extends FileSystem> clazz) {
     super(clazz.getSimpleName() + "-" + DelegationTokenRenewer.class.getSimpleName());
     setDaemon(true);
   }
-
+  
   public static synchronized DelegationTokenRenewer getInstance() {
     if (INSTANCE == null) {
       INSTANCE = new DelegationTokenRenewer(FileSystem.class);
     }
     return INSTANCE;
   }
-
-  /** Add a renew action to the queue. */
-  public synchronized <T extends FileSystem & Renewable> void addRenewAction(final T fs) {
-    queue.add(new RenewAction<T>(fs));
-    if (!isAlive()) {
+  
+  /** 
+   * Add a renew action to the queue.
+   * 
+   * Note that the addition is asynchronous.
+   * 
+   * Note that this method also starts the renewer thread 
+   * when the first element is added.
+   * 
+   * Implementation note: looks like currently this method does not need
+   * to be synchronized because there are no restrictions on the element
+   * addition.   
+   * TODO: should we reject the addition if an action for 
+   * this 'fs' is already present in the queue?
+   */
+  public <T extends FileSystem & Renewable> void addRenewAction(final T fs) {
+    final RenewAction<T> renewAction = new RenewAction<T>(fs); 
+    queue.add(renewAction);
+    if (renewerThreadStarted.compareAndSet(false, true)) {
       start();
     }
   }
-
-  /**
-   * Remove the associated renew action from the queue
-   * 
-   * @throws IOException
+  
+  /** Remove the associated renew action from the queue.
+   * Note that only one RenewAction is removed,
+   * so, if there are several RenewAction-s associated to the same file-system,
+   * only one of them will be removed. 
    */
-  public synchronized <T extends FileSystem & Renewable> void removeRenewAction(
-      final T fs) throws IOException {
-    for (RenewAction<?> action : queue) {
+  public synchronized <T extends FileSystem & Renewable> boolean removeRenewAction(
+      final T fs) {
+    // NB: here we iterate over a snapshot iterator obtained on the queue
+    // at the moment of the iterator creation
+    for (RenewAction<?> action: queue) {
       if (action.weakFs.get() == fs) {
-        try {
-          fs.getRenewToken().cancel(fs.getConf());
-        } catch (InterruptedException ie) {
-          LOG.error("Interrupted while canceling token for " + fs.getUri()
-              + "filesystem");
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(ie.getStackTrace());
-          }
-        }
-        queue.remove(action);
-        return;
+        final boolean removed = queue.remove(action);
+        return removed;
       }
     }
+    return false;
   }
-
-  @SuppressWarnings("static-access")
+  
   @Override
+  /*
+   * Sync challenge is there: if we took an action and are in progress
+   * of renewing it, #removeRenewAction(fs) will not find it in the 
+   * queue returning 'false', and after that the action 
+   * will be returned to the queue with the updated renew delay.  
+   */
   public void run() {
+    RenewAction<?> action = null;
     for(;;) {
-      RenewAction<?> action = null;
       try {
+        // block here until an expired element appears in the queue,
+        // but do not remove it from the queue:
+        action = queue.blockingPeek();
+        // Now sync to avoid conflicts with #removeRenewAction() method:
         synchronized (this) {
-          action = queue.take();
-          if (action.renew()) {
-            action.updateRenewalTime();
-            queue.add(action);
+          // #poll() is a non-blocking invocation: immediately removes 
+          // and returns an expired element, or 'null' if there is no one:
+          action = queue.poll();
+          if (action != null) {
+            if (action.renew()) {
+              // NB: update the delay must be done *only* when the action
+              // is not in the queue, because the actions are compared
+              // using the delay value
+              action.updateRenewalTime();
+              queue.add(action); // put it back into the queue
+            }
           }
         }
       } catch (InterruptedException ie) {
-        return;
-      } catch (Exception ie) {
-        action.weakFs.get().LOG.warn("Failed to renew token, action=" + action,
-            ie);
+        return; // the only exit point of this method.
+      } catch (Exception e) {
+        FileSystem.LOG.warn("Failed to renew token, action=" + action, e);
       }
     }
   }
