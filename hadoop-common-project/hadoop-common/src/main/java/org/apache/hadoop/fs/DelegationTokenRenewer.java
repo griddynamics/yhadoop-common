@@ -311,16 +311,18 @@ public class DelegationTokenRenewer
     }
     for (RenewAction<?> action: queue) {
       if (action.weakFs.get() == fs) {
-        try {
-          fs.getRenewToken().cancel(fs.getConf());
-        } catch (InterruptedException ie) {
-          LOG.error("Interrupted while canceling token for " + fs.getUri()
+        final boolean removed = queue.remove(action);
+        if (removed) {
+          try {
+            fs.getRenewToken().cancel(fs.getConf());
+          } catch (InterruptedException ie) {
+            LOG.error("Interrupted while canceling token for " + fs.getUri()
               + " filesystem");
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(ie.getStackTrace());
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(ie.getStackTrace());
+            }
           }
         }
-        final boolean removed = queue.remove(action);
         return removed;
       }
     }
