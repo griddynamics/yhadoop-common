@@ -37,12 +37,13 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
 import org.apache.hadoop.mapred.Counters;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.junit.Ignore;
 
+@Ignore
 public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 {
 
@@ -55,11 +56,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
   private static final List<String> REDUCER_BAD_RECORDS = 
     Arrays.asList("hey001","hey018");
   
-  private static final String badMapper = 
-    UtilTest.makeJavaCommand(BadApp.class, new String[]{});
-  private static final String badReducer = 
-    UtilTest.makeJavaCommand(BadApp.class, new String[]{"true"});
-  private static final int INPUTSIZE=100;
+  private static final int INPUTSIZE = 100;
   
   public TestStreamingBadRecords() throws IOException
   {
@@ -68,6 +65,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     utilTest.redirectIfAntJunit();
   }
 
+  @Override
   protected void setUp() throws Exception {
     Properties props = new Properties();
     props.setProperty(JTConfig.JT_RETIREJOBS, "false");
@@ -287,6 +285,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       super(args);
     }
 
+    @Override
     protected void processLine(String line) throws Exception {
       List<String> badRecords = MAPPER_BAD_RECORDS;
       if(isReducer) {
@@ -311,7 +310,5 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       new BadApp(args);
     }
   }
-  
-  
 
 }

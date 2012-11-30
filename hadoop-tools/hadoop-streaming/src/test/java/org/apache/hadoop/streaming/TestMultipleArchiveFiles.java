@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
@@ -44,7 +45,6 @@ public class TestMultipleArchiveFiles extends TestStreaming
 {
   private static final Log LOG = LogFactory.getLog(TestMultipleArchiveFiles.class);
 
-  private StreamJob job;
   private String INPUT_DIR = "multiple-archive-files/";
   private String INPUT_FILE = INPUT_DIR + "input.txt";
   private String CACHE_ARCHIVE_1 = INPUT_DIR + "cacheArchive1.zip";
@@ -65,10 +65,27 @@ public class TestMultipleArchiveFiles extends TestStreaming
     input = "HADOOP";
     expectedOutput = "HADOOP\t\nHADOOP\t\n";
     conf = new Configuration();
-    dfs = new MiniDFSCluster(conf, 1, true, null);
+    dfs = 
+         new MiniDFSCluster
+        .Builder(conf)
+        .checkExitOnShutdown(true)
+        .numDataNodes(1)
+        .format(true)
+        .racks(null)
+        .build();
+        
     fileSys = dfs.getFileSystem();
     namenode = fileSys.getUri().getAuthority();
-    mr  = new MiniMRCluster(1, namenode, 1);
+    
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + "."
+        + CapacitySchedulerConfiguration.QUEUES, "default");
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".default."
+        + CapacitySchedulerConfiguration.CAPACITY, "100");
+
+    final JobConf jobConf = new JobConf(conf);
+    mr  = new MiniMRCluster(0,0, 1, namenode, 1, null, null, null, jobConf);
 
     map = "xargs cat";
     reduce = "cat";
