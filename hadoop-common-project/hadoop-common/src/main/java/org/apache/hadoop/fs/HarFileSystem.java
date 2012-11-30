@@ -799,7 +799,7 @@ public class HarFileSystem extends FilterFileSystem {
       
       public synchronized int available() throws IOException {
         long remaining = end - underLyingStream.getPos();
-        if (remaining > (long)Integer.MAX_VALUE) {
+        if (remaining > Integer.MAX_VALUE) {
           return Integer.MAX_VALUE;
         }
         return (int) remaining;
@@ -827,10 +827,15 @@ public class HarFileSystem extends FilterFileSystem {
         int ret = read(oneBytebuff, 0, 1);
         return (ret <= 0) ? -1: (oneBytebuff[0] & 0xff);
       }
-      
+
+      // NB: currently this method actually never executed becusae
+      // java.io.DataInputStream.read(byte[]) directly delegates to 
+      // method java.io.InputStream.read(byte[], int, int).
+      // However, potentially it can be invoked, so leave it intact for now.
+      @Override
       public synchronized int read(byte[] b) throws IOException {
-        int ret = read(b, 0, b.length);
-        if (ret != -1) {
+        final int ret = read(b, 0, b.length);
+        if (ret > 0) {
           position += ret;
         }
         return ret;
@@ -857,15 +862,19 @@ public class HarFileSystem extends FilterFileSystem {
       public synchronized long skip(long n) throws IOException {
         long tmpN = n;
         if (tmpN > 0) {
-          if (position + tmpN > end) {
-            tmpN = end - position;
-          }
+          final long actualRemaining = end - position; 
+          if (tmpN > actualRemaining) {
+            tmpN = actualRemaining;
+          }   
           underLyingStream.seek(tmpN + position);
           position += tmpN;
           return tmpN;
-        }
-        return (tmpN < 0)? -1 : 0;
-      }
+        }   
+        // NB: the contract is described in java.io.InputStream.skip(long):
+        // this method returns the number of bytes actually skipped, so,
+        // the return value should never be negative. 
+        return 0;
+      }   
       
       public synchronized long getPos() throws IOException {
         return (position - start);
@@ -893,7 +902,12 @@ public class HarFileSystem extends FilterFileSystem {
       throws IOException {
         int nlength = length;
         if (start + nlength + pos > end) {
+          // length corrected to the real remaining length:
           nlength = (int) (end - (start + pos));
+        }
+        if (nlength <= 0) {
+          // EOS:
+          return -1;
         }
         return underLyingStream.read(pos + start , b, offset, nlength);
       }
@@ -907,10 +921,6 @@ public class HarFileSystem extends FilterFileSystem {
           throw new IOException("Not enough bytes to read.");
         }
         underLyingStream.readFully(pos + start, b, offset, length);
-      }
-      
-      public void readFully(long pos, byte[] b) throws IOException {
-          readFully(pos, b, 0, b.length);
       }
       
     }
