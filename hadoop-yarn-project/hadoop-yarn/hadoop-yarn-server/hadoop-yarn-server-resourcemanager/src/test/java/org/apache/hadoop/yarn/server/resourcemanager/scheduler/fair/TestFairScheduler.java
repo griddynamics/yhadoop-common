@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -97,7 +97,7 @@ public class TestFairScheduler {
     Configuration conf = createConfiguration();
     // All tests assume only one assignment per node update
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
-    Store store = StoreFactory.getStore(conf);
+    RMStateStore store = StoreFactory.getStore(conf);
     resourceManager = new ResourceManager(store);
     resourceManager.init(conf);
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
@@ -401,11 +401,11 @@ public class TestFairScheduler {
         createAppAttemptId(1, 1), "default", "user1");
     scheduler.handle(appAddedEvent1);
 
-    // Scheduler should have one queue (the default)
-    assertEquals(1, scheduler.getQueueManager().getQueues().size());
+    // Scheduler should have two queues (the default and the one created for user1)
+    assertEquals(2, scheduler.getQueueManager().getQueues().size());
 
     // That queue should have one app
-    assertEquals(1, scheduler.getQueueManager().getQueue("default").getApplications().size());
+    assertEquals(1, scheduler.getQueueManager().getQueue("user1").getApplications().size());
 
     AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
         createAppAttemptId(1, 1), RMAppAttemptState.FINISHED);
@@ -413,8 +413,8 @@ public class TestFairScheduler {
     // Now remove app
     scheduler.handle(appRemovedEvent1);
 
-    // Default queue should have no apps
-    assertEquals(0, scheduler.getQueueManager().getQueue("default").getApplications().size());
+    // Queue should have no apps
+    assertEquals(0, scheduler.getQueueManager().getQueue("user1").getApplications().size());
   }
 
   @Test

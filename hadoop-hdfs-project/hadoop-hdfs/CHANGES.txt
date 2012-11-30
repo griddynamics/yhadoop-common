@@ -17,6 +17,9 @@ Trunk (Unreleased)
     reliably storing HDFS edit logs. See dedicated section below for breakdown
     of subtasks.
 
+    HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
+    (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -166,6 +169,12 @@ Trunk (Unreleased)
 
     HDFS-4215. Remove locking from addToParent(..) since it is used in image
     loading, and add INode.isFile().  (szetszwo)
+
+    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
+    (suresh)
+
+    HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
+    FSDirectory and INodeDirectory. (szetszwo)
 
   OPTIMIZATIONS
 
@@ -477,6 +486,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4038. Override toString() for BookKeeperEditLogInputStream.
     (Vinay via umamahesh)
+
+    HDFS-4214. OfflineEditsViewer should print out the offset at which it
+    encountered an error. (Colin Patrick McCabe via atm)
 
   OPTIMIZATIONS
 
