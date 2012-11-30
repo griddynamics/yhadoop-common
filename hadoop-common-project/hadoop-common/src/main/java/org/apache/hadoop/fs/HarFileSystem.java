@@ -804,14 +804,19 @@ public class HarFileSystem extends FilterFileSystem {
      * Create an input stream that fakes all the reads/positions/seeking.
      */
     private static class HarFsInputStream extends FSInputStream {
-      private long position, start, end;
+      private final long start, end;
+      private long position;
       //The underlying data input stream that the
       // underlying filesystem will return.
-      private FSDataInputStream underLyingStream;
+      private final FSDataInputStream underLyingStream;
       //one byte buffer
-      private byte[] oneBytebuff = new byte[1];
+      private final byte[] oneBytebuff = new byte[1];
+      
       HarFsInputStream(FileSystem fs, Path path, long start,
           long length, int bufferSize) throws IOException {
+        if (length < 0) {
+          throw new IllegalArgumentException("Negative length ["+length+"]");
+        }
         underLyingStream = fs.open(path, bufferSize);
         underLyingStream.seek(start);
         // the start of this file in the part file
@@ -913,12 +918,21 @@ public class HarFileSystem extends FilterFileSystem {
       }
       
       @Override
-      public synchronized void seek(long pos) throws IOException {
-        if (pos < 0 || (start + pos > end)) {
-          throw new IOException("Failed to seek: EOF");
-        }
+      public synchronized void seek(final long pos) throws IOException {
+        validatePosition(pos);
         position = start + pos;
         underLyingStream.seek(position);
+      }
+
+      private void validatePosition(final long pos) throws IOException {
+        if (pos < 0) {
+          throw new IOException("Negative position: "+pos);
+         }
+         final long length = end - start;
+         if (pos > length) {
+           throw new IOException("Position behind the end " +
+               "of the stream (length = "+length+"): " + pos);
+         }
       }
 
       @Override
@@ -938,7 +952,7 @@ public class HarFileSystem extends FilterFileSystem {
         int nlength = length;
         if (start + nlength + pos > end) {
           // length corrected to the real remaining length:
-          nlength = (int) (end - (start + pos));
+          nlength = (int) (end - start - pos);
         }
         if (nlength <= 0) {
           // EOS:
@@ -958,7 +972,6 @@ public class HarFileSystem extends FilterFileSystem {
         }
         underLyingStream.readFully(pos + start, b, offset, length);
       }
-      
     }
   
     /**
