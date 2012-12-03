@@ -280,12 +280,12 @@ public class TestFileUtil {
     Assert.assertTrue(new File(tmp, FILE).exists());
   }
 
-  private final File xSubDir = new File(del, "xsubdir");
-  private final File ySubDir = new File(del, "ysubdir");
-  static final String file1Name = "file1";
-  private final File file2 = new File(xSubDir, "file2");
-  private final File file3 = new File(ySubDir, "file3");
-  private final File zlink = new File(del, "zlink");
+  private File xSubDir = new File(del, "xsubdir");
+  private File ySubDir = new File(del, "ysubdir");
+  static String file1Name = "file1";
+  private File file2 = new File(xSubDir, "file2");
+  private File file3 = new File(ySubDir, "file3");
+  private File zlink = new File(del, "zlink");
   
   /**
    * Creates a directory which can not be deleted completely.
