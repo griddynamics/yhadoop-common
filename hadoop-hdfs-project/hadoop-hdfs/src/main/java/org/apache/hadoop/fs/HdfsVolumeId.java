@@ -37,6 +37,10 @@ public class HdfsVolumeId implements VolumeId {
   private final byte[] id;
 
   public HdfsVolumeId(byte[] id) {
+    if (id == null) {
+      throw new NullPointerException("A valid Id can only be constructed " +
+      		"with a non-null byte array.");
+    }
     this.id = id;
   }
 

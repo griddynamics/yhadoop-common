@@ -117,17 +117,21 @@ public class TestVolumeId {
 
   @Test
   /*
-   * Test HdfsVolumeId(null) instances: show that we permit such
+   * Test HdfsVolumeId(new byte[0]) instances: show that we permit such
    * objects, they are still valid, and obey the same equality
    * rules other objects do. 
    */
-  public void testNullIdBytes() {
-    final VolumeId idNull1   = new HdfsVolumeId(null);
-    final VolumeId idNull2   = new HdfsVolumeId(null);
-    final VolumeId idNonNull = new HdfsVolumeId(new byte[] { (byte)1 });
-    testEq(true, idNull1, idNull2);
-    testEq(false, idNull1, idNonNull);
-    testEq(false, idNull2, idNonNull);
+  public void testIdEmptyBytes() {
+    final VolumeId idEmpty1   = new HdfsVolumeId(new byte[0]);
+    assertTrue(idEmpty1.isValid());
+    final VolumeId idEmpty2   = new HdfsVolumeId(new byte[0]);
+    assertTrue(idEmpty2.isValid());
+    final VolumeId idNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 });
+    assertTrue(idNotEmpty.isValid());
+    
+    testEq(true, idEmpty1, idEmpty2);
+    testEq(false, idEmpty1, idNotEmpty);
+    testEq(false, idEmpty2, idNotEmpty);
   }
   
   @Test
@@ -135,12 +139,16 @@ public class TestVolumeId {
    * Test the VolumeId.INVALID_VOLUME_ID singleton.
    */
   public void testInvalidId() {
-    final VolumeId idNull    = new HdfsVolumeId(null);
+    try {
+      new HdfsVolumeId(null);
+      assertTrue("NPE expected.", false);
+    } catch (NullPointerException npe) {
+      // okay
+    }
     final VolumeId idEmpty   = new HdfsVolumeId(new byte[] {});
-    final VolumeId idNonNull = new HdfsVolumeId(new byte[] { (byte)1 });
+    final VolumeId idNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 });
     
-    testEq(false, VolumeId.INVALID_VOLUME_ID, idNull);
-    testEq(false, VolumeId.INVALID_VOLUME_ID, idNonNull);
+    testEq(false, VolumeId.INVALID_VOLUME_ID, idNotEmpty);
     testEq(false, VolumeId.INVALID_VOLUME_ID, idEmpty);
     
     testEqMany(true, 
@@ -151,9 +159,8 @@ public class TestVolumeId {
     testEqMany(false, 
         new VolumeId[] {
           VolumeId.INVALID_VOLUME_ID, 
-          idNull, 
           idEmpty, 
-          idNonNull });
+          idNotEmpty });
   }
   
   @Test
@@ -165,8 +172,6 @@ public class TestVolumeId {
     // We cannot assert more.
     String strInvalid = VolumeId.INVALID_VOLUME_ID.toString();
     assertNotNull(strInvalid);
-    
-    String strNull = new HdfsVolumeId(null).toString();
     
     String strEmpty = new HdfsVolumeId(new byte[] {}).toString();
     assertNotNull(strEmpty);
