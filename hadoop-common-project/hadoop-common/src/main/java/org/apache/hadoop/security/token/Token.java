@@ -38,6 +38,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * The client-side form of the token.
  */
@@ -275,6 +277,15 @@ public class Token<T extends TokenIdentifier> implements Writable {
   
   private static ServiceLoader<TokenRenewer> renewers =
       ServiceLoader.load(TokenRenewer.class);
+  // renewer for testing purposes:
+  private static TokenRenewer testRenewer = null;
+
+  @VisibleForTesting
+  protected static void setTestRenewer(final TokenRenewer testTokenRenewer) {
+    synchronized (renewers) {
+      testRenewer = testTokenRenewer;
+    }
+  }
 
   private synchronized TokenRenewer getRenewer() throws IOException {
     if (renewer != null) {
@@ -282,6 +293,11 @@ public class Token<T extends TokenIdentifier> implements Writable {
     }
     renewer = TRIVIAL_RENEWER;
     synchronized (renewers) {
+      if (testRenewer != null 
+          && testRenewer.handleKind(kind)) {
+        renewer = testRenewer;
+        return renewer;
+      }
       for (TokenRenewer canidate : renewers) {
         if (canidate.handleKind(this.kind)) {
           renewer = canidate;

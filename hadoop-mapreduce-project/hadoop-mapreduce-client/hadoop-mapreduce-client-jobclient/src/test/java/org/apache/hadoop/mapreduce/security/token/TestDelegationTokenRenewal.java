@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.security.token;
 
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -45,15 +44,13 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * unit test - 
- * tests addition/deletion/cancelation of renewals of delegation tokens
+ * tests addition/deletion/cancellation of renewals of delegation tokens
  *
  */
-@Ignore
 public class TestDelegationTokenRenewal {
   private static final Log LOG = 
       LogFactory.getLog(TestDelegationTokenRenewal.class);
@@ -102,7 +99,6 @@ public class TestDelegationTokenRenewal {
       LOG.info("Cancel token " + token);
       token.cancelToken();
    }
-
   }
 
   private static Configuration conf;
@@ -145,6 +141,11 @@ public class TestDelegationTokenRenewal {
     public String status = "GOOD";
     public static final String CANCELED = "CANCELED";
 
+    // delegate to overcome visibility restriction
+    static void setTestRenewer(Renewer testTokenRenewer) {
+      Token.setTestRenewer(testTokenRenewer);
+    }
+    
     public MyToken(DelegationTokenIdentifier dtId1,
         MyDelegationTokenSecretManager sm) {
       super(dtId1, sm);
@@ -156,6 +157,7 @@ public class TestDelegationTokenRenewal {
 
     public void cancelToken() {this.status=CANCELED;}
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder(1024);
       
@@ -181,19 +183,17 @@ public class TestDelegationTokenRenewal {
    * exception
    */
   static class MyFS extends DistributedFileSystem {
-    
     public MyFS() {}
+    @Override
     public void close() {}
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException {}
-    
     @Override 
     public MyToken getDelegationToken(Text renewer) throws IOException {
       MyToken result = createTokens(renewer);
       LOG.info("Called MYDFS.getdelegationtoken " + result);
       return result;
     }
-
   }
   
   /**
@@ -242,6 +242,9 @@ public class TestDelegationTokenRenewal {
    */
   @Test
   public void testDTRenewal () throws Exception {
+    // set up custom Renewer for testing:
+    MyToken.setTestRenewer(new Renewer());
+    
     MyFS dfs = (MyFS)FileSystem.get(conf);
     LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+conf.hashCode());
     // Test 1. - add three tokens - make sure exactly one get's renewed
