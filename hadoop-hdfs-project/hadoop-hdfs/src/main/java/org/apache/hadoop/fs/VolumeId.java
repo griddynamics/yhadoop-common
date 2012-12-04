@@ -32,6 +32,7 @@ public interface VolumeId extends Comparable<VolumeId> {
    * Represents an invalid Volume ID (ID for unknown content).
    */
   public static final VolumeId INVALID_VOLUME_ID = new VolumeId() {
+    
     @Override
     public int compareTo(VolumeId arg0) {
       // This object is equal only to itself;
@@ -46,19 +47,23 @@ public interface VolumeId extends Comparable<VolumeId> {
         return -1;
       }
     }
+    
     @Override
     public boolean equals(Object obj) {
       // this object is equal only to itself:
       return (obj == this);
     }
+    
     @Override
     public int hashCode() {
       return Integer.MIN_VALUE;
     }
+    
     @Override
     public boolean isValid() {
       return false;
     }
+    
     @Override
     public String toString() {
       return "Invalid VolumeId";

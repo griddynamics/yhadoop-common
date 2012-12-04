@@ -115,12 +115,12 @@ public class TestVolumeId {
     assertTrue(sum < volumeIds.length);
   }
 
-  @Test
   /*
    * Test HdfsVolumeId(new byte[0]) instances: show that we permit such
    * objects, they are still valid, and obey the same equality
    * rules other objects do. 
    */
+  @Test
   public void testIdEmptyBytes() {
     final VolumeId idEmpty1   = new HdfsVolumeId(new byte[0]);
     assertTrue(idEmpty1.isValid());
@@ -134,10 +134,10 @@ public class TestVolumeId {
     testEq(false, idEmpty2, idNotEmpty);
   }
   
-  @Test
   /*
    * Test the VolumeId.INVALID_VOLUME_ID singleton.
    */
+  @Test
   public void testInvalidId() {
     try {
       new HdfsVolumeId(null);
@@ -163,12 +163,12 @@ public class TestVolumeId {
           idNotEmpty });
   }
   
-  @Test
   /*
    * test #toString() for typical VolumeId equality classes
    */
+  @Test
   public void testToString() {
-    // The #toString() return value is only checked for != null in some cases.
+    // The #toString() return value is only checked for != null.
     // We cannot assert more.
     String strInvalid = VolumeId.INVALID_VOLUME_ID.toString();
     assertNotNull(strInvalid);
@@ -176,8 +176,8 @@ public class TestVolumeId {
     String strEmpty = new HdfsVolumeId(new byte[] {}).toString();
     assertNotNull(strEmpty);
     
-    String strNonNull = new HdfsVolumeId(new byte[] { (byte)1 }).toString();
-    assertNotNull(strNonNull);
+    String strNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 }).toString();
+    assertNotNull(strNotEmpty);
   } 
   
 }
