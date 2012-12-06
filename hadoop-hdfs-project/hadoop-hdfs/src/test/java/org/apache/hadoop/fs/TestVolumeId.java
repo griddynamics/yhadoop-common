@@ -24,41 +24,42 @@ public class TestVolumeId {
 
   @Test
   public void testEquality() {
-    final VolumeId id1 = new HdfsVolumeId(new byte[] { (byte)0, (byte)0 }, true);
+    final VolumeId id1 = new HdfsVolumeId(new byte[] { (byte)0, (byte)0 });
     testEq(true, id1, id1);
 
-    final VolumeId id2 = new HdfsVolumeId(new byte[] { (byte)0, (byte)1 }, true);
+    final VolumeId id2 = new HdfsVolumeId(new byte[] { (byte)0, (byte)1 });
     testEq(true, id2, id2);
     testEq(false, id1, id2);
 
-    final VolumeId id3 = new HdfsVolumeId(new byte[] { (byte)1, (byte)0 }, true);
+    final VolumeId id3 = new HdfsVolumeId(new byte[] { (byte)1, (byte)0 });
     testEq(true, id3, id3);
     testEq(false, id1, id3);
     
     // same as 2, but "invalid":
-    final VolumeId id2copy1 = new HdfsVolumeId(new byte[] { (byte)0, (byte)1 }, false);
+    final VolumeId id2copy1 = new HdfsVolumeId(new byte[] { (byte)0, (byte)1 });
     
     testEq(true, id2, id2copy1);
 
     // same as 2copy1: 
-    final VolumeId id2copy2 = new HdfsVolumeId(new byte[] { (byte)0, (byte)1 }, false);
+    final VolumeId id2copy2 = new HdfsVolumeId(new byte[] { (byte)0, (byte)1 });
     
     testEq(true, id2, id2copy2);
     
-    testEqMany(true, id2, id2copy1, id2copy2);
+    testEqMany(true, new VolumeId[] { id2, id2copy1, id2copy2 });
     
-    testEqMany(false, id1, id2, id3);
+    testEqMany(false, new VolumeId[] { id1, id2, id3 });
   }
   
-  private void testEq(final boolean eq, VolumeId id1, VolumeId id2) {
+  @SuppressWarnings("unchecked")
+  private <T> void testEq(final boolean eq, Comparable<? super T> id1, Comparable<? super T> id2) {
     final int h1 = id1.hashCode();
     final int h2 = id2.hashCode();
     
     // eq reflectivity:
     assertTrue(id1.equals(id1));
     assertTrue(id2.equals(id2));
-    assertEquals(0, id1.compareTo(id1));
-    assertEquals(0, id2.compareTo(id2));
+    assertEquals(0, id1.compareTo((T)id1));
+    assertEquals(0, id2.compareTo((T)id2));
 
     // eq symmetry:
     assertEquals(eq, id1.equals(id2));
@@ -69,10 +70,10 @@ public class TestVolumeId {
     assertFalse(id2.equals(null));
     
     // compareTo:
-    assertEquals(eq, 0 == id1.compareTo(id2));
-    assertEquals(eq, 0 == id2.compareTo(id1));
+    assertEquals(eq, 0 == id1.compareTo((T)id2));
+    assertEquals(eq, 0 == id2.compareTo((T)id1));
     // compareTo must be antisymmetric:
-    assertEquals(sign(id1.compareTo(id2)), -sign(id2.compareTo(id1)));
+    assertEquals(sign(id1.compareTo((T)id2)), -sign(id2.compareTo((T)id1)));
     
     // compare with null should never return 0 to be consistent with #equals(): 
     assertTrue(id1.compareTo(null) != 0);
@@ -97,8 +98,9 @@ public class TestVolumeId {
     }
   }
   
-  private void testEqMany(final boolean eq, VolumeId... volumeIds) {
-    VolumeId vidNext;
+  @SuppressWarnings("unchecked")
+  private <T> void testEqMany(final boolean eq, Comparable<? super T>... volumeIds) {
+    Comparable<? super T> vidNext;
     int sum = 0;
     for (int i=0; i<volumeIds.length; i++) {
       if (i == volumeIds.length - 1) {
@@ -107,10 +109,75 @@ public class TestVolumeId {
         vidNext = volumeIds[i + 1];
       }
       testEq(eq, volumeIds[i], vidNext);
-      sum += sign(volumeIds[i].compareTo(vidNext));
+      sum += sign(volumeIds[i].compareTo((T)vidNext));
     }
     // the comparison relationship must always be acyclic:
     assertTrue(sum < volumeIds.length);
   }
+
+  /*
+   * Test HdfsVolumeId(new byte[0]) instances: show that we permit such
+   * objects, they are still valid, and obey the same equality
+   * rules other objects do. 
+   */
+  @Test
+  public void testIdEmptyBytes() {
+    final VolumeId idEmpty1   = new HdfsVolumeId(new byte[0]);
+    assertTrue(idEmpty1.isValid());
+    final VolumeId idEmpty2   = new HdfsVolumeId(new byte[0]);
+    assertTrue(idEmpty2.isValid());
+    final VolumeId idNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 });
+    assertTrue(idNotEmpty.isValid());
+    
+    testEq(true, idEmpty1, idEmpty2);
+    testEq(false, idEmpty1, idNotEmpty);
+    testEq(false, idEmpty2, idNotEmpty);
+  }
+  
+  /*
+   * Test the VolumeId.INVALID_VOLUME_ID singleton.
+   */
+  @Test
+  public void testInvalidId() {
+    try {
+      new HdfsVolumeId(null);
+      assertTrue("NPE expected.", false);
+    } catch (NullPointerException npe) {
+      // okay
+    }
+    final VolumeId idEmpty   = new HdfsVolumeId(new byte[] {});
+    final VolumeId idNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 });
+    
+    testEq(false, VolumeId.INVALID_VOLUME_ID, idNotEmpty);
+    testEq(false, VolumeId.INVALID_VOLUME_ID, idEmpty);
+    
+    testEqMany(true, 
+        new VolumeId[] { 
+          VolumeId.INVALID_VOLUME_ID, 
+          VolumeId.INVALID_VOLUME_ID, 
+          VolumeId.INVALID_VOLUME_ID } );
+    testEqMany(false, 
+        new VolumeId[] {
+          VolumeId.INVALID_VOLUME_ID, 
+          idEmpty, 
+          idNotEmpty });
+  }
+  
+  /*
+   * test #toString() for typical VolumeId equality classes
+   */
+  @Test
+  public void testToString() {
+    // The #toString() return value is only checked for != null.
+    // We cannot assert more.
+    String strInvalid = VolumeId.INVALID_VOLUME_ID.toString();
+    assertNotNull(strInvalid);
+    
+    String strEmpty = new HdfsVolumeId(new byte[] {}).toString();
+    assertNotNull(strEmpty);
+    
+    String strNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 }).toString();
+    assertNotNull(strNotEmpty);
+  } 
   
 }
