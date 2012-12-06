@@ -22,6 +22,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileUtil;
@@ -112,7 +116,7 @@ public class TestTaskLog {
    */
   @Test
   public void testTaskLogWithoutTaskLogDir() throws IOException {
-    TaskLog tasklog= new TaskLog();
+//    TaskLog tasklog= new TaskLog();
     System.clearProperty(MRJobConfig.TASK_LOG_DIR);
 
     // test TaskLog
@@ -127,7 +131,48 @@ public class TestTaskLog {
    File f= TaskLog.getTaskLogFile(taid,true,LogName.STDOUT);
    assertTrue(f.getAbsolutePath().endsWith("stdout"));
    
+  }
+  @Test
+  public void testExternalCall() throws IOException {
+    
+    List<String> setup= Arrays.asList("setup");
+    List<String> cmd= Arrays.asList("cmd");
+
+    String commandLine=TaskLog.buildCommandLine(setup, cmd, new File("stdoutFilename"),  new File("stderrFilename"), 100L, true);
+    assertEquals(commandLine, " export JVM_PID=`echo $$` ; 'setup' ;('cmd'  < /dev/null  | tail -c 100 >> stdoutFilename ; exit $PIPESTATUS ) 2>&1 | tail -c 100 >> stderrFilename ; exit $PIPESTATUS");
+    commandLine=TaskLog.buildDebugScriptCommandLine(cmd, "debugout");
+    assertEquals(commandLine, "exec cmd  < /dev/null  >debugout 2>&1 ");
+    List<String> commandLines =TaskLog.captureDebugOut(cmd, new File("debugoutFilename"));
+    assertTrue(commandLines.size()==3);
+    Iterator<String> it=commandLines.iterator();
+    assertEquals(it.next(), "bash");
+    assertEquals(it.next(), "-c");
+    assertEquals(it.next(), "exec cmd  < /dev/null  >debugoutFilename 2>&1 ");
+
+    commandLines = TaskLog.captureOutAndError(cmd, new File("stdoutFilename"), new File("stderrFilename"), 100L);
+    assertTrue(commandLines.size()==3);
+    it=commandLines.iterator();
+    assertEquals(it.next(), "bash");
+    assertEquals(it.next(), "-c");
+    assertEquals(it.next(), " export JVM_PID=`echo $$` ; ('cmd'  < /dev/null  | tail -c 100 >> stdoutFilename ; exit $PIPESTATUS ) 2>&1 | tail -c 100 >> stderrFilename ; exit $PIPESTATUS");
+    commandLines= TaskLog.captureOutAndError(setup, cmd, new File("stdoutFilename"), new File("stderrFilename"), 100L);
+    it=commandLines.iterator();
+    assertEquals(it.next(), "bash");
+    assertEquals(it.next(), "-c");
+    assertEquals(it.next(), " export JVM_PID=`echo $$` ; 'setup' ;('cmd'  < /dev/null  | tail -c 100 >> stdoutFilename ; exit $PIPESTATUS ) 2>&1 | tail -c 100 >> stderrFilename ; exit $PIPESTATUS");
+
+    commandLines= TaskLog.captureOutAndError(setup, cmd, new File("stdoutFilename"), new File("stderrFilename"), 100L, true);
+    it=commandLines.iterator();
+    assertEquals(it.next(), "bash");
+    assertEquals(it.next(), "-c");
+    assertEquals(it.next(), " export JVM_PID=`echo $$` ; 'setup' ;('cmd'  < /dev/null  | tail -c 100 >> stdoutFilename ; exit $PIPESTATUS ) 2>&1 | tail -c 100 >> stderrFilename ; exit $PIPESTATUS");
+    
+    commandLines= TaskLog.captureOutAndError(setup, cmd, new File("stdoutFilename"), new File("stderrFilename"), 100L, "pidFileName");
+    it=commandLines.iterator();
+    assertEquals(it.next(), "bash");
+    assertEquals(it.next(), "-c");
+    assertEquals(it.next(), " export JVM_PID=`echo $$` ; 'setup' ;('cmd'  < /dev/null  | tail -c 100 >> stdoutFilename ; exit $PIPESTATUS ) 2>&1 | tail -c 100 >> stderrFilename ; exit $PIPESTATUS");
+   
    System.out.println("end");
   }
-  
 }

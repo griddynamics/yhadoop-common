@@ -19,14 +19,18 @@
 package org.apache.hadoop.mapred;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -34,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapred.JobClient.NetworkedJob;
 import org.apache.hadoop.mapred.JobClient.TaskStatusFilter;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
@@ -41,8 +46,6 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.client.YarnClientImpl;
-import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.junit.Test;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -54,7 +57,7 @@ public class TestNetworkedJob {
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
-  @SuppressWarnings("deprecation")
+ // @SuppressWarnings("deprecation")
   @Test
   public void testGetNullCounters() throws Exception {
     // mock creation
@@ -115,7 +118,7 @@ public class TestNetworkedJob {
     }
   }
 
-  @SuppressWarnings("unused")
+  @SuppressWarnings({ "unused", "deprecation" })
   @Test
   public void testNetworkedJob() throws Exception {
     // mock creation
@@ -182,14 +185,28 @@ public class TestNetworkedJob {
         assertEquals(e.getMessage(), "Unrecognized task type: JOB_CLEANUP");
       }
       assertEquals(client.getReduceTaskReports(jobId).length, 0);
-
+// test ClusterStatus
       ClusterStatus status = client.getClusterStatus(true);
+      assertEquals(status.getActiveTrackerNames().size(),2);
+      // it method does not implemented and always return empty array or null;
+      assertEquals(status.getBlacklistedTrackers(),0);
+      assertEquals( status.getBlacklistedTrackerNames().size(),0);
+      assertEquals( status.getBlackListedTrackersInfo().size(),0);
+      assertEquals( status.getJobTrackerStatus(),JobTrackerStatus.RUNNING);
+      assertEquals( status.getMapTasks(),1);
+      assertEquals( status.getMaxMapTasks(),20);
+      assertEquals(status.getMaxReduceTasks(),4);
+      assertEquals( status.getNumExcludedNodes(),0);
+      assertEquals(  status.getReduceTasks(),1);
+      assertEquals( status.getTaskTrackers(),2);
+      assertEquals(status.getTTExpiryInterval(),0);
       assertEquals(status.getJobTrackerStatus(), JobTrackerStatus.RUNNING);
       try {
         Configuration configuration = JobClient.getConfiguration("noresource");
       } catch (RuntimeException e) {
         assertTrue(e.getMessage().endsWith("not found on CLASSPATH"));
       }
+      
       // test taskStatusfilter
       JobClient.setTaskOutputFilter(job, TaskStatusFilter.ALL);
       assertEquals(JobClient.getTaskOutputFilter(job), TaskStatusFilter.ALL);
@@ -245,6 +262,109 @@ public class TestNetworkedJob {
       assertEquals("Expected matching startTimes", rj.getJobStatus()
           .getStartTime(), client.getJob(jobId).getJobStatus().getStartTime());
     } finally {
+      if (fileSys != null) {
+        fileSys.delete(testDir, true);
+      }
+      if (mr != null) {
+        mr.stop();
+      }
+    }
+  }
+  
+  /**
+   * test BlackListInfo class
+   * @throws IOException 
+   */
+  @Test 
+  public void testBlackListInfo() throws IOException{
+    BlackListInfo info= new BlackListInfo();
+    info.setBlackListReport("blackListInfo");
+    info.setReasonForBlackListing("reasonForBlackListing");
+    info.setTrackerName("trackerName");
+    ByteArrayOutputStream byteOut=new ByteArrayOutputStream();
+    DataOutput out = new DataOutputStream(byteOut);
+    info.write(out);
+    BlackListInfo info2=new BlackListInfo();
+    info2.readFields(new DataInputStream(new ByteArrayInputStream(byteOut.toByteArray())));
+    assertEquals(info, info);
+    assertEquals(info.toString(), info.toString());
+    
+  }
+  
+  @Test
+  public void testJobQueueClient() throws Exception {
+    // mock creation
+    MiniMRClientCluster mr = null;
+    FileSystem fileSys = null;
+    PrintStream oldOut= System.out;
+    try {
+      Configuration conf = new Configuration();
+      mr = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
+
+      JobConf job = new JobConf(mr.getConfig());
+
+      fileSys = FileSystem.get(job);
+      fileSys.delete(testDir, true);
+      FSDataOutputStream out = fileSys.create(inFile, true);
+      out.writeBytes("This is a test file");
+      out.close();
+
+      FileInputFormat.setInputPaths(job, inFile);
+      FileOutputFormat.setOutputPath(job, outDir);
+
+      job.setInputFormat(TextInputFormat.class);
+      job.setOutputFormat(TextOutputFormat.class);
+
+      job.setMapperClass(IdentityMapper.class);
+      job.setReducerClass(IdentityReducer.class);
+      job.setNumReduceTasks(0);
+
+      JobClient client = new JobClient(mr.getConfig());
+
+       client.submitJob(job);
+      
+      JobQueueClient jobClient = new JobQueueClient(job);
+      
+
+     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+     System.setOut(new PrintStream(bytes));
+     String[] arg={"-list"};
+      jobClient.run(arg);
+      assertTrue(bytes.toString().contains("Queue Name : default"));
+      assertTrue(bytes.toString().contains("Queue State : running"));
+      bytes = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(bytes));
+      String[] arg1=  {"-showacls"};
+      jobClient.run(arg1);
+      assertTrue(bytes.toString().contains("Queue acls for user :  polzovatel"));
+      assertTrue(bytes.toString().contains("root  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
+      assertTrue(bytes.toString().contains("default  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
+      
+      bytes = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(bytes));
+      String[] arg2=  {"-info","default"};
+      jobClient.run(arg2);
+      assertTrue(bytes.toString().contains("Queue Name : default"));
+      assertTrue(bytes.toString().contains("Queue State : running"));
+      assertTrue(bytes.toString().contains("Scheduling Info"));
+
+      
+      bytes = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(bytes));
+      String[] arg3=  {"-info","default","-showJobs"};
+      jobClient.run(arg3);
+      assertTrue(bytes.toString().contains("Queue Name : default"));
+      assertTrue(bytes.toString().contains("Queue State : running"));
+      assertTrue(bytes.toString().contains("Scheduling Info"));
+      assertTrue(bytes.toString().contains("job_1"));
+
+      String[] arg4=  {};
+      jobClient.run(arg4);
+      
+      
+      bytes.toString();
+    } finally {
+      System.setOut(oldOut);
       if (fileSys != null) {
         fileSys.delete(testDir, true);
       }
