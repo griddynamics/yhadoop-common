@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -174,12 +179,28 @@ public class NameNodeAdapter {
     return spy;
   }
   
+  public static JournalSet spyOnJournalSet(NameNode nn) {
+    FSEditLog editLog = nn.getFSImage().getEditLog();
+    JournalSet js = Mockito.spy(editLog.getJournalSet());
+    editLog.setJournalSetForTesting(js);
+    return js;
+  }
+  
   public static String getMkdirOpPath(FSEditLogOp op) {
     if (op.opCode == FSEditLogOpCodes.OP_MKDIR) {
       return ((MkdirOp) op).path;
     } else {
       return null;
     }
+  }
+  
+  public static FSEditLogOp createMkdirOp(String path) {
+    MkdirOp op = MkdirOp.getInstance(new FSEditLogOp.OpInstanceCache())
+      .setPath(path)
+      .setTimestamp(0)
+      .setPermissionStatus(new PermissionStatus(
+              "testuser", "testgroup", FsPermission.getDefault()));
+    return op;
   }
   
   /**
