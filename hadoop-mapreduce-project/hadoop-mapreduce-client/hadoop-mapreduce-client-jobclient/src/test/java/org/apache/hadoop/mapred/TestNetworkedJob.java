@@ -201,6 +201,19 @@ public class TestNetworkedJob {
       assertEquals( status.getTaskTrackers(),2);
       assertEquals(status.getTTExpiryInterval(),0);
       assertEquals(status.getJobTrackerStatus(), JobTrackerStatus.RUNNING);
+      
+      // test read and write
+      ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+      status.write(new DataOutputStream(dataOut));
+      ClusterStatus status2= new ClusterStatus();
+      
+      status2.readFields(new DataInputStream(new  ByteArrayInputStream(dataOut.toByteArray())));
+      assertEquals(status.getActiveTrackerNames(), status2.getActiveTrackerNames());
+      assertEquals(status.getBlackListedTrackersInfo(),status2.getBlackListedTrackersInfo());
+      assertEquals(status.getMapTasks(),status2.getMapTasks());
+
+
+      
       try {
         Configuration configuration = JobClient.getConfiguration("noresource");
       } catch (RuntimeException e) {
@@ -288,6 +301,9 @@ public class TestNetworkedJob {
     info2.readFields(new DataInputStream(new ByteArrayInputStream(byteOut.toByteArray())));
     assertEquals(info, info);
     assertEquals(info.toString(), info.toString());
+    assertEquals(info.getTrackerName(),"trackerName");
+    assertEquals(info.getReasonForBlackListing(), "reasonForBlackListing");
+    assertEquals(info.getBlackListReport(),"blackListInfo");
     
   }
   
@@ -336,10 +352,12 @@ public class TestNetworkedJob {
       System.setOut(new PrintStream(bytes));
       String[] arg1=  {"-showacls"};
       jobClient.run(arg1);
-      assertTrue(bytes.toString().contains("Queue acls for user :  polzovatel"));
+      assertTrue(bytes.toString().contains("Queue acls for user :"));
       assertTrue(bytes.toString().contains("root  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
       assertTrue(bytes.toString().contains("default  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
-      
+
+      // test for info and default queue
+
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
       String[] arg2=  {"-info","default"};
@@ -348,7 +366,7 @@ public class TestNetworkedJob {
       assertTrue(bytes.toString().contains("Queue State : running"));
       assertTrue(bytes.toString().contains("Scheduling Info"));
 
-      
+      // test for info , default queue and jobs
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
       String[] arg3=  {"-info","default","-showJobs"};

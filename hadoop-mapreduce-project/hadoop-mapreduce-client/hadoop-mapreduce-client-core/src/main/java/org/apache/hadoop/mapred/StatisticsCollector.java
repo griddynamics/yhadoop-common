@@ -99,6 +99,7 @@ class StatisticsCollector {
     return Collections.unmodifiableMap(statistics);
   }
 
+ 
   synchronized Stat createStat(String name) {
     return createStat(name, DEFAULT_COLLECT_WINDOWS);
   }
