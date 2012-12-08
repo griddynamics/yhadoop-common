@@ -266,6 +266,9 @@ Trunk (Unreleased)
     the nodes in the same nodegroup should also be excluded.  (Junping Du
     via szetszwo)
 
+    HDFS-4260 Fix HDFS tests to set test dir to a valid HDFS path as opposed
+    to the local build path (Chri Nauroth via Sanjay)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -571,6 +574,12 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4282. TestEditLog.testFuzzSequences FAILED in all pre-commit test
     (todd)
+
+    HDFS-4236. Remove artificial limit on username length introduced in
+    HDFS-4171. (tucu via suresh)
+
+    HDFS-4279. NameNode does not initialize generic conf keys when started
+    with -recover. (Colin Patrick McCabe via atm)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
