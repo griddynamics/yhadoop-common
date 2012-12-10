@@ -414,6 +414,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3680. Allow customized audit logging in HDFS FSNamesystem. (Marcelo
     Vanzin via atm)
 
+    HDFS-4130. BKJM: The reading for editlog at NN starting using bkjm is not efficient.
+    (Han Xiao via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -584,6 +587,12 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4279. NameNode does not initialize generic conf keys when started
     with -recover. (Colin Patrick McCabe via atm)
+
+    HDFS-4291. edit log unit tests leave stray test_edit_log_file around
+    (Colin Patrick McCabe via todd)
+
+    HDFS-4292. Sanity check not correct in RemoteBlockReader2.newBlockReader
+    (Binglin Chang via todd)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
