@@ -354,6 +354,9 @@ public class TestTextInputFormat {
         position += b.length;
         return b.length;
       }
+      public void reset() {
+        position=0;
+      }
     };
     final LongWritable key = new LongWritable();
     final Text val = new Text();
@@ -362,8 +365,13 @@ public class TestTextInputFormat {
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
                 LineRecordReader.MAX_LINE_LENGTH, MAXLINE);
     conf.setInt("io.file.buffer.size", BUF); // used by LRR
-    final LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
+     LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
     assertFalse("Read a line from null", lrr.next(key, val));
+    infNull.reset();
+     lrr = new LineRecordReader(infNull, 0L, MAXLINE, MAXPOS);
+    assertFalse("Read a line from null", lrr.next(key, val));
+    
+    
   }
 
   private static void writeFile(FileSystem fs, Path name, 

@@ -30,6 +30,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Arrays;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -45,6 +47,8 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
+
+import com.sun.source.tree.AssertTree;
 
 public class TestTaskAttemptListenerImpl {
   public static class MockTaskAttemptListenerImpl extends TaskAttemptListenerImpl {
@@ -83,6 +87,8 @@ public class TestTaskAttemptListenerImpl {
     listener.init(conf);
     listener.start();
     JVMId id = new JVMId("foo",1, true, 1);
+    
+    assertTrue(id.isMapJVM());
     WrappedJvmID wid = new WrappedJvmID(id.getJobId(), id.isMap, id.getId());
 
     // Verify ask before registration.
@@ -127,6 +133,17 @@ public class TestTaskAttemptListenerImpl {
     assertTrue(result.shouldDie);
 
     listener.stop();
+    
+    // test JVMID
+   JVMId jvmid= JVMId.forName("jvm_001_002_m_004");
+   assertNotNull(jvmid);
+   try{
+    JVMId.forName("jvm_001_002_m_004_006");
+    Assert.fail();
+   }catch(IllegalArgumentException e){
+     assertEquals(e.getMessage(), "TaskId string : jvm_001_002_m_004_006 is not properly formed");
+   }
+
   }
 
   @Test

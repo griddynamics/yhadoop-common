@@ -26,7 +26,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 
 import org.junit.Test;
-
+import static org.junit.Assert.*;
 public class TestIFile {
 
   @Test
@@ -63,5 +63,11 @@ public class TestIFile {
     IFile.Reader<Text, Text> reader =
       new IFile.Reader<Text, Text>(conf, rfs, path, codec, null);
     reader.close();
+    
+    // test check summ 
+    byte[] ab= new byte[100];
+    int readed= reader.checksumIn.readWithChecksum(ab, 0, ab.length);
+    assertEquals( readed,reader.checksumIn.getChecksum().length);
+    
   }
 }

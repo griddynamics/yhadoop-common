@@ -57,7 +57,6 @@ public class TestNetworkedJob {
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
- // @SuppressWarnings("deprecation")
   @Test
   public void testGetNullCounters() throws Exception {
     // mock creation
@@ -152,6 +151,7 @@ public class TestNetworkedJob {
       RunningJob rj = client.submitJob(job);
       JobID jobId = rj.getID();
       NetworkedJob runningJob = (NetworkedJob) client.getJob(jobId);
+      runningJob.setJobPriority(JobPriority.HIGH.name());
       assertTrue(runningJob.getConfiguration().toString()
           .endsWith("0001/job.xml"));
       assertEquals(runningJob.getID(), jobId);
@@ -168,12 +168,12 @@ public class TestNetworkedJob {
       TaskCompletionEvent[] tce = runningJob.getTaskCompletionEvents(0);
       assertEquals(tce.length, 0);
 
-      String url = runningJob.getHistoryUrl();
-      boolean ret = runningJob.isRetired();
-      String f = runningJob.getFailureInfo();
+      assertEquals(runningJob.getHistoryUrl(),"");
+      assertFalse(runningJob.isRetired());
+      assertEquals( runningJob.getFailureInfo(),"");
       assertEquals(runningJob.getJobStatus().getJobName(), "N/A");
-
       assertEquals(client.getMapTaskReports(jobId).length, 0);
+      
       try {
         client.getSetupTaskReports(jobId);
       } catch (YarnException e) {
@@ -185,41 +185,41 @@ public class TestNetworkedJob {
         assertEquals(e.getMessage(), "Unrecognized task type: JOB_CLEANUP");
       }
       assertEquals(client.getReduceTaskReports(jobId).length, 0);
-// test ClusterStatus
+      // test ClusterStatus
       ClusterStatus status = client.getClusterStatus(true);
-      assertEquals(status.getActiveTrackerNames().size(),2);
+      assertEquals(status.getActiveTrackerNames().size(), 2);
       // it method does not implemented and always return empty array or null;
-      assertEquals(status.getBlacklistedTrackers(),0);
-      assertEquals( status.getBlacklistedTrackerNames().size(),0);
-      assertEquals( status.getBlackListedTrackersInfo().size(),0);
-      assertEquals( status.getJobTrackerStatus(),JobTrackerStatus.RUNNING);
-      assertEquals( status.getMapTasks(),1);
-      assertEquals( status.getMaxMapTasks(),20);
-      assertEquals(status.getMaxReduceTasks(),4);
-      assertEquals( status.getNumExcludedNodes(),0);
-      assertEquals(  status.getReduceTasks(),1);
-      assertEquals( status.getTaskTrackers(),2);
-      assertEquals(status.getTTExpiryInterval(),0);
+      assertEquals(status.getBlacklistedTrackers(), 0);
+      assertEquals(status.getBlacklistedTrackerNames().size(), 0);
+      assertEquals(status.getBlackListedTrackersInfo().size(), 0);
       assertEquals(status.getJobTrackerStatus(), JobTrackerStatus.RUNNING);
-      
+      assertEquals(status.getMapTasks(), 1);
+      assertEquals(status.getMaxMapTasks(), 20);
+      assertEquals(status.getMaxReduceTasks(), 4);
+      assertEquals(status.getNumExcludedNodes(), 0);
+      assertEquals(status.getReduceTasks(), 1);
+      assertEquals(status.getTaskTrackers(), 2);
+      assertEquals(status.getTTExpiryInterval(), 0);
+      assertEquals(status.getJobTrackerStatus(), JobTrackerStatus.RUNNING);
+
       // test read and write
       ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
       status.write(new DataOutputStream(dataOut));
-      ClusterStatus status2= new ClusterStatus();
-      
-      status2.readFields(new DataInputStream(new  ByteArrayInputStream(dataOut.toByteArray())));
-      assertEquals(status.getActiveTrackerNames(), status2.getActiveTrackerNames());
-      assertEquals(status.getBlackListedTrackersInfo(),status2.getBlackListedTrackersInfo());
-      assertEquals(status.getMapTasks(),status2.getMapTasks());
+      ClusterStatus status2 = new ClusterStatus();
 
+      status2.readFields(new DataInputStream(new ByteArrayInputStream(dataOut
+          .toByteArray())));
+      assertEquals(status.getActiveTrackerNames(),
+          status2.getActiveTrackerNames());
+      assertEquals(status.getBlackListedTrackersInfo(),
+          status2.getBlackListedTrackersInfo());
+      assertEquals(status.getMapTasks(), status2.getMapTasks());
 
-      
       try {
-        Configuration configuration = JobClient.getConfiguration("noresource");
       } catch (RuntimeException e) {
         assertTrue(e.getMessage().endsWith("not found on CLASSPATH"));
       }
-      
+
       // test taskStatusfilter
       JobClient.setTaskOutputFilter(job, TaskStatusFilter.ALL);
       assertEquals(JobClient.getTaskOutputFilter(job), TaskStatusFilter.ALL);
@@ -255,6 +255,9 @@ public class TestNetworkedJob {
           .getDelegationToken(new Text(UserGroupInformation.getCurrentUser()
               .getShortUserName()));
       assertEquals(token.getKind().toString(), "RM_DELEGATION_TOKEN");
+      
+      // test JobClient
+      
       try {
         long l = client.renewDelegationToken(token);
       } catch (UnsupportedOperationException e) {
@@ -283,36 +286,40 @@ public class TestNetworkedJob {
       }
     }
   }
-  
+
   /**
    * test BlackListInfo class
-   * @throws IOException 
+   * 
+   * @throws IOException
    */
-  @Test 
-  public void testBlackListInfo() throws IOException{
-    BlackListInfo info= new BlackListInfo();
+  @Test
+  public void testBlackListInfo() throws IOException {
+    BlackListInfo info = new BlackListInfo();
     info.setBlackListReport("blackListInfo");
     info.setReasonForBlackListing("reasonForBlackListing");
     info.setTrackerName("trackerName");
-    ByteArrayOutputStream byteOut=new ByteArrayOutputStream();
+    ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
     DataOutput out = new DataOutputStream(byteOut);
     info.write(out);
-    BlackListInfo info2=new BlackListInfo();
-    info2.readFields(new DataInputStream(new ByteArrayInputStream(byteOut.toByteArray())));
+    BlackListInfo info2 = new BlackListInfo();
+    info2.readFields(new DataInputStream(new ByteArrayInputStream(byteOut
+        .toByteArray())));
     assertEquals(info, info);
     assertEquals(info.toString(), info.toString());
-    assertEquals(info.getTrackerName(),"trackerName");
+    assertEquals(info.getTrackerName(), "trackerName");
     assertEquals(info.getReasonForBlackListing(), "reasonForBlackListing");
-    assertEquals(info.getBlackListReport(),"blackListInfo");
-    
+    assertEquals(info.getBlackListReport(), "blackListInfo");
+
   }
-  
+/**
+ *  test run from command line JobQueueClient
+ * @throws Exception
+ */
   @Test
   public void testJobQueueClient() throws Exception {
-    // mock creation
-    MiniMRClientCluster mr = null;
+        MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
-    PrintStream oldOut= System.out;
+    PrintStream oldOut = System.out;
     try {
       Configuration conf = new Configuration();
       mr = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
@@ -337,30 +344,31 @@ public class TestNetworkedJob {
 
       JobClient client = new JobClient(mr.getConfig());
 
-       client.submitJob(job);
-      
-      JobQueueClient jobClient = new JobQueueClient(job);
-      
+      client.submitJob(job);
 
-     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-     System.setOut(new PrintStream(bytes));
-     String[] arg={"-list"};
+      JobQueueClient jobClient = new JobQueueClient(job);
+
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(bytes));
+      String[] arg = { "-list" };
       jobClient.run(arg);
       assertTrue(bytes.toString().contains("Queue Name : default"));
       assertTrue(bytes.toString().contains("Queue State : running"));
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
-      String[] arg1=  {"-showacls"};
+      String[] arg1 = { "-showacls" };
       jobClient.run(arg1);
       assertTrue(bytes.toString().contains("Queue acls for user :"));
-      assertTrue(bytes.toString().contains("root  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
-      assertTrue(bytes.toString().contains("default  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
+      assertTrue(bytes.toString().contains(
+          "root  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
+      assertTrue(bytes.toString().contains(
+          "default  ADMINISTER_QUEUE,SUBMIT_APPLICATIONS"));
 
       // test for info and default queue
 
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
-      String[] arg2=  {"-info","default"};
+      String[] arg2 = { "-info", "default" };
       jobClient.run(arg2);
       assertTrue(bytes.toString().contains("Queue Name : default"));
       assertTrue(bytes.toString().contains("Queue State : running"));
@@ -369,18 +377,17 @@ public class TestNetworkedJob {
       // test for info , default queue and jobs
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
-      String[] arg3=  {"-info","default","-showJobs"};
+      String[] arg3 = { "-info", "default", "-showJobs" };
       jobClient.run(arg3);
       assertTrue(bytes.toString().contains("Queue Name : default"));
       assertTrue(bytes.toString().contains("Queue State : running"));
       assertTrue(bytes.toString().contains("Scheduling Info"));
       assertTrue(bytes.toString().contains("job_1"));
 
-      String[] arg4=  {};
+      String[] arg4 = {};
       jobClient.run(arg4);
+
       
-      
-      bytes.toString();
     } finally {
       System.setOut(oldOut);
       if (fileSys != null) {
