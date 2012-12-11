@@ -64,7 +64,21 @@ public class TestOldMethodsJobID {
         TaskID.getTaskIDsPattern("003", 1, TaskType.MAP, 4));
     assertEquals("003_0001_m_000004",
         TaskID.getTaskIDsPatternWOPrefix("003", 1, TaskType.MAP, 4).toString());
-
+   
+  }
+  
+  /**
+   * test JobID
+   * @throws IOException 
+   */
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testJobID() throws IOException{
+    JobID jid = new JobID("001",2);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    jid.write(new DataOutputStream(out));
+   assertEquals(jid,JobID.read(new DataInputStream(new ByteArrayInputStream(out.toByteArray()))));
+   assertEquals("job_001_0001",JobID.getJobIDsPattern("001",1));
   }
   /*
    * test deprecated methods TaskCompletionEvent
@@ -128,5 +142,24 @@ public class TestOldMethodsJobID {
     assertEquals("attempt_001_0001_r_000002_3",TaskAttemptID.getTaskAttemptIDsPattern("001", 1, TaskType.REDUCE, 2, 3));
     assertEquals("001_0001_m_000001_2", TaskAttemptID.getTaskAttemptIDsPatternWOPrefix("001",1, TaskType.MAP, 1, 2).toString());
     
+  }
+  
+  /**
+   * test Reporter.NULL
+   * 
+   */
+  
+  @Test
+  public void testReporter(){
+    Reporter nullReporter=Reporter.NULL;
+    assertNull(nullReporter.getCounter(null));
+    assertNull(nullReporter.getCounter("group", "name"));
+    try{
+      assertNull(nullReporter.getInputSplit());
+    }catch(UnsupportedOperationException e){
+      assertEquals( "NULL reporter has no input",e.getMessage());
+    }
+    assertEquals(0,nullReporter.getProgress(),0.01);
+
   }
 }

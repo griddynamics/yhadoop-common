@@ -20,8 +20,11 @@ package org.apache.hadoop.mapred;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assert.*;
+/**
+ *  test Clock classs
+ *
+ */
 public class TestClock {
 
   @Test
@@ -29,6 +32,7 @@ public class TestClock {
     Clock clock= new Clock();
     long templateTime=System.currentTimeMillis();
     long time=clock.getTime();
-    assertTrue(templateTime<=time && templateTime+3>=time  );
+    assertEquals(templateTime, time,30);
+
   }
 }

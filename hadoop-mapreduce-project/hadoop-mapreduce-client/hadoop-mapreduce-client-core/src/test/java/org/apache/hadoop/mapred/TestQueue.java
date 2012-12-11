@@ -40,6 +40,11 @@ import static org.mockito.Mockito.*;
  */
 public class TestQueue {
 
+  /**
+   * test QueueManager
+   * 
+   * @throws IOException
+   */
   @Test
   public void testQueue() throws IOException {
     File f = null;
@@ -91,7 +96,7 @@ public class TestQueue {
       iterator = root.getChildren().iterator();
       Queue firstSubQueue1 = iterator.next();
       Queue secondSubQueue1 = iterator.next();
-// tets equal method
+      // tets equal method
       assertTrue(firstSubQueue.equals(firstSubQueue1));
       assertEquals(firstSubQueue1.getState().getStateName(), "running");
       assertEquals(secondSubQueue1.getState().getStateName(), "stopped");
@@ -126,16 +131,24 @@ public class TestQueue {
 
       // test dumpConfiguration
       Writer writer = new StringWriter();
-      
-      Configuration conf= getConfiguration();
+
+      Configuration conf = getConfiguration();
       conf.unset(DeprecatedQueueConfigurationParser.MAPRED_QUEUE_NAMES_KEY);
-      QueueManager.dumpConfiguration(writer,f.getAbsolutePath(), conf);
+      QueueManager.dumpConfiguration(writer, f.getAbsolutePath(), conf);
       String result = writer.toString();
-      assertTrue(result.indexOf("\"name\":\"first\",\"state\":\"running\",\"acl_submit_job\":\"user1,user2 group1,group2\",\"acl_administer_jobs\":\"user3,user4 group3,group4\",\"properties\":[],\"children\":[]")>0);
+      assertTrue(result
+          .indexOf("\"name\":\"first\",\"state\":\"running\",\"acl_submit_job\":\"user1,user2 group1,group2\",\"acl_administer_jobs\":\"user3,user4 group3,group4\",\"properties\":[],\"children\":[]") > 0);
 
+      writer = new StringWriter();
+      QueueManager.dumpConfiguration(writer, conf);
+      result = writer.toString();
+      assertEquals(
+          "{\"queues\":[{\"name\":\"default\",\"state\":\"running\",\"acl_submit_job\":\"*\",\"acl_administer_jobs\":\"*\",\"properties\":[],\"children\":[]},{\"name\":\"q1\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":[],\"children\":[{\"name\":\"q1:q2\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":[{\"key\":\"capacity\",\"value\":\"20\"},{\"key\":\"user-limit\",\"value\":\"30\"}],\"children\":[]}]}]}",
+          result);
+      // test constructor QueueAclsInfo
+      QueueAclsInfo qi = new QueueAclsInfo();
+      assertNull(qi.getQueueName());
 
-      
-      
     } finally {
       if (f != null) {
         f.delete();
@@ -155,6 +168,14 @@ public class TestQueue {
     conf.set(QueueManager.QUEUE_CONF_PROPERTY_NAME_PREFIX + "second.state",
         "stopped");
     return conf;
+  }
+
+  @Test
+  public void testDefaultConfig() {
+    QueueManager manager = new QueueManager(true);
+    assertNotNull(manager.getChildQueues("q1"));
+    assertNotNull(manager.getQueue("default"));
+    assertEquals(manager.getRoot().getChildren().size(), 2);
   }
 
   /**
@@ -199,8 +220,6 @@ public class TestQueue {
         "stopped");
 
     manager.setSchedulerInfo("first", "queueInfo");
-   
- 
 
   }
 
@@ -223,4 +242,5 @@ public class TestQueue {
     return f;
 
   }
+  
 }
