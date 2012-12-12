@@ -295,6 +295,9 @@ Trunk (Unreleased)
     HADOOP-9121. InodeTree.java has redundant check for vName while 
     throwing exception. (Arup Malakar via suresh)
 
+    HADOOP-9131. Turn off TestLocalFileSystem#testListStatusWithColons on
+    Windows. (Chris Nauroth via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -478,6 +481,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9126. FormatZK and ZKFC startup can fail due to zkclient connection
     establishment delay. (Rakesh R and todd via todd)
+
+    HADOOP-9113. o.a.h.fs.TestDelegationTokenRenewer is failing intermittently.
+    (Karthik Kambatla via eli)
 
 Release 2.0.2-alpha - 2012-09-07 
 
