@@ -31,6 +31,7 @@ import static org.junit.Assert.*;
 
 public class TestTaskLogAppender {
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testTaskLogAppender(){
     TaskLogAppender appender= new TaskLogAppender();

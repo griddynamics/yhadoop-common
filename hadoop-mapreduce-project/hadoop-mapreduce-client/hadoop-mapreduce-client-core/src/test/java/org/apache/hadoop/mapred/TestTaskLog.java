@@ -18,17 +18,13 @@
 package org.apache.hadoop.mapred;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Writer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.junit.Test;
@@ -43,7 +39,6 @@ public class TestTaskLog {
 
   @Test
   public void testTaskLog() throws IOException {
-    TaskLog tasklog= new TaskLog();
     // test TaskLog
     System.setProperty(MRJobConfig.TASK_LOG_DIR, "testString");
     assertEquals(TaskLog.getMRv2LogDir(), "testString");
@@ -132,6 +127,7 @@ public class TestTaskLog {
    assertTrue(f.getAbsolutePath().endsWith("stdout"));
    
   }
+  @SuppressWarnings("deprecation")
   @Test
   public void testExternalCall() throws IOException {
     

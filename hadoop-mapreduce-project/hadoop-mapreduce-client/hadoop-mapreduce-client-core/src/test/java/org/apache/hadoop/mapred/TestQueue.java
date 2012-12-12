@@ -220,7 +220,13 @@ public class TestQueue {
         "stopped");
 
     manager.setSchedulerInfo("first", "queueInfo");
-
+    Set<Queue> children=manager.getRoot().getChildren();
+    
+    Queue [] queues= children.toArray( new Queue[0]  );
+    manager.setQueues(queues);
+    
+    assertEquals(manager.getRoot().getChildren().size(), 2);
+    
   }
 
   private File writeFile() throws IOException {

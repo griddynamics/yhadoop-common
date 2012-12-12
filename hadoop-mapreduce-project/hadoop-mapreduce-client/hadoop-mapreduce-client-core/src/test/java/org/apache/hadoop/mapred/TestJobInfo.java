@@ -29,7 +29,6 @@ import org.apache.hadoop.io.Text;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-
 /**
  * test class JobInfo
  * 

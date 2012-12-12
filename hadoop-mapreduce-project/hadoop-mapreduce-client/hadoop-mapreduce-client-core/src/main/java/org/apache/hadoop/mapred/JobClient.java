@@ -133,7 +133,6 @@ import org.apache.hadoop.util.ToolRunner;
  * @see Tool
  * @see DistributedCache
  */
-@SuppressWarnings("deprecation")
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class JobClient extends CLI {
