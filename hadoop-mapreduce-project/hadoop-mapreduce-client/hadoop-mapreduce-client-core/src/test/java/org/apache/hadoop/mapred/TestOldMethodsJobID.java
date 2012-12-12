@@ -30,7 +30,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * 
+ * Test deprcated methods
  *
  */
 public class TestOldMethodsJobID {
@@ -80,8 +80,8 @@ public class TestOldMethodsJobID {
    assertEquals(jid,JobID.read(new DataInputStream(new ByteArrayInputStream(out.toByteArray()))));
    assertEquals("job_001_0001",JobID.getJobIDsPattern("001",1));
   }
-  /*
-   * test deprecated methods TaskCompletionEvent
+  /**
+   * test deprecated methods of TaskCompletionEvent
    */
   @SuppressWarnings("deprecation")
   @Test
@@ -106,6 +106,10 @@ public class TestOldMethodsJobID {
 
   }
 
+  /**
+   * test depricated methods of JobProfile
+   * @throws IOException
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void testJobProfile() throws IOException {
@@ -114,13 +118,11 @@ public class TestOldMethodsJobID {
         "name");
     assertEquals("job_001_0003", profile.getJobId());
     assertEquals("default", profile.getQueueName());
-
+   // serialization test
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-
     profile.write(new DataOutputStream(out));
 
     JobProfile profile2 = new JobProfile();
-
     profile2.readFields(new DataInputStream(new ByteArrayInputStream(out
         .toByteArray())));
 
@@ -154,6 +156,7 @@ public class TestOldMethodsJobID {
     Reporter nullReporter=Reporter.NULL;
     assertNull(nullReporter.getCounter(null));
     assertNull(nullReporter.getCounter("group", "name"));
+    // getInputSplit method removed
     try{
       assertNull(nullReporter.getInputSplit());
     }catch(UnsupportedOperationException e){

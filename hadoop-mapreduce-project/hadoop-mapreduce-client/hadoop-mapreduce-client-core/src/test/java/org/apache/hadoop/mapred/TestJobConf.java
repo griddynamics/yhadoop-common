@@ -26,8 +26,7 @@ import org.junit.Test;
 
 /**
  * test JobConf
- * @author polzovatel
- *
+ * 
  */
 public class TestJobConf {
 
@@ -42,26 +41,30 @@ public class TestJobConf {
     Pattern pattern = conf.getJarUnpackPattern();
     assertEquals(Pattern.compile("(?:classes/|lib/).*").toString(),
         pattern.toString());
-    // conf.deleteLocalFiles();
     // default value
     assertFalse(conf.getKeepFailedTaskFiles());
     conf.setKeepFailedTaskFiles(true);
     assertTrue(conf.getKeepFailedTaskFiles());
 
+    // default value
     assertNull(conf.getKeepTaskFilesPattern());
     conf.setKeepTaskFilesPattern("123454");
     assertEquals("123454", conf.getKeepTaskFilesPattern());
 
+    // default value
     assertNotNull(conf.getWorkingDirectory());
     conf.setWorkingDirectory(new Path("test"));
     assertTrue(conf.getWorkingDirectory().toString().endsWith("test"));
 
+    // default value
     assertEquals(1, conf.getNumTasksToExecutePerJvm());
 
+    // default value
     assertNull(conf.getKeyFieldComparatorOption());
     conf.setKeyFieldComparatorOptions("keySpec");
     assertEquals("keySpec", conf.getKeyFieldComparatorOption());
 
+    // default value
     assertFalse(conf.getUseNewReducer());
     conf.setUseNewReducer(true);
     assertTrue(conf.getUseNewReducer());
@@ -107,24 +110,29 @@ public class TestJobConf {
     conf.setJobSubmitHostAddress("ww");
     assertEquals("ww", conf.getJobSubmitHostAddress());
 
+    // default value
     assertFalse(conf.getProfileEnabled());
     conf.setProfileEnabled(true);
     assertTrue(conf.getProfileEnabled());
 
+    // default value
     assertEquals(conf.getProfileTaskRange(true).toString(), "0-2");
     assertEquals(conf.getProfileTaskRange(false).toString(), "0-2");
     conf.setProfileTaskRange(true, "0-3");
     assertEquals(conf.getProfileTaskRange(false).toString(), "0-2");
     assertEquals(conf.getProfileTaskRange(true).toString(), "0-3");
 
+    // default value
     assertNull(conf.getMapDebugScript());
     conf.setMapDebugScript("mDbgScript");
     assertEquals("mDbgScript", conf.getMapDebugScript());
 
+    // default value
     assertNull(conf.getReduceDebugScript());
     conf.setReduceDebugScript("rDbgScript");
     assertEquals("rDbgScript", conf.getReduceDebugScript());
 
+    // default value
     assertNull(conf.getJobLocalDir());
 
     assertEquals("default", conf.getQueueName());
@@ -133,10 +141,10 @@ public class TestJobConf {
 
     assertEquals(1, conf.computeNumSlotsPerMap(100L));
     assertEquals(1, conf.computeNumSlotsPerReduce(100L));
-    
-    conf.setMemoryForMapTask(100*1000);
+
+    conf.setMemoryForMapTask(100 * 1000);
     assertEquals(1000, conf.computeNumSlotsPerMap(100L));
-    conf.setMemoryForReduceTask(1000*1000);
+    conf.setMemoryForReduceTask(1000 * 1000);
     assertEquals(1000, conf.computeNumSlotsPerReduce(1000L));
 
     assertEquals(-1, conf.getMaxPhysicalMemoryForTask());

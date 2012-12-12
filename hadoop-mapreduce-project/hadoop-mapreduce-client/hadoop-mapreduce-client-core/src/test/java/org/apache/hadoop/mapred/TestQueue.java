@@ -42,6 +42,7 @@ public class TestQueue {
 
   /**
    * test QueueManager
+   * configuration from file
    * 
    * @throws IOException
    */
@@ -179,7 +180,7 @@ public class TestQueue {
   }
 
   /**
-   * test for Qmanager with configuration
+   * test for Qmanager with empty configuration
    * 
    * @throws IOException
    */
@@ -193,6 +194,8 @@ public class TestQueue {
     manager.setSchedulerInfo("second", "queueInfoqueueInfo");
 
     Queue root = manager.getRoot();
+    
+    // test children queues
     assertTrue(root.getChildren().size() == 2);
     Iterator<Queue> iterator = root.getChildren().iterator();
     Queue firstSubQueue = iterator.next();
@@ -211,7 +214,7 @@ public class TestQueue {
 
     assertEquals(firstSubQueue.getSchedulingInfo(), "queueInfo");
     assertEquals(secondSubQueue.getSchedulingInfo(), "queueInfoqueueInfo");
-
+// test leaf queue
     Set<String> template = new HashSet<String>();
     template.add("first");
     template.add("second");
@@ -228,7 +231,11 @@ public class TestQueue {
     assertEquals(manager.getRoot().getChildren().size(), 2);
     
   }
-
+/**
+ * write cofiguration
+ * @return
+ * @throws IOException
+ */
   private File writeFile() throws IOException {
 
     File f = null;

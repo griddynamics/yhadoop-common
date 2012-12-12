@@ -53,6 +53,7 @@ public class TestQueueConfigurationParser {
     DOMImplementationImpl domImplLS = (DOMImplementationImpl) document
         .getImplementation();
     LSSerializer serializer = domImplLS.createLSSerializer();
+    // write to String for check 
     String str = serializer.writeToString(e);
     assertTrue(str
         .endsWith("<queue><name>root</name><properties/><state>running</state><queue><name>child1</name><properties/><state>running</state></queue><queue><name>child2</name><properties/><state>running</state></queue></queue>"));

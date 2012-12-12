@@ -31,7 +31,10 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-
+/**
+ * 
+ * test MultiFileSplit class
+ */
 public class TestMultiFileSplit extends TestCase{
 
     public void testReadWrite() throws Exception {

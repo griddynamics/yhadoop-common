@@ -82,7 +82,7 @@ public class TestStatisticsCollector extends TestCase{
     assertEquals((10+10+10+12+13+14), stat.getValues().get(window).getValue());
     assertEquals(95, stat.getValues().get(sincStart).getValue());
     
-    
+    //  test Stat class 
     Map updaters= collector.getUpdaters();
     assertEquals(updaters.size(),2);
     Map<String, Stat> ststistics=collector.getStatistics();

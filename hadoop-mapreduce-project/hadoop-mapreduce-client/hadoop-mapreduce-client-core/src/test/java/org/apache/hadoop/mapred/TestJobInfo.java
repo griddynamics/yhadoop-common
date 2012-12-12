@@ -37,18 +37,20 @@ import static org.junit.Assert.*;
 public class TestJobInfo {
   @Test
   public void testJobInfo() throws IOException {
-    JobID jid= new JobID("001",1);
+    JobID jid = new JobID("001", 1);
     Text user = new Text("User");
-    Path path= new Path("/tmp/test");
-    JobInfo info = new JobInfo(jid,user,path);
+    Path path = new Path("/tmp/test");
+    JobInfo info = new JobInfo(jid, user, path);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     info.write(new DataOutputStream(out));
-    
-    JobInfo copyinfo= new JobInfo();
-    copyinfo.readFields(new DataInputStream(new ByteArrayInputStream(out.toByteArray())));
+
+    JobInfo copyinfo = new JobInfo();
+    copyinfo.readFields(new DataInputStream(new ByteArrayInputStream(out
+        .toByteArray())));
     assertEquals(info.getJobID().toString(), copyinfo.getJobID().toString());
-    assertEquals(info.getJobSubmitDir().getName(), copyinfo.getJobSubmitDir().getName());
+    assertEquals(info.getJobSubmitDir().getName(), copyinfo.getJobSubmitDir()
+        .getName());
     assertEquals(info.getUser().toString(), copyinfo.getUser().toString());
-    
+
   }
 }

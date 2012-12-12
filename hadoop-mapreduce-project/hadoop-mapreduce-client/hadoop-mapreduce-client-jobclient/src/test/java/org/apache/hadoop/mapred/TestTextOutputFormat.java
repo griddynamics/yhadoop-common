@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.*;

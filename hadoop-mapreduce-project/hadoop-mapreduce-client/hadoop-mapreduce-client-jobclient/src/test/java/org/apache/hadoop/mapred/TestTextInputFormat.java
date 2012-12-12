@@ -366,6 +366,7 @@ public class TestTextInputFormat {
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
                 LineRecordReader.MAX_LINE_LENGTH, MAXLINE);
     conf.setInt("io.file.buffer.size", BUF); // used by LRR
+    // test another constructor 
      LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
     assertFalse("Read a line from null", lrr.next(key, val));
     infNull.reset();

@@ -33,6 +33,7 @@ public class TestJobQueueClient {
    * Test that print job queue recursively prints child queues
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testPrintJobQueueInfo() throws IOException {
     JobQueueClient queueClient = new JobQueueClient();
     JobQueueInfo parent = new JobQueueInfo();

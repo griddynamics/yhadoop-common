@@ -36,7 +36,10 @@ import static org.mockito.Mockito.*;
  * TestCounters checks the sanity and recoverability of Queue
  */
 public class TestTaskLog {
-
+/**
+ * test TaskAttemptID 
+ * @throws IOException
+ */
   @Test
   public void testTaskLog() throws IOException {
     // test TaskLog
@@ -127,6 +130,10 @@ public class TestTaskLog {
    assertTrue(f.getAbsolutePath().endsWith("stdout"));
    
   }
+  /**
+   * test command line strings
+   * @throws IOException
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void testExternalCall() throws IOException {
@@ -169,6 +176,5 @@ public class TestTaskLog {
     assertEquals(it.next(), "-c");
     assertEquals(it.next(), " export JVM_PID=`echo $$` ; 'setup' ;('cmd'  < /dev/null  | tail -c 100 >> stdoutFilename ; exit $PIPESTATUS ) 2>&1 | tail -c 100 >> stderrFilename ; exit $PIPESTATUS");
    
-   System.out.println("end");
   }
 }

@@ -25,7 +25,6 @@ import static org.junit.Assert.*;
 /**
  * test SkipBadRecords
  * 
- * @author polzovatel
  * 
  */
 public class TestSkipBadRecords {
@@ -40,7 +39,7 @@ public class TestSkipBadRecords {
     assertEquals(0, SkipBadRecords.getReducerMaxSkipGroups(conf), 0);
     assertNull(SkipBadRecords.getSkipOutputPath(conf));
 
-    // test sertters
+    // test setters
     SkipBadRecords.setAttemptsToStartSkipping(conf, 5);
     SkipBadRecords.setAutoIncrMapperProcCount(conf, false);
     SkipBadRecords.setAutoIncrReducerProcCount(conf, false);
@@ -49,6 +48,7 @@ public class TestSkipBadRecords {
     JobConf jc= new JobConf();
     SkipBadRecords.setSkipOutputPath(jc, new Path("test"));
     
+    // test getters 
     assertEquals(5, SkipBadRecords.getAttemptsToStartSkipping(conf));
     assertFalse(SkipBadRecords.getAutoIncrMapperProcCount(conf));
     assertFalse(SkipBadRecords.getAutoIncrReducerProcCount(conf));

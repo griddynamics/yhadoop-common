@@ -59,16 +59,16 @@ public class TestNetworkedJob {
 
   @Test
   public void testGetNullCounters() throws Exception {
-    // mock creation
+    //mock creation
     Job mockJob = mock(Job.class);
-    RunningJob underTest = new JobClient.NetworkedJob(mockJob);
+    RunningJob underTest = new JobClient.NetworkedJob(mockJob); 
 
     when(mockJob.getCounters()).thenReturn(null);
     assertNull(underTest.getCounters());
-    // verification
+    //verification
     verify(mockJob).getCounters();
   }
-
+  
   @Test
   public void testGetJobStatus() throws IOException, InterruptedException,
       ClassNotFoundException {
@@ -106,7 +106,8 @@ public class TestNetworkedJob {
       assertEquals("Expected matching JobIDs", jobId, client.getJob(jobId)
           .getJobStatus().getJobID());
       assertEquals("Expected matching startTimes", rj.getJobStatus()
-          .getStartTime(), client.getJob(jobId).getJobStatus().getStartTime());
+          .getStartTime(), client.getJob(jobId).getJobStatus()
+          .getStartTime());
     } finally {
       if (fileSys != null) {
         fileSys.delete(testDir, true);
@@ -116,7 +117,10 @@ public class TestNetworkedJob {
       }
     }
   }
-
+/**
+ * test JobConf 
+ * @throws Exception
+ */
   @SuppressWarnings({ "unused", "deprecation" })
   @Test
   public void testNetworkedJob() throws Exception {
@@ -152,6 +156,7 @@ public class TestNetworkedJob {
       JobID jobId = rj.getID();
       NetworkedJob runningJob = (NetworkedJob) client.getJob(jobId);
       runningJob.setJobPriority(JobPriority.HIGH.name());
+      // test getters
       assertTrue(runningJob.getConfiguration().toString()
           .endsWith("0001/job.xml"));
       assertEquals(runningJob.getID(), jobId);

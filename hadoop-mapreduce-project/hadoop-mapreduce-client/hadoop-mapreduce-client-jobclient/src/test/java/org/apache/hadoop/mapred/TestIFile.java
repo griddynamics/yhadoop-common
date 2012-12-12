@@ -64,7 +64,7 @@ public class TestIFile {
       new IFile.Reader<Text, Text>(conf, rfs, path, codec, null);
     reader.close();
     
-    // test check summ 
+    // test check sum 
     byte[] ab= new byte[100];
     int readed= reader.checksumIn.readWithChecksum(ab, 0, ab.length);
     assertEquals( readed,reader.checksumIn.getChecksum().length);
