@@ -54,6 +54,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4800. Cleanup o.a.h.mapred.MapTaskStatus - remove unused 
     code. (kkambatl via tucu)
 
+    MAPREDUCE-4861. Cleanup: Remove unused mapreduce.security.token.DelegationTokenRenewal. 
+    (kkambatl via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -954,6 +957,9 @@ Release 0.23.3
 
     MAPREDUCE-4641. Exception in commitJob marks job as successful in job
     history (Jason Lowe via bobby)
+
+    MAPREDUCE-4549. Distributed cache conflicts breaks backwards compatability 
+    (Robert Evans via tucu)
 
 Release 0.23.2 - UNRELEASED
 
