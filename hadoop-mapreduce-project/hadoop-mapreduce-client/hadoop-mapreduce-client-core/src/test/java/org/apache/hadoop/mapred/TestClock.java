@@ -22,7 +22,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 /**
- *  test Clock classs
+ *  test Clock class
  *
  */
 public class TestClock {

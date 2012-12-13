@@ -31,7 +31,7 @@ public class TestIFile {
 
   @Test
   /**
-   * Create an IFile.Writer using GzipCodec since this codec does not
+   * Create an IFile.Writer using GzipCodec since this code does not
    * have a compressor when run via the tests (ie no native libraries).
    */
   public void testIFileWriterWithCodec() throws Exception {

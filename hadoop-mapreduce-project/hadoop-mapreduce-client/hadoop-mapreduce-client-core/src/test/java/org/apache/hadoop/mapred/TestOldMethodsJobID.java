@@ -30,7 +30,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Test deprcated methods
+ * Test deprecated methods
  *
  */
 public class TestOldMethodsJobID {
