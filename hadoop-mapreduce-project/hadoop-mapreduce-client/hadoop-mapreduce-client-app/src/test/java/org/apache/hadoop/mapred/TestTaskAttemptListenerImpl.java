@@ -30,6 +30,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Arrays;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -127,6 +129,27 @@ public class TestTaskAttemptListenerImpl {
     assertTrue(result.shouldDie);
 
     listener.stop();
+
+    // test JVMID
+    JVMId jvmid = JVMId.forName("jvm_001_002_m_004");
+    assertNotNull(jvmid);
+    try {
+      JVMId.forName("jvm_001_002_m_004_006");
+      Assert.fail();
+    } catch (IllegalArgumentException e) {
+      assertEquals(e.getMessage(),
+          "TaskId string : jvm_001_002_m_004_006 is not properly formed");
+    }
+
+  }
+
+  @Test
+  public void testJVMId() {
+
+    JVMId jvmid = new JVMId("test", 1, true, 2);
+    JVMId jvmid1 = JVMId.forName("jvm_test_0001_m_000002");
+    // test compare methot should be the same
+    assertEquals(0, jvmid.compareTo(jvmid1));
   }
 
   @Test
