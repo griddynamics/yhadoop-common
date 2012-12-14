@@ -157,4 +157,12 @@ public class TestHdfsHelper extends TestDirHelper {
     return MINI_DFS;
   }
 
+  public static synchronized void shutdown() {
+    if (MINI_DFS != null) {
+      System.out.println("Shutting down the MiniDFSCluster...");
+      MINI_DFS.shutdown();
+      MINI_DFS = null;
+    }
+  }
+  
 }

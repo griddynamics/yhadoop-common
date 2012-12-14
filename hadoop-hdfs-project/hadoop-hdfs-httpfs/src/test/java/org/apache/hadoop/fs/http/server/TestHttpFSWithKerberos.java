@@ -26,7 +26,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.security.TestUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.HFSTestCase;
@@ -40,6 +42,9 @@ import org.apache.hadoop.test.TestJettyHelper;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.After;
+import org.junit.Before;
+
+import static org.junit.Assert.*;
 import org.junit.Test;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
@@ -58,8 +63,49 @@ import java.util.concurrent.Callable;
 
 public class TestHttpFSWithKerberos extends HFSTestCase {
 
+  private String keytabFile;
+  private String user;
+  private Server server;
+    
+  @Before
+  public void before() throws Exception {
+    keytabFile = System.getProperty("user.keytab", "/Users/tucu/tucu.keytab");
+    File ktbFile = new File(keytabFile);
+    assertTrue(ktbFile.exists() && ktbFile.canRead());
+    
+    user = System.getProperty("user.principal", "client");
+    
+    assertTrue(!UserGroupInformation.isSecurityEnabled());
+    
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    AuthenticationMethod am = ugi.getAuthenticationMethod();
+    assertTrue(am == AuthenticationMethod.SIMPLE);
+  }
+  
   @After
-  public void resetUGI() {
+  public void after() throws Exception {
+    if (server != null) {
+      server.stop();
+      server.destroy();
+      server = null;
+    }
+    
+    TestHdfsHelper.shutdown();
+    
+    resetUGI();
+    assertTrue(!UserGroupInformation.isSecurityEnabled());
+    
+    // NB: this is needed to null the static field 
+    // org.apache.hadoop.security.UserGroupInformation.loginUser .
+    // The setter org.apache.hadoop.security.UserGroupInformation.setLoginUser(UserGroupInformation)
+    // has package visibility, so we use another test to reset it:
+    new TestUserGroupInformation().resetUgi();
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    AuthenticationMethod am = ugi.getAuthenticationMethod();
+    assertTrue(am == AuthenticationMethod.SIMPLE);
+  }
+  
+  private void resetUGI() {
     Configuration conf = new Configuration();
     UserGroupInformation.setConfiguration(conf);
   }
@@ -104,7 +150,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     URL url = cl.getResource("webapp");
     WebAppContext context = new WebAppContext(url.getPath(), "/webhdfs");
-    Server server = TestJettyHelper.getJettyServer();
+    server = TestJettyHelper.getJettyServer();
     server.addHandler(context);
     server.start();
     HttpFSServerWebApp.get().setAuthority(TestJettyHelper.getAuthority());
@@ -212,7 +258,6 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
     });
   }
 
-  @SuppressWarnings("deprecation")
   private void testDelegationTokenWithFS(Class fileSystemClass)
     throws Exception {
     createHttpFSServer();
@@ -232,12 +277,11 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   }
 
   private void testDelegationTokenWithinDoAs(
-    final Class fileSystemClass, boolean proxyUser) throws Exception {
+    final Class<?> fileSystemClass, boolean proxyUser) throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.authentication", "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    UserGroupInformation.loginUserFromKeytab("client",
-                                             "/Users/tucu/tucu.keytab");
+    UserGroupInformation.loginUserFromKeytab(user, keytabFile);
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     if (proxyUser) {
       ugi = UserGroupInformation.createProxyUser("foo", ugi);
@@ -266,18 +310,20 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
-  public void testDelegationTokenWithWebhdfsFileSystem() throws Exception {
-    testDelegationTokenWithinDoAs(WebHdfsFileSystem.class, false);
-  }
-
-  @Test
-  @TestDir
-  @TestJetty
-  @TestHdfs
   public void testDelegationTokenWithHttpFSFileSystemProxyUser()
     throws Exception {
     testDelegationTokenWithinDoAs(HttpFSFileSystem.class, true);
   }
+  
+  
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testDelegationTokenWithWebhdfsFileSystem() throws Exception {
+    testDelegationTokenWithinDoAs(WebHdfsFileSystem.class, false);
+  }
+
 
   // TODO: WebHdfsFilesystem does work with ProxyUser HDFS-3509
   //    @Test
