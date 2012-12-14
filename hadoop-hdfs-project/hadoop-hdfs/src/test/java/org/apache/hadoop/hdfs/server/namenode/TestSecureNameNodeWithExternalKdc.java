@@ -17,11 +17,9 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
@@ -33,6 +31,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
@@ -67,19 +66,20 @@ public class TestSecureNameNodeWithExternalKdc {
   public void testSecureNameNode() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
     try {
-      String nnPrincipal =
-        System.getProperty("dfs.namenode.kerberos.principal");
-      String nnSpnegoPrincipal =
-        System.getProperty("dfs.namenode.kerberos.internal.spnego.principal");
-      String nnKeyTab = System.getProperty("dfs.namenode.keytab.file");
+      final String nnPrincipal =
+        System.getProperty(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
+      final String nnSpnegoPrincipal =
+        System.getProperty(DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY);
+      final String nnKeyTab = System.getProperty(
+          DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
       assertNotNull("NameNode principal was not specified", nnPrincipal);
       assertNotNull("NameNode SPNEGO principal was not specified",
         nnSpnegoPrincipal);
       assertNotNull("NameNode keytab was not specified", nnKeyTab);
+      checkKeytab(nnKeyTab);
 
-      Configuration conf = new HdfsConfiguration();
-      conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
-          "kerberos");
+      final Configuration conf = new HdfsConfiguration();
+      SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
       conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, nnPrincipal);
       conf.set(DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
           nnSpnegoPrincipal);
@@ -95,13 +95,21 @@ public class TestSecureNameNodeWithExternalKdc {
           (short) 511));
 
       // The user specified should not be a superuser
-      String userPrincipal = System.getProperty("user.principal");
-      String userKeyTab = System.getProperty("user.keytab");
+      final String userPrincipal = System.getProperty("user.principal");
+      final String userKeyTab = System.getProperty("user.keytab");
       assertNotNull("User principal was not specified", userPrincipal);
+      assertTrue("Incorrect configuration: user principal ["+userPrincipal
+          +"] is the same as DFS Name Node principal ["+nnPrincipal+"]", 
+          !userPrincipal.equals(nnPrincipal));
       assertNotNull("User keytab was not specified", userKeyTab);
+      checkKeytab(userKeyTab);
 
-      UserGroupInformation ugi = UserGroupInformation
+      final UserGroupInformation ugi = UserGroupInformation
           .loginUserFromKeytabAndReturnUGI(userPrincipal, userKeyTab);
+      
+      assertEquals(AuthenticationMethod.KERBEROS,
+          ugi.getAuthenticationMethod());
+      
       FileSystem fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
@@ -118,12 +126,17 @@ public class TestSecureNameNodeWithExternalKdc {
       Path p = new Path("/tmp/alpha");
       fs.mkdirs(p);
       assertNotNull(fs.listStatus(p));
-      assertEquals(AuthenticationMethod.KERBEROS,
-          ugi.getAuthenticationMethod());
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
+  }
+  
+  public static void checkKeytab(String keytabPath) {
+    final File keytabFile = new File(keytabPath);
+    assertTrue("Keytab file ["+keytabFile.getAbsolutePath()
+        + "] not found or is not readable.", keytabFile.exists() 
+        && keytabFile.canRead());
   }
 }

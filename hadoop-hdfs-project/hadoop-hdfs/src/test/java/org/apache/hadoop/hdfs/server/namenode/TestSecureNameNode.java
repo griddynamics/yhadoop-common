@@ -17,21 +17,19 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.TestUGIWithSecurityOn;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -39,8 +37,18 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * System properties required:
+ * -DstartKdc=true (required for maven run to start "apacheds" server)
+ * -Dkdc.resource.dir=.../hadoop-common-project/hadoop-common/target/test-classes/kdc
+ *   (this is needed to find the bundled keytabs)
+ */
 public class TestSecureNameNode {
-  final static private int NUM_OF_DATANODES = 0;
+  
+  private static final int NUM_OF_DATANODES = 0;
+  
+  private static final String NAME_NODE_PRINCIPAL = "nn1/localhost@EXAMPLE.COM";
+  private static final String USER_PRINCIPAL = "user1@EXAMPLE.COM";
 
   @Before
   public void testKdcRunning() {
@@ -52,27 +60,36 @@ public class TestSecureNameNode {
   public void testName() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
     try {
-      String keyTabDir = System.getProperty("kdc.resource.dir") + "/keytabs";
-      String nn1KeytabPath = keyTabDir + "/nn1.keytab";
-      String user1KeyTabPath = keyTabDir + "/user1.keytab";
-      Configuration conf = new HdfsConfiguration();
-      conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
-          "kerberos");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
-          "nn1/localhost@EXAMPLE.COM");
+      final String keyTabDir = System.getProperty("kdc.resource.dir") + "/keytabs";
+      final String nn1KeytabPath = keyTabDir + "/nn1.keytab";
+      final String user1KeyTabPath = keyTabDir + "/user1.keytab";
+      TestSecureNameNodeWithExternalKdc.checkKeytab(nn1KeytabPath);
+      TestSecureNameNodeWithExternalKdc.checkKeytab(user1KeyTabPath);
+      
+      final Configuration conf = new HdfsConfiguration();
+      SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, NAME_NODE_PRINCIPAL);
       conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, nn1KeytabPath);
 
+      // Actually this config property is needed when the test is running on Java6. 
+      // Surprisingly, on Java7 it passes even if this property is not set, 
+      // because Krb5LoginModule successfully passes the #login() method even if
+      // the principal "${dfs.web.authentication.kerberos.principal}" is not 
+      // defined in the keytab ".../nn1.keytab":
+      conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, NAME_NODE_PRINCIPAL);
+      
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES)
           .build();
       final MiniDFSCluster clusterRef = cluster;
       cluster.waitActive();
+      
       FileSystem fsForCurrentUser = cluster.getFileSystem();
       fsForCurrentUser.mkdirs(new Path("/tmp"));
       fsForCurrentUser.setPermission(new Path("/tmp"), new FsPermission(
           (short) 511));
 
       UserGroupInformation ugi = UserGroupInformation
-          .loginUserFromKeytabAndReturnUGI("user1@EXAMPLE.COM", user1KeyTabPath);
+          .loginUserFromKeytabAndReturnUGI(USER_PRINCIPAL, user1KeyTabPath);
       FileSystem fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
