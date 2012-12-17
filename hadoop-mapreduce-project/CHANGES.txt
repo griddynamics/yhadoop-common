@@ -14,6 +14,8 @@ Trunk (Unreleased)
     MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
     (Avner BenHanoch via acmurthy) 
 
+    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
@@ -70,6 +72,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
+
+    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
+    (masokan via tucu)
 
   BUG FIXES
 
@@ -207,6 +212,12 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4800. Cleanup o.a.h.mapred.MapTaskStatus - remove unused 
     code. (kkambatl via tucu)
+
+    MAPREDUCE-4861. Cleanup: Remove unused mapreduce.security.token.DelegationTokenRenewal. 
+    (kkambatl via tucu)
+
+    MAPREDUCE-4856. TestJobOutputCommitter uses same directory as
+    TestJobCleanup. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 

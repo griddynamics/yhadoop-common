@@ -123,6 +123,11 @@ Release 2.0.3-alpha - Unreleased
     YARN-72. NM should handle cleaning up containers when it shuts down.
     (Sandy Ryza via tomwhite)
 
+    YARN-267. Fix fair scheduler web UI. (Sandy Ryza via tomwhite)
+
+    YARN-264. y.s.rm.DelegationTokenRenewer attempts to renew token even 
+    after removing an app. (kkambatl via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -205,6 +210,9 @@ Release 0.23.6 - UNRELEASED
 
     YARN-258. RM web page UI shows Invalid Date for start and finish times
     (Ravi Prakash via jlowe)
+
+    YARN-266. RM and JHS Web UIs are blank because AppsBlock is not escaping
+    string properly (Ravi Prakash via jlowe)
 
 Release 0.23.5 - UNRELEASED
 
