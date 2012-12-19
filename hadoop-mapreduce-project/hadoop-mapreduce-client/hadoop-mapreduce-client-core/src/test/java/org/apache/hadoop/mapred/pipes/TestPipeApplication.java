@@ -135,11 +135,11 @@ public class TestPipeApplication {
       Application<WritableComparable<Object>, Writable, IntWritable, Text> application = new Application<WritableComparable<Object>, Writable, IntWritable, Text>(
           conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();
-      assertEquals(reporter.getProgress(), 1.0, 0.01);
-      assertEquals(reporter.getStatus(), "PROGRESS");
+     
       Thread.sleep(2000);
       wr.close();
-
+ assertEquals(reporter.getProgress(), 1.0, 0.01);
+      assertEquals(reporter.getStatus(), "PROGRESS");
     } finally {
       psw.deleteOnExit();
       psw.deleteOnExit();
