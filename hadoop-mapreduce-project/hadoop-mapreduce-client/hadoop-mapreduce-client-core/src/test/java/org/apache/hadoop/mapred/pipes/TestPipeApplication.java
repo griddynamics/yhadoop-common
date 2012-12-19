@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -26,107 +29,118 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
-
+import static org.junit.Assert.*;
 
 public class TestPipeApplication {
-  private static File baseSpace = new File("./");
   private static File workSpace = new File("target",
       TestPipeApplication.class.getName() + "-workSpace");
-  
+
   @Test
-  public void testOne() throws Exception{
-    JobConf conf= new JobConf();
-    RecordReader<FloatWritable, NullWritable> rReader= new RecordReader<FloatWritable, NullWritable>() {
-      private float index= 0.0f;
+  public void testOne() throws Exception {
+    JobConf conf = new JobConf();
+    RecordReader<FloatWritable, NullWritable> rReader = new RecordReader<FloatWritable, NullWritable>() {
+      private float index = 0.0f;
+
       @Override
-      public boolean next(FloatWritable key, NullWritable value) throws IOException {
+      public boolean next(FloatWritable key, NullWritable value)
+          throws IOException {
         key.set(index++);
         return false;
       }
+
       @Override
       public float getProgress() throws IOException {
         return index;
       }
-      
+
       @Override
       public long getPos() throws IOException {
-        
+
         return 0;
       }
-      
+
       @Override
       public NullWritable createValue() {
-      
-        return  NullWritable.get();
+
+        return NullWritable.get();
       }
-      
+
       @Override
       public FloatWritable createKey() {
         FloatWritable result = new FloatWritable(index);
         return result;
       }
-      
+
       @Override
       public void close() throws IOException {
-      
-        
+
       }
     };
-    
-   String classpath= System.getProperty("java.class.path");
-    File fCommand= new File(workSpace+File.separator+"cache.sh");
+
+    String classpath = System.getProperty("java.class.path");
+    File fCommand = new File(workSpace + File.separator + "cache.sh");
     fCommand.deleteOnExit();
-    if(!fCommand.getParentFile().exists()){
+    if (!fCommand.getParentFile().exists()) {
       fCommand.getParentFile().mkdirs();
     }
     fCommand.createNewFile();
-    OutputStream os= new FileOutputStream(fCommand);
+    OutputStream os = new FileOutputStream(fCommand);
     os.write("#!/bin/sh \n".getBytes());
 
-//    /opt/yahoo/yhadoop-common/hadoop-common-project/hadoop-common
-//    /opt/yahoo/yhadoop-common/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core
+    // /opt/yahoo/yhadoop-common/hadoop-common-project/hadoop-common
+    // /opt/yahoo/yhadoop-common/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core
 
-    
-    os.write(("java -cp "+classpath+" org.apache.hadoop.mapred.pipes.PipeApplicatoinClient").getBytes());
+    os.write(("java -cp " + classpath + " org.apache.hadoop.mapred.pipes.PipeApplicatoinClient")
+        .getBytes());
     os.flush();
     os.close();
-    
-    Reporter reporter = new TestTaskReporter();
-  //  Counters.Counter cnt =new Counters.Counter();
-   // Credentials credentials =     UserGroupInformation.getCurrentUser().getCredentials();
-   // ApplicationTokenIdentifier identifier= new ApplicationTokenIdentifier();
-    //org.apache.hadoop.security.token.Token
-    File psw= new File("./jobTokenPassword");
+
+    TestTaskReporter reporter = new TestTaskReporter();
+    // Counters.Counter cnt =new Counters.Counter();
+    // Credentials credentials =
+    // UserGroupInformation.getCurrentUser().getCredentials();
+    // ApplicationTokenIdentifier identifier= new ApplicationTokenIdentifier();
+    // org.apache.hadoop.security.token.Token
+    File psw = new File("./jobTokenPassword");
     psw.deleteOnExit();
-    psw= new File("./.jobTokenPassword.crc");
+    psw = new File("./.jobTokenPassword.crc");
     psw.deleteOnExit();
-    try{
-    
-    TaskAttemptID taskid =  TaskAttemptID.forName("attempt_001_02_r03_04_05");
-    File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
-    File stderr = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDERR);   
-    if(!stdout.getParentFile().exists()){
-      stdout.getParentFile().mkdirs();
-    }
-    stdout.deleteOnExit();
-    stderr.deleteOnExit();
-    
-    conf.set(MRJobConfig.TASK_ATTEMPT_ID, "attempt_001_02_r03_04_05");
-    conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
-    Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>("user".getBytes(), "password".getBytes(), new Text("kind"), new Text("service"));
-    conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
-    OutputCollector<WritableComparable, Writable> output= new CombineOutputCollector<WritableComparable, Writable>(new Counters.Counter(),new Progress() ,conf);
- 
-    
-    Application application = new Application<WritableComparable, Writable, WritableComparable, Writable>(conf, rReader, output, reporter, IntWritable.class, Text.class);
-    
-    
-    
-    }catch(Exception e){
-      e.printStackTrace();
-      throw e;
-    }finally{
+    try {
+
+      TaskAttemptID taskid = TaskAttemptID.forName("attempt_001_02_r03_04_05");
+      File stdout = TaskLog.getTaskLogFile(taskid, false,
+          TaskLog.LogName.STDOUT);
+      File stderr = TaskLog.getTaskLogFile(taskid, false,
+          TaskLog.LogName.STDERR);
+      if (!stdout.getParentFile().exists()) {
+        stdout.getParentFile().mkdirs();
+      }
+      stdout.deleteOnExit();
+      stderr.deleteOnExit();
+
+      conf.set(MRJobConfig.TASK_ATTEMPT_ID, "attempt_001_02_r03_04_05");
+      conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
+      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+              "service"));
+      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
+          new Counters.Counter(), new Progress(), conf);
+      FileSystem fs = new RawLocalFileSystem();
+      fs.setConf(conf);
+      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs, new Path(workSpace
+          + File.separator + "outfile"), IntWritable.class, Text.class, null,
+          null);
+      output.setWriter(wr);
+      Application<WritableComparable<Object>, Writable, IntWritable, Text> application = new Application<WritableComparable<Object>, Writable, IntWritable, Text>(
+          conf, rReader, output, reporter, IntWritable.class, Text.class);
+      application.getDownlink().flush();
+      assertEquals(reporter.getProgress(), 1.0, 0.01);
+      assertEquals(reporter.getStatus(), "PROGRESS");
+      Thread.sleep(2000);
+      wr.close();
+
+    } finally {
       psw.deleteOnExit();
       psw.deleteOnExit();
 
@@ -134,41 +148,42 @@ public class TestPipeApplication {
     System.out.println("ok!");
   }
 
-  private class Progress implements Progressable{
+  private class Progress implements Progressable {
 
     @Override
     public void progress() {
       // no think todo
-      
+
     }
-    
+
   }
-  private   class CombineOutputCollector<K extends Object, V extends Object> 
-  implements OutputCollector<K, V> {
+
+  private class CombineOutputCollector<K extends Object, V extends Object>
+      implements OutputCollector<K, V> {
     private Writer<K, V> writer;
     private Counters.Counter outCounter;
     private Progressable progressable;
     private long progressBar;
 
-    public CombineOutputCollector(Counters.Counter outCounter, Progressable progressable, Configuration conf) {
+    public CombineOutputCollector(Counters.Counter outCounter,
+        Progressable progressable, Configuration conf) {
       this.outCounter = outCounter;
-      this.progressable=progressable;
-      progressBar = conf.getLong(MRJobConfig.COMBINE_RECORDS_BEFORE_PROGRESS, 0);
+      this.progressable = progressable;
+      progressBar = conf
+          .getLong(MRJobConfig.COMBINE_RECORDS_BEFORE_PROGRESS, 0);
     }
-    
+
     public synchronized void setWriter(Writer<K, V> writer) {
       this.writer = writer;
     }
 
-    public synchronized void collect(K key, V value)
-        throws IOException {
+    public synchronized void collect(K key, V value) throws IOException {
       outCounter.increment(1);
       writer.append(key, value);
-        progressable.progress();
+      progressable.progress();
     }
   }
 
-  
   private class TestTaskReporter implements Reporter {
     private int recordNum = 0; // number of records processed
     private String status = null;
@@ -184,6 +199,11 @@ public class TestPipeApplication {
     @Override
     public void setStatus(String status) {
       this.status = status;
+
+    }
+
+    public String getStatus() {
+      return this.status;
 
     }
 
@@ -217,8 +237,9 @@ public class TestPipeApplication {
       return split;
     }
 
-    public void setInputSplit(InputSplit split) throws UnsupportedOperationException {
-      this.split=split;
+    public void setInputSplit(InputSplit split)
+        throws UnsupportedOperationException {
+      this.split = split;
     }
 
     @Override
