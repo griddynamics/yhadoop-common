@@ -1,8 +1,11 @@
 package org.apache.hadoop.mapred.pipes;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +33,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.junit.Test;
+
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
+
 import static org.junit.Assert.*;
 
 public class TestPipeApplication {
@@ -134,12 +140,18 @@ public class TestPipeApplication {
           new Path(workSpace + File.separator + "outfile"), IntWritable.class,
           Text.class, null, null);
       output.setWriter(wr);
+      
       Application<WritableComparable<Object>, Writable, IntWritable, Text> application = new Application<WritableComparable<Object>, Writable, IntWritable, Text>(
           conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();
 
       Thread.sleep(4000);
       wr.close();
+      System.out.println("==================");
+      printFile(stderr);
+      System.out.println("==================");
+      printFile(stdout);
+      System.out.println("==================");
       
       assertEquals(1.0, reporter.getProgress(), 0.01);
       assertNotNull(reporter.getCounter("group", "name"));
@@ -152,6 +164,17 @@ public class TestPipeApplication {
     System.out.println("ok!");
   }
 
+  private void printFile(File f) throws IOException{
+    InputStream in= new FileInputStream(f);
+    byte [] ab = new byte[512];
+    int counter=0;
+    ByteOutputStream out= new ByteOutputStream();
+    while ((counter=in.read(ab))>=0){
+      out.write(ab, 0, counter);
+    }
+    in.close();
+    System.out.println("file:" + new String(out.getBytes()));
+  }
   private class Progress implements Progressable {
 
     @Override
