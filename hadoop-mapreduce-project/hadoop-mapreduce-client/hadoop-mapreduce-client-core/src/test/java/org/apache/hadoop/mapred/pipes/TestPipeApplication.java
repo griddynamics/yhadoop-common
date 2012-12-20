@@ -39,8 +39,7 @@ public class TestPipeApplication {
   @Test
   public void testOne() throws Exception {
     JobConf conf = new JobConf();
-    
-    
+
     RecordReader<FloatWritable, NullWritable> rReader = new RecordReader<FloatWritable, NullWritable>() {
       private float index = 0.0f;
 
@@ -131,17 +130,19 @@ public class TestPipeApplication {
           new Counters.Counter(), new Progress(), conf);
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
-      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs, new Path(workSpace
-          + File.separator + "outfile"), IntWritable.class, Text.class, null,
-          null);
+      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
+          new Path(workSpace + File.separator + "outfile"), IntWritable.class,
+          Text.class, null, null);
       output.setWriter(wr);
       Application<WritableComparable<Object>, Writable, IntWritable, Text> application = new Application<WritableComparable<Object>, Writable, IntWritable, Text>(
           conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();
-     
-      Thread.sleep(2000);
+
+      Thread.sleep(4000);
       wr.close();
-     assertEquals(reporter.getProgress(), 1.0, 0.01);
+      
+      assertEquals(1.0, reporter.getProgress(), 0.01);
+      assertNotNull(reporter.getCounter("group", "name"));
       assertEquals(reporter.getStatus(), "PROGRESS");
     } finally {
       psw.deleteOnExit();
@@ -214,9 +215,9 @@ public class TestPipeApplication {
       Counters.Counter counter = null;
       if (counters != null) {
         counter = counters.findCounter(group, name);
-        if(counter==null){
-          Group grp=counters.addGroup(group,group);
-          counter= grp.addCounter(name, name, 10);
+        if (counter == null) {
+          Group grp = counters.addGroup(group, group);
+          counter = grp.addCounter(name, name, 10);
         }
       }
       return counter;
@@ -233,7 +234,7 @@ public class TestPipeApplication {
     }
 
     public void incrCounter(String group, String counter, long amount) {
-      
+
       if (counters != null) {
         counters.incrCounter(group, counter, amount);
       }
