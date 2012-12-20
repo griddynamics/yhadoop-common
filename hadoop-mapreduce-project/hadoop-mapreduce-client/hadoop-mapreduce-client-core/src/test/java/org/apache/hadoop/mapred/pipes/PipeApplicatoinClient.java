@@ -79,14 +79,20 @@ public class PipeApplicatoinClient {
       WritableUtils.writeVInt(dataout, 50);
 
  //     iw.write(dataout);
-      writeObject(new Text("key"), dataout);
+      System.out.println("2");
 
+      writeObject(new Text("key"), dataout);
+      System.out.println("3");
+  
       writeObject(new Text("value"), dataout);
+      dataout.flush();
       System.out.println("4");
       // STATUS
 
       WritableUtils.writeVInt(dataout, 52);
       Text.writeString(dataout, "PROGRESS");
+      dataout.flush();
+
       // progress
       WritableUtils.writeVInt(dataout, 53);
       dataout.writeFloat(50.5f);
@@ -97,7 +103,7 @@ public class PipeApplicatoinClient {
       Text.writeString(dataout, "group");
       Text.writeString(dataout, "name");
       // increment counter
-
+      System.out.println("10");
       WritableUtils.writeVInt(dataout, 56);
       WritableUtils.writeVInt(dataout, 0);
 
@@ -108,9 +114,13 @@ public class PipeApplicatoinClient {
       WritableUtils.writeVInt(dataout, 54);
 
       dataout.writeFloat(50.5f);
+      
+      System.out.println("14");
+  
       dataout.flush();
       dataout.close();
-      
+      System.out.println("15");
+
     } catch (Exception x) {
       x.printStackTrace();
     }finally{
