@@ -123,6 +123,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
             throw new InterruptedException();
           }
           int cmd = WritableUtils.readVInt(inStream);
+          System.out.println("cmd:"+cmd);
           LOG.debug("Handling uplink command " + cmd);
           if (cmd == MessageType.AUTHENTICATION_RESP.code) {
             String digest = Text.readString(inStream);

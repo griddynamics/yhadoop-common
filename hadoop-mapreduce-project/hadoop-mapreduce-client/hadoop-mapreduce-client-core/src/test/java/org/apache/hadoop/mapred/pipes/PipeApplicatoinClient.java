@@ -75,7 +75,6 @@ public class PipeApplicatoinClient {
       }
 
       // output code
-      System.out.println("1");
       WritableUtils.writeVInt(dataout, 50);
 
       IntWritable iw = new IntWritable();
