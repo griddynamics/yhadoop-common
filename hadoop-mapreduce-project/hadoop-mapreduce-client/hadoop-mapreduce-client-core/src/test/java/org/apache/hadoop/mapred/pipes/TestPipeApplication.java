@@ -18,6 +18,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapred.Counters;
+import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -38,6 +39,8 @@ public class TestPipeApplication {
   @Test
   public void testOne() throws Exception {
     JobConf conf = new JobConf();
+    
+    
     RecordReader<FloatWritable, NullWritable> rReader = new RecordReader<FloatWritable, NullWritable>() {
       private float index = 0.0f;
 
@@ -138,8 +141,8 @@ public class TestPipeApplication {
      
       Thread.sleep(2000);
       wr.close();
-    // assertEquals(reporter.getProgress(), 1.0, 0.01);
-    //  assertEquals(reporter.getStatus(), "PROGRESS");
+     assertEquals(reporter.getProgress(), 1.0, 0.01);
+      assertEquals(reporter.getStatus(), "PROGRESS");
     } finally {
       psw.deleteOnExit();
       psw.deleteOnExit();
@@ -187,7 +190,7 @@ public class TestPipeApplication {
   private class TestTaskReporter implements Reporter {
     private int recordNum = 0; // number of records processed
     private String status = null;
-    private Counters counters;
+    private Counters counters = new Counters();
     private InputSplit split;
 
     @Override
@@ -211,6 +214,10 @@ public class TestPipeApplication {
       Counters.Counter counter = null;
       if (counters != null) {
         counter = counters.findCounter(group, name);
+        if(counter==null){
+          Group grp=counters.addGroup(group,group);
+          counter= grp.addCounter(name, name, 10);
+        }
       }
       return counter;
     }
@@ -226,6 +233,7 @@ public class TestPipeApplication {
     }
 
     public void incrCounter(String group, String counter, long amount) {
+      
       if (counters != null) {
         counters.incrCounter(group, counter, amount);
       }

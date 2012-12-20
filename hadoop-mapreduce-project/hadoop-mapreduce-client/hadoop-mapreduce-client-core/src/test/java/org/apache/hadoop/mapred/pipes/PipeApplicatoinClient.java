@@ -30,7 +30,11 @@ public class PipeApplicatoinClient {
 
       int port = Integer
           .parseInt(System.getenv("mapreduce.pipes.command.port"));
-      Socket socket = new Socket("localhost", port);
+      
+      java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
+      
+      
+      Socket socket = new Socket(addr.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
       System.out.println("port1:" + port);
@@ -90,13 +94,13 @@ public class PipeApplicatoinClient {
       // register cunter
       WritableUtils.writeVInt(dataout, 55);
       // id
-      WritableUtils.writeVInt(dataout, 1);
+      WritableUtils.writeVInt(dataout, 0);
       Text.writeString(dataout, "group");
       Text.writeString(dataout, "name");
       // increment counter
 
       WritableUtils.writeVInt(dataout, 56);
-      WritableUtils.writeVInt(dataout, 1);
+      WritableUtils.writeVInt(dataout, 0);
 
       WritableUtils.writeVLong(dataout, 2);
 
