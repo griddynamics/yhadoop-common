@@ -61,4 +61,18 @@ public class TestArrayWritable extends TestCase {
       assertEquals(destElements[i],elements[i]);
     }
   }
+  
+  public void testArrayWritableToArray() {
+    Text[] elements = {new Text("zero"), new Text("one"), new Text("two")};
+    TextArrayWritable arrayWritable = new TextArrayWritable();
+    arrayWritable.set(elements);
+    Object array = arrayWritable.toArray();
+  
+    assertTrue("TestArrayWritable testArrayWritableToArray error!!! ", array instanceof Text[]);
+    Text[] destElements = (Text[]) array;
+  
+    for (int i = 0; i < elements.length; i++) {	    
+	  assertEquals(destElements[i], elements[i]);		
+    }	  
+  }
 }
