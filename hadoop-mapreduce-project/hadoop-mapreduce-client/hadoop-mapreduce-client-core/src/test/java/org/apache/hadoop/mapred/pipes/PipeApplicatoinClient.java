@@ -26,6 +26,7 @@ public class PipeApplicatoinClient {
   }
 
   public void binaryProtocolStub() {
+    Socket socket =null;
     try {
 
       int port = Integer
@@ -34,7 +35,7 @@ public class PipeApplicatoinClient {
       java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
       
       
-      Socket socket = new Socket(addr.getHostName(), port);
+      socket = new Socket(addr.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
       System.out.println("port1:" + port);
@@ -108,9 +109,19 @@ public class PipeApplicatoinClient {
       WritableUtils.writeVInt(dataout, 54);
 
       dataout.writeFloat(50.5f);
-
+      dataout.flush();
+      dataout.close();
+      
     } catch (Exception x) {
       x.printStackTrace();
+    }finally{
+      if( socket!=null )
+        try {
+          socket.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+    
     }
   }
 
