@@ -13,7 +13,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -131,17 +131,17 @@ public class TestPipeApplication {
           "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
-      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
+      CombineOutputCollector<Text, Text> output = new CombineOutputCollector<Text, Text>(
           new Counters.Counter(), new Progress(), conf);
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
-      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
-          new Path(workSpace + File.separator + "outfile"), IntWritable.class,
+      Writer<Text, Text> wr = new Writer<Text, Text>(conf, fs,
+          new Path(workSpace + File.separator + "outfile"), Text.class,
           Text.class, null, null);
       output.setWriter(wr);
       
-      Application<WritableComparable<Object>, Writable, IntWritable, Text> application = new Application<WritableComparable<Object>, Writable, IntWritable, Text>(
-          conf, rReader, output, reporter, IntWritable.class, Text.class);
+      Application<WritableComparable<Object>, Writable, Text, Text> application = new Application<WritableComparable<Object>, Writable, Text, Text>(
+          conf, rReader, output, reporter, Text.class, Text.class);
       application.getDownlink().flush();
 
       Thread.sleep(4000);

@@ -78,9 +78,8 @@ public class PipeApplicatoinClient {
       // output code
       WritableUtils.writeVInt(dataout, 50);
 
-      IntWritable iw = new IntWritable();
-      iw.set(123);
-      writeObject(iw, dataout);
+ //     iw.write(dataout);
+      writeObject(new Text("key"), dataout);
 
       writeObject(new Text("value"), dataout);
       System.out.println("4");
