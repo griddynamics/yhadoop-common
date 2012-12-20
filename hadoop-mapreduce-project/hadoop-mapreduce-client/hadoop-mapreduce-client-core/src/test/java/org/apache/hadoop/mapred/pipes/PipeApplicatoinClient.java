@@ -136,21 +136,25 @@ public class PipeApplicatoinClient {
     // For Text and BytesWritable, encode them directly, so that they end up
     // in C++ as the natural translations.
     DataOutputBuffer buffer = new DataOutputBuffer();
-
+System.out.println("writeObject");
     if (obj instanceof Text) {
       Text t = (Text) obj;
       int len = t.getLength();
+      System.out.println("writeObject Text:"+len);
       WritableUtils.writeVInt(stream, len);
       stream.write(t.getBytes(), 0, len);
     } else if (obj instanceof BytesWritable) {
       BytesWritable b = (BytesWritable) obj;
       int len = b.getLength();
+      System.out.println("writeObject BytesWritable:"+len);
       WritableUtils.writeVInt(stream, len);
       stream.write(b.getBytes(), 0, len);
     } else {
       buffer.reset();
       obj.write(buffer);
       int length = buffer.getLength();
+      System.out.println("writeObject :"+length);
+
       WritableUtils.writeVInt(stream, length);
       stream.write(buffer.getData(), 0, length);
     }

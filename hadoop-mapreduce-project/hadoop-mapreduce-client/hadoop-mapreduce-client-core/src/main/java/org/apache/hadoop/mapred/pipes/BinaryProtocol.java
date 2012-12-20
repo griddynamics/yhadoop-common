@@ -173,15 +173,20 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     
     private void readObject(Writable obj) throws IOException {
       int numBytes = WritableUtils.readVInt(inStream);
+      System.out.println("numBytes:"+numBytes);
       byte[] buffer;
       // For BytesWritable and Text, use the specified length to set the length
       // this causes the "obvious" translations to work. So that if you emit
       // a string "abc" from C++, it shows up as "abc".
       if (obj instanceof BytesWritable) {
+        System.out.println("BytesWritable:");
+
         buffer = new byte[numBytes];
         inStream.readFully(buffer);
         ((BytesWritable) obj).set(buffer, 0, numBytes);
       } else if (obj instanceof Text) {
+        System.out.println("Text:");
+
         buffer = new byte[numBytes];
         inStream.readFully(buffer);
         ((Text) obj).set(buffer);
