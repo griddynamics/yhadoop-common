@@ -123,7 +123,6 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
             throw new InterruptedException();
           }
           int cmd = WritableUtils.readVInt(inStream);
-          System.out.println("cmd:"+cmd);
           LOG.debug("Handling uplink command " + cmd);
           if (cmd == MessageType.AUTHENTICATION_RESP.code) {
             String digest = Text.readString(inStream);
@@ -133,12 +132,8 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
                 + "complete. Ignoring");
             continue;
           } else if (cmd == MessageType.OUTPUT.code) {
-            System.out.println("3:"+System.currentTimeMillis());
-
             readObject(key);
             readObject(value);
-            System.out.println("4:"+System.currentTimeMillis());
-
             handler.output(key, value);
           } else if (cmd == MessageType.PARTITIONED_OUTPUT.code) {
             int part = WritableUtils.readVInt(inStream);
@@ -168,7 +163,6 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
         } catch (InterruptedException e) {
           return;
         } catch (Throwable e) {
-          System.out.println("err:"+System.currentTimeMillis());
           LOG.error(StringUtils.stringifyException(e));
           handler.failed(e);
           return;
@@ -177,22 +171,16 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     }
     
     private void readObject(Writable obj) throws IOException {
-      System.out.println("obj:"+obj.getClass().getName()+":"+System.currentTimeMillis());
       int numBytes = WritableUtils.readVInt(inStream);
-      System.out.println("numBytes:"+numBytes);
       byte[] buffer;
       // For BytesWritable and Text, use the specified length to set the length
       // this causes the "obvious" translations to work. So that if you emit
       // a string "abc" from C++, it shows up as "abc".
       if (obj instanceof BytesWritable) {
-        System.out.println("BytesWritable:");
-
         buffer = new byte[numBytes];
         inStream.readFully(buffer);
         ((BytesWritable) obj).set(buffer, 0, numBytes);
       } else if (obj instanceof Text) {
-        System.out.println("Text:");
-
         buffer = new byte[numBytes];
         inStream.readFully(buffer);
         ((Text) obj).set(buffer);
@@ -298,9 +286,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
       list.add(itm.getValue());
     }
     WritableUtils.writeVInt(stream, list.size());
-    System.out.println("list.size():"+list.size());
     for(String entry: list){
-      System.out.println("key:"+entry);
       Text.writeString(stream, entry);
     }
   }

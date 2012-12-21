@@ -148,14 +148,9 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     
     downlink.authenticate(digestToSend, challenge);
     waitForAuthentication();
-    System.out.println("Authentication succeeded");
-
     LOG.debug("Authentication succeeded");
     downlink.start();
-    System.out.println("started");
-
     downlink.setJobConf(conf);
-    System.out.println("conf dounloaded");
   }
 
   private String getSecurityChallenge() {

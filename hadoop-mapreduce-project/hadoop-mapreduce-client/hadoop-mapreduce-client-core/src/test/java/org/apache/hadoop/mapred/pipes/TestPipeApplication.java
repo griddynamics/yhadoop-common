@@ -13,6 +13,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -127,34 +128,31 @@ public class TestPipeApplication {
           "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
-      CombineOutputCollector<Text, Text> output = new CombineOutputCollector<Text, Text>(
+      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
           new Counters.Counter(), new Progress(), conf);
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
-      Writer<Text, Text> wr = new Writer<Text, Text>(conf, fs,
-          new Path(workSpace + File.separator + "outfile"), Text.class,
+      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
+          new Path(workSpace + File.separator + "outfile"), IntWritable.class,
           Text.class, null, null);
       output.setWriter(wr);
-      Application<WritableComparable<Object>, Writable, Text, Text> application = new Application<WritableComparable<Object>, Writable, Text, Text>(
-          conf, rReader, output, reporter, Text.class, Text.class);
+      conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
+      
+      Application<WritableComparable<Object>, Writable, IntWritable, Text> application = new Application<WritableComparable<Object>, Writable, IntWritable, Text>(
+          conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();
       
       
       application.waitForFinish();
       
-      
-System.out.println("1:"+System.currentTimeMillis());
 
       wr.close();
-      System.out.println("==================");
-      printFile(stderr);
-      System.out.println("==================");
-      printFile(stdout);
-      System.out.println("==================");
       
       assertEquals(1.0, reporter.getProgress(), 0.01);
       assertNotNull(reporter.getCounter("group", "name"));
       assertEquals(reporter.getStatus(), "PROGRESS");
+      
+      application.getDownlink().close();
     } finally {
       psw.deleteOnExit();
       psw.deleteOnExit();
@@ -163,17 +161,7 @@ System.out.println("1:"+System.currentTimeMillis());
     System.out.println("ok!");
   }
 
-  private void printFile(File f) throws IOException{
-    InputStream in= new FileInputStream(f);
-    byte [] ab = new byte[512];
-    int counter=0;
-    ByteArrayOutputStream output= new ByteArrayOutputStream();
-    while ((counter=in.read(ab))>=0){
-      output.write(ab, 0, counter);
-    }
-    in.close();
-    System.out.println("file:" + new String(output.toByteArray()));
-  }
+  
   private class Progress implements Progressable {
 
     @Override

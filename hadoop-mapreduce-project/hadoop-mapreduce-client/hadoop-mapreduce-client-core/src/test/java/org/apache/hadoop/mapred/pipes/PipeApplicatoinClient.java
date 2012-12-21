@@ -38,7 +38,6 @@ public class PipeApplicatoinClient {
       socket = new Socket(addr.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
-      System.out.println("port1:" + port);
 
       // try to read
       DataInputStream dataInput = new DataInputStream(input);
@@ -54,22 +53,18 @@ public class PipeApplicatoinClient {
       String s = createDigest("password".getBytes(), str);
 
       Text.writeString(dataout, s);
-      System.out.println("security ok"+System.currentTimeMillis());
 
       // start
 
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("code:" + i+":"+System.currentTimeMillis());
       i = WritableUtils.readVInt(dataInput);
 
-      System.out.println("version:" + i+":"+System.currentTimeMillis());
   // get conf
       // should be MessageType.SET_JOB_CONF.code
       i = WritableUtils.readVInt(dataInput);
           // array length
 
       int j = WritableUtils.readVInt(dataInput);
-      System.out.println("i:"+i+" j:"+j);
       for (i = 0; i < j; i++) {
         String key = Text.readString(dataInput);
         i++;
@@ -80,16 +75,18 @@ public class PipeApplicatoinClient {
 
       // output code
       WritableUtils.writeVInt(dataout, 50);
-
- //     iw.write(dataout);
-      System.out.println("2!"+":"+System.currentTimeMillis());
-
-      writeObject(new Text("key"), dataout);
-      System.out.println("3!"+":"+System.currentTimeMillis());
-  
+      IntWritable wt= new IntWritable();
+      wt.set(123);
+      writeObject(wt, dataout);
       writeObject(new Text("value"), dataout);
-      dataout.flush();
-      System.out.println("4!"+":"+System.currentTimeMillis());
+      
+    //  PARTITIONED_OUTPUT
+      WritableUtils.writeVInt(dataout, 51);
+      WritableUtils.writeVInt(dataout, 0);
+      writeObject(wt, dataout);
+      writeObject(new Text("value"), dataout);
+
+      
       // STATUS
 
       WritableUtils.writeVInt(dataout, 52);
