@@ -42,7 +42,7 @@ public class TestPipeApplication {
       TestPipeApplication.class.getName() + "-workSpace");
 
   @Test
-  public void testOne() throws Exception {
+  public void testOne() throws Throwable {
     JobConf conf = new JobConf();
 
     RecordReader<FloatWritable, NullWritable> rReader = new RecordReader<FloatWritable, NullWritable>() {
@@ -103,11 +103,7 @@ public class TestPipeApplication {
     os.close();
 
     TestTaskReporter reporter = new TestTaskReporter();
-    // Counters.Counter cnt =new Counters.Counter();
-    // Credentials credentials =
-    // UserGroupInformation.getCurrentUser().getCredentials();
-    // ApplicationTokenIdentifier identifier= new ApplicationTokenIdentifier();
-    // org.apache.hadoop.security.token.Token
+  
     File psw = new File("./jobTokenPassword");
     psw.deleteOnExit();
     psw = new File("./.jobTokenPassword.crc");
@@ -139,13 +135,15 @@ public class TestPipeApplication {
           new Path(workSpace + File.separator + "outfile"), Text.class,
           Text.class, null, null);
       output.setWriter(wr);
-      
       Application<WritableComparable<Object>, Writable, Text, Text> application = new Application<WritableComparable<Object>, Writable, Text, Text>(
           conf, rReader, output, reporter, Text.class, Text.class);
       application.getDownlink().flush();
+      
+      
+      application.waitForFinish();
+      
+      
 System.out.println("1:"+System.currentTimeMillis());
-      Thread.sleep(4000);
-      System.out.println("2:"+System.currentTimeMillis());
 
       wr.close();
       System.out.println("==================");
