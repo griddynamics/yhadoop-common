@@ -63,15 +63,16 @@ public class PipeApplicatoinClient {
       i = WritableUtils.readVInt(dataInput);
 
       System.out.println("version:" + i+":"+System.currentTimeMillis());
-
-      i = WritableUtils.readVInt(dataInput);
-      // get conf
+  // get conf
       // should be MessageType.SET_JOB_CONF.code
+      i = WritableUtils.readVInt(dataInput);
+          // array length
+
       int j = WritableUtils.readVInt(dataInput);
-      // array length
-      j = WritableUtils.readVInt(dataInput);
+      System.out.println("i:"+i+" j:"+j);
       for (i = 0; i < j; i++) {
         String key = Text.readString(dataInput);
+        i++;
         String value = Text.readString(dataInput);
         System.out.println("key:" + key + " value:" + value);
       }

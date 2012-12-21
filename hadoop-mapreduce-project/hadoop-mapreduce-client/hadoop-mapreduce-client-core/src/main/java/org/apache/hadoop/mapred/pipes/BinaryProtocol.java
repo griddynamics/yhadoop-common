@@ -298,6 +298,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
       list.add(itm.getValue());
     }
     WritableUtils.writeVInt(stream, list.size());
+    System.out.println("list.size():"+list.size());
     for(String entry: list){
       System.out.println("key:"+entry);
       Text.writeString(stream, entry);
