@@ -143,8 +143,10 @@ public class TestPipeApplication {
       Application<WritableComparable<Object>, Writable, Text, Text> application = new Application<WritableComparable<Object>, Writable, Text, Text>(
           conf, rReader, output, reporter, Text.class, Text.class);
       application.getDownlink().flush();
-
+System.out.println("1:"+System.currentTimeMillis());
       Thread.sleep(4000);
+      System.out.println("2:"+System.currentTimeMillis());
+
       wr.close();
       System.out.println("==================");
       printFile(stderr);

@@ -133,8 +133,12 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
                 + "complete. Ignoring");
             continue;
           } else if (cmd == MessageType.OUTPUT.code) {
+            System.out.println("3:"+System.currentTimeMillis());
+
             readObject(key);
             readObject(value);
+            System.out.println("4:"+System.currentTimeMillis());
+
             handler.output(key, value);
           } else if (cmd == MessageType.PARTITIONED_OUTPUT.code) {
             int part = WritableUtils.readVInt(inStream);

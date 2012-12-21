@@ -54,14 +54,15 @@ public class PipeApplicatoinClient {
       String s = createDigest("password".getBytes(), str);
 
       Text.writeString(dataout, s);
-      System.out.println("security ok");
+      System.out.println("security ok"+System.currentTimeMillis());
+
       // start
 
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("code:" + i);
+      System.out.println("code:" + i+":"+System.currentTimeMillis());
       i = WritableUtils.readVInt(dataInput);
 
-      System.out.println("version:" + i);
+      System.out.println("version:" + i+":"+System.currentTimeMillis());
 
       i = WritableUtils.readVInt(dataInput);
       // get conf
@@ -74,12 +75,13 @@ public class PipeApplicatoinClient {
         String value = Text.readString(dataInput);
         System.out.println("key:" + key + " value:" + value);
       }
+      System.out.println("cfg ok:" + ":"+System.currentTimeMillis());
 
       // output code
       WritableUtils.writeVInt(dataout, 50);
 
  //     iw.write(dataout);
-      System.out.println("2");
+      System.out.println("2!"+":"+System.currentTimeMillis());
 
       writeObject(new Text("key"), dataout);
       System.out.println("3");
