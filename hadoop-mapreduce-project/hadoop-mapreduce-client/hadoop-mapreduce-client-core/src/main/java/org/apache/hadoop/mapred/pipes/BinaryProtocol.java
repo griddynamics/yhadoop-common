@@ -168,6 +168,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
         } catch (InterruptedException e) {
           return;
         } catch (Throwable e) {
+          System.out.println("err:"+System.currentTimeMillis());
           LOG.error(StringUtils.stringifyException(e));
           handler.failed(e);
           return;
@@ -176,6 +177,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     }
     
     private void readObject(Writable obj) throws IOException {
+      System.out.println("obj:"+obj.getClass().getName()+":"+System.currentTimeMillis());
       int numBytes = WritableUtils.readVInt(inStream);
       System.out.println("numBytes:"+numBytes);
       byte[] buffer;

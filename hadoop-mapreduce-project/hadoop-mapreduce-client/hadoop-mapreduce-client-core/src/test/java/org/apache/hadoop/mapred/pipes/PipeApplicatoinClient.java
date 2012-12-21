@@ -154,7 +154,13 @@ System.out.println("writeObject");
       int len = t.getLength();
       System.out.println("writeObject Text:"+len);
       WritableUtils.writeVLong(stream, len);
+      stream.flush();
+      System.out.println("flush:"+System.currentTimeMillis());
+
       stream.write(t.getBytes(), 0, len);
+      stream.flush();
+      System.out.println("flush2:"+System.currentTimeMillis());
+
     } else if (obj instanceof BytesWritable) {
       BytesWritable b = (BytesWritable) obj;
       int len = b.getLength();
@@ -171,6 +177,7 @@ System.out.println("writeObject");
       stream.write(buffer.getData(), 0, length);
     }
     stream.flush();
+    System.out.println("flush3:"+System.currentTimeMillis());
 
   }
 
