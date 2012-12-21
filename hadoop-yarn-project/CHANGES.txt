@@ -13,9 +13,6 @@ Trunk - Unreleased
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
 
-    YARN-57. Allow process-tree based resource calculation et al. to be
-    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
-
   OPTIMAZATIONS
 
   BUG FIXES
@@ -32,6 +29,12 @@ Release 2.0.3-alpha - Unreleased
     applications on an RM bounce. (Bikas Saha via acmurthy)
 
   IMPROVEMENTS
+
+    YARN-223. Update process tree instead of getting new process trees.
+    (Radim Kolar via llu)
+
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
 
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
     vinodkv)
@@ -136,6 +139,21 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-264. y.s.rm.DelegationTokenRenewer attempts to renew token even 
     after removing an app. (kkambatl via tucu)
+
+    YARN-271. Fair scheduler hits IllegalStateException trying to reserve
+    different apps on same node. (Sandy Ryza via tomwhite)
+
+    YARN-272. Fair scheduler log messages try to print objects without 
+    overridden toString methods. (sandyr via tucu)
+
+    YARN-278. Fair scheduler maxRunningApps config causes no apps to make
+    progress. (sandyr via tucu)
+
+    YARN-282. Fair scheduler web UI double counts Apps Submitted. 
+    (sandyr via tucu)
+
+    YARN-283. Fair scheduler fails to get queue info without root prefix. 
+    (sandyr via tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
