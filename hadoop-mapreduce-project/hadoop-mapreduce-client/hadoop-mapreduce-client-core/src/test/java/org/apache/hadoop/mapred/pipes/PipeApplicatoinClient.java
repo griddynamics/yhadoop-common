@@ -84,11 +84,11 @@ public class PipeApplicatoinClient {
       System.out.println("2!"+":"+System.currentTimeMillis());
 
       writeObject(new Text("key"), dataout);
-      System.out.println("3");
+      System.out.println("3!"+":"+System.currentTimeMillis());
   
       writeObject(new Text("value"), dataout);
       dataout.flush();
-      System.out.println("4");
+      System.out.println("4!"+":"+System.currentTimeMillis());
       // STATUS
 
       WritableUtils.writeVInt(dataout, 52);
@@ -170,6 +170,8 @@ System.out.println("writeObject");
       WritableUtils.writeVInt(stream, length);
       stream.write(buffer.getData(), 0, length);
     }
+    stream.flush();
+
   }
 
 }
