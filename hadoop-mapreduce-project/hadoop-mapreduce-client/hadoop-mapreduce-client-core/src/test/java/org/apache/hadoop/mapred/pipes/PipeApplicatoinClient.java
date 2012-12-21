@@ -153,13 +153,13 @@ System.out.println("writeObject");
       Text t = (Text) obj;
       int len = t.getLength();
       System.out.println("writeObject Text:"+len);
-      WritableUtils.writeVInt(stream, len);
+      WritableUtils.writeVLong(stream, len);
       stream.write(t.getBytes(), 0, len);
     } else if (obj instanceof BytesWritable) {
       BytesWritable b = (BytesWritable) obj;
       int len = b.getLength();
       System.out.println("writeObject BytesWritable:"+len);
-      WritableUtils.writeVInt(stream, len);
+      WritableUtils.writeVLong(stream, len);
       stream.write(b.getBytes(), 0, len);
     } else {
       buffer.reset();
