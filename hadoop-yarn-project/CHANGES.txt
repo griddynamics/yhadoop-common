@@ -216,6 +216,10 @@ Release 0.23.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-285. Added a temporary plugin interface for RM to be able to redirect
+    to JobHistory server for apps that it no longer tracks. (Derek Dagit via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
