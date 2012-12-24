@@ -10,8 +10,6 @@ import java.net.Socket;
 import javax.crypto.SecretKey;
 
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -66,12 +64,10 @@ public class PipeApplicatoinRunabeClient {
 
       int j = WritableUtils.readVInt(dataInput);
       for (i = 0; i < j; i++) {
-        String key=Text.readString(dataInput);
+        Text.readString(dataInput);
         i++;
-        String val= Text.readString(dataInput);
-        System.out.println("key:"+key+"val:"+val);
+        Text.readString(dataInput);
       }
-      System.out.println("cfg  222s ok:" + ":"+System.currentTimeMillis());
 
 
 // RUN_MAP.code
@@ -79,23 +75,17 @@ public class PipeApplicatoinRunabeClient {
 
       i = WritableUtils.readVInt(dataInput);
       
-      System.out.println("3=:" +i);
       TestPipeApplication.FakeSplit split= new TestPipeApplication.FakeSplit() ; 
       readObject(split, dataInput);
-      System.out.println("split=:" +split);
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("numReduces=:" +i);
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("pipedInput=:" +i);
       
       //should be 2
       
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("2=:" +i);
       s= Text.readString(dataInput);
-      System.out.println("s=:" +s);
       s= Text.readString(dataInput);
-      System.out.println("s=:" +s);
+      
 /*
       
       System.out.println("start translate:" );
@@ -111,12 +101,9 @@ public class PipeApplicatoinRunabeClient {
       
       // done
       WritableUtils.writeVInt(dataout, 54);
-      dataout.writeFloat(50.5f);
-      System.out.println("14");
   
       dataout.flush();
       dataout.close();
-      System.out.println("15");
 
     } catch (Exception x) {
       x.printStackTrace();
@@ -158,42 +145,5 @@ public class PipeApplicatoinRunabeClient {
   }
 
 
-  private void writeObject(Writable obj, DataOutputStream stream)
-      throws IOException {
-    // For Text and BytesWritable, encode them directly, so that they end up
-    // in C++ as the natural translations.
-    DataOutputBuffer buffer = new DataOutputBuffer();
-System.out.println("writeObject");
-    if (obj instanceof Text) {
-      Text t = (Text) obj;
-      int len = t.getLength();
-      System.out.println("writeObject Text:"+len);
-      WritableUtils.writeVLong(stream, len);
-      stream.flush();
-      System.out.println("flush:"+System.currentTimeMillis());
-
-      stream.write(t.getBytes(), 0, len);
-      stream.flush();
-      System.out.println("flush2:"+System.currentTimeMillis());
-
-    } else if (obj instanceof BytesWritable) {
-      BytesWritable b = (BytesWritable) obj;
-      int len = b.getLength();
-      System.out.println("writeObject BytesWritable:"+len);
-      WritableUtils.writeVLong(stream, len);
-      stream.write(b.getBytes(), 0, len);
-    } else {
-      buffer.reset();
-      obj.write(buffer);
-      int length = buffer.getLength();
-      System.out.println("writeObject :"+length);
-
-      WritableUtils.writeVInt(stream, length);
-      stream.write(buffer.getData(), 0, length);
-    }
-    stream.flush();
-    System.out.println("flush3:"+System.currentTimeMillis());
-
-  }
 
 }
