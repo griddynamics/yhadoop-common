@@ -20,16 +20,102 @@ package org.apache.hadoop.io;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
 import junit.framework.TestCase;
 
 public class TestMapFile extends TestCase {
-  private static Configuration conf = new Configuration();
-
+  private static Configuration conf = new Configuration();           
+    
+  public void testGetClosestOnCurrentApi() throws Exception {
+    Path dirName = new Path(System.getProperty("test.build.data",".") + getName() + ".mapfile");	
+	MapFile.Writer.setIndexInterval(conf, 4);
+	MapFile.Writer writer = new MapFile.Writer(conf, dirName,
+			MapFile.Writer.keyClass(Text.class),
+			MapFile.Writer.valueClass(Text.class));						
+	
+	assertEquals(4, writer.getIndexInterval());		
+	int FIRST_KEY = 1;
+	//Test keys: 11,21,31,...,91
+	for (int i = FIRST_KEY; i < 100; i += 10) {
+      String iStr = Integer.toString(i);
+      Text t = new Text(iStr);            
+      writer.append(t, t);
+    }
+	writer.close();
+	
+	MapFile.Reader reader = new MapFile.Reader(dirName, conf,			
+		MapFile.Reader.comparator(new WritableComparator(Text.class)));	
+	
+	Text key = new Text("55");
+    Text value = new Text();
+    
+    // Test get closest with step forward
+    Text closest = (Text)reader.getClosest(key, value);
+    assertEquals(new Text("61"), closest);
+    
+    // Test get closest with step back
+    closest = (Text)reader.getClosest(key, value, true);
+    assertEquals(new Text("51"), closest);
+        
+    // Test get closest when we pass explicit key
+    final Text explicitKey = new Text("21");
+    closest = (Text)reader.getClosest(explicitKey, value);
+    assertEquals(new Text("21"), explicitKey);   
+            
+    // Test what happens at boundaries.  Assert if searching a key that is
+    // less than first key in the mapfile, that the first key is returned.
+    key = new Text("00");
+    closest = (Text)reader.getClosest(key, value);
+    assertEquals(FIRST_KEY, Integer.parseInt(closest.toString()));
+    
+    // Assert that null is returned if key is > last entry in mapfile.
+    key = new Text("92");
+    closest = (Text)reader.getClosest(key, value);
+    assertNull("Not null key in testGetClosestWithNewCode", closest);
+    
+    // If we were looking for the key before, we should get the last key
+    closest = (Text)reader.getClosest(key, value, true);
+    assertEquals(new Text("91"), closest);    
+  }
+  
+  public void testMidKeyOnCurrentApi() throws Exception {
+    // Write a mapfile of simple data: keys are 
+    Path dirName = new Path(System.getProperty("test.build.data",".") +
+      getName() + ".mapfile");
+    MapFile.Writer writer = new MapFile.Writer(conf, dirName,
+			MapFile.Writer.keyClass(IntWritable.class),
+			MapFile.Writer.valueClass(IntWritable.class));
+           
+    //0,1,....9
+    int SIZE = 10;
+    for (int i = 0; i < SIZE; i++) 
+	  writer.append(new IntWritable(i), new IntWritable(i));
+    writer.close();
+    
+    MapFile.Reader reader = new MapFile.Reader(dirName, conf,			
+    		MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));
+    
+    assertEquals(new IntWritable((SIZE-1)/2), reader.midKey());            
+  }
+  /*
+  public void testRename() {	  
+    final String NEW_FILE_PATH = "./.testRenamed.mapfile"; 
+    final String OLD_FILE_PATH = "./.testRename.mapfile";
+	Path dirName = new Path(System.getProperty("test.build.data",".") + getName()+ "" + ".mapfile");
+	try {
+	    FileSystem fs = FileSystem.getLocal(conf);  
+	    MapFile.Writer writer = new MapFile.Writer(conf, dirName, 
+			  MapFile.Writer.keyClass(IntWritable.class), MapFile.Writer.valueClass(IntWritable.class));
+	    writer.close();
+		MapFile.rename(fs, OLD_FILE_PATH, NEW_FILE_PATH);
+	} catch(IOException ex) {
+	  fail(ex.getMessage());	
+	}
+  } 
+  */      
   /**
    * Test getClosest feature.
    * @throws Exception
-   */
+   */    
   public void testGetClosest() throws Exception {
     // Write a mapfile of simple data: keys are 
     Path dirName = new Path(System.getProperty("test.build.data",".") +
@@ -87,7 +173,7 @@ public class TestMapFile extends TestCase {
     closest = (Text)reader.getClosest(key, value, true);
     assertEquals(new Text("90"), closest);
   }
-
+    
   public void testMidKey() throws Exception {
     // Write a mapfile of simple data: keys are 
     Path dirName = new Path(System.getProperty("test.build.data",".") +
@@ -104,8 +190,7 @@ public class TestMapFile extends TestCase {
       conf);
     assertEquals(new IntWritable(1), reader.midKey());
   }
-
-
+  
   public void testMidKeyEmpty() throws Exception {
     // Write a mapfile of simple data: keys are 
     Path dirName = new Path(System.getProperty("test.build.data",".") +
