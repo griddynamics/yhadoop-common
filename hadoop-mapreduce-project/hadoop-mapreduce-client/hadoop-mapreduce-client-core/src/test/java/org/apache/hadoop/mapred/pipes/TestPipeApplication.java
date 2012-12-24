@@ -12,6 +12,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -32,6 +33,7 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -85,7 +87,7 @@ public class TestPipeApplication {
       psw1.deleteOnExit();
     }
   }
-
+@Ignore
   @Test
   public void testOne() throws Throwable {
     JobConf conf = new JobConf();
@@ -156,6 +158,34 @@ public class TestPipeApplication {
     System.out.println("ok!");
   }
 
+  
+  @Ignore
+  @Test
+  public void testSubmitter() throws Exception {
+    MiniDFSCluster dfscluster=null;
+    try{
+    JobConf conf = new JobConf();
+    System.setProperty("test.build.data", "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
+    conf.set("hadoop.log.dir", "target/tmp");
+    
+    conf.set(Submitter.IS_JAVA_MAP, "false");
+    conf.set(Submitter.IS_JAVA_RW, "false");
+    conf.set(Submitter.IS_JAVA_REDUCE, "false");
+    conf.set(Submitter.IS_JAVA_RR, "false");
+    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinRunabeClient");
+    conf.set(Submitter.EXECUTABLE, fCommand.getAbsolutePath());
+    
+     dfscluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
+    
+    
+   
+    }finally{
+      if (dfscluster != null) {
+        dfscluster.shutdown();
+      }
+    }
+  }
+
   private class Progress implements Progressable {
 
     @Override
@@ -165,7 +195,7 @@ public class TestPipeApplication {
 
   }
 
-  private File getFileCommand( String clazz ) throws Exception {
+  private File getFileCommand(String clazz) throws Exception {
     String classpath = System.getProperty("java.class.path");
     File fCommand = new File(workSpace + File.separator + "cache.sh");
     fCommand.deleteOnExit();
@@ -176,8 +206,7 @@ public class TestPipeApplication {
     OutputStream os = new FileOutputStream(fCommand);
     os.write("#!/bin/sh \n".getBytes());
 
-    os.write(("java -cp " + classpath + " "+clazz)
-        .getBytes());
+    os.write(("java -cp " + classpath + " " + clazz).getBytes());
     os.flush();
     os.close();
     FileUtil.chmod(fCommand.getAbsolutePath(), "700");
