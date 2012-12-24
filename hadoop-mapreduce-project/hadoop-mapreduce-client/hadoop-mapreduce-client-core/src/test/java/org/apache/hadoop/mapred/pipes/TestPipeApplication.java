@@ -12,7 +12,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -162,8 +161,7 @@ public class TestPipeApplication {
   @Ignore
   @Test
   public void testSubmitter() throws Exception {
-    MiniDFSCluster dfscluster=null;
-    try{
+
     JobConf conf = new JobConf();
     System.setProperty("test.build.data", "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
     conf.set("hadoop.log.dir", "target/tmp");
@@ -174,16 +172,7 @@ public class TestPipeApplication {
     conf.set(Submitter.IS_JAVA_RR, "false");
     File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinRunabeClient");
     conf.set(Submitter.EXECUTABLE, fCommand.getAbsolutePath());
-    
-     dfscluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
-    
-    
-   
-    }finally{
-      if (dfscluster != null) {
-        dfscluster.shutdown();
-      }
-    }
+  
   }
 
   private class Progress implements Progressable {
