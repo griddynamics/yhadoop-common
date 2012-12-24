@@ -140,6 +140,21 @@ Release 2.0.3-alpha - Unreleased
     YARN-264. y.s.rm.DelegationTokenRenewer attempts to renew token even 
     after removing an app. (kkambatl via tucu)
 
+    YARN-271. Fair scheduler hits IllegalStateException trying to reserve
+    different apps on same node. (Sandy Ryza via tomwhite)
+
+    YARN-272. Fair scheduler log messages try to print objects without 
+    overridden toString methods. (sandyr via tucu)
+
+    YARN-278. Fair scheduler maxRunningApps config causes no apps to make
+    progress. (sandyr via tucu)
+
+    YARN-282. Fair scheduler web UI double counts Apps Submitted. 
+    (sandyr via tucu)
+
+    YARN-283. Fair scheduler fails to get queue info without root prefix. 
+    (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -201,6 +216,10 @@ Release 0.23.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-285. Added a temporary plugin interface for RM to be able to redirect
+    to JobHistory server for apps that it no longer tracks. (Derek Dagit via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -225,6 +244,9 @@ Release 0.23.6 - UNRELEASED
 
     YARN-266. RM and JHS Web UIs are blank because AppsBlock is not escaping
     string properly (Ravi Prakash via jlowe)
+
+    YARN-280. RM does not reject app submission with invalid tokens 
+    (Daryn Sharp via tgraves)
 
 Release 0.23.5 - UNRELEASED
 

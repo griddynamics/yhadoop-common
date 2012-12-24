@@ -143,6 +143,9 @@ Trunk (Unreleased)
 
     HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
 
+    HADOOP-9162. Add utility to check native library availability.
+    (Binglin Chang via suresh)
+
   BUG FIXES
 
     HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
@@ -414,6 +417,8 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.
     (Jonathan Allen via suresh)
+
+    HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
 
   OPTIMIZATIONS
 
@@ -1221,6 +1226,8 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
     Veselovsky via bobby)
+
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
 Release 0.23.5 - UNRELEASED
 
