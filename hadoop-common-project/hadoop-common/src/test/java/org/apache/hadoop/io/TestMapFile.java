@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.io;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -25,14 +28,22 @@ import junit.framework.TestCase;
 public class TestMapFile extends TestCase {
   private static Configuration conf = new Configuration();           
     
-  public void testGetClosestOnCurrentApi() throws Exception {
-    Path dirName = new Path(System.getProperty("test.build.data",".") + getName() + ".mapfile");	
+  private MapFile.Writer createWriter(String fileName, 
+		  Class<? extends WritableComparable<?>> keyClass, Class<? extends Writable> valueClass) throws IOException {
+	Path dirName = new Path(System.getProperty("test.build.data",".") + fileName);
 	MapFile.Writer.setIndexInterval(conf, 4);
-	MapFile.Writer writer = new MapFile.Writer(conf, dirName,
-			MapFile.Writer.keyClass(Text.class),
-			MapFile.Writer.valueClass(Text.class));						
-	
-	assertEquals(4, writer.getIndexInterval());		
+	return new MapFile.Writer(conf, dirName,
+		MapFile.Writer.keyClass(keyClass), MapFile.Writer.valueClass(valueClass));	  
+  }
+  
+  private MapFile.Reader createReader(String fileName, Class<? extends WritableComparable<?>> keyClass) throws IOException {
+    Path dirName = new Path(System.getProperty("test.build.data",".") + fileName);
+	return new MapFile.Reader(dirName, conf, MapFile.Reader.comparator(new WritableComparator(keyClass)));
+  }
+  
+  public void testGetClosestOnCurrentApi() throws Exception {    
+    final String TEST_PREFIX = "testGetClosestOnCurrentApi.mapfile";
+    MapFile.Writer writer = createWriter(TEST_PREFIX, Text.class, Text.class);        								
 	int FIRST_KEY = 1;
 	//Test keys: 11,21,31,...,91
 	for (int i = FIRST_KEY; i < 100; i += 10) {
@@ -42,9 +53,7 @@ public class TestMapFile extends TestCase {
     }
 	writer.close();
 	
-	MapFile.Reader reader = new MapFile.Reader(dirName, conf,			
-		MapFile.Reader.comparator(new WritableComparator(Text.class)));	
-	
+	MapFile.Reader reader = createReader(TEST_PREFIX, Text.class);		
 	Text key = new Text("55");
     Text value = new Text();
     
@@ -79,39 +88,137 @@ public class TestMapFile extends TestCase {
   
   public void testMidKeyOnCurrentApi() throws Exception {
     // Write a mapfile of simple data: keys are 
-    Path dirName = new Path(System.getProperty("test.build.data",".") +
-      getName() + ".mapfile");
-    MapFile.Writer writer = new MapFile.Writer(conf, dirName,
-			MapFile.Writer.keyClass(IntWritable.class),
-			MapFile.Writer.valueClass(IntWritable.class));
-           
+	final String TEST_PREFIX = "testMidKeyOnCurrentApi.mapfile";
+    MapFile.Writer writer = createWriter(TEST_PREFIX, IntWritable.class, IntWritable.class);           
     //0,1,....9
     int SIZE = 10;
     for (int i = 0; i < SIZE; i++) 
 	  writer.append(new IntWritable(i), new IntWritable(i));
     writer.close();
     
-    MapFile.Reader reader = new MapFile.Reader(dirName, conf,			
-    		MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));
-    
+    MapFile.Reader reader = createReader(TEST_PREFIX, IntWritable.class);    
     assertEquals(new IntWritable((SIZE-1)/2), reader.midKey());            
   }
-  /*
-  public void testRename() {	  
-    final String NEW_FILE_PATH = "./.testRenamed.mapfile"; 
-    final String OLD_FILE_PATH = "./.testRename.mapfile";
-	Path dirName = new Path(System.getProperty("test.build.data",".") + getName()+ "" + ".mapfile");
+  
+  public void testRename() {	 
+    final String NEW_FILE_NAME = "test-new.mapfile"; 
+    final String OLD_FILE_NAME = "test-old.mapfile";    
+    final String PATH_PREFIX = System.getProperty("test.build.data",".");	
 	try {
 	    FileSystem fs = FileSystem.getLocal(conf);  
-	    MapFile.Writer writer = new MapFile.Writer(conf, dirName, 
-			  MapFile.Writer.keyClass(IntWritable.class), MapFile.Writer.valueClass(IntWritable.class));
+	    MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class); 	
 	    writer.close();
-		MapFile.rename(fs, OLD_FILE_PATH, NEW_FILE_PATH);
+		MapFile.rename(fs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX + NEW_FILE_NAME);
+		MapFile.delete(fs, PATH_PREFIX + NEW_FILE_NAME);		
 	} catch(IOException ex) {
 	  fail(ex.getMessage());	
 	}
   } 
-  */      
+  
+  public void testKeyValueClasses() {	
+	Class<? extends WritableComparable<?>> keyClass = IntWritable.class;
+	Class<?> valueClass = Text.class;
+	try {
+	  createWriter("testKeyValueClasses.mapfile", IntWritable.class, Text.class); 			  			 
+	  assertNotNull("writer key class null error !!!", MapFile.Writer.keyClass(keyClass));
+	  assertNotNull("writer value class null error !!!", MapFile.Writer.valueClass(valueClass));	  
+	} catch(IOException ex) {
+		  fail(ex.getMessage());	
+	}
+  }
+    
+  public void testReaderWithWrongKeyClass() {    
+	try {	  	 
+	  final String TEST_METHOD_KEY = "testReaderWithWrongKeyClass.mapfile";
+	  deleteFileIfExists(TEST_METHOD_KEY);
+	  MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class, Text.class);	  
+	  
+	  for (int i = 0; i < 10; i++)
+	    writer.append(new IntWritable(i), new Text("value" + i));
+	  writer.close();
+	  
+	  MapFile.Reader reader = createReader(TEST_METHOD_KEY, Text.class);	  	  
+	  reader.getClosest(new Text("2"), new Text(""));
+	  fail("no excepted exception in testReaderWithWrongKeyClass !!!");
+	} catch (IOException ex) { 
+	  /*for pass test this should be throw*/	
+	}	
+  }     
+  
+  public void testReaderWithWrongValueClass() {
+    MapFile.Writer writer = null;
+	try {
+     final String TEST_METHOD_KEY = "testReaderWithWrongValueClass.mapfile";
+     deleteFileIfExists(TEST_METHOD_KEY);
+     writer = createWriter(TEST_METHOD_KEY, IntWritable.class, Text.class);
+     writer.append(new IntWritable(0), new IntWritable(0));     
+     fail("no excepted exception in testReaderWithWrongKeyClass !!!");
+   } catch (IOException ex) {	   
+	 /*for pass test this should be throw*/	   
+   }	  
+  }
+  
+  public void testReaderKeyIteration() {	  
+    final String TEST_METHOD_KEY = "testReaderKeyIteration.mapfile";
+    int SIZE = 10;
+    int ITERATIONS = 5;
+    try {
+      deleteFileIfExists(TEST_METHOD_KEY);
+	  MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class, Text.class);
+	  int start = 0;
+	  for (int i = 0; i < SIZE; i++)
+	    writer.append(new IntWritable(i), new Text("Value:" + i));    	
+	  writer.close();    	    	
+	
+	  MapFile.Reader reader = createReader(TEST_METHOD_KEY, IntWritable.class);
+	  //test iteration	  
+	  Writable startValue = new Text("Value:" + start);    	
+	  int i = 0;
+	  while(i++ < ITERATIONS) {
+		IntWritable key = new IntWritable(start);
+		Writable value = startValue;
+	    while(reader.next(key, value)) {
+	      assertNotNull(key);
+	      assertNotNull(value);
+	    }
+	    reader.reset();
+	  }	  
+      assertTrue("reader seek error !!!", reader.seek(new IntWritable(SIZE/2)));      
+      assertFalse("reader seek error !!!", reader.seek(new IntWritable(SIZE*2)));
+    } catch(IOException ex) {
+	  fail("reader seek error !!!");  
+    }
+  }
+
+  private boolean deleteFileIfExists(String fileName) {
+	File file = new File(".","." + fileName);
+    if (file.exists())
+      return file.delete();
+    return false;
+  }
+  
+  public void testFix() {
+    try {
+      FileSystem fs = FileSystem.getLocal(conf);
+      final String INDEX_LESS_MAP_FILE = "testFix.mapfile";
+      int PAIR_SIZE = 20;
+      Path dir = new Path(System.getProperty("test.build.data",".") + INDEX_LESS_MAP_FILE);
+	  MapFile.Writer writer = createWriter(INDEX_LESS_MAP_FILE, IntWritable.class, Text.class);
+	  for (int i = 0; i < PAIR_SIZE; i ++)
+		  writer.append(new IntWritable(0), new Text("value"));	  
+	  writer.close();
+	  
+	  File indexFile = new File(".", "." + INDEX_LESS_MAP_FILE);
+	  boolean tryToFix = false;
+	  if (indexFile.exists())
+		  tryToFix = indexFile.delete();
+	  
+	  if (tryToFix)
+	    assertTrue("testFix error !!!", MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);	  
+    } catch (Exception ex) {
+      fail("testFix error !!!");
+    }
+  } 
   /**
    * Test getClosest feature.
    * @throws Exception
