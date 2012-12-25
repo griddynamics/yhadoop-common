@@ -43,6 +43,7 @@ public class TestMapFile extends TestCase {
   
   public void testGetClosestOnCurrentApi() throws Exception {    
     final String TEST_PREFIX = "testGetClosestOnCurrentApi.mapfile";
+    deleteFileIfExists(TEST_PREFIX);
     MapFile.Writer writer = createWriter(TEST_PREFIX, Text.class, Text.class);        								
 	int FIRST_KEY = 1;
 	//Test keys: 11,21,31,...,91
