@@ -20,6 +20,8 @@ import org.apache.hadoop.util.Time;
 import org.junit.After;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
+
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,16 +50,21 @@ public class TestUserGroupInformationWithTicketCache {
   
   @BeforeClass
   public static void beforeClass() {
-    // NB: skip the test if corresponding properties are not specified: 
-    final String userProperty = System.getProperty("user.principal");
-    assumeTrue(userProperty != null);
-    
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    javax.security.auth.login.Configuration.setConfiguration(null);
   }
   
   @Before
   public void before() {
+    // NB: skip the test if corresponding properties are not specified: 
+    final String userProperty = System.getProperty("user.principal");
+    assumeTrue(userProperty != null);
+    
     // cleanup the login state:
     UserGroupInformation.setLoginUser(null);
     
