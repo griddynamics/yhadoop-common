@@ -26,8 +26,6 @@ public class PipeApplicatoinRunabeClient {
   public void binaryProtocolStub() {
     Socket socket =null;
     try {
-System.out.println("ttttt"+System.getenv("mapreduce.pipes.command.port"));
-System.out.println("xx"+System.getenv());
 
       int port = Integer 
           .parseInt(System.getenv("mapreduce.pipes.command.port"));
