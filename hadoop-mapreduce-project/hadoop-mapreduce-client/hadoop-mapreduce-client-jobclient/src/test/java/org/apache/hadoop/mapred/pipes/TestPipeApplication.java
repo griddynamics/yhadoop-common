@@ -3,13 +3,11 @@ package org.apache.hadoop.mapred.pipes;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.net.HttpURLConnection;
 import java.security.Permission;
 
 import org.apache.hadoop.conf.Configuration;
@@ -17,7 +15,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -28,8 +25,6 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Counters.Group;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -41,11 +36,9 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import static org.mockito.Mock.*;
 
 import static org.junit.Assert.*;
 
@@ -53,7 +46,6 @@ public class TestPipeApplication {
   private static File workSpace = new File("target",
       TestPipeApplication.class.getName() + "-workSpace");
 
-  @Ignore
   @Test
   public void testRunner() throws Exception {
 
@@ -107,7 +99,6 @@ public class TestPipeApplication {
     }
   }
 
-  @Ignore
   @Test
   public void testOne() throws Throwable {
     JobConf conf = new JobConf();
