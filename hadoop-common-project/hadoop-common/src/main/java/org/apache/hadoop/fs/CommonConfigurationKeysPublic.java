@@ -221,5 +221,12 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_SECURITY_SERVICE_USER_NAME_KEY =
     "hadoop.security.service.user.name.key";
+  
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN =
+          "hadoop.kerberos.min.seconds.before.relogin";
+  /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
+  public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
+          60; 
 }
 
