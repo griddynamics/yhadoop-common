@@ -57,7 +57,7 @@ public class TestUserGroupInformation {
    * class that simply throws an exception will ensure that the tests fail
    * if UGI uses the static default config instead of its own config
    */
-  private static class DummyLoginConfiguration extends
+  static class DummyLoginConfiguration extends
     javax.security.auth.login.Configuration
   {
     @Override
