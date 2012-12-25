@@ -52,6 +52,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -66,6 +67,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * User and group information for Hadoop.
  * This class wraps around a JAAS Subject and provides methods to determine the
@@ -79,7 +82,11 @@ public class UserGroupInformation {
   /**
    * Percentage of the ticket window to use before we renew ticket.
    */
-  private static final float TICKET_RENEW_WINDOW = 0.80f;
+  private static float TICKET_RENEW_WINDOW = 0.80f;
+  @VisibleForTesting
+  static void setTicketRenewWindowFactor(float ticketRenewWindowFactor) {
+    TICKET_RENEW_WINDOW = ticketRenewWindowFactor;
+  }
   static final String HADOOP_USER_NAME = "HADOOP_USER_NAME";
   static final String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
   
@@ -195,7 +202,12 @@ public class UserGroupInformation {
   private static AuthenticationMethod authenticationMethod;
   /** Server-side groups fetching service */
   private static Groups groups;
-  /** Min time (in seconds) before relogin for Kerberos */
+  /** Min time (in *milliseconds*) before relogin for Kerberos.
+   * Note, however, that 
+   * {@link CommonConfigurationKeysPublic#HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN}
+   * and {@link CommonConfigurationKeysPublic#HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT}
+   * are specified in *seconds*. 
+   * */
   private static long kerberosMinSecondsBeforeRelogin;
   /** The configuration to use */
   private static Configuration conf;
@@ -737,9 +749,10 @@ public class UserGroupInformation {
                   LOG.debug("Current time is " + now);
                   LOG.debug("Next refresh is " + nextRefresh);
                 }
-                if (now < nextRefresh) {
-                  Thread.sleep(nextRefresh - now);
-                }
+                long toSleep = nextRefresh - now;
+                if (toSleep > 0) {
+                  Thread.sleep(toSleep);
+                } 
                 Shell.execCommand(cmd, "-R");
                 if(LOG.isDebugEnabled()) {
                   LOG.debug("renewed ticket");
@@ -990,7 +1003,7 @@ public class UserGroupInformation {
     if (now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
           "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) +
-          " seconds before.");
+          " second(s) before.");
       return false;
     }
     return true;
