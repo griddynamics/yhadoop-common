@@ -33,7 +33,7 @@
 
   <properties>
     <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
-    <kerberos.realm>LOCALHOST</kerberos.realm>
+    <kerberos.realm>EXAMPLE.COM</kerberos.realm>
   </properties>
 
   <dependencies>
