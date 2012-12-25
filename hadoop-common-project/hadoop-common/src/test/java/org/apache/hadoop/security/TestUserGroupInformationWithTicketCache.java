@@ -226,12 +226,16 @@ public class TestUserGroupInformationWithTicketCache {
   }
 
   private void clearTGT() {
-    final File cacheFile = new File(ticketCacheFilePath);
-    // delete the cache file, if any:
-    if (cacheFile.exists()) {
-      cacheFile.delete();
+    // NB: it may be null in case if the property is not given,
+    // so the test gets skipped, but #after() is executed anyway.
+    if (ticketCacheFilePath != null) {
+      final File cacheFile = new File(ticketCacheFilePath);
+      // delete the cache file, if any:
+      if (cacheFile.exists()) {
+        cacheFile.delete();
+      }
+      assertTrue(!cacheFile.exists());
     }
-    assertTrue(!cacheFile.exists());
   }
   
   private void cacheTGT(final String princ) throws Exception {
