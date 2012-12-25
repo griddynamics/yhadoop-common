@@ -40,6 +40,8 @@ import org.junit.Test;
  */
 public class TestUserGroupInformationWithTicketCache {
 
+  private static javax.security.auth.login.Configuration originalConfiguration; 
+  
   private String principal;
   private String realm;
   private String fullPrincipalName; 
@@ -50,13 +52,15 @@ public class TestUserGroupInformationWithTicketCache {
   
   @BeforeClass
   public static void beforeClass() {
+    originalConfiguration = javax.security.auth.login.Configuration.getConfiguration();
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
   }
 
   @AfterClass
   public static void afterClass() {
-    javax.security.auth.login.Configuration.setConfiguration(null);
+    // restore the login configuration:
+    javax.security.auth.login.Configuration.setConfiguration(originalConfiguration);
   }
   
   @Before
@@ -107,6 +111,7 @@ public class TestUserGroupInformationWithTicketCache {
     // Reset the UGI state to initial:
     UserGroupInformation.setLoginUser(null);
     UserGroupInformation.setTicketRenewWindowFactor(0.8f);
+    clearTGT();
   }
   
   private void checkFileReadable(String path) {
@@ -224,17 +229,21 @@ public class TestUserGroupInformationWithTicketCache {
     assertTrue("Renew count "+renewCount+" did not reach expected value of 3.", 
         renewCount >= 3);
   }
-  
-  private void cacheTGT(String princ) throws Exception {
-    // ensure once again the keytab file exists:
-    checkFileReadable(ktbFilePath);
-    
+
+  private void clearTGT() {
     final File cacheFile = new File(ticketCacheFilePath);
     // delete the cache file, if any:
     if (cacheFile.exists()) {
       cacheFile.delete();
     }
     assertTrue(!cacheFile.exists());
+  }
+  
+  private void cacheTGT(final String princ) throws Exception {
+    // ensure once again the keytab file exists:
+    checkFileReadable(ktbFilePath);
+    
+    clearTGT();
     
     Format format = new MessageFormat(kinitCommandFormat);
     String command = format.format(new String[] { ktbFilePath, ticketCacheFilePath, princ});
