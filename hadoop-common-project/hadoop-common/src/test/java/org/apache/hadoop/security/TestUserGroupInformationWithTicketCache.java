@@ -80,8 +80,6 @@ public class TestUserGroupInformationWithTicketCache {
   }
   
   private void initParameters() {
-    System.setProperty("sun.security.krb5.debug", "true"); // turn debug on
-    
     principal = getPropertyAndCheck("user.principal", null);
     realm = getPropertyAndCheck("user.realm", "EXAMPLE.COM");
     fullPrincipalName = principal + "@" + realm;
