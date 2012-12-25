@@ -1,17 +1,20 @@
 package org.apache.hadoop.mapred.pipes;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -79,6 +82,12 @@ public class TestPipeApplication {
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
       TestTaskReporter reporter = new TestTaskReporter();
       PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text> runner = new PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text>();
+      TaskAttemptID taskid =  TaskAttemptID.forName("attempt_001_02_r03_04_05");
+      File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
+      if(!stdout.getParentFile().exists()){
+        stdout.getParentFile().mkdirs();
+      }
+      
       runner.configure(conf);
       runner.run(rReader, output, reporter);
     } finally {
@@ -86,7 +95,6 @@ public class TestPipeApplication {
       psw1.deleteOnExit();
     }
   }
-@Ignore
   @Test
   public void testOne() throws Throwable {
     JobConf conf = new JobConf();
@@ -158,23 +166,42 @@ public class TestPipeApplication {
   }
 
   
-  @Ignore
   @Test
   public void testSubmitter() throws Exception {
 
     JobConf conf = new JobConf();
+   MiniDFSCluster dfs = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
+   File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinRunabeClient");
+    FileSystem fs = dfs.getFileSystem();
+    fs.delete(new Path(fCommand.getParent()), true);
+    Path wordExec = new Path("testing/bin/application");
+    fs.copyFromLocalFile(new Path(fCommand.getAbsolutePath()), wordExec); 
     System.setProperty("test.build.data", "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
     conf.set("hadoop.log.dir", "target/tmp");
+    
     
     conf.set(Submitter.IS_JAVA_MAP, "false");
     conf.set(Submitter.IS_JAVA_RW, "false");
     conf.set(Submitter.IS_JAVA_REDUCE, "false");
     conf.set(Submitter.IS_JAVA_RR, "false");
-    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinRunabeClient");
     conf.set(Submitter.EXECUTABLE, fCommand.getAbsolutePath());
+    Submitter.setExecutable(conf, fs.makeQualified(wordExec).toString());
+
+ //   assertEquals("/opt/yahoo/yhadoop-common/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/target/org.apache.hadoop.mapred.pipes.TestPipeApplication-workSpace/cache.sh", Submitter.getExecutable(conf));
   
+    /*PrintStream oldps= System.out;
+   ByteArrayOutputStream out= new ByteArrayOutputStream();
+   System.setOut(new PrintStream(out));
+    Submitter.main(new String[0]);
+    System.setOut(oldps);
+    */
+    Submitter.runJob(conf);
+
+    System.out.println("ok!");
   }
 
+  
+  
   private class Progress implements Progressable {
 
     @Override

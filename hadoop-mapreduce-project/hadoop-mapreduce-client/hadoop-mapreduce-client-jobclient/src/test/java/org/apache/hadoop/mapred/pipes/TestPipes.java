@@ -19,7 +19,10 @@
 package org.apache.hadoop.mapred.pipes;
 
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -36,6 +39,7 @@ import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.Utils;
@@ -44,13 +48,17 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Ignore;
+import org.junit.Test;
 
 import junit.framework.TestCase;
-@Ignore
+//@Ignore
 public class TestPipes extends TestCase {
   private static final Log LOG =
     LogFactory.getLog(TestPipes.class.getName());
+  private static File workSpace = new File("target",
+      TestPipes.class.getName() + "-workSpace");
   
+  /*
   private static Path cppExamples = 
     new Path(System.getProperty("install.c++.examples"));
   static Path wordCountSimple = 
@@ -59,7 +67,7 @@ public class TestPipes extends TestCase {
     new Path(cppExamples, "bin/wordcount-part");
   static Path wordCountNoPipes = 
     new Path(cppExamples,"bin/wordcount-nopipe");
-  
+  */
   static Path nonPipedOutDir;
   
   static void cleanup(FileSystem fs, Path p) throws IOException {
@@ -67,11 +75,10 @@ public class TestPipes extends TestCase {
     assertFalse("output not cleaned up", fs.exists(p));
   }
 
-  public void testPipes() throws IOException {
-    if (System.getProperty("compile.c++") == null) {
-      LOG.info("compile.c++ is not defined, so skipping TestPipes");
-      return;
-    }
+  
+  @Test
+  public void testPipes() throws Exception {
+   
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     Path inputPath = new Path("testing/in");
@@ -79,17 +86,26 @@ public class TestPipes extends TestCase {
     try {
       final int numSlaves = 2;
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, numSlaves, true, null);
+   //   dfs = new MiniDFSCluster(conf, numSlaves, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(numSlaves).format(true).build();
       mr = new MiniMRCluster(numSlaves, dfs.getFileSystem().getUri().toString(), 1);
+      
+     //  MiniMRClientClusterFactory.create(caller, noOfNMs, conf)
+      File fcommand=getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinClient");
+      Path wordCountSimple= new Path(fcommand.getAbsolutePath());
       writeInputFile(dfs.getFileSystem(), inputPath);
       runProgram(mr, dfs, wordCountSimple, 
                  inputPath, outputPath, 3, 2, twoSplitOutput, null);
       cleanup(dfs.getFileSystem(), outputPath);
-      runProgram(mr, dfs, wordCountSimple, 
+     runProgram(mr, dfs, wordCountSimple, 
                  inputPath, outputPath, 3, 0, noSortOutput, null);
       cleanup(dfs.getFileSystem(), outputPath);
+      Path wordCountPart= new Path(fcommand.getAbsolutePath());
+
       runProgram(mr, dfs, wordCountPart,
                  inputPath, outputPath, 3, 2, fixedPartitionOutput, null);
+      Path wordCountNoPipes= new Path(fcommand.getAbsolutePath());
+
       runNonPipedProgram(mr, dfs, wordCountNoPipes, null);
       mr.waitUntilIdle();
     } finally {
@@ -277,4 +293,22 @@ public class TestPipes extends TestCase {
       assertTrue("got exception: " + StringUtils.stringifyException(e), false);
     }
   }
+  private File getFileCommand(String clazz) throws Exception {
+    String classpath = System.getProperty("java.class.path");
+    File fCommand = new File(workSpace + File.separator + "cache.sh");
+    fCommand.deleteOnExit();
+    if (!fCommand.getParentFile().exists()) {
+      fCommand.getParentFile().mkdirs();
+    }
+    fCommand.createNewFile();
+    OutputStream os = new FileOutputStream(fCommand);
+    os.write("#!/bin/sh \n".getBytes());
+
+    os.write(("java -cp " + classpath + " " + clazz).getBytes());
+    os.flush();
+    os.close();
+    FileUtil.chmod(fCommand.getAbsolutePath(), "700");
+    return fCommand;
+  }
+
 }
