@@ -21,7 +21,6 @@ import org.junit.After;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
 
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -39,8 +38,6 @@ import org.junit.Test;
  *   "user.keytab"               (default = "/etc/krb5.keytab")
  */
 public class TestUserGroupInformationWithTicketCache {
-
-  private static javax.security.auth.login.Configuration originalConfiguration; 
   
   private String principal;
   private String realm;
@@ -52,15 +49,8 @@ public class TestUserGroupInformationWithTicketCache {
   
   @BeforeClass
   public static void beforeClass() {
-    originalConfiguration = javax.security.auth.login.Configuration.getConfiguration();
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
-  }
-
-  @AfterClass
-  public static void afterClass() throws Exception {
-    // restore the login configuration:
-    javax.security.auth.login.Configuration.setConfiguration(originalConfiguration);
   }
   
   @Before
@@ -110,10 +100,11 @@ public class TestUserGroupInformationWithTicketCache {
   public void after() throws Exception {
     // Reset the UGI state to initial:
     UserGroupInformation.setLoginUser(null);
+    // restore the original renew window value:
     UserGroupInformation.setTicketRenewWindowFactor(0.8f);
-    
+    // wait until the renewals stop:
     Thread.sleep(4 * 1000L);
-    
+    // now remove the ticket cache:
     clearTGT();
   }
   
@@ -212,7 +203,7 @@ public class TestUserGroupInformationWithTicketCache {
     // we're trying to track the renewals from the main thread
     // by monitoring the last login time:
     long t = startTime;
-    final long finishTime = startTime + 10 * 1000L; // 10 sec.
+    final long finishTime = startTime + 10 * 1000L;
     int renewCount = 0;
     while (t < finishTime) {
       long lastLogin = user.getLastLogin();
