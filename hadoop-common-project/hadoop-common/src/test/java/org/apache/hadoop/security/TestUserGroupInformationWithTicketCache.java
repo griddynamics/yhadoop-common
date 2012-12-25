@@ -58,7 +58,7 @@ public class TestUserGroupInformationWithTicketCache {
   }
 
   @AfterClass
-  public static void afterClass() {
+  public static void afterClass() throws Exception {
     // restore the login configuration:
     javax.security.auth.login.Configuration.setConfiguration(originalConfiguration);
   }
@@ -107,10 +107,13 @@ public class TestUserGroupInformationWithTicketCache {
   }
   
   @After
-  public void after() {
+  public void after() throws Exception {
     // Reset the UGI state to initial:
     UserGroupInformation.setLoginUser(null);
     UserGroupInformation.setTicketRenewWindowFactor(0.8f);
+    
+    Thread.sleep(4 * 1000L);
+    
     clearTGT();
   }
   
@@ -174,9 +177,6 @@ public class TestUserGroupInformationWithTicketCache {
 
   @Test
   public void testLoginAutoRenewalFromTicketCache() throws Exception {
-    // 
-    //System.getenv(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
-    
     cacheTGT(fullPrincipalName);
 
     // Reset the ticket renew window to a very small value to ensure 
