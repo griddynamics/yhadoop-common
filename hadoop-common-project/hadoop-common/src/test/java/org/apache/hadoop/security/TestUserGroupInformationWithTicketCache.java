@@ -141,9 +141,6 @@ public class TestUserGroupInformationWithTicketCache {
     final Credentials credentials = ugi.getCredentials();
     assertNotNull(credentials);
     
-    final String[] groupNames = ugi.getGroupNames();
-    assertArrayEquals(new String[] { principal }, groupNames);
-    
     final Subject subject = ugi.getSubject();
     assertNotNull(subject);
     Set<Principal> principals = subject.getPrincipals();
@@ -152,12 +149,12 @@ public class TestUserGroupInformationWithTicketCache {
     }
     assertTrue(!subject.isReadOnly());
     
-    Set<KerberosKey> krbKeySet = subject.getPrivateCredentials(KerberosKey.class);
+    final Set<KerberosKey> krbKeySet = subject.getPrivateCredentials(KerberosKey.class);
     assertTrue(krbKeySet.isEmpty());
-    Set<KerberosTicket> krbTicketSet = subject.getPrivateCredentials(KerberosTicket.class);
+    final Set<KerberosTicket> krbTicketSet = subject.getPrivateCredentials(KerberosTicket.class);
     assertTrue(!krbTicketSet.isEmpty());
     
-    for (KerberosTicket kt: krbTicketSet) {
+    for (final KerberosTicket kt: krbTicketSet) {
       assertNotNull(kt);
       final KerberosPrincipal kp = kt.getClient();
       assertNotNull(kp);
