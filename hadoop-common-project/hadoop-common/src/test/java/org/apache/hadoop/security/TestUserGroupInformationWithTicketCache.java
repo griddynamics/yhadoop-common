@@ -102,9 +102,7 @@ public class TestUserGroupInformationWithTicketCache {
     UserGroupInformation.setLoginUser(null);
     // restore the original renew window value:
     UserGroupInformation.setTicketRenewWindowFactor(0.8f);
-    // wait until the renewals stop:
-    Thread.sleep(4 * 1000L);
-    // now remove the ticket cache:
+    // remove the ticket cache:
     clearTGT();
   }
   
@@ -219,6 +217,12 @@ public class TestUserGroupInformationWithTicketCache {
     // with a high probability the refresh will happen at least 3 times:
     assertTrue("Renew count "+renewCount+" did not reach expected value of 3.", 
         renewCount >= 3);
+    
+    // special hack to stop the renewal thread:
+    // this causes an IOException to be thrown, then   
+    user.setLogin(null);
+    // wait the thread to finish (no ref to it, so cannot join directly):
+    Thread.sleep(4000L);
   }
 
   private void clearTGT() {
