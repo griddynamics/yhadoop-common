@@ -51,7 +51,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-//@Ignore
+@Ignore
 public class TestPipes extends TestCase {
   private static final Log LOG =
     LogFactory.getLog(TestPipes.class.getName());
