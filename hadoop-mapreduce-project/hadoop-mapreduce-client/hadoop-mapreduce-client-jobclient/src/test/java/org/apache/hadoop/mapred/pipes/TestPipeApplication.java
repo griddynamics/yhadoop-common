@@ -4,8 +4,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.security.Permission;
@@ -35,7 +37,6 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
-import org.apache.hadoop.mapred.lib.BinaryPartitioner;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
@@ -128,20 +129,28 @@ public class TestPipeApplication {
     output.setWriter(wr);
     conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
 
-    Application<WritableComparable<Object>, Writable, IntWritable, Text> application = new Application<WritableComparable<Object>, Writable, IntWritable, Text>(
+    Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<WritableComparable<IntWritable>, Writable, IntWritable, Text>(
         conf, rReader, output, reporter, IntWritable.class, Text.class);
+    application.getDownlink().flush();
+    
+    application.getDownlink().mapItem( new IntWritable(3), new Text("txt"));
+    
     application.getDownlink().flush();
 
     application.waitForFinish();
-
+    
     wr.close();
+    
+    // check getDownlink().mapItem();
+    String stdout=readstdout(conf);
+    assertTrue(stdout.contains("map object1:txt"));
+    assertTrue(stdout.contains("map object:3"));
 
     assertEquals(1.0, reporter.getProgress(), 0.01);
     assertNotNull(reporter.getCounter("group", "name"));
     assertEquals(reporter.getStatus(), "PROGRESS");
 
     application.getDownlink().close();
-    System.out.println("ok!");
   }
 
   @Test
@@ -267,7 +276,7 @@ public class TestPipeApplication {
       args[18] = "-lazyOutput";
       args[19] = "lazyOutput";
       args[20] = "-jobconf";
-      args[21] = "key=val";
+      args[21] = "mapreduce.pipes.isjavarecordwriter=false,mapreduce.pipes.isjavarecordreader=false";
 
       Submitter.main(args);
       fail();
@@ -320,8 +329,6 @@ public class TestPipeApplication {
   @Test
   public void testPipesPartitioner() {
     
-    
-    
     PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
      JobConf conf = new JobConf();
     Submitter.getJavaPartitioner(conf);
@@ -334,6 +341,10 @@ public class TestPipeApplication {
 
     assertEquals(3, partitioner.getPartition(iw, new Text("test"), 2));
   }
+/**
+ *  clean previos std and error outs 
+ * @param conf
+ */
 
   private void initstdout(JobConf conf) {
     TaskAttemptID taskid = TaskAttemptID.forName(conf
@@ -350,6 +361,23 @@ public class TestPipeApplication {
 
   }
 
+  private String readstdout(JobConf conf) throws Exception {
+    TaskAttemptID taskid = TaskAttemptID.forName(conf
+        .get(MRJobConfig.TASK_ATTEMPT_ID));
+    File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
+    ByteArrayOutputStream out= new ByteArrayOutputStream();
+    InputStream is= new FileInputStream(stdout);
+    byte[] buffer = new byte[1024];
+    int counter=0;
+    while((counter=is.read(buffer))>=0){
+      out.write(buffer,0,counter);
+    }
+    
+    is.close();
+    
+    return out.toString();
+
+  }
   private class Progress implements Progressable {
 
     @Override

@@ -108,17 +108,25 @@ public class PipeApplicatoinClient {
 
       WritableUtils.writeVLong(dataout, 2);
 
+      // map item
+     i=  WritableUtils.readVInt(dataInput);
+     System.out.println("map item:"+i);
+     IntWritable iw= new IntWritable();
+     readObject(iw, dataInput);
+     System.out.println("map object:"+iw);
+     Text txt= new Text();
+     readObject(txt, dataInput);
+     System.out.println("map object1:"+txt);
+
       // done
 
       WritableUtils.writeVInt(dataout, 54);
 
       dataout.writeFloat(50.5f);
       
-      System.out.println("14");
   
       dataout.flush();
       dataout.close();
-      System.out.println("15");
 
     } catch (Exception x) {
       x.printStackTrace();
@@ -169,6 +177,24 @@ public class PipeApplicatoinClient {
     }
     stream.flush();
 
+  }
+  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
+    int numBytes = WritableUtils.readVInt(inStream);
+    byte[] buffer;
+    // For BytesWritable and Text, use the specified length to set the length
+    // this causes the "obvious" translations to work. So that if you emit
+    // a string "abc" from C++, it shows up as "abc".
+    if (obj instanceof BytesWritable) {
+      buffer = new byte[numBytes];
+      inStream.readFully(buffer);
+      ((BytesWritable) obj).set(buffer, 0, numBytes);
+    } else if (obj instanceof Text) {
+      buffer = new byte[numBytes];
+      inStream.readFully(buffer);
+      ((Text) obj).set(buffer);
+    } else {
+      obj.readFields(inStream);
+    }
   }
 
 }

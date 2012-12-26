@@ -45,17 +45,17 @@ public class TestPipesNonJavaInputFormat {
         input1.getAbsolutePath() + "," + input2.getAbsolutePath());
     InputSplit[] splits = inputFormat.getSplits(conf, 2);
     assertEquals(2, splits.length);
-    
-    
-    PipesNonJavaInputFormat.PipesDummyRecordReader dummirr = new PipesNonJavaInputFormat.PipesDummyRecordReader(conf, splits[0]) ;
+
+    PipesNonJavaInputFormat.PipesDummyRecordReader dummirr = new PipesNonJavaInputFormat.PipesDummyRecordReader(
+        conf, splits[0]);
     assertNull(dummirr.createKey());
     assertNull(dummirr.createValue());
     assertEquals(0, dummirr.getPos());
-    
-    assertEquals(0.0, dummirr.getProgress(),0.001);
-    assertTrue(dummirr.next(new FloatWritable(2.0f),  NullWritable.get()));
-    assertEquals(2.0, dummirr.getProgress(),0.001);
 
+    assertEquals(0.0, dummirr.getProgress(), 0.001);
+    assertTrue(dummirr.next(new FloatWritable(2.0f), NullWritable.get()));
+    assertEquals(2.0, dummirr.getProgress(), 0.001);
+    dummirr.close();
   }
 
   private class TestTaskReporter implements Reporter {
@@ -76,6 +76,7 @@ public class TestPipesNonJavaInputFormat {
 
     }
 
+    @SuppressWarnings("unused")
     public String getStatus() {
       return this.status;
 
