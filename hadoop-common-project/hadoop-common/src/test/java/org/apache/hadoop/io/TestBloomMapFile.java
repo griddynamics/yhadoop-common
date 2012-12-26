@@ -119,7 +119,7 @@ public class TestBloomMapFile extends TestCase {
 	  assertNotNull("testDeleteFile error !!!", writer);
 	  BloomMapFile.delete(fs, "." + DELETABLE_FILE_NAME);
 	} catch(Exception ex) {
-	  fail("testDeleteFile");	
+	  fail("unexpect ez in testDeleteFile !!!");	
 	}
   }
   
@@ -139,7 +139,7 @@ public class TestBloomMapFile extends TestCase {
       
       assertNull("testIOExceptionInWriterConstructor error !!!", reader.getBloomFilter());      		  	 
 	} catch (Exception ex) {
-	  fail("unexpectable ex in testIOExceptionInWriterConstructor !!!");
+	  fail("unexpect ex in testIOExceptionInWriterConstructor !!!");
 	}
   }
   
@@ -161,7 +161,7 @@ public class TestBloomMapFile extends TestCase {
       assertNotNull("testGetBloomMapFile error !!!", reader.get(new IntWritable(6), new Text()));
       assertNull("testGetBloomMapFile error !!!", reader.get(new IntWritable(16), new Text()));      
 	} catch (Exception ex) {
-	  fail("testGetBloomMapFile");
+	  fail("unexpect ex in testGetBloomMapFile !!!");
 	}
   }
   
