@@ -193,7 +193,8 @@ public class TestUserGroupInformationWithTicketCache {
         break;
       }
     }
-    assertTrue("Current system user ["+currentUser+"] not found among the principals.", found);
+    assertTrue("Current system user ["+currentUser
+        +"] not found among the principals.", found);
     
     final Subject subject = ugi.getSubject();
     final User user = subject.getPrincipals(User.class).iterator().next();
@@ -201,7 +202,7 @@ public class TestUserGroupInformationWithTicketCache {
     // we're trying to track the renewals from the main thread
     // by monitoring the last login time:
     long t = startTime;
-    final long finishTime = startTime + 10 * 1000L;
+    final long finishTime = startTime + 12 * 1000L;
     int renewCount = 0;
     while (t < finishTime) {
       long lastLogin = user.getLastLogin();
@@ -213,16 +214,16 @@ public class TestUserGroupInformationWithTicketCache {
     }
     
     // Renewals should happen each ~2 seconds.
-    // Since we're waiting for 10+ seconds, we may state that 
+    // Since we're waiting for 12+ seconds, we may state that 
     // with a high probability the refresh will happen at least 3 times:
     assertTrue("Renew count "+renewCount+" did not reach expected value of 3.", 
         renewCount >= 3);
     
-    // special hack to stop the renewal thread:
-    // this causes an IOException to be thrown, then   
-    user.setLogin(null);
-    // wait the thread to finish (no ref to it, so cannot join directly):
-    Thread.sleep(4000L);
+    // interrupt the renewal thread and wait it to finish:
+    final Thread renewalThread = ugi.getRenewalThread();
+    assertNotNull(renewalThread);
+    renewalThread.interrupt();
+    renewalThread.join();
   }
 
   private void clearTGT() {
@@ -245,10 +246,12 @@ public class TestUserGroupInformationWithTicketCache {
     clearTGT();
     
     Format format = new MessageFormat(kinitCommandFormat);
-    String command = format.format(new String[] { ktbFilePath, ticketCacheFilePath, princ});
+    String command = format.format(new String[] { ktbFilePath, 
+        ticketCacheFilePath, princ});
     Process process = Runtime.getRuntime().exec(command);
     int status = process.waitFor();
-    assertEquals("Process [" +command+ "] exited with status code " + status + ".", 0, status);
+    assertEquals("Process [" +command+ "] exited with status code " 
+        + status + ".", 0, status);
     
     // NB: cache file must exist at this point:
     checkFileReadable(ticketCacheFilePath);
