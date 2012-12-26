@@ -151,7 +151,12 @@ public class TestPipeApplication {
     assertEquals(reporter.getStatus(), "PROGRESS");
 
     application.getDownlink().close();
-    application.abort(new Throwable());
+    try{
+      application.abort(new Throwable());
+      fail();
+    }catch(IOException e){
+      assertEquals("pipe child exception", e.getMessage());
+    }
   }
 
   @Test
