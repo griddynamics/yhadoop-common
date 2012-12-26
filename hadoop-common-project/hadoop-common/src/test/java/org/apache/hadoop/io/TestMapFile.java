@@ -326,7 +326,7 @@ public class TestMapFile extends TestCase {
   }
   
   @SuppressWarnings("deprecation")
-  public void testDeprecatedWritersConstructors() {	
+  public void testDeprecatedConstructors() {	
 	String path = System.getProperty("test.build.data",".") + "writes" + ".mapfile";
 	try {
 	  FileSystem fs = FileSystem.getLocal(conf);
@@ -340,7 +340,11 @@ public class TestMapFile extends TestCase {
 	  assertNotNull(writer);	  
 	  writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class), Text.class, SequenceFile.CompressionType.RECORD);
 	  assertNotNull(writer);
-	  writer.close();
+	  writer.close();	  
+	  MapFile.Reader reader = new MapFile.Reader(fs, path, WritableComparator.get(IntWritable.class), conf);	  
+	  assertNotNull(reader);
+	  assertNotNull("reader key is null !!!", reader.getKeyClass());
+	  assertNotNull("reader value in null", reader.getValueClass());
 	} catch (IOException e) {		
 	  fail(e.getMessage());
 	}  
@@ -375,7 +379,20 @@ public class TestMapFile extends TestCase {
 	} catch (Exception e) {
 	  fail("fail in testPathExplosionWriterCreation. Other ex !!!");	
 	}
-  }   
+  }
+  
+  
+  public void testDescOrderWithThrowExceptionWriterAppend() {    
+    try {  
+	  MapFile.Writer writer = createWriter(".mapfile", IntWritable.class, Text.class);
+	  writer.append(new IntWritable(2), new Text("value: " + 2));
+	  writer.append(new IntWritable(1), new Text("value: " + 1));
+	  fail("testDescOrderWithThrowExceptionWriterAppend not expected exception error !!!");
+    } catch (IOException ex) {	    
+	} catch (Exception e){
+	  fail("testDescOrderWithThrowExceptionWriterAppend other ex throw !!!");
+	}
+  }
   /**
    * Test getClosest feature.
    * @throws Exception
