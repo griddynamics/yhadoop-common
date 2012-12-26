@@ -160,9 +160,14 @@ public class TestPipeApplication {
     conf.set(Submitter.IS_JAVA_REDUCE, "false");
     conf.set(Submitter.IS_JAVA_RR, "false");
     conf.set(Submitter.EXECUTABLE, "exec");
-    PipesPartitioner partitioner = new PipesPartitioner();
+    
+    Submitter.setIsJavaMapper(conf, false);
+    Submitter.setIsJavaReducer(conf, false);
+    Submitter.setKeepCommandFile(conf,false);
+    Submitter.setIsJavaRecordReader(conf,false);
+    PipesPartitioner<IntWritable,Text> partitioner = new PipesPartitioner<IntWritable,Text>();
     partitioner.configure(conf);
-
+        
     Submitter.setJavaPartitioner(conf, partitioner.getClass());
 
     assertEquals(PipesPartitioner.class, (Submitter.getJavaPartitioner(conf)));
