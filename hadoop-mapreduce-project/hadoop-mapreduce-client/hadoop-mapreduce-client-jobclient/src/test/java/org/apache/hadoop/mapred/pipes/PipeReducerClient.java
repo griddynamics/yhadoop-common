@@ -9,17 +9,15 @@ import java.net.Socket;
 
 import javax.crypto.SecretKey;
 
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 
-public class PipeApplicatoinRunabeClient {
+public class PipeReducerClient {
 
   public static void main(String[] args) {
-    PipeApplicatoinRunabeClient client = new PipeApplicatoinRunabeClient();
+    PipeReducerClient client = new PipeReducerClient();
     client.binaryProtocolStub();
   }
 
@@ -78,23 +76,14 @@ public class PipeApplicatoinRunabeClient {
       //should be 3
 
       i = WritableUtils.readVInt(dataInput);
-System.out.println("runmap:"+i);      
-      TestPipeApplication.FakeSplit split= new TestPipeApplication.FakeSplit() ; 
-      readObject(split, dataInput);
-      System.out.println("split:"+split);      
+      System.out.println("reduce code:"+i);      
+      i = WritableUtils.readVInt(dataInput);
+      System.out.println("reduce :"+i);      
 
       i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-      
-      //should be 2
-      
-      i = WritableUtils.readVInt(dataInput);
-      s= Text.readString(dataInput);
-      System.out.println("s2: "+s);
-      s= Text.readString(dataInput);
-      System.out.println("s2: "+s);
-      
-      System.out.println("11");
+      System.out.println("pipeout :"+i);      
+
+   
 
       
       // done
@@ -122,26 +111,5 @@ System.out.println("runmap:"+i);
     return SecureShuffleUtils.hashFromString(data, key);
 
   }
-
-  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
-    int numBytes = WritableUtils.readVInt(inStream);
-    byte[] buffer;
-    // For BytesWritable and Text, use the specified length to set the length
-    // this causes the "obvious" translations to work. So that if you emit
-    // a string "abc" from C++, it shows up as "abc".
-    if (obj instanceof BytesWritable) {
-      buffer = new byte[numBytes];
-      inStream.readFully(buffer);
-      ((BytesWritable) obj).set(buffer, 0, numBytes);
-    } else if (obj instanceof Text) {
-      buffer = new byte[numBytes];
-      inStream.readFully(buffer);
-      ((Text) obj).set(buffer);
-    } else {
-      obj.readFields(inStream);
-    }
-  }
-
-
 
 }

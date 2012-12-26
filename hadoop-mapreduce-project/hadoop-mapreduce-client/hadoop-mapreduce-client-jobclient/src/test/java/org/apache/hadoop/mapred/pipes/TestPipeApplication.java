@@ -98,7 +98,7 @@ public class TestPipeApplication {
   }
 
   @Test
-  public void testOne() throws Throwable {
+  public void testApplication() throws Throwable {
     JobConf conf = new JobConf();
 
     RecordReader<FloatWritable, NullWritable> rReader = new Reader();
