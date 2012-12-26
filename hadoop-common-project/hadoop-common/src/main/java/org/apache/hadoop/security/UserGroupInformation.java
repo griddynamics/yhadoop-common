@@ -309,6 +309,8 @@ public class UserGroupInformation {
   private final User user;
   private final boolean isKeytab;
   private final boolean isKrbTkt;
+
+  private volatile Thread renewalThread;
   
   private static String OS_LOGIN_MODULE_NAME;
   private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -724,14 +726,22 @@ public class UserGroupInformation {
     long end = tgt.getEndTime().getTime();
     return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
   }
-
+  
   /**Spawn a thread to do periodic renewals of kerberos credentials*/
   private void spawnAutoRenewalThreadForUserCreds() {
     if (isSecurityEnabled()) {
       //spawn thread only if we have kerb credentials
       if (user.getAuthenticationMethod() == AuthenticationMethod.KERBEROS &&
           !isKeytab) {
-        Thread t = new Thread(new Runnable() {
+        
+        final Thread old = renewalThread;
+        if (old != null 
+            && (old.getState() != Thread.State.TERMINATED)) {
+          throw new IllegalStateException("An existing renewal thread "
+          		+ "is still not terminated.");
+        }
+        
+        final Thread newThread = new Thread(new Runnable() {
           
           @Override
           public void run() {
@@ -767,7 +777,7 @@ public class UserGroupInformation {
                 nextRefresh = Math.max(getRefreshTime(tgt),
                                        now + kerberosMinSecondsBeforeRelogin);
               } catch (InterruptedException ie) {
-                LOG.warn("Terminating renewal thread");
+                LOG.warn("Interrupted: terminating renewal thread.");
                 return;
               } catch (IOException ie) {
                 LOG.warn("Exception encountered while running the" +
@@ -777,12 +787,19 @@ public class UserGroupInformation {
             }
           }
         });
-        t.setDaemon(true);
-        t.setName("TGT Renewer for " + getUserName());
-        t.start();
+        newThread.setDaemon(true);
+        newThread.setName("TGT Renewer for " + getUserName());
+        newThread.start();
+        renewalThread = newThread;
       }
     }
   }
+  
+  @VisibleForTesting
+  Thread getRenewalThread() {
+    return renewalThread;
+  }
+  
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
    * file and logs them in. They become the currently logged-in user.
