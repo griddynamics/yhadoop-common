@@ -9,12 +9,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.security.Permission;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -273,6 +276,52 @@ public class TestPipeApplication {
     
   }
 
+  @Test 
+  public void testPipesReduser() throws Exception{
+    
+    cleanTokenPasswordFile();
+    JobConf conf = new JobConf();
+    
+    Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+        "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+            "service"));
+    conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+    
+    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerClient");
+    conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
+    
+    PipesReducer<BooleanWritable, Text, IntWritable, Text> reduser =  new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
+    reduser.configure(conf);
+    BooleanWritable bw= new BooleanWritable(false);
+    
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, "attempt_001_02_r03_04_05");
+    initstdout (conf);
+    conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
+    CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(  new Counters.Counter(), new Progress(), conf);
+    Reporter reporter= new TestTaskReporter();
+    List<Text> ltext= new ArrayList<Text>();
+    ltext.add(new Text("1 boolean"));
+    
+    reduser.reduce(bw,ltext.iterator(), output, reporter);
+    reduser.close();
+    System.out.println("ok");
+    
+  }
+  
+  private void initstdout(JobConf conf){
+    TaskAttemptID taskid = 
+        TaskAttemptID.forName(conf.get(MRJobConfig.TASK_ATTEMPT_ID));
+    File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
+    File stderr = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDERR);
+    // prepare folder 
+    if(!stdout.getParentFile().exists()){
+      stdout.getParentFile().mkdirs();
+    }else{ //clean logs 
+      stdout.deleteOnExit();
+      stderr.deleteOnExit();
+    }
+    
+  }
   private class Progress implements Progressable {
 
     @Override
