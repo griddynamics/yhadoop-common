@@ -30,7 +30,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
@@ -159,20 +158,23 @@ public class TestPipeApplication {
     conf.set(Submitter.IS_JAVA_RW, "false");
     conf.set(Submitter.IS_JAVA_REDUCE, "false");
     conf.set(Submitter.IS_JAVA_RR, "false");
-
+    conf.set(Submitter.EXECUTABLE,"exec");
+    
+    
     // assertEquals("/opt/yahoo/yhadoop-common/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/target/org.apache.hadoop.mapred.pipes.TestPipeApplication-workSpace/cache.sh",
     // Submitter.getExecutable(conf));
 
     SecurityManager securityManager = System.getSecurityManager();
-    System.setSecurityManager(new NoExitSecurityManager());
     PrintStream oldps = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
 // test without paramaters
     try {
+      System.setSecurityManager(new NoExitSecurityManager());
+
       System.setOut(new PrintStream(out));
       Submitter.main(new String[0]);
       fail();
-    } catch (Exception e) {
+    } catch (ExitException e) {
       assertTrue(out.toString().contains(""));
       assertTrue(out.toString().contains("bin/hadoop pipes"));
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
@@ -223,47 +225,43 @@ public class TestPipeApplication {
     }
 
     try {
-      Submitter sbm=  Mockito.mock(Submitter.class);
+      System.setSecurityManager(new NoExitSecurityManager());
+      File fCommand = getFileCommand(null);
+      String [] args = new String[20];
+      File input=new File(workSpace+File.separator+"input");
+      if(!input.exists()){
+        input.createNewFile();
+      }
+      File outpot=new File(workSpace+File.separator+"output");
+      FileUtil.fullyDelete(outpot);
+
       
-      RunningJob stm=Mockito.mock(RunningJob.class); 
-      Mockito.when(sbm.runJob(conf)).thenReturn(stm);
-
-
-      String [] args = new String[10];
-      args[0]="input";
-      args[1]="input";
-      args[2]="output";
-      args[3]="output";
-      args[4]="jar";
-      args[5]="jar";
-      args[6]="inputformat";
-      args[7]="inputformat";
-      args[8]="map";
-      args[9]="map";
-      args[10]="partitioner";
-      args[11]="partitioner";
-      args[12]="reduce";
-      args[13]="reduce";
-      args[14]="writer";
-      args[15]="writer";
-      args[16]="reduces";
-      args[17]="reduces";
-      args[18]="lazyOutput";
+      args[0]="-input";
+      args[1]=input.getAbsolutePath();//"input";
+      args[2]="-output";
+      args[3]=outpot.getAbsolutePath();//"output";
+      args[4]="-inputformat";
+      args[5]="org.apache.hadoop.mapred.TextInputFormat";
+      args[6]="-map";
+      args[7]="org.apache.hadoop.mapred.lib.IdentityMapper";
+      args[8]="-partitioner";
+      args[9]="org.apache.hadoop.mapred.pipes.PipesPartitioner";
+      args[10]="-reduce";
+      args[11]="org.apache.hadoop.mapred.lib.IdentityReducer";
+      args[12]="-writer";
+      args[13]="org.apache.hadoop.mapred.TextOutputFormat";
+      args[14]="-program";
+      args[15]=fCommand.getAbsolutePath();//"program";
+      args[16]="-reduces";
+      args[17]="2";
+      args[18]="-lazyOutput";
       args[19]="lazyOutput";
-      /*
-      args[]="";
-      args[]="";
-      args[]="";
-      args[]="";
-      args[]="";
-      args[]="";
-      */
-      sbm.main(new String[0]);
-      System.setOut(new PrintStream(out));
-      Submitter.main(new String[0]);
+     
+      Submitter.main(args);
       fail();
+    } catch (ExitException e) {
     } catch (Exception e) {
-      
+      e.printStackTrace();
     } finally {
       System.setOut(oldps);
       System.setSecurityManager(securityManager);
@@ -485,4 +483,6 @@ public class TestPipeApplication {
       this.status = status;
     }
   }
+  
+ 
 }
