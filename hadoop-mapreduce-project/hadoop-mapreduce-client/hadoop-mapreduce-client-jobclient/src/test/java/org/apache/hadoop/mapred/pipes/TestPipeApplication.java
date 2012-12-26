@@ -35,11 +35,11 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
+import org.apache.hadoop.mapred.lib.BinaryPartitioner;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.junit.Test;
-
 
 import static org.junit.Assert.*;
 
@@ -159,20 +159,21 @@ public class TestPipeApplication {
     conf.set(Submitter.IS_JAVA_RW, "false");
     conf.set(Submitter.IS_JAVA_REDUCE, "false");
     conf.set(Submitter.IS_JAVA_RR, "false");
-    conf.set(Submitter.EXECUTABLE,"exec");
-    
-    Submitter.setJavaPartitioner(conf, PipesPartitioner.class);
-    
-    
-    assertEquals( PipesPartitioner.class,(Submitter.getJavaPartitioner(conf)));
-    
+    conf.set(Submitter.EXECUTABLE, "exec");
+    PipesPartitioner partitioner = new PipesPartitioner();
+    partitioner.configure(conf);
+
+    Submitter.setJavaPartitioner(conf, partitioner.getClass());
+
+    assertEquals(PipesPartitioner.class, (Submitter.getJavaPartitioner(conf)));
+
     // assertEquals("/opt/yahoo/yhadoop-common/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/target/org.apache.hadoop.mapred.pipes.TestPipeApplication-workSpace/cache.sh",
     // Submitter.getExecutable(conf));
 
     SecurityManager securityManager = System.getSecurityManager();
     PrintStream oldps = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-// test without paramaters
+    // test without paramaters
     try {
       System.setSecurityManager(new NoExitSecurityManager());
 
@@ -232,96 +233,113 @@ public class TestPipeApplication {
     try {
       System.setSecurityManager(new NoExitSecurityManager());
       File fCommand = getFileCommand(null);
-      String [] args = new String[22];
-      File input=new File(workSpace+File.separator+"input");
-      if(!input.exists()){
+      String[] args = new String[22];
+      File input = new File(workSpace + File.separator + "input");
+      if (!input.exists()) {
         input.createNewFile();
       }
-      File outpot=new File(workSpace+File.separator+"output");
+      File outpot = new File(workSpace + File.separator + "output");
       FileUtil.fullyDelete(outpot);
 
-      
-      args[0]="-input";
-      args[1]=input.getAbsolutePath();//"input";
-      args[2]="-output";
-      args[3]=outpot.getAbsolutePath();//"output";
-      args[4]="-inputformat";
-      args[5]="org.apache.hadoop.mapred.TextInputFormat";
-      args[6]="-map";
-      args[7]="org.apache.hadoop.mapred.lib.IdentityMapper";
-      args[8]="-partitioner";
-      args[9]="org.apache.hadoop.mapred.pipes.PipesPartitioner";
-      args[10]="-reduce";
-      args[11]="org.apache.hadoop.mapred.lib.IdentityReducer";
-      args[12]="-writer";
-      args[13]="org.apache.hadoop.mapred.TextOutputFormat";
-      args[14]="-program";
-      args[15]=fCommand.getAbsolutePath();//"program";
-      args[16]="-reduces";
-      args[17]="2";
-      args[18]="-lazyOutput";
-      args[19]="lazyOutput";
-      args[20]="-jobconf";
-      args[21]="key=val";
-     
+      args[0] = "-input";
+      args[1] = input.getAbsolutePath();// "input";
+      args[2] = "-output";
+      args[3] = outpot.getAbsolutePath();// "output";
+      args[4] = "-inputformat";
+      args[5] = "org.apache.hadoop.mapred.TextInputFormat";
+      args[6] = "-map";
+      args[7] = "org.apache.hadoop.mapred.lib.IdentityMapper";
+      args[8] = "-partitioner";
+      args[9] = "org.apache.hadoop.mapred.pipes.PipesPartitioner";
+      args[10] = "-reduce";
+      args[11] = "org.apache.hadoop.mapred.lib.IdentityReducer";
+      args[12] = "-writer";
+      args[13] = "org.apache.hadoop.mapred.TextOutputFormat";
+      args[14] = "-program";
+      args[15] = fCommand.getAbsolutePath();// "program";
+      args[16] = "-reduces";
+      args[17] = "2";
+      args[18] = "-lazyOutput";
+      args[19] = "lazyOutput";
+      args[20] = "-jobconf";
+      args[21] = "key=val";
+
       Submitter.main(args);
       fail();
     } catch (ExitException e) {
       assertEquals(e.status, 0);
-   
+
     } finally {
       System.setOut(oldps);
       System.setSecurityManager(securityManager);
     }
-    
+
   }
 
-  @Test 
-  public void testPipesReduser() throws Exception{
-    
+  @Test
+  public void testPipesReduser() throws Exception {
+
     cleanTokenPasswordFile();
     JobConf conf = new JobConf();
-    
+
     Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
         "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
             "service"));
     conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
-    
+
     File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerClient");
     conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
-    
-    PipesReducer<BooleanWritable, Text, IntWritable, Text> reduser =  new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
+
+    PipesReducer<BooleanWritable, Text, IntWritable, Text> reduser = new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
     reduser.configure(conf);
-    BooleanWritable bw= new BooleanWritable(false);
-    
+    BooleanWritable bw = new BooleanWritable(false);
+
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, "attempt_001_02_r03_04_05");
-    initstdout (conf);
+    initstdout(conf);
     conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
-    CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(  new Counters.Counter(), new Progress(), conf);
-    Reporter reporter= new TestTaskReporter();
-    List<Text> ltext= new ArrayList<Text>();
+    CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
+        new Counters.Counter(), new Progress(), conf);
+    Reporter reporter = new TestTaskReporter();
+    List<Text> ltext = new ArrayList<Text>();
     ltext.add(new Text("1 boolean"));
-    
-    reduser.reduce(bw,ltext.iterator(), output, reporter);
+
+    reduser.reduce(bw, ltext.iterator(), output, reporter);
     reduser.close();
     System.out.println("ok");
-    
+
   }
-  
-  private void initstdout(JobConf conf){
-    TaskAttemptID taskid = 
-        TaskAttemptID.forName(conf.get(MRJobConfig.TASK_ATTEMPT_ID));
+
+  /**
+   * test PipesPartitioner
+   */
+  @Test
+  public void testPipesPartitioner() {
+    PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
+    PipesPartitioner.setNextPartition(3);
+
+    JobConf conf = new JobConf();
+    Submitter.getJavaPartitioner(conf);
+
+    partitioner.configure(new JobConf());
+    IntWritable iw = new IntWritable(4);
+    assertEquals(3, partitioner.getPartition(iw, new Text("test"), 2));
+  }
+
+  private void initstdout(JobConf conf) {
+    TaskAttemptID taskid = TaskAttemptID.forName(conf
+        .get(MRJobConfig.TASK_ATTEMPT_ID));
     File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
     File stderr = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDERR);
-    // prepare folder 
-    if(!stdout.getParentFile().exists()){
+    // prepare folder
+    if (!stdout.getParentFile().exists()) {
       stdout.getParentFile().mkdirs();
-    }else{ //clean logs 
+    } else { // clean logs
       stdout.deleteOnExit();
       stderr.deleteOnExit();
     }
-    
+
   }
+
   private class Progress implements Progressable {
 
     @Override
@@ -535,6 +553,5 @@ public class TestPipeApplication {
       this.status = status;
     }
   }
-  
- 
+
 }
