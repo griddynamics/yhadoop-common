@@ -151,6 +151,7 @@ public class TestPipeApplication {
     assertEquals(reporter.getStatus(), "PROGRESS");
 
     application.getDownlink().close();
+    application.abort(new Throwable());
   }
 
   @Test
