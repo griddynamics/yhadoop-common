@@ -19,22 +19,85 @@ package org.apache.hadoop.io;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionInputStream;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.util.Progressable;
+
 import junit.framework.TestCase;
+import static org.mockito.Mockito.*;
 
 public class TestMapFile extends TestCase {
   private static Configuration conf = new Configuration();           
-    
+  
+  private static final Progressable defaultProgressable = new Progressable() {
+    @Override
+	public void progress() {    	
+    }
+  };
+  
+  private static final CompressionCodec defaultCodec = new CompressionCodec() {
+	@Override
+	public CompressionOutputStream createOutputStream(OutputStream out) throws IOException {
+		return null;
+	}
+	@Override
+	public CompressionOutputStream createOutputStream(OutputStream out, Compressor compressor) throws IOException {				
+		return null;
+	}
+
+	@Override
+	public Class<? extends Compressor> getCompressorType() {
+		return null;
+	}
+
+	@Override
+	public Compressor createCompressor() {
+		return null;
+	}
+
+	@Override
+	public CompressionInputStream createInputStream(InputStream in)throws IOException {				
+		return null;
+	}
+
+	@Override
+	public CompressionInputStream createInputStream(InputStream in, Decompressor decompressor) throws IOException {				
+		return null;
+	}
+
+	@Override
+	public Class<? extends Decompressor> getDecompressorType() {
+		return null;
+	}
+
+	@Override
+	public Decompressor createDecompressor() {
+		return null;
+	}
+
+	@Override
+	public String getDefaultExtension() {
+		return null;
+	}
+  };
+  
   private MapFile.Writer createWriter(String fileName, 
 		  Class<? extends WritableComparable<?>> keyClass, Class<? extends Writable> valueClass) throws IOException {
 	Path dirName = new Path(System.getProperty("test.build.data",".") + fileName);
 	MapFile.Writer.setIndexInterval(conf, 4);
 	return new MapFile.Writer(conf, dirName,
 		MapFile.Writer.keyClass(keyClass), MapFile.Writer.valueClass(valueClass));	  
-  }
+  }  
   
   private MapFile.Reader createReader(String fileName, Class<? extends WritableComparable<?>> keyClass) throws IOException {
     Path dirName = new Path(System.getProperty("test.build.data",".") + fileName);
@@ -106,15 +169,56 @@ public class TestMapFile extends TestCase {
     final String OLD_FILE_NAME = "test-old.mapfile";    
     final String PATH_PREFIX = System.getProperty("test.build.data",".");	
 	try {
-	    FileSystem fs = FileSystem.getLocal(conf);  
-	    MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class); 	
-	    writer.close();
-		MapFile.rename(fs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX + NEW_FILE_NAME);
-		MapFile.delete(fs, PATH_PREFIX + NEW_FILE_NAME);		
+	  FileSystem fs = FileSystem.getLocal(conf);  
+	  MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class); 	
+	  writer.close();
+	  MapFile.rename(fs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX + NEW_FILE_NAME);
+	  MapFile.delete(fs, PATH_PREFIX + NEW_FILE_NAME);		
 	} catch(IOException ex) {
 	  fail(ex.getMessage());	
 	}
   } 
+  
+  public void testRenameWithException() {
+    final String ERROR_MESSAGE = "Can't rename file";
+	try {	  
+	  final String NEW_FILE_NAME = "test-new.mapfile"; 
+	  final String OLD_FILE_NAME = "test-old.mapfile";    
+	  final String PATH_PREFIX = System.getProperty("test.build.data",".");	  
+	  FileSystem fs = FileSystem.getLocal(conf);
+	  FileSystem spyFs = spy(fs);	  
+	  
+	  MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class); 	
+	  writer.close();
+	  
+	  Path oldDir = new Path(PATH_PREFIX + OLD_FILE_NAME);
+	  Path newDir = new Path(PATH_PREFIX + NEW_FILE_NAME);	  
+	  when(spyFs.rename(oldDir, newDir)).thenThrow(new IOException(ERROR_MESSAGE));	  
+	  
+	  MapFile.rename(spyFs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX + NEW_FILE_NAME);
+	  fail("testRenameWithException no exception error !!!");		
+	} catch(IOException ex) {
+		assertEquals("testRenameWithException invalid IOExceptionMessage !!!" , ex.getMessage(), ERROR_MESSAGE);
+	}
+  }
+  
+  public void testOnFinalKey() {
+    final String TEST_METHOD_KEY = "testOnFinalKey.mapfile";
+    int SIZE = 10;
+    try {
+	  MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class, IntWritable.class); 	
+	  for (int i = 0; i < SIZE; i++)
+	    writer.append(new IntWritable(i), new IntWritable(i));			 
+	  writer.close();
+	  
+	  MapFile.Reader reader = createReader(TEST_METHOD_KEY, IntWritable.class);
+	  IntWritable expectedKey = new IntWritable(0);
+	  reader.finalKey(expectedKey);
+	  assertEquals("testOnFinalKey not same !!!", expectedKey, new IntWritable(9));
+    } catch (IOException ex) {
+      fail("testOnFinalKey error !!!");  	
+    }	  
+  }
   
   public void testKeyValueClasses() {	
 	Class<? extends WritableComparable<?>> keyClass = IntWritable.class;
@@ -124,7 +228,7 @@ public class TestMapFile extends TestCase {
 	  assertNotNull("writer key class null error !!!", MapFile.Writer.keyClass(keyClass));
 	  assertNotNull("writer value class null error !!!", MapFile.Writer.valueClass(valueClass));	  
 	} catch(IOException ex) {
-		  fail(ex.getMessage());	
+	  fail(ex.getMessage());	
 	}
   }
     
@@ -206,20 +310,72 @@ public class TestMapFile extends TestCase {
       Path dir = new Path(System.getProperty("test.build.data",".") + INDEX_LESS_MAP_FILE);
 	  MapFile.Writer writer = createWriter(INDEX_LESS_MAP_FILE, IntWritable.class, Text.class);
 	  for (int i = 0; i < PAIR_SIZE; i ++)
-		  writer.append(new IntWritable(0), new Text("value"));	  
+	    writer.append(new IntWritable(0), new Text("value"));	  
 	  writer.close();
 	  
-	  File indexFile = new File(".", "." + INDEX_LESS_MAP_FILE);
+	  File indexFile = new File(".", "." + INDEX_LESS_MAP_FILE + "/index");
 	  boolean tryToFix = false;
 	  if (indexFile.exists())
-		  tryToFix = indexFile.delete();
+	    tryToFix = indexFile.delete();
 	  
 	  if (tryToFix)
 	    assertTrue("testFix error !!!", MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);	  
     } catch (Exception ex) {
       fail("testFix error !!!");
     }
+  }
+  
+  @SuppressWarnings("deprecation")
+  public void testDeprecatedWritersConstructors() {	
+	String path = System.getProperty("test.build.data",".") + "writes" + ".mapfile";
+	try {
+	  FileSystem fs = FileSystem.getLocal(conf);
+	  MapFile.Writer writer = new MapFile.Writer(conf, fs, path, IntWritable.class, Text.class, CompressionType.RECORD);
+	  assertNotNull(writer);
+	  writer = new MapFile.Writer(conf, fs, path, IntWritable.class, Text.class, CompressionType.RECORD, defaultProgressable);
+	  assertNotNull(writer);	  	  	  	  	
+	  writer = new MapFile.Writer(conf, fs, path, IntWritable.class, Text.class, CompressionType.RECORD, defaultCodec, defaultProgressable);			   	
+	  assertNotNull(writer);	  
+	  writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class), Text.class);
+	  assertNotNull(writer);	  
+	  writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class), Text.class, SequenceFile.CompressionType.RECORD);
+	  assertNotNull(writer);
+	  writer.close();
+	} catch (IOException e) {		
+	  fail(e.getMessage());
+	}  
+  }
+  
+  public void testKeyLessWriterCreation() {	
+    try {
+	  MapFile.Writer writer = 
+			  new MapFile.Writer(conf, new Path(System.getProperty("test.build.data",".") + ""));
+	  fail("fail in testKeyLessWriterCreation !!!");
+    } catch (IllegalArgumentException ex) {    	
+    } catch (Exception e) {
+      fail("fail in testKeyLessWriterCreation. Other ex !!!");	
+    }
   } 
+  
+  public void testPathExplosionWriterCreation() {	
+    Path path = new Path(System.getProperty("test.build.data",".") + ".mapfile");
+    String TEST_ERROR_MESSAGE = "Mkdirs failed to create directory " + path.getName();
+	try {	        
+      FileSystem fsSpy = spy(FileSystem.get(conf));
+      Path pathSpy = spy(path);      
+      when(fsSpy.mkdirs(path)).thenThrow(new IOException(TEST_ERROR_MESSAGE));
+      
+      when(pathSpy.getFileSystem(conf)).thenReturn(fsSpy);
+      
+      MapFile.Writer writer = new MapFile.Writer(conf, pathSpy,
+			MapFile.Writer.keyClass(IntWritable.class), MapFile.Writer.valueClass(IntWritable.class));      
+	  fail("fail in testPathExplosionWriterCreation !!!");
+	} catch (IOException ex) {
+	  assertEquals("testPathExplosionWriterCreation ex message error !!!", ex.getMessage(), TEST_ERROR_MESSAGE);	
+	} catch (Exception e) {
+	  fail("fail in testPathExplosionWriterCreation. Other ex !!!");	
+	}
+  }   
   /**
    * Test getClosest feature.
    * @throws Exception
