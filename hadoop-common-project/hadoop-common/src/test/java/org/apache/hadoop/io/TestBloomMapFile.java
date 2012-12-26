@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.io;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -107,5 +108,61 @@ public class TestBloomMapFile extends TestCase {
     list.add(new Text("B"));
     checkMembershipVaryingSizedKeys(getName(), list);
   }
-
+  
+  public void testDeleteFile() {	
+    try { 
+      String DELETABLE_FILE_NAME = "deletableFile.bloommapfile"; 	
+	  FileSystem fs = FileSystem.getLocal(conf);
+      Path dirName = new Path(System.getProperty("test.build.data",".") + DELETABLE_FILE_NAME);	  
+	  BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, dirName, 
+		MapFile.Writer.keyClass(IntWritable.class), MapFile.Writer.valueClass(Text.class));
+	  assertNotNull("testDeleteFile error !!!", writer);
+	  BloomMapFile.delete(fs, "." + DELETABLE_FILE_NAME);
+	} catch(Exception ex) {
+	  fail("testDeleteFile");	
+	}
+  }
+  
+  public void testIOExceptionInWriterConstructor() {
+	String TEST_FILE_NAME = "testFile.bloommapfile";
+	Path dirName = new Path(System.getProperty("test.build.data",".") + TEST_FILE_NAME);
+	Path dirNameSpy = org.mockito.Mockito.spy(dirName);
+	try {
+	  BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, dirName, 
+		MapFile.Writer.keyClass(IntWritable.class), MapFile.Writer.valueClass(Text.class));
+	  writer.append(new IntWritable(1), new Text("123124142"));
+	  writer.close();
+		
+	  org.mockito.Mockito.when(dirNameSpy.getFileSystem(conf)).thenThrow(new IOException());      
+      BloomMapFile.Reader reader = new BloomMapFile.Reader(dirNameSpy, conf, 
+    	  MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));                        
+      
+      assertNull("testIOExceptionInWriterConstructor error !!!", reader.getBloomFilter());      		  	 
+	} catch (Exception ex) {
+	  fail("unexpectable ex in testIOExceptionInWriterConstructor !!!");
+	}
+  }
+  
+  public void testGetBloomMapFile() {
+	String TEST_FILE_NAME = "getTestFile.bloommapfile";
+	int SIZE = 10;
+	Path dirName = new Path(System.getProperty("test.build.data",".") + TEST_FILE_NAME);
+	try {
+      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, dirName, 
+		MapFile.Writer.keyClass(IntWritable.class), MapFile.Writer.valueClass(Text.class));
+      
+      for (int i = 0; i < SIZE; i++)
+    	  writer.append(new IntWritable(i), new Text() );
+      writer.close();
+      
+      BloomMapFile.Reader reader = new BloomMapFile.Reader(dirName, conf, 
+        	  MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));
+            
+      assertNotNull("testGetBloomMapFile error !!!", reader.get(new IntWritable(6), new Text()));
+      assertNull("testGetBloomMapFile error !!!", reader.get(new IntWritable(16), new Text()));      
+	} catch (Exception ex) {
+	  fail("testGetBloomMapFile");
+	}
+  }
+  
 }
