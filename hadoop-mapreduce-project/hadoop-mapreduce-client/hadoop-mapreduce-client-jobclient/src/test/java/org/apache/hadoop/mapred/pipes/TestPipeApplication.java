@@ -314,14 +314,19 @@ public class TestPipeApplication {
    */
   @Test
   public void testPipesPartitioner() {
+    
+    
+    
     PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
+     JobConf conf = new JobConf();
+    Submitter.getJavaPartitioner(conf);
+    partitioner.configure(new JobConf()); 
+    IntWritable iw = new IntWritable(4);
+    assertEquals(0, partitioner.getPartition(iw, new Text("test"), 2));
+
     PipesPartitioner.setNextPartition(3);
 
-    JobConf conf = new JobConf();
-    Submitter.getJavaPartitioner(conf);
 
-    partitioner.configure(new JobConf());
-    IntWritable iw = new IntWritable(4);
     assertEquals(3, partitioner.getPartition(iw, new Text("test"), 2));
   }
 
