@@ -36,7 +36,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 
 import static org.junit.Assert.*;
@@ -149,7 +148,6 @@ public class TestPipeApplication {
 
     cleanTokenPasswordFile();
 
-    // Path wordExec = new Path("testing/bin/application");
     System.setProperty("test.build.data",
         "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
     conf.set("hadoop.log.dir", "target/tmp");
@@ -160,6 +158,10 @@ public class TestPipeApplication {
     conf.set(Submitter.IS_JAVA_RR, "false");
     conf.set(Submitter.EXECUTABLE,"exec");
     
+    Submitter.setJavaPartitioner(conf, PipesPartitioner.class);
+    
+    
+    assertEquals( PipesPartitioner.class,(Submitter.getJavaPartitioner(conf)));
     
     // assertEquals("/opt/yahoo/yhadoop-common/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/target/org.apache.hadoop.mapred.pipes.TestPipeApplication-workSpace/cache.sh",
     // Submitter.getExecutable(conf));
@@ -227,7 +229,7 @@ public class TestPipeApplication {
     try {
       System.setSecurityManager(new NoExitSecurityManager());
       File fCommand = getFileCommand(null);
-      String [] args = new String[20];
+      String [] args = new String[22];
       File input=new File(workSpace+File.separator+"input");
       if(!input.exists()){
         input.createNewFile();
@@ -256,18 +258,19 @@ public class TestPipeApplication {
       args[17]="2";
       args[18]="-lazyOutput";
       args[19]="lazyOutput";
+      args[20]="-jobconf";
+      args[21]="key=val";
      
       Submitter.main(args);
       fail();
     } catch (ExitException e) {
-    } catch (Exception e) {
-      e.printStackTrace();
+      assertEquals(e.status, 0);
+   
     } finally {
       System.setOut(oldps);
       System.setSecurityManager(securityManager);
     }
     
-    System.out.println("ok!");
   }
 
   private class Progress implements Progressable {
