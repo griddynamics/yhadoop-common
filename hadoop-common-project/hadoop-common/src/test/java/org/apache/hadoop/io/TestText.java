@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
 
+import com.google.common.primitives.Bytes;
+
 /** Unit tests for LargeUTF8. */
 public class TestText extends TestCase {
   private static final int NUM_ITERATIONS = 100;
@@ -321,7 +323,39 @@ public class TestText extends TestCase {
       (new Text("foo"),
        "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.io.Text\"}");
   }
-
+  
+  public void testCharAt() {
+    String line = "adsawseeeeegqewgasddga";
+    Text text = new Text(line);
+    for (int i = 0; i < line.length(); i++) {
+      assertTrue("testCharAt error1 !!!", text.charAt(i) == line.charAt(i));
+    }    
+    assertEquals("testCharAt error2 !!!", -1, text.charAt(-1));    
+    assertEquals("testCharAt error3 !!!", -1, text.charAt(100));
+  }    
+  
+  public void testReadWriteOperations() {
+    String line = "adsawseeeeegqewgasddga";
+    byte[] inputBytes = line.getBytes();       
+    inputBytes = Bytes.concat(new byte[] {(byte)22}, inputBytes);        
+    
+    DataInputBuffer in = new DataInputBuffer();
+    DataOutputBuffer out = new DataOutputBuffer();
+    Text text = new Text(line);
+    try {      
+      in.reset(inputBytes, inputBytes.length);
+      text.readFields(in, inputBytes.length);      
+    } catch(Exception ex) {
+      fail("testReadFields error !!!");
+    }    
+    try {
+      text.write(out, 0);
+    } catch(IOException ex) {      
+    } catch(Exception ex) {
+      fail("testReadWriteOperations error !!!");
+    }    
+  }
+    
   public static void main(String[] args)  throws Exception
   {
     TestText test = new TestText("main");
