@@ -1,5 +1,7 @@
 package org.apache.hadoop.io;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import junit.framework.TestCase;
 
@@ -44,4 +46,77 @@ public class TestTwoDArrayWritable extends TestCase {
 		}
 	  }	  
 	}
+	
+	public void test2DArrayConstructor() {		
+	  TwoDArrayWritable twoDArrayWritable = new TwoDArrayWritable(Text.class, elements);
+	  for (int i = 0; i < elements.length; i++) {
+		for (int j = 0; j < elements.length; j++) {
+		  assertEquals(twoDArrayWritable.get()[i][j], elements[i][j]);
+		}
+	  }		  	 
+	}
+	
+	public void testInstantiationException() {
+	  try {	 
+		Writable[][] writables = new Writable[][]{ { new NonInstantiationWritable(true)} , {new NonInstantiationWritable(true)}  }; 
+		DataOutputBuffer out = new DataOutputBuffer();
+		DataInputBuffer in = new DataInputBuffer();
+		   
+		TwoDArrayWritable twoDArrayWritable = new TwoDArrayWritable(NonInstantiationWritable.class);
+		twoDArrayWritable.set(writables);
+		twoDArrayWritable.write(out);
+		
+		in.reset(out.getData(), out.getLength());
+		twoDArrayWritable.readFields(in);		
+		fail("testInstantiationException error !!!");
+	  } catch(RuntimeException ex) {		 
+	  } catch (Exception ex) {
+	    fail("testInstantiationException error. other exception !!!");
+	  }
+	}	
+	
+	public void testIllegalAccessException() {
+	  try {		
+	    Writable[][] writables = new Writable[][]{ { new IllegalAccessWritable(true)}, {new IllegalAccessWritable(true)}  }; 
+	    DataOutputBuffer out = new DataOutputBuffer();
+	    DataInputBuffer in = new DataInputBuffer();
+		   
+		TwoDArrayWritable twoDArrayWritable = new TwoDArrayWritable(NonInstantiationWritable.class);
+		twoDArrayWritable.set(writables);
+		twoDArrayWritable.write(out);
+		
+		in.reset(out.getData(), out.getLength());
+		twoDArrayWritable.readFields(in);		
+		fail("testIllegalAccessException error !!!");
+	  } catch(RuntimeException ex) {		  
+	  } catch (Exception ex) {
+		fail("testInstantiationException error !!!");
+	  }
+	}		
+	
+	static class NonInstantiationWritable implements Writable {		
+		public NonInstantiationWritable(boolean flag){}
+		
+		@Override
+		public void write(DataOutput out) throws IOException {			
+		}
+
+		@Override
+		public void readFields(DataInput in) throws IOException {			
+		}		
+	}
+	
+	static class IllegalAccessWritable implements Writable {		
+		private IllegalAccessWritable(){}
+		
+		public IllegalAccessWritable(boolean flag){}
+		
+		@Override
+		public void write(DataOutput out) throws IOException {			
+		}
+
+		@Override
+		public void readFields(DataInput in) throws IOException {			
+		}		
+	}	
 }

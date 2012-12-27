@@ -32,6 +32,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import junit.framework.TestCase;
 import static org.mockito.Mockito.*;
@@ -339,8 +340,10 @@ public class TestMapFile extends TestCase {
 	  writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class), Text.class);
 	  assertNotNull(writer);	  
 	  writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class), Text.class, SequenceFile.CompressionType.RECORD);
-	  assertNotNull(writer);
+	  assertNotNull(writer);	  
+	  writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class), Text.class, CompressionType.RECORD, defaultProgressable);
 	  writer.close();	  
+	  assertNotNull(writer);
 	  MapFile.Reader reader = new MapFile.Reader(fs, path, WritableComparator.get(IntWritable.class), conf);	  
 	  assertNotNull(reader);
 	  assertNotNull("reader key is null !!!", reader.getKeyClass());
