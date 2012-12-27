@@ -11,6 +11,7 @@ import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosKey;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
+import javax.security.auth.login.LoginContext;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -59,8 +60,7 @@ public class TestUserGroupInformationWithTicketCache {
   public void before() throws Exception {
     // NB: skip the test if corresponding properties are not specified: 
     final String userProperty = System.getProperty("user.principal");
-    final String cache = System.getProperty("user.ticket.cache");
-    assumeTrue(userProperty != null && cache != null);
+    assumeTrue(userProperty != null);
     
     // cleanup the login state:
     UserGroupInformation.setLoginUser(null);
@@ -109,10 +109,12 @@ public class TestUserGroupInformationWithTicketCache {
   
   @After
   public void after() throws Exception {
-    // Reset the UGI state to initial:
+    // Reset the static UGI state to initial:
     UserGroupInformation.setLoginUser(null);
     // restore the original renew window value:
     UserGroupInformation.setTicketRenewWindowFactor(0.8f);
+    // cleanup the static UGI configuration:
+    UserGroupInformation.setConfiguration(new Configuration());
     // remove the ticket cache:
     clearTGT();
   }
@@ -271,4 +273,70 @@ public class TestUserGroupInformationWithTicketCache {
     checkFileReadable(ticketCacheFilePath);
   }
 
+  @Test
+  public void testCheckTGTAndReloginFromKeytab() throws Exception {
+    conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    // clear cached ticket, if any:
+    clearTGT();
+    // Reset the ticket renew window to a very small value to ensure 
+    // fast renew allowed:
+    UserGroupInformation.setTicketRenewWindowFactor(1e-8f);
+    // initial login from the keytab:
+    final UserGroupInformation ugi = UserGroupInformation
+        .loginUserFromKeytabAndReturnUGI(fullPrincipalName, ktbFilePath);
+    // check UGI is correct:
+    assertNotNull(ugi);
+    assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
+    assertEquals(AuthenticationMethod.KERBEROS, UserGroupInformation.getRealAuthenticationMethod(ugi));
+    assertTrue(ugi.isFromKeytab()); // NB: but not from the cache.
+    assertEquals(principal, ugi.getShortUserName());
+    assertEquals(fullPrincipalName, ugi.getUserName());
+    
+    final Subject subject = ugi.getSubject();
+    final User user = subject.getPrincipals(User.class).iterator().next();
+    final long loginTime0 = user.getLastLogin();
+    // NB: for some reason the last login time is updated *only* upon a re-login. 
+    // Initial login time is always zero:  
+    assertTrue(loginTime0 == 0L);
+    final LoginContext loginContext0 = user.getLogin();
+
+    // no auto-renew thread should be started in this case:
+    final Thread renewThread = ugi.getRenewalThread();
+    assertNull(renewThread);
+    
+    // 1. ask the UGI to re-login from the keytab:
+    ugi.checkTGTAndReloginFromKeytab();
+    // check that re-login really happened (because loginTime0 == 0, see above):
+    final long loginTime1 = user.getLastLogin();
+    final LoginContext loginContext1 = user.getLogin();
+    assertTrue(loginTime1 > loginTime0);
+    assertTrue(loginContext0 != loginContext1);
+    
+    // 2. now try to re-login again, and check that 
+    // the new login did *not* happen: its too early to login again 
+    // (60 sec is the default minimum time gap between the login attempts):
+    ugi.checkTGTAndReloginFromKeytab();
+    final long loginTime2 = user.getLastLogin();
+    final LoginContext loginContext2 = user.getLogin();
+    assertTrue(loginTime2 == loginTime1);
+    assertTrue(loginContext2 == loginContext1);
+    
+    // 3. Now reset the configuration to allow more frequent re-logins 
+    // with 1 sec time gap: 
+    conf = new Configuration();
+    conf.set(CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN, 
+        Integer.toString(1)/* 1 second */); 
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    // wait more than the min time gap and re-login again:
+    Thread.sleep(2000L);
+    ugi.checkTGTAndReloginFromKeytab();
+    // check that re-login has really happened:
+    final long loginTime3 = user.getLastLogin();
+    final LoginContext loginContext3 = user.getLogin();
+    assertTrue(loginTime3 > loginTime2);
+    assertTrue(loginContext3 != loginContext2);
+  }
 }
