@@ -16,6 +16,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.TestUserGroupInformation.DummyLoginConfiguration;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.junit.After;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
@@ -29,12 +30,12 @@ import org.junit.Test;
 /**
  * Tests authentication with help of the Kerberos ticket cache.
  *   
- * The following system properties must be set:
+ * The following system properties *must* be set:
  *   "user.principal"    - short name of the principal
  *   "user.ticket.cache" - path to the Krb ticket cache file
  *   
- * The following properties may be set if non-default values are needed:
- *   "user.realm"                (default = "EXAMPLE.COM")
+ * The following properties *may* be set if non-default values are needed:
+ *   "java.security.krb5.conf"   (default = "/etc/krb5.conf" for Linux)
  *   "user.kinit.command.format" (default = "kinit -V -l 1d -r 100d -k -t {0} {2}")
  *   "user.keytab"               (default = "/etc/krb5.keytab")
  */
@@ -55,10 +56,11 @@ public class TestUserGroupInformationWithTicketCache {
   }
   
   @Before
-  public void before() {
+  public void before() throws Exception {
     // NB: skip the test if corresponding properties are not specified: 
     final String userProperty = System.getProperty("user.principal");
-    assumeTrue(userProperty != null);
+    final String cache = System.getProperty("user.ticket.cache");
+    assumeTrue(userProperty != null && cache != null);
     
     // cleanup the login state:
     UserGroupInformation.setLoginUser(null);
@@ -74,15 +76,23 @@ public class TestUserGroupInformationWithTicketCache {
     initParameters();
   }
   
-  private void initParameters() {
+  private void initParameters() throws Exception {
     principal = getPropertyAndCheck("user.principal", null);
-    realm = getPropertyAndCheck("user.realm", "EXAMPLE.COM");
+    
+    // NB: it's significant that we work with the default realm,
+    // since otherwise no rule will be applied to the principal:
+    realm = new KerberosName("x").getDefaultRealm();
+    assertTrue("The default Kerberos realm is null or empty. " +
+        "Please check the Kerberos config used. System property " +
+        "'java.security.krb5.conf' can be used to configure.", 
+       realm != null && !realm.isEmpty());
+    
     fullPrincipalName = principal + "@" + realm;
     
     // The format parameters:
     // {0} -- keytab file,
     // {1} -- ticket cache file,
-    // {2} -- principal name.
+    // {2} -- full principal name.
     // NB: "-r" option with a correct period must 
     //     be given to make the ticket renewable.
     // NB: " -c {1} " may be added to use a non-default cache file. 
@@ -222,9 +232,10 @@ public class TestUserGroupInformationWithTicketCache {
     assertTrue("Renew count "+renewCount+" did not reach expected value of 3.", 
         renewCount >= 3);
     
-    // interrupt the renewal thread and wait it to finish:
     final Thread renewalThread = ugi.getRenewalThread();
     assertNotNull(renewalThread);
+    assertTrue(renewalThread.isAlive());
+    // interrupt the renewal thread and wait it to finish:
     renewalThread.interrupt();
     renewalThread.join();
   }
