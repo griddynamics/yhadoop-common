@@ -101,7 +101,7 @@ public class TestPipeApplication {
       assertTrue(stdout.contains("s2: org.apache.hadoop.io.FloatWritable"));
       assertTrue(stdout.contains("s2: org.apache.hadoop.io.NullWritable"));
       assertTrue(stdout
-          .contains("split:org.apache.hadoop.mapred.pipes.TestPipeApplication$FakeSplit@851052d"));
+          .contains("split:org.apache.hadoop.mapred.pipes.TestPipeApplication$FakeSplit"));
 
     } finally {
       if (psw != null) {
