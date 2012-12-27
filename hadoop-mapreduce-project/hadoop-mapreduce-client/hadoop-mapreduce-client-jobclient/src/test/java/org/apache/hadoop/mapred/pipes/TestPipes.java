@@ -198,8 +198,8 @@ public class TestPipes extends TestCase {
 
     List<String> results = new ArrayList<String>();
     for (Path p:FileUtil.stat2Paths(dfs.getFileSystem().listStatus(outputPath,
-                                new Utils.OutputFileUtils
-                                         .OutputFilesFilter()))) {
+    		                        new Utils.OutputFileUtils
+    		                                 .OutputFilesFilter()))) {
       results.add(MapReduceTestUtil.readOutput(p, job));
     }
     assertEquals("number of reduces is wrong", 
