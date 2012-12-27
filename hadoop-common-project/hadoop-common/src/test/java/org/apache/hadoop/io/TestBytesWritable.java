@@ -133,5 +133,20 @@ public class TestBytesWritable {
     assertTrue("buffer created with (array, len) has bad length",
         zeroBuf.getLength() == copyBuf.getLength());
   }
+  
+  @Test
+  public void testObjectCommonMethods() {    
+    byte b = 0x9;
+    ByteWritable bw = new ByteWritable();
+    bw.set(b);
+    assertTrue("testSetByteWritable error", bw.get() == b);
+    assertTrue("testSetByteWritable error < 0", bw.compareTo(new ByteWritable((byte)0xA)) < 0);
+    assertTrue("testSetByteWritable error > 0", bw.compareTo(new ByteWritable((byte)0x8)) > 0);
+    assertTrue("testSetByteWritable error == 0", bw.compareTo(new ByteWritable((byte)0x9)) == 0);
+    assertTrue("testSetByteWritable equals error !!!", bw.equals(new ByteWritable((byte)0x9)));
+    assertTrue("testSetByteWritable equals error !!!", ! bw.equals(new ByteWritable((byte)0xA)));
+    assertTrue("testSetByteWritable equals error !!!", ! bw.equals(new IntWritable(1)));
+    assertEquals("testSetByteWritable error ", "9", bw.toString());    
+  }
+  
 }
-
