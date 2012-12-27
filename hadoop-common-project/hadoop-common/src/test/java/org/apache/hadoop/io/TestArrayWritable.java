@@ -78,9 +78,9 @@ public class TestArrayWritable extends TestCase {
   
   public void testNullArgument() {
     try {
-	  Class<? extends Writable> valueClass = null;
-	  ArrayWritable arrayWritable = new ArrayWritable(valueClass);
-	  fail("testNullArgument error !!!");
+	    Class<? extends Writable> valueClass = null;
+	    ArrayWritable arrayWritable = new ArrayWritable(valueClass);
+	    fail("testNullArgument error !!!");
     } catch (IllegalArgumentException exp) {
       //should be for test pass	
     } catch (Exception e) {
@@ -89,9 +89,9 @@ public class TestArrayWritable extends TestCase {
   }
   
   public void testArrayWritableStringConstructor() {
-	String[] original = {"test1","test2","test3"};
-	ArrayWritable arrayWritable = new ArrayWritable(new String[] {"test1","test2","test3"});
-	assertEquals("testArrayWritableStringConstructor class error!!!", UTF8.class, arrayWritable.getValueClass());	
-	assertEquals("testArrayWritableStringConstructor toString error!!!", original, arrayWritable.toStrings());
+	  String[] original = {"test1","test2","test3"};
+	  ArrayWritable arrayWritable = new ArrayWritable(new String[] {"test1","test2","test3"});
+	  assertEquals("testArrayWritableStringConstructor class error!!!", UTF8.class, arrayWritable.getValueClass());	
+	  assertEquals("testArrayWritableStringConstructor toString error!!!", original, arrayWritable.toStrings());
   }
 }
