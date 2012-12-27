@@ -353,7 +353,17 @@ public class TestText extends TestCase {
     } catch(IOException ex) {      
     } catch(Exception ex) {
       fail("testReadWriteOperations error !!!");
-    }    
+    }        
+  }
+  
+  public void testBytesToCodePoint() {
+    ByteBuffer bytes = ByteBuffer.wrap("25724131613461341234".getBytes());
+    assert bytes.position() == 0;
+    int iterations = bytes.limit();
+    for (int i = 1; i < iterations; i++) {
+      Text.bytesToCodePoint(bytes);      
+      assertTrue("testBytesToCodePoint", bytes.position() == i );
+    }            
   }
     
   public static void main(String[] args)  throws Exception
