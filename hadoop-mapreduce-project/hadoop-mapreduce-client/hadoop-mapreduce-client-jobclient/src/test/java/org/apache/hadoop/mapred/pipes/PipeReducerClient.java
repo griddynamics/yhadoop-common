@@ -9,7 +9,10 @@ import java.net.Socket;
 
 import javax.crypto.SecretKey;
 
+import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -22,7 +25,6 @@ public class PipeReducerClient {
   }
 
   public void binaryProtocolStub() {
-    System.out.println("1");
     Socket socket =null;
     try {
 
@@ -35,7 +37,6 @@ public class PipeReducerClient {
       socket = new Socket(addr.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
-      System.out.println("5");
 
       // try to read
       DataInputStream dataInput = new DataInputStream(input);
@@ -65,25 +66,29 @@ public class PipeReducerClient {
 
       int j = WritableUtils.readVInt(dataInput);
       for (i = 0; i < j; i++) {
-        String key=Text.readString(dataInput);
+        Text.readString(dataInput);
         i++;
-        String value= Text.readString(dataInput);
-        System.out.println("key:"+key + " value:"+value);
+         Text.readString(dataInput);
       }
 
 
-// RUN_MAP.code
-      //should be 3
-
+      //should be 5
+  //RUN_REDUCE
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("reduce code:"+i);      
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("reduce :"+i);      
-
       i = WritableUtils.readVInt(dataInput);
-      System.out.println("pipeout :"+i);      
-
-   
+// reduce key
+      i = WritableUtils.readVInt(dataInput);
+      // value of reduce key
+      BooleanWritable value= new BooleanWritable();
+      readObject(value, dataInput);
+      System.out.println("reducer key :"+value);  
+      // reduce value code:
+      i = WritableUtils.readVInt(dataInput);
+      Text txt= new Text();
+      // vakue
+      readObject(txt, dataInput);
+      System.out.println("reduce value  :"+txt);      
 
       
       // done
@@ -112,4 +117,22 @@ public class PipeReducerClient {
 
   }
 
+  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
+    int numBytes = WritableUtils.readVInt(inStream);
+    byte[] buffer;
+    // For BytesWritable and Text, use the specified length to set the length
+    // this causes the "obvious" translations to work. So that if you emit
+    // a string "abc" from C++, it shows up as "abc".
+    if (obj instanceof BytesWritable) {
+      buffer = new byte[numBytes];
+      inStream.readFully(buffer);
+      ((BytesWritable) obj).set(buffer, 0, numBytes);
+    } else if (obj instanceof Text) {
+      buffer = new byte[numBytes];
+      inStream.readFully(buffer);
+      ((Text) obj).set(buffer);
+    } else {
+      obj.readFields(inStream);
+    }
+  }
 }

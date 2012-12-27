@@ -24,7 +24,6 @@ public class PipeApplicatoinRunabeClient {
   }
 
   public void binaryProtocolStub() {
-    System.out.println("1");
     Socket socket =null;
     try {
 
@@ -37,7 +36,6 @@ public class PipeApplicatoinRunabeClient {
       socket = new Socket(addr.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
-      System.out.println("5");
 
       // try to read
       DataInputStream dataInput = new DataInputStream(input);
@@ -67,10 +65,9 @@ public class PipeApplicatoinRunabeClient {
 
       int j = WritableUtils.readVInt(dataInput);
       for (i = 0; i < j; i++) {
-        String key=Text.readString(dataInput);
+        Text.readString(dataInput);
         i++;
-        String value= Text.readString(dataInput);
-        System.out.println("key:"+key + " value:"+value);
+        Text.readString(dataInput);
       }
 
 
@@ -94,7 +91,6 @@ System.out.println("runmap:"+i);
       s= Text.readString(dataInput);
       System.out.println("s2: "+s);
       
-      System.out.println("11");
 
       
       // done

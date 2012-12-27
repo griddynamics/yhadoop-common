@@ -19,14 +19,18 @@ public class TestPipesNonJavaInputFormat {
   private static File workSpace = new File("target",
       TestPipesNonJavaInputFormat.class.getName() + "-workSpace");
 
+  // test PipesNonJavaInputFormat
   @Test
   public void testFormat() throws IOException {
+    
     PipesNonJavaInputFormat inputFormat = new PipesNonJavaInputFormat();
     JobConf conf = new JobConf();
+    
     RecordReader<FloatWritable, NullWritable> reader = inputFormat
         .getRecordReader(new FakeSplit(), conf, new TestTaskReporter());
     assertEquals(0.0f, reader.getProgress(), 0.001);
 
+    // input and output files
     File input1 = new File(workSpace + File.separator + "input1");
     if (!input1.getParentFile().exists()) {
       input1.getParentFile().mkdirs();
@@ -40,7 +44,7 @@ public class TestPipesNonJavaInputFormat {
     if (!input2.exists()) {
       input2.createNewFile();
     }
-
+// set data for splits
     conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
         input1.getAbsolutePath() + "," + input2.getAbsolutePath());
     InputSplit[] splits = inputFormat.getSplits(conf, 2);

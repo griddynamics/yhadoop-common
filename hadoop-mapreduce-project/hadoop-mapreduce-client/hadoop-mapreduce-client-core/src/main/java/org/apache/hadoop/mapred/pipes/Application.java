@@ -126,14 +126,6 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
       TaskAttemptID.forName(conf.get(MRJobConfig.TASK_ATTEMPT_ID));
     File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
     File stderr = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDERR);
-    // prepare folder 
-    if(!stdout.getParentFile().exists()){
-      stdout.getParentFile().mkdirs();
-    }else{ //clean logs 
-      stdout.deleteOnExit();
-      stderr.deleteOnExit();
-    }
-    
     long logLength = TaskLog.getTaskLogLength(conf);
     cmd = TaskLog.captureOutAndError(null, cmd, stdout, stderr, logLength,
                                      false);

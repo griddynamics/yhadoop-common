@@ -48,24 +48,25 @@ public class TestPipeApplication {
   private static File workSpace = new File("target",
       TestPipeApplication.class.getName() + "-workSpace");
 
+  private static String taskName = "attempt_001_02_r03_04_05";
+
+  /**
+   * test PipesMapRunner
+   * 
+   * @throws Exception
+   */
   @Test
   public void testRunner() throws Exception {
 
-    File psw = new File("./jobTokenPassword");
-    if (psw.exists()) {
-      FileUtil.chmod(psw.getAbsolutePath(), "700");
-      psw.delete();
-    }
-    File psw1 = new File("./.jobTokenPassword.crc");
-    if (psw1.exists()) {
-      FileUtil.chmod(psw1.getAbsolutePath(), "700");
-      psw1.delete();
-    }
+    // clean old password files
+    File[] psw = cleanTokenPasswordFile();
     try {
       RecordReader<FloatWritable, NullWritable> rReader = new Reader();
       JobConf conf = new JobConf();
       conf.set(Submitter.IS_JAVA_RR, "true");
-      conf.set(MRJobConfig.TASK_ATTEMPT_ID, "attempt_001_02_r03_04_05");
+      // for stdour and stderror
+
+      conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
 
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
           new Counters.Counter(), new Progress(), conf);
@@ -75,125 +76,157 @@ public class TestPipeApplication {
           new Path(workSpace + File.separator + "outfile"), IntWritable.class,
           Text.class, null, null);
       output.setWriter(wr);
-
+      // stub for client
       File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinRunabeClient");
 
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
-
+      // token for authorization
       Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
           "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+
       TestTaskReporter reporter = new TestTaskReporter();
       PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text> runner = new PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text>();
-      TaskAttemptID taskid = TaskAttemptID.forName("attempt_001_02_r03_04_05");
-      File stdout = TaskLog.getTaskLogFile(taskid, false,
-          TaskLog.LogName.STDOUT);
-      if (!stdout.getParentFile().exists()) {
-        stdout.getParentFile().mkdirs();
-      }
+
+      initstdout(conf);
 
       runner.configure(conf);
       runner.run(rReader, output, reporter);
+
+      String stdout = readstdout(conf);
+
+      // test part of translated data. As common file for client and test -
+      // clients stdout
+      assertTrue(stdout.contains("s2: org.apache.hadoop.io.FloatWritable"));
+      assertTrue(stdout.contains("s2: org.apache.hadoop.io.NullWritable"));
+      assertTrue(stdout
+          .contains("split:org.apache.hadoop.mapred.pipes.TestPipeApplication$FakeSplit@851052d"));
+
     } finally {
-      psw.deleteOnExit();
-      psw1.deleteOnExit();
+      if (psw != null) {
+        // remove password files
+        for (File file : psw) {
+          file.deleteOnExit();
+        }
+      }
+
     }
   }
 
+  /**
+   * test org.apache.hadoop.mapred.pipes.Application
+   * 
+   * @throws Throwable
+   */
   @Test
   public void testApplication() throws Throwable {
     JobConf conf = new JobConf();
 
     RecordReader<FloatWritable, NullWritable> rReader = new Reader();
 
+    // client for test
     File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinClient");
 
     TestTaskReporter reporter = new TestTaskReporter();
 
-    cleanTokenPasswordFile();
+    File[] psw = cleanTokenPasswordFile();
+    try {
 
-    conf.set(MRJobConfig.TASK_ATTEMPT_ID, "attempt_001_02_r03_04_05");
-    conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
-    Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
-        "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
-            "service"));
-    conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
-    CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-        new Counters.Counter(), new Progress(), conf);
-    FileSystem fs = new RawLocalFileSystem();
-    fs.setConf(conf);
-    Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
-        new Path(workSpace + File.separator + "outfile"), IntWritable.class,
-        Text.class, null, null);
-    output.setWriter(wr);
-    conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
+      conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
+      conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
-    Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<WritableComparable<IntWritable>, Writable, IntWritable, Text>(
-        conf, rReader, output, reporter, IntWritable.class, Text.class);
-    application.getDownlink().flush();
-    
-    application.getDownlink().mapItem( new IntWritable(3), new Text("txt"));
-    
-    application.getDownlink().flush();
+      // token for authorization
+      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+              "service"));
 
-    application.waitForFinish();
-    
-    wr.close();
-    
-    // check getDownlink().mapItem();
-    String stdout=readstdout(conf);
-    assertTrue(stdout.contains("map object1:txt"));
-    assertTrue(stdout.contains("map object:3"));
+      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
+          new Counters.Counter(), new Progress(), conf);
+      FileSystem fs = new RawLocalFileSystem();
+      fs.setConf(conf);
+      Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
+          new Path(workSpace + File.separator + "outfile"), IntWritable.class,
+          Text.class, null, null);
+      output.setWriter(wr);
+      conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
 
-    assertEquals(1.0, reporter.getProgress(), 0.01);
-    assertNotNull(reporter.getCounter("group", "name"));
-    assertEquals(reporter.getStatus(), "PROGRESS");
+      Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<WritableComparable<IntWritable>, Writable, IntWritable, Text>(
+          conf, rReader, output, reporter, IntWritable.class, Text.class);
+      application.getDownlink().flush();
 
-    application.getDownlink().close();
-    try{
-      application.abort(new Throwable());
-      fail();
-    }catch(IOException e){
-      assertEquals("pipe child exception", e.getMessage());
+      application.getDownlink().mapItem(new IntWritable(3), new Text("txt"));
+
+      application.getDownlink().flush();
+
+      application.waitForFinish();
+
+      wr.close();
+
+      // check getDownlink().mapItem();
+      String stdout = readstdout(conf);
+      assertTrue(stdout.contains("map object1:txt"));
+      assertTrue(stdout.contains("map object:3"));
+
+      // reporter test counter, and status should be sended
+      assertEquals(1.0, reporter.getProgress(), 0.01);
+      assertNotNull(reporter.getCounter("group", "name"));
+      assertEquals(reporter.getStatus(), "PROGRESS");
+
+      application.getDownlink().close();
+      try {
+        // try to abort
+        application.abort(new Throwable());
+        fail();
+      } catch (IOException e) {
+        // abort works ?
+        assertEquals("pipe child exception", e.getMessage());
+      }
+    } finally {
+      if (psw != null) {
+        // remove password files
+        for (File file : psw) {
+          file.deleteOnExit();
+        }
+      }
     }
   }
 
+  /**
+   * test org.apache.hadoop.mapred.pipes.Submitter
+   * 
+   * @throws Exception
+   */
   @Test
   public void testSubmitter() throws Exception {
 
     JobConf conf = new JobConf();
 
-    cleanTokenPasswordFile();
+    File[] psw = cleanTokenPasswordFile();
 
     System.setProperty("test.build.data",
         "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
     conf.set("hadoop.log.dir", "target/tmp");
 
-    conf.set(Submitter.IS_JAVA_MAP, "false");
-    conf.set(Submitter.IS_JAVA_RW, "false");
-    conf.set(Submitter.IS_JAVA_REDUCE, "false");
-    conf.set(Submitter.IS_JAVA_RR, "false");
-    conf.set(Submitter.EXECUTABLE, "exec");
-    
+    // prepare configuration
     Submitter.setIsJavaMapper(conf, false);
     Submitter.setIsJavaReducer(conf, false);
-    Submitter.setKeepCommandFile(conf,false);
-    Submitter.setIsJavaRecordReader(conf,false);
-    PipesPartitioner<IntWritable,Text> partitioner = new PipesPartitioner<IntWritable,Text>();
+    Submitter.setKeepCommandFile(conf, false);
+    Submitter.setIsJavaRecordReader(conf, false);
+    Submitter.setIsJavaRecordWriter(conf, false);
+    PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
     partitioner.configure(conf);
-        
+
     Submitter.setJavaPartitioner(conf, partitioner.getClass());
 
     assertEquals(PipesPartitioner.class, (Submitter.getJavaPartitioner(conf)));
-
-    // assertEquals("/opt/yahoo/yhadoop-common/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/target/org.apache.hadoop.mapred.pipes.TestPipeApplication-workSpace/cache.sh",
-    // Submitter.getExecutable(conf));
-
+    // test going to call main method with System.exit(). Change Security
     SecurityManager securityManager = System.getSecurityManager();
+    // store System.out
     PrintStream oldps = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    // test without paramaters
+    // test without parameters
     try {
       System.setSecurityManager(new NoExitSecurityManager());
 
@@ -201,6 +234,7 @@ public class TestPipeApplication {
       Submitter.main(new String[0]);
       fail();
     } catch (ExitException e) {
+      // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
       assertTrue(out.toString().contains("bin/hadoop pipes"));
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
@@ -247,9 +281,16 @@ public class TestPipeApplication {
               "-archives <comma separated list of archives>    specify comma separated archives to be unarchived on the compute machines."));
     } finally {
       System.setOut(oldps);
+      // restore
       System.setSecurityManager(securityManager);
+      if (psw != null) {
+        // remove password files
+        for (File file : psw) {
+          file.deleteOnExit();
+        }
+      }
     }
-
+    // test call Submitter form command line
     try {
       System.setSecurityManager(new NoExitSecurityManager());
       File fCommand = getFileCommand(null);
@@ -287,6 +328,7 @@ public class TestPipeApplication {
       Submitter.main(args);
       fail();
     } catch (ExitException e) {
+      // status should be 0
       assertEquals(e.status, 0);
 
     } finally {
@@ -296,36 +338,54 @@ public class TestPipeApplication {
 
   }
 
+  /**
+   * test org.apache.hadoop.mapred.pipes.PipesReducer
+   * 
+   * @throws Exception
+   */
   @Test
   public void testPipesReduser() throws Exception {
 
-    cleanTokenPasswordFile();
+    File[] psw = cleanTokenPasswordFile();
     JobConf conf = new JobConf();
+    try {
+      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+              "service"));
+      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
 
-    Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
-        "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
-            "service"));
-    conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerClient");
+      conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
-    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerClient");
-    conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
+      PipesReducer<BooleanWritable, Text, IntWritable, Text> reduser = new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
+      reduser.configure(conf);
+      BooleanWritable bw = new BooleanWritable(true);
 
-    PipesReducer<BooleanWritable, Text, IntWritable, Text> reduser = new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
-    reduser.configure(conf);
-    BooleanWritable bw = new BooleanWritable(false);
+      conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
+      initstdout(conf);
+      conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
+      CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
+          new Counters.Counter(), new Progress(), conf);
+      Reporter reporter = new TestTaskReporter();
+      List<Text> ltext = new ArrayList<Text>();
+      ltext.add(new Text("1 boolean"));
 
-    conf.set(MRJobConfig.TASK_ATTEMPT_ID, "attempt_001_02_r03_04_05");
-    initstdout(conf);
-    conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
-    CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-        new Counters.Counter(), new Progress(), conf);
-    Reporter reporter = new TestTaskReporter();
-    List<Text> ltext = new ArrayList<Text>();
-    ltext.add(new Text("1 boolean"));
+      reduser.reduce(bw, ltext.iterator(), output, reporter);
+      reduser.close();
+      String stdout= readstdout(conf);
+     // test data
+      assertTrue(stdout.contains("reducer key :true"));
+      assertTrue(stdout.contains("reduce value  :1 boolean"));
 
-    reduser.reduce(bw, ltext.iterator(), output, reporter);
-    reduser.close();
-    System.out.println("ok");
+      System.out.println("ok!");
+    } finally {
+      if (psw != null) {
+        // remove password files
+        for (File file : psw) {
+          file.deleteOnExit();
+        }
+      }
+    }
 
   }
 
@@ -334,23 +394,24 @@ public class TestPipeApplication {
    */
   @Test
   public void testPipesPartitioner() {
-    
+
     PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
-     JobConf conf = new JobConf();
+    JobConf conf = new JobConf();
     Submitter.getJavaPartitioner(conf);
-    partitioner.configure(new JobConf()); 
+    partitioner.configure(new JobConf());
     IntWritable iw = new IntWritable(4);
     assertEquals(0, partitioner.getPartition(iw, new Text("test"), 2));
 
     PipesPartitioner.setNextPartition(3);
 
-
     assertEquals(3, partitioner.getPartition(iw, new Text("test"), 2));
   }
-/**
- *  clean previos std and error outs 
- * @param conf
- */
+
+  /**
+   * clean previous std  error and outs
+   * 
+   * @param conf
+   */
 
   private void initstdout(JobConf conf) {
     TaskAttemptID taskid = TaskAttemptID.forName(conf
@@ -364,26 +425,26 @@ public class TestPipeApplication {
       stdout.deleteOnExit();
       stderr.deleteOnExit();
     }
-
   }
 
   private String readstdout(JobConf conf) throws Exception {
     TaskAttemptID taskid = TaskAttemptID.forName(conf
         .get(MRJobConfig.TASK_ATTEMPT_ID));
     File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
-    ByteArrayOutputStream out= new ByteArrayOutputStream();
-    InputStream is= new FileInputStream(stdout);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    InputStream is = new FileInputStream(stdout);
     byte[] buffer = new byte[1024];
-    int counter=0;
-    while((counter=is.read(buffer))>=0){
-      out.write(buffer,0,counter);
+    int counter = 0;
+    while ((counter = is.read(buffer)) >= 0) {
+      out.write(buffer, 0, counter);
     }
-    
+
     is.close();
-    
+
     return out.toString();
 
   }
+
   private class Progress implements Progressable {
 
     @Override
@@ -393,17 +454,19 @@ public class TestPipeApplication {
 
   }
 
-  private void cleanTokenPasswordFile() throws Exception {
-    File psw = new File("./jobTokenPassword");
-    if (psw.exists()) {
-      FileUtil.chmod(psw.getAbsolutePath(), "700");
-      psw.delete();
+  private File[] cleanTokenPasswordFile() throws Exception {
+    File[] result = new File[2];
+    result[0] = new File("./jobTokenPassword");
+    if (result[0].exists()) {
+      FileUtil.chmod(result[0].getAbsolutePath(), "700");
+      result[0].delete();
     }
-    File psw1 = new File("./.jobTokenPassword.crc");
-    if (psw1.exists()) {
-      FileUtil.chmod(psw1.getAbsolutePath(), "700");
-      psw1.delete();
+    result[1] = new File("./.jobTokenPassword.crc");
+    if (result[1].exists()) {
+      FileUtil.chmod(result[1].getAbsolutePath(), "700");
+      result[1].delete();
     }
+    return result;
   }
 
   private File getFileCommand(String clazz) throws Exception {

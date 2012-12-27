@@ -70,7 +70,7 @@ public class PipeApplicatoinClient {
         i++;
          Text.readString(dataInput);
       }
-      System.out.println("cfg 1s ok:" + ":"+System.currentTimeMillis());
+      System.out.println("cfg  ok:" + ":"+System.currentTimeMillis());
 
       // output code
       WritableUtils.writeVInt(dataout, 50);
@@ -102,7 +102,6 @@ public class PipeApplicatoinClient {
       Text.writeString(dataout, "group");
       Text.writeString(dataout, "name");
       // increment counter
-      System.out.println("10");
       WritableUtils.writeVInt(dataout, 56);
       WritableUtils.writeVInt(dataout, 0);
 
