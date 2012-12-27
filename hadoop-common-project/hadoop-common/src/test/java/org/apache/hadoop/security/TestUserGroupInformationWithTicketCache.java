@@ -299,9 +299,6 @@ public class TestUserGroupInformationWithTicketCache {
     assertTrue(loginTime0 == 0L);
     final LoginContext loginContext0 = user.getLogin();
 
-    // cache the ticket: 
-    //cacheTGT(fullPrincipalName); // XXX
-    
     // no auto-renew thread should be started in this case:
     final Thread renewThread = ugi.getRenewalThread();
     assertNull(renewThread);
