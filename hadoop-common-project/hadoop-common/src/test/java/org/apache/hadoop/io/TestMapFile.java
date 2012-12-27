@@ -311,13 +311,11 @@ public class TestMapFile extends TestCase {
 	      writer.append(new IntWritable(0), new Text("value"));	  
 	    writer.close();
 	  
-	    File indexFile = new File(".", "." + INDEX_LESS_MAP_FILE + "/index");
-	    boolean tryToFix = false;
+	    File indexFile = new File(".", "." + INDEX_LESS_MAP_FILE + "/index");	    
 	    if (indexFile.exists())
-	      tryToFix = indexFile.delete();
-	  
-	    if (tryToFix)
-	      assertTrue("testFix error !!!", MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);	  
+	      indexFile.delete();
+	  	    
+	    assertTrue("testFix error !!!", MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);	  
     } catch (Exception ex) {
       fail("testFix error !!!");
     }
@@ -412,7 +410,7 @@ public class TestMapFile extends TestCase {
       MapFile.main(args);
     } catch(Exception ex) {
       fail("testMainMethodMapFile error !!!");  
-    }
+    }            
   }  
   /**
    * Test getClosest feature.
