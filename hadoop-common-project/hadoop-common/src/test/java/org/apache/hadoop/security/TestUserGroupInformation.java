@@ -17,11 +17,13 @@
 package org.apache.hadoop.security;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 import org.junit.*;
 
 import static org.mockito.Mockito.*;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
@@ -277,39 +279,50 @@ public class TestUserGroupInformation {
   @SuppressWarnings("unchecked") // from Mockito mocks
   @Test
   public <T extends TokenIdentifier> void testAddToken() throws Exception {
-    UserGroupInformation ugi = 
+    final UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
     
     Token<T> t1 = mock(Token.class);
     Token<T> t2 = mock(Token.class);
     Token<T> t3 = mock(Token.class);
     
+    boolean result; 
     // add token to ugi
-    ugi.addToken(t1);
+    result = ugi.addToken(t1);
+    assertTrue(result);
     checkTokens(ugi, t1);
 
     // replace token t1 with t2 - with same key (null)
-    ugi.addToken(t2);
+    result = ugi.addToken(t2);
+    assertTrue(result);
     checkTokens(ugi, t2);
     
     // change t1 service and add token
     when(t1.getService()).thenReturn(new Text("t1"));
-    ugi.addToken(t1);
+    result = ugi.addToken(t1);
+    assertTrue(result);
     checkTokens(ugi, t1, t2);
   
     // overwrite t1 token with t3 - same key (!null)
     when(t3.getService()).thenReturn(new Text("t1"));
-    ugi.addToken(t3);
+    result = ugi.addToken(t3);
+    assertTrue(result);
     checkTokens(ugi, t2, t3);
 
     // just try to re-add with new name
     when(t1.getService()).thenReturn(new Text("t1.1"));
-    ugi.addToken(t1);
+    result = ugi.addToken(t1);
+    assertTrue(result);
     checkTokens(ugi, t1, t2, t3);    
 
     // just try to re-add with new name again
-    ugi.addToken(t1);
-    checkTokens(ugi, t1, t2, t3);    
+    result = ugi.addToken(t1);
+    assertTrue(result);
+    checkTokens(ugi, t1, t2, t3);
+    
+    // test null token addition:
+    result = ugi.addToken(null);
+    assertTrue(!result);
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks
@@ -644,4 +657,42 @@ public class TestUserGroupInformation {
     // Restore hasSufficientTimElapsed back to private
     method.setAccessible(false);
   }
+  
+  /**
+   * System property required to pass the test: 
+   *  "user.principal"    - short name of the principal.
+   * System property that should be set in order to use correct Kerberos config file:
+   *  "java.security.krb5.conf" - the path to the Kerberos config file.
+   */
+  @Test
+  public void testMain() throws Exception {
+    // 0. test #main(String[]) with no args:
+    UserGroupInformation.main(new String[0]);
+    
+    final String principal = System.getProperty("user.principal", null);
+    // Skip the test if the principal is not set: 
+    assumeTrue(principal != null);
+    
+    final String keytabPath = System.getProperty("user.keytab", "/etc/krb5.keytab");
+    checkFileReadable(keytabPath);
+    
+    // 1. Invoke with simple auth: 
+    final String[] args = new String[] { principal, keytabPath }; 
+    UserGroupInformation.main(args);
+
+    // 2. Set Kerberos auth method and invoke again:
+    final Configuration c = new Configuration();
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, c);
+    UserGroupInformation.setConfiguration(c);
+    
+    UserGroupInformation.main(args);
+  }
+
+  static void checkFileReadable(String path) {
+    File f = new File(path);
+    assertTrue("File ["+f.getAbsolutePath()+"] does not exist.", f.exists());
+    assertTrue("File ["+f.getAbsolutePath()+"] is not a regular file.", f.isFile());
+    assertTrue("File ["+f.getAbsolutePath()+"] is not readable.", f.canRead());
+  }
+  
 }
