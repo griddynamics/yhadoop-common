@@ -21,11 +21,16 @@ package org.apache.hadoop.io;
 import junit.framework.TestCase;
 
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
 
+import javax.xml.stream.events.Characters;
+
+import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Chars;
 
 /** Unit tests for LargeUTF8. */
 public class TestText extends TestCase {
@@ -357,15 +362,36 @@ public class TestText extends TestCase {
   }
   
   public void testBytesToCodePoint() {
-    ByteBuffer bytes = ByteBuffer.wrap("25724131613461341234".getBytes());
-    assert bytes.position() == 0;
-    int iterations = bytes.limit();
-    for (int i = 1; i < iterations; i++) {
+    try {
+      ByteBuffer bytes = ByteBuffer.wrap(new byte[] {-2, 45, 23, 12, 76, 89});                                      
       Text.bytesToCodePoint(bytes);      
-      assertTrue("testBytesToCodePoint", bytes.position() == i );
-    }            
+      assertTrue("testBytesToCodePoint error !!!", bytes.position() == 6 );                      
+    } catch (BufferUnderflowException ex) {
+      fail("testBytesToCodePoint unexp exception");
+    } catch (Exception e) {
+      fail("testBytesToCodePoint unexp exception");
+    }    
   }
-    
+  
+  public void testbytesToCodePointWithInvalidUTF() {
+    try {                 
+      Text.bytesToCodePoint(ByteBuffer.wrap(new byte[] {-2}));
+      fail("testbytesToCodePointWithInvalidUTF error unexp exception !!!");
+    } catch (BufferUnderflowException ex) {      
+    } catch(Exception e) {
+      fail("testbytesToCodePointWithInvalidUTF error unexp exception !!!");
+    }
+  }
+  
+  public void testUtf8Length() {         
+    assertEquals("testUtf8Length1 error   !!!", 1, Text.utf8Length(new String(new char[]{(char)1})));
+    assertEquals("testUtf8Length127 error !!!", 1, Text.utf8Length(new String(new char[]{(char)127})));
+    assertEquals("testUtf8Length128 error !!!", 2, Text.utf8Length(new String(new char[]{(char)128})));
+    assertEquals("testUtf8Length193 error !!!", 2, Text.utf8Length(new String(new char[]{(char)193})));    
+    assertEquals("testUtf8Length225 error !!!", 2, Text.utf8Length(new String(new char[]{(char)225})));
+    assertEquals("testUtf8Length254 error !!!", 2, Text.utf8Length(new String(new char[]{(char)254})));                 
+  }
+  
   public static void main(String[] args)  throws Exception
   {
     TestText test = new TestText("main");
