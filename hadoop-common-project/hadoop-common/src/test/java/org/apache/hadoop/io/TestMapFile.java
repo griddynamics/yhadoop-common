@@ -311,11 +311,13 @@ public class TestMapFile extends TestCase {
 	      writer.append(new IntWritable(0), new Text("value"));	  
 	    writer.close();
 	  
-	    File indexFile = new File(".", "." + INDEX_LESS_MAP_FILE + "/index");	    
+	    File indexFile = new File(".", "." + INDEX_LESS_MAP_FILE + "/index");
+	    boolean isDeleted = false; 
 	    if (indexFile.exists())
-	      indexFile.delete();
-	  	    
-	    assertTrue("testFix error !!!", MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);	  
+	      isDeleted = indexFile.delete();
+	  	
+	    if (isDeleted)    
+	      assertTrue("testFix error !!!", MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);	  
     } catch (Exception ex) {
       fail("testFix error !!!");
     }
