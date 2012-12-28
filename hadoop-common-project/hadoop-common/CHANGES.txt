@@ -6,9 +6,17 @@ Release 0.23.6 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-9020. Add a SASL PLAIN server (daryn via tgraves)
+
   IMPROVEMENTS
 
     HADOOP-8931. Add Java version to startup message. (eli)
+
+    HADOOP-9108. Add a method to clear terminateCalled to ExitUtil for test 
+    cases (Kihwal Lee via tgraves)
+
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in 
+    child hadoop client processes (Yu Gao via tgraves)
 
   OPTIMIZATIONS
 
@@ -22,6 +30,20 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
     Veselovsky via bobby)
+
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via tgraves)
+
+    HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
+    rather than info during fallback. (Colin Patrick McCabe via todd)
+
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
+    HADOOP-9152. HDFS can report negative DFS Used on clusters with very 
+    small amounts of data (Brock Noland via tgraves)
+
+    HADOOP-9169. Bring branch-0.23 ExitUtil up to same level as branch-2
+    (Robert Joseph Evans via jlowe)
 
 Release 0.23.5 - UNRELEASED
 
@@ -249,12 +271,14 @@ Release 0.23.3
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
-    HADOOP-8167. Configuration deprecation logic breaks backwards compatibility (tucu)
+    HADOOP-8167. Configuration deprecation logic breaks backwards compatibility
+    (tucu)
 
     HADOOP-8172. Configuration no longer sets all keys in a deprecated key 
     list. (Anupam Seth via bobby)
 
-    HADOOP-8197. Configuration logs WARNs on every use of a deprecated key (tucu)
+    HADOOP-8197. Configuration logs WARNs on every use of a deprecated key
+    (tucu)
 
     HADOOP-8627. FS deleteOnExit may delete the wrong path (daryn via bobby)
 
