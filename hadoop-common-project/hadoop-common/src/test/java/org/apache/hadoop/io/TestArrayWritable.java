@@ -20,6 +20,8 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.junit.Assert;
+
 import junit.framework.TestCase;
 
 /** Unit tests for ArrayWritable */
@@ -89,9 +91,12 @@ public class TestArrayWritable extends TestCase {
   }
   
   public void testArrayWritableStringConstructor() {
-	  String[] original = {"test1","test2","test3"};
-	  ArrayWritable arrayWritable = new ArrayWritable(new String[] {"test1","test2","test3"});
-	  assertEquals("testArrayWritableStringConstructor class error!!!", UTF8.class, arrayWritable.getValueClass());	
-	  assertEquals("testArrayWritableStringConstructor toString error!!!", original, arrayWritable.toStrings());
+    String[] original = { "test1", "test2", "test3" };
+    ArrayWritable arrayWritable = new ArrayWritable(original);
+    assertEquals("testArrayWritableStringConstructor class error!!!", 
+        UTF8.class, arrayWritable.getValueClass());
+    Assert.assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
+      original, arrayWritable.toStrings());
   }
+  
 }
