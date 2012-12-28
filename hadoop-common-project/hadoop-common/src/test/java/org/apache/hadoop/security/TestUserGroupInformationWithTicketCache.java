@@ -235,8 +235,13 @@ public class TestUserGroupInformationWithTicketCache {
     assertNotNull(renewalThread);
     assertTrue(renewalThread.isAlive());
     // interrupt the renewal thread and wait it to finish:
-    renewalThread.interrupt();
-    renewalThread.join();
+    while (renewalThread.isAlive()) {
+      // NB: must interrupt several times 
+      // because there are Thread#join() invocations in Shell.execCommand()
+      // that can "eat" the interrupted status:
+      renewalThread.interrupt();
+      renewalThread.join(200L);
+    }
   }
 
   private void clearTGT() {
