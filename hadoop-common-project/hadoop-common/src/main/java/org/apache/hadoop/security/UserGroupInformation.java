@@ -536,6 +536,14 @@ public class UserGroupInformation {
     return loginUser;
   }
 
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  synchronized static void setLoginUser(UserGroupInformation ugi) {
+    // if this is to become stable, should probably logout the currently
+    // logged in ugi if it's different
+    loginUser = ugi; 
+  }
+
   /**
    * Is this user logged in from a keytab file?
    * @return true if the credentials are from a keytab file.

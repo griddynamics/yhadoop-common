@@ -70,14 +70,24 @@ public class TestUserGroupInformation {
   /** configure ugi */
   @BeforeClass
   public static void setup() {
+    javax.security.auth.login.Configuration.setConfiguration(
+        new DummyLoginConfiguration());
+  }
+  
+  @Before
+  public void setupUgi() {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.auth_to_local",
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
         "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
         + "DEFAULT");
     UserGroupInformation.setConfiguration(conf);
-    javax.security.auth.login.Configuration.setConfiguration(
-        new DummyLoginConfiguration());
+    UserGroupInformation.setLoginUser(null);
+  }
+  
+  @After
+  public void resetUgi() {
+    UserGroupInformation.setLoginUser(null);
   }
   
   /** Test login method */
