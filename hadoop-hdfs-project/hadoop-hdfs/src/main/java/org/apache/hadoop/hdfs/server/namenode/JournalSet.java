@@ -24,7 +24,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.SortedSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +45,6 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.TreeMultiset;
 
 /**
  * Manages a collection of Journals. None of the methods are synchronized, it is
@@ -145,7 +146,7 @@ public class JournalSet implements JournalManager {
       return journal;
     }
 
-    private boolean isDisabled() {
+    boolean isDisabled() {
       return disabled;
     }
 
@@ -163,8 +164,12 @@ public class JournalSet implements JournalManager {
       return required;
     }
   }
-  
-  private List<JournalAndStream> journals = Lists.newArrayList();
+ 
+  // COW implementation is necessary since some users (eg the web ui) call
+  // getAllJournalStreams() and then iterate. Since this is rarely
+  // mutated, there is no performance concern.
+  private List<JournalAndStream> journals =
+      new CopyOnWriteArrayList<JournalSet.JournalAndStream>();
   final int minimumRedundantJournals;
   
   JournalSet(int minimumRedundantResources) {
@@ -232,15 +237,28 @@ public class JournalSet implements JournalManager {
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxId, boolean inProgressOk) throws IOException {
-    final TreeMultiset<EditLogInputStream> allStreams =
-        TreeMultiset.create(EDIT_LOG_INPUT_STREAM_COMPARATOR);
+    final PriorityQueue<EditLogInputStream> allStreams = 
+        new PriorityQueue<EditLogInputStream>(64,
+            EDIT_LOG_INPUT_STREAM_COMPARATOR);
     for (JournalAndStream jas : journals) {
       if (jas.isDisabled()) {
         LOG.info("Skipping jas " + jas + " since it's disabled");
         continue;
       }
-      jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
+      try {
+        jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
+      } catch (IOException ioe) {
+        LOG.warn("Unable to determine input streams from " + jas.getManager() +
+            ". Skipping.", ioe);
+      }
     }
+    chainAndMakeRedundantStreams(streams, allStreams, fromTxId, inProgressOk);
+  }
+  
+  public static void chainAndMakeRedundantStreams(
+      Collection<EditLogInputStream> outStreams,
+      PriorityQueue<EditLogInputStream> allStreams,
+      long fromTxId, boolean inProgressOk) {
     // We want to group together all the streams that start on the same start
     // transaction ID.  To do this, we maintain an accumulator (acc) of all
     // the streams we've seen at a given start transaction ID.  When we see a
@@ -249,7 +267,8 @@ public class JournalSet implements JournalManager {
     // transaction ID.
     LinkedList<EditLogInputStream> acc =
         new LinkedList<EditLogInputStream>();
-    for (EditLogInputStream elis : allStreams) {
+    EditLogInputStream elis;
+    while ((elis = allStreams.poll()) != null) {
       if (acc.isEmpty()) {
         acc.add(elis);
       } else {
@@ -257,7 +276,7 @@ public class JournalSet implements JournalManager {
         if (accFirstTxId == elis.getFirstTxId()) {
           acc.add(elis);
         } else if (accFirstTxId < elis.getFirstTxId()) {
-          streams.add(acc.get(0));
+          outStreams.add(new RedundantEditLogInputStream(acc, fromTxId));
           acc.clear();
           acc.add(elis);
         } else if (accFirstTxId > elis.getFirstTxId()) {
@@ -268,7 +287,7 @@ public class JournalSet implements JournalManager {
       }
     }
     if (!acc.isEmpty()) {
-      streams.add(acc.get(0));
+      outStreams.add(new RedundantEditLogInputStream(acc, fromTxId));
       acc.clear();
     }
   }
@@ -450,12 +469,12 @@ public class JournalSet implements JournalManager {
     }
 
     @Override
-    protected void flushAndSync() throws IOException {
+    protected void flushAndSync(final boolean durable) throws IOException {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
         public void apply(JournalAndStream jas) throws IOException {
           if (jas.isActive()) {
-            jas.getCurrentStream().flushAndSync();
+            jas.getCurrentStream().flushAndSync(durable);
           }
         }
       }, "flushAndSync");
@@ -508,7 +527,6 @@ public class JournalSet implements JournalManager {
     }
   }
   
-  @VisibleForTesting
   List<JournalAndStream> getAllJournalStreams() {
     return journals;
   }

@@ -51,10 +51,13 @@
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
       <item name="Cluster Setup" href="hadoop-project-dist/hadoop-common/ClusterSetup.html"/>
       <item name="CLI Mini Cluster" href="hadoop-project-dist/hadoop-common/CLIMiniCluster.html"/>
-      </menu>
+      <item name="File System Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
+      <item name="Hadoop Commands Reference" href="hadoop-project-dist/hadoop-common/CommandsManual.html"/>
+    </menu>
     
     <menu name="HDFS" inherit="top">
-      <item name="High Availability" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailability.html"/>
+      <item name="High Availability With QJM" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithQJM.html"/>
+      <item name="High Availability With NFS" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithNFS.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="WebHDFS REST API" href="hadoop-project-dist/hadoop-hdfs/WebHDFS.html"/>
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>

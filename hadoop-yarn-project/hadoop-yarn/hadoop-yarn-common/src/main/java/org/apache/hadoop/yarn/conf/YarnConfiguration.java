@@ -225,18 +225,11 @@ public class YarnConfiguration extends Configuration {
   public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
     7*24*60*60*1000; // 7 days
   
+  public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
+  public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
   
   /** The class to use as the persistent store.*/
   public static final String RM_STORE = RM_PREFIX + "store.class";
- 
-  /** The address of the zookeeper instance to use with ZK store.*/
-  public static final String RM_ZK_STORE_ADDRESS = 
-    RM_PREFIX + "zookeeper-store.address";
-  
-  /** The zookeeper session timeout for the zookeeper store.*/
-  public static final String RM_ZK_STORE_TIMEOUT_MS = 
-    RM_PREFIX + "zookeeper-store.session.timeout-ms";
-  public static final int DEFAULT_RM_ZK_STORE_TIMEOUT_MS = 60000;
   
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
@@ -407,6 +400,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
+  
+  public static final String YARN_TRACKING_URL_GENERATOR = 
+      YARN_PREFIX + "tracking.url.generator";
 
   /** Amount of memory in GB that can be allocated for containers.*/
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
