@@ -19,18 +19,12 @@
 package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
-
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
-
-import javax.xml.stream.events.Characters;
-
-import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Chars;
 
 /** Unit tests for LargeUTF8. */
 public class TestText extends TestCase {
@@ -349,12 +343,12 @@ public class TestText extends TestCase {
     Text text = new Text(line);
     try {      
       in.reset(inputBytes, inputBytes.length);
-      text.readFields(in, inputBytes.length);      
+      text.readFields(in);      
     } catch(Exception ex) {
       fail("testReadFields error !!!");
     }    
     try {
-      text.write(out, 0);
+      text.write(out);
     } catch(IOException ex) {      
     } catch(Exception ex) {
       fail("testReadWriteOperations error !!!");
