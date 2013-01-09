@@ -19,12 +19,9 @@
 package org.apache.hadoop.mapreduce.jobhistory;
 
 import static junit.framework.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
+
 
 import java.io.File;
 import java.io.IOException;
