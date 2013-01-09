@@ -180,6 +180,9 @@ Trunk (Unreleased)
     HDFS-4352. Encapsulate arguments to BlockReaderFactory in a class
     (Colin Patrick McCabe via todd)
 
+    HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes
+    (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -453,6 +456,19 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9173. Add security token protobuf definition to common and
     use it in hdfs. (suresh)
+
+    HDFS-4030. BlockManager excessBlocksCount and
+    postponedMisreplicatedBlocksCount should be AtomicLongs. (eli)
+
+    HDFS-4031. Update findbugsExcludeFile.xml to include findbugs 2
+    exclusions. (eli)
+    
+    HDFS-4033. Miscellaneous findbugs 2 fixes. (eli)
+
+    HDFS-4034. Remove redundant null checks. (eli)
+
+    HDFS-4035. LightWeightGSet and LightWeightHashSet increment a
+    volatile without synchronization. (eli)
 
   OPTIMIZATIONS
 
