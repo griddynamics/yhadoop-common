@@ -201,6 +201,48 @@ public class TestMapFile extends TestCase {
 	  }
   }
   
+  public void testRenameWithFalse() {
+    final String ERROR_MESSAGE = "Could not rename";
+    final String NEW_FILE_NAME = "test-new.mapfile"; 
+    final String OLD_FILE_NAME = "test-old.mapfile";    
+    final String PATH_PREFIX = System.getProperty("test.build.data",".");
+    try {             
+      FileSystem fs = FileSystem.getLocal(conf);
+      FileSystem spyFs = spy(fs);   
+    
+      MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class);  
+      writer.close();
+    
+      Path oldDir = new Path(PATH_PREFIX + OLD_FILE_NAME);
+      Path newDir = new Path(PATH_PREFIX + NEW_FILE_NAME);    
+      when(spyFs.rename(oldDir, newDir)).thenReturn(false);   
+    
+      MapFile.rename(spyFs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX + NEW_FILE_NAME);
+      fail("testRenameWithException no exception error !!!");   
+    } catch(IOException ex) {
+      assertTrue("testRenameWithFalse invalid IOExceptionMessage error !!!", ex.getMessage().startsWith(ERROR_MESSAGE));
+    }
+  }
+  
+  public void testWriteWithFailDirCreation() {
+    String ERROR_MESSAGE = "Mkdirs failed to create directory";    
+    Path dirName = new Path(System.getProperty("test.build.data",".") + "fail.mapfile");
+    
+    try {                       
+      FileSystem fs = FileSystem.getLocal(conf);
+      FileSystem spyFs = spy(fs);
+      Path pathSpy = spy(dirName);
+      when(pathSpy.getFileSystem(conf)).thenReturn(spyFs);
+      when(spyFs.mkdirs(dirName)).thenReturn(false);          
+                  
+      MapFile.Writer writer = new MapFile.Writer(conf, pathSpy, 
+          MapFile.Writer.keyClass(IntWritable.class), MapFile.Writer.valueClass(Text.class));                         
+      fail("testWriteWithFailDirCreation error !!!");
+    } catch(IOException ex) {
+      assertTrue("testWriteWithFailDirCreation ex error !!!", ex.getMessage().startsWith(ERROR_MESSAGE));
+    }
+  }
+  
   public void testOnFinalKey() {
     final String TEST_METHOD_KEY = "testOnFinalKey.mapfile";
     int SIZE = 10;
@@ -344,6 +386,10 @@ public class TestMapFile extends TestCase {
 	    assertNotNull(writer);	  
 	    writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class), 
 	      Text.class, CompressionType.RECORD, defaultProgressable);
+	    assertNotNull(writer);
+	    writer = new MapFile.Writer(conf, fs, path, WritableComparator.get(Text.class),
+	        Text.class, CompressionType.RECORD, defaultCodec, defaultProgressable);
+	    assertNotNull(writer);
 	    writer.close();	  
 	    assertNotNull(writer);
 	    MapFile.Reader reader = new MapFile.Reader(fs, path, 
