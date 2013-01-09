@@ -177,9 +177,6 @@ Trunk (Unreleased)
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
 
-    HDFS-4352. Encapsulate arguments to BlockReaderFactory in a class
-    (Colin Patrick McCabe via todd)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -302,6 +299,9 @@ Release 2.0.3-alpha - Unreleased
   INCOMPATIBLE CHANGES
 
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
+    HDFS-4362. GetDelegationTokenResponseProto does not handle null token.
     (suresh)
 
   NEW FEATURES
@@ -450,6 +450,19 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9173. Add security token protobuf definition to common and
     use it in hdfs. (suresh)
+
+    HDFS-4030. BlockManager excessBlocksCount and
+    postponedMisreplicatedBlocksCount should be AtomicLongs. (eli)
+
+    HDFS-4031. Update findbugsExcludeFile.xml to include findbugs 2
+    exclusions. (eli)
+    
+    HDFS-4033. Miscellaneous findbugs 2 fixes. (eli)
+
+    HDFS-4034. Remove redundant null checks. (eli)
+
+    HDFS-4035. LightWeightGSet and LightWeightHashSet increment a
+    volatile without synchronization. (eli)
 
   OPTIMIZATIONS
 
@@ -657,6 +670,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4302. Fix fatal exception when starting NameNode with DEBUG logs
     (Eugene Koontz via todd)
 
+    HDFS-3970. Fix bug causing rollback of HDFS upgrade to result in bad
+    VERSION file. (Vinay and Andrew Wang via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
@@ -759,6 +775,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
     (Chao Shi via todd)
 
+    HDFS-4351.  In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
+    needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
 

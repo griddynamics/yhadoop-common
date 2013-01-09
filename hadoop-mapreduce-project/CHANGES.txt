@@ -172,6 +172,12 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    MAPREDUCE-4520. Added support for MapReduce applications to request for
+    CPU cores along-with memory post YARN-2. (acmurthy)
+
+    MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
+    vinodkv)
+
   IMPROVEMENTS
 
     MAPREDUCE-3678. The Map tasks logs should have the value of input
@@ -194,6 +200,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4899. Implemented a MR specific plugin for tracking finished
     applications that YARN's ResourceManager doesn't keep track off anymore
     (Derek Dagit via vinodkv)
+
+    MAPREDUCE-4920. Use security token protobuf definition from hadoop common.
+    (Suresh Srinivas via vinodkv)
 
   OPTIMIZATIONS
 
@@ -234,6 +243,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4856. TestJobOutputCommitter uses same directory as
     TestJobCleanup. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4278. Cannot run two local jobs in parallel from the same
+    gateway. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -660,6 +672,15 @@ Release 0.23.6 - UNRELEASED
     running jobs in local mode (Devaraj K via bobby)
 
     MAPREDUCE-4832. MR AM can get in a split brain situation (jlowe)
+
+    MAPREDUCE-4894. Renewal / cancellation of JobHistory tokens (Siddharth
+    Seth via tgraves)
+
+    MAPREDUCE-4819. AM can rerun job after reporting final job status to the
+    client (bobby and Bikas Saha via bobby)
+
+    MAPREDUCE-4913. TestMRAppMaster#testMRAppMasterMissingStaging occasionally 
+    exits (Jason Lowe via tgraves)
 
 Release 0.23.5 - UNRELEASED
 
