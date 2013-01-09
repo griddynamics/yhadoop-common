@@ -115,7 +115,10 @@ public class ShellBasedUnixGroupsNetgroupMapping
       String user = userInfo.replaceFirst("[^,]*,", "");
       user = user.replaceFirst(",.*$", "");
       // voila! got username!
-      users.add(user);
+      user = user.trim();
+      if (user.length() > 0) {
+        users.add(user);
+      }
     }
 
     return users;

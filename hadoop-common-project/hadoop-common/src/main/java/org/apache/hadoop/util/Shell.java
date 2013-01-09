@@ -261,6 +261,11 @@ abstract public class Shell {
     public int getExitCode() {
       return exitCode;
     }
+    
+    @Override
+    public String toString() {
+      return super.toString() + " exit code = " + exitCode;
+    }
   }
   
   /**

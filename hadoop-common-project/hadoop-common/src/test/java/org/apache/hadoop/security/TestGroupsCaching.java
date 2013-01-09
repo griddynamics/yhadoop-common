@@ -25,9 +25,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.*;
+import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,15 +39,30 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 
 public class TestGroupsCaching {
   public static final Log LOG = LogFactory.getLog(TestGroupsCaching.class);
-  private static Configuration conf = new Configuration();
-  private static String[] myGroups = {"grp1", "grp2"};
+  private static final Configuration conf = new Configuration();
+  private static final String[] myGroups = {"grp1", "grp2"};
 
-  static {
+  @BeforeClass
+  public static void beforeClass() {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
       FakeGroupMapping.class,
       ShellBasedUnixGroupsMapping.class);
   }
+  
+  @Before
+  public void before() {
+    NetgroupCache.clear();
+    FakeGroupMapping.allGroups.clear();
+    FakeGroupMapping.blackList.clear();
+  }
 
+  @After
+  public void after() {
+    NetgroupCache.clear();
+    FakeGroupMapping.allGroups.clear();
+    FakeGroupMapping.blackList.clear();
+  }
+  
   public static class FakeGroupMapping extends ShellBasedUnixGroupsMapping {
     // any to n mapping
     private static Set<String> allGroups = new HashSet<String>();
@@ -88,19 +102,19 @@ public class TestGroupsCaching {
   }
 
   @Test
-  public void TestGroupsCaching() throws Exception {
-    Groups groups = new Groups(conf);
+  public void testGroupsCaching() throws Exception {
+    final Groups groups = new Groups(conf);
     groups.cacheGroupsAdd(Arrays.asList(myGroups));
     groups.refresh();
     FakeGroupMapping.clearBlackList();
     FakeGroupMapping.addToBlackList("user1");
 
     // regular entry
-    assertTrue(groups.getGroups("me").size() == 2);
+    assertEquals(2, groups.getGroups("me").size());
 
     // this must be cached. blacklisting should have no effect.
     FakeGroupMapping.addToBlackList("me");
-    assertTrue(groups.getGroups("me").size() == 2);
+    assertEquals(2, groups.getGroups("me").size());
 
     // ask for a negative entry
     try {
@@ -115,6 +129,6 @@ public class TestGroupsCaching {
 
     // this shouldn't be cached. remove from the black list and retry.
     FakeGroupMapping.clearBlackList();
-    assertTrue(groups.getGroups("user1").size() == 2);
+    assertEquals(2, groups.getGroups("user1").size());
   }
 }

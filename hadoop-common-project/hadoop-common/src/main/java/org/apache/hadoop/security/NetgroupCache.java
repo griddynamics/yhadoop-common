@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Class that caches the netgroups and inverts group-to-user map
- * to user-to-group map, primarily intented for use with
+ * to user-to-group map, primarily intended for use with
  * netgroups (as returned by getent netgrgoup) which only returns
  * group to user mapping.
  */
@@ -43,10 +43,10 @@ public class NetgroupCache {
   private static final Log LOG = LogFactory.getLog(NetgroupCache.class);
 
   private static boolean netgroupToUsersMapUpdated = true;
-  private static Map<String, Set<String>> netgroupToUsersMap =
+  private static final Map<String, Set<String>> netgroupToUsersMap =
     new ConcurrentHashMap<String, Set<String>>();
 
-  private static Map<String, Set<String>> userToNetgroupsMap =
+  private static final Map<String, Set<String>> userToNetgroupsMap =
     new ConcurrentHashMap<String, Set<String>>();
 
 

@@ -32,6 +32,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * A user-to-groups mapping service.
  * 
@@ -158,6 +160,11 @@ public class Groups {
   }
 
   private static Groups GROUPS = null;
+  
+  @VisibleForTesting
+  static void resetGroups() {
+    GROUPS = null;
+  }
   
   /**
    * Get the groups being used to map user-to-groups.

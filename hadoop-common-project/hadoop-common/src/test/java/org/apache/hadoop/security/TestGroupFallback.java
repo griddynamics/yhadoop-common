@@ -93,11 +93,17 @@ public class TestGroupFallback {
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMappingWithFallback");
 
-    Groups groups = new Groups(conf);
+    final Groups groups = new Groups(conf);
 
-    String username = System.getProperty("user.name");
+    final String username = System.getProperty("user.name");
+    
     List<String> groupList = groups.getGroups(username);
-
+    LOG.info(username + " has GROUPS: " + groupList.toString());
+    assertTrue(groupList.size() > 0);
+    
+    groups.refresh();
+    
+    groupList = groups.getGroups(username);
     LOG.info(username + " has GROUPS: " + groupList.toString());
     assertTrue(groupList.size() > 0);
   }
