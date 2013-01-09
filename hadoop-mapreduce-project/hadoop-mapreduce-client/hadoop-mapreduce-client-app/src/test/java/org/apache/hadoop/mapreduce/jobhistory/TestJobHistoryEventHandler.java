@@ -22,12 +22,10 @@ import static junit.framework.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
-
 import java.io.File;
 import java.io.IOException;
 
 import junit.framework.Assert;
-
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
