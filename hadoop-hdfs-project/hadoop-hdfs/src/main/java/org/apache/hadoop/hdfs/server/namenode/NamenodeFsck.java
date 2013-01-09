@@ -40,10 +40,8 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -558,15 +556,13 @@ public class NamenodeFsck {
         s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
         s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
         
+        String file = BlockReaderFactory.getFileName(targetAddr, block.getBlockPoolId(),
+            block.getBlockId());
         blockReader = BlockReaderFactory.newBlockReader(
-          new BlockReaderFactory.Params(new Conf(conf)).
-            setPeer(TcpPeerServer.peerFromSocketAndKey(s,
-                namenode.getRpcServer().getDataEncryptionKey())).
-            setBlock(block).
-            setFile(BlockReaderFactory.getFileName(targetAddr, 
-                block.getBlockPoolId(), block.getBlockId())).
-            setBlockToken(lblock.getBlockToken()).
-            setDatanodeID(chosenNode));
+            conf, s, file, block, lblock
+            .getBlockToken(), 0, -1,
+            namenode.getRpcServer().getDataEncryptionKey());
+        
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue
         LOG.info("Failed to connect to " + targetAddr + ":" + ex);
