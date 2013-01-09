@@ -7,6 +7,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
     (suresh)
 
+    HDFS-4362. GetDelegationTokenResponseProto does not handle null token.
+    (suresh)
+
   NEW FEATURES
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
@@ -160,6 +163,19 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9173. Add security token protobuf definition to common and
     use it in hdfs. (suresh)
+
+    HDFS-4030. BlockManager excessBlocksCount and
+    postponedMisreplicatedBlocksCount should be AtomicLongs. (eli)
+
+    HDFS-4031. Update findbugsExcludeFile.xml to include findbugs 2
+    exclusions. (eli)
+
+    HDFS-4033. Miscellaneous findbugs 2 fixes. (eli)
+
+    HDFS-4034. Remove redundant null checks. (eli)
+
+    HDFS-4035. LightWeightGSet and LightWeightHashSet increment a
+    volatile without synchronization. (eli)
 
   OPTIMIZATIONS
 
@@ -464,6 +480,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4351.  In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
     needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
+
+    HDFS-4100. Fix all findbug security warings. (Liang Xie via eli)
 
 Release 2.0.2-alpha - 2012-09-07 
 
