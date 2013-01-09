@@ -25,20 +25,25 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReadOpChecksumInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
 
@@ -51,8 +56,7 @@ import org.apache.hadoop.util.DataChecksum;
 @Deprecated
 public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
-  private final Peer peer;
-  private final DatanodeID datanodeID;
+  Socket dnSock; //for now just sending the status code (e.g. checksumOk) after the read.
   private final DataInputStream in;
   private DataChecksum checksum;
 
@@ -122,9 +126,9 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     // if eos was set in the previous read, send a status code to the DN
     if (eos && !eosBefore && nRead >= 0) {
       if (needChecksum()) {
-        sendReadResult(peer, Status.CHECKSUM_OK);
+        sendReadResult(dnSock, Status.CHECKSUM_OK);
       } else {
-        sendReadResult(peer, Status.SUCCESS);
+        sendReadResult(dnSock, Status.SUCCESS);
       }
     }
     return nRead;
@@ -318,8 +322,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   
   private RemoteBlockReader(String file, String bpid, long blockId,
       DataInputStream in, DataChecksum checksum, boolean verifyChecksum,
-      long startOffset, long firstChunkOffset, long bytesToRead, 
-      Peer peer, DatanodeID datanodeID) {
+      long startOffset, long firstChunkOffset, long bytesToRead, Socket dnSock) {
     // Path is used only for printing block and file information in debug
     super(new Path("/blk_" + blockId + ":" + bpid + ":of:"+ file)/*too non path-like?*/,
           1, verifyChecksum,
@@ -327,8 +330,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
           checksum.getBytesPerChecksum(),
           checksum.getChecksumSize());
     
-    this.peer = peer;
-    this.datanodeID = datanodeID;
+    this.dnSock = dnSock;
     this.in = in;
     this.checksum = checksum;
     this.startOffset = Math.max( startOffset, 0 );
@@ -347,6 +349,13 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     checksumSize = this.checksum.getChecksumSize();
   }
 
+  public static RemoteBlockReader newBlockReader(Socket sock, String file,
+      ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
+      long startOffset, long len, int bufferSize) throws IOException {
+    return newBlockReader(sock, file, block, blockToken, startOffset,
+        len, bufferSize, true, "");
+  }
+
   /**
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
@@ -362,25 +371,29 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * @param clientName  Client name
    * @return New BlockReader instance, or null on error.
    */
-  public static RemoteBlockReader newBlockReader(BlockReaderFactory.Params params)
-        throws IOException {
+  public static RemoteBlockReader newBlockReader( Socket sock, String file,
+                                     ExtendedBlock block, 
+                                     Token<BlockTokenIdentifier> blockToken,
+                                     long startOffset, long len,
+                                     int bufferSize, boolean verifyChecksum,
+                                     String clientName)
+                                     throws IOException {
     // in and out will be closed when sock is closed (by the caller)
     final DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
-        params.getPeer().getOutputStream()));
-    new Sender(out).readBlock(params.getBlock(), params.getBlockToken(), 
-        params.getClientName(), params.getStartOffset(), params.getLen());
-
+          NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT)));
+    new Sender(out).readBlock(block, blockToken, clientName, startOffset, len);
+    
     //
     // Get bytes in block, set streams
     //
-    DataInputStream in = new DataInputStream(
-        new BufferedInputStream(params.getPeer().getInputStream(),
-            params.getBufferSize()));
 
+    DataInputStream in = new DataInputStream(
+        new BufferedInputStream(NetUtils.getInputStream(sock), 
+                                bufferSize));
+    
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
         vintPrefixed(in));
-    RemoteBlockReader2.checkSuccess(status, params.getPeer(),
-        params.getBlock(), params.getFile());
+    RemoteBlockReader2.checkSuccess(status, sock, block, file);
     ReadOpChecksumInfoProto checksumInfo =
       status.getReadOpChecksumInfo();
     DataChecksum checksum = DataTransferProtoUtil.fromProto(
@@ -390,29 +403,26 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     // Read the first chunk offset.
     long firstChunkOffset = checksumInfo.getChunkOffset();
     
-    if ( firstChunkOffset < 0 || firstChunkOffset > params.getStartOffset() ||
-        firstChunkOffset <= (params.getStartOffset() - checksum.getBytesPerChecksum())) {
+    if ( firstChunkOffset < 0 || firstChunkOffset > startOffset ||
+        firstChunkOffset <= (startOffset - checksum.getBytesPerChecksum())) {
       throw new IOException("BlockReader: error in first chunk offset (" +
                             firstChunkOffset + ") startOffset is " + 
-                            params.getStartOffset() + " for file " + params.getFile());
+                            startOffset + " for file " + file);
     }
 
-    return new RemoteBlockReader(params.getFile(), params.getBlock().getBlockPoolId(), 
-        params.getBlock().getBlockId(), in, checksum, params.getVerifyChecksum(),
-        params.getStartOffset(), firstChunkOffset, params.getLen(),
-        params.getPeer(), params.getDatanodeID());
+    return new RemoteBlockReader(file, block.getBlockPoolId(), block.getBlockId(),
+        in, checksum, verifyChecksum, startOffset, firstChunkOffset, len, sock);
   }
 
   @Override
-  public synchronized void close(PeerCache peerCache) throws IOException {
+  public synchronized void close() throws IOException {
     startOffset = -1;
     checksum = null;
-    if (peerCache != null && sentStatusCode) {
-      peerCache.put(datanodeID, peer);
-    } else {
-      peer.close();
+    if (dnSock != null) {
+      dnSock.close();
     }
-    // in will be closed when its Peer is closed.
+
+    // in will be closed when its Socket is closed.
   }
   
   @Override
@@ -426,21 +436,37 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     return readFully(this, buf, offset, len);
   }
 
+  @Override
+  public Socket takeSocket() {
+    assert hasSentStatusCode() :
+      "BlockReader shouldn't give back sockets mid-read";
+    Socket res = dnSock;
+    dnSock = null;
+    return res;
+  }
+
+  @Override
+  public boolean hasSentStatusCode() {
+    return sentStatusCode;
+  }
+
   /**
    * When the reader reaches end of the read, it sends a status response
    * (e.g. CHECKSUM_OK) to the DN. Failure to do so could lead to the DN
    * closing our connection (which we will re-open), but won't affect
    * data correctness.
    */
-  void sendReadResult(Peer peer, Status statusCode) {
-    assert !sentStatusCode : "already sent status code to " + peer;
+  void sendReadResult(Socket sock, Status statusCode) {
+    assert !sentStatusCode : "already sent status code to " + sock;
     try {
-      RemoteBlockReader2.writeReadResult(peer.getOutputStream(), statusCode);
+      RemoteBlockReader2.writeReadResult(
+          NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT),
+          statusCode);
       sentStatusCode = true;
     } catch (IOException e) {
       // It's ok not to be able to send this. But something is probably wrong.
       LOG.info("Could not send read status (" + statusCode + ") to datanode " +
-               datanodeID + ": " + e.getMessage());
+               sock.getInetAddress() + ": " + e.getMessage());
     }
   }
   
@@ -460,4 +486,12 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   public int read(ByteBuffer buf) throws IOException {
     throw new UnsupportedOperationException("readDirect unsupported in RemoteBlockReader");
   }
+
+  @Override
+  public IOStreamPair getStreams() {
+    // This class doesn't support encryption, which is the only thing this
+    // method is used for. See HDFS-3637.
+    return null;
+  }
+
 }
