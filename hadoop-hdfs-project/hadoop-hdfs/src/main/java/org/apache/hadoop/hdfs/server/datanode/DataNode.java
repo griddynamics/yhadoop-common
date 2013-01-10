@@ -98,7 +98,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
@@ -115,6 +114,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -1468,7 +1468,7 @@ public class DataNode extends Configured
         // read ack
         if (isClient) {
           DNTransferAckProto closeAck = DNTransferAckProto.parseFrom(
-              HdfsProtoUtil.vintPrefixed(in));
+              PBHelper.vintPrefixed(in));
           if (LOG.isDebugEnabled()) {
             LOG.debug(getClass().getSimpleName() + ": close-ack=" + closeAck);
           }
@@ -1908,10 +1908,11 @@ public class DataNode extends Configured
   }
 
   /**
-   * Get namenode corresponding to a block pool
+   * Get the NameNode corresponding to the given block pool.
+   *
    * @param bpid Block pool Id
    * @return Namenode corresponding to the bpid
-   * @throws IOException
+   * @throws IOException if unable to get the corresponding NameNode
    */
   public DatanodeProtocolClientSideTranslatorPB getActiveNamenodeForBP(String bpid)
       throws IOException {
@@ -1935,11 +1936,6 @@ public class DataNode extends Configured
     final String bpid = block.getBlockPoolId();
     DatanodeProtocolClientSideTranslatorPB nn =
       getActiveNamenodeForBP(block.getBlockPoolId());
-    if (nn == null) {
-      throw new IOException(
-          "Unable to synchronize block " + rBlock + ", since this DN "
-          + " has not acknowledged any NN as active.");
-    }
     
     long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {

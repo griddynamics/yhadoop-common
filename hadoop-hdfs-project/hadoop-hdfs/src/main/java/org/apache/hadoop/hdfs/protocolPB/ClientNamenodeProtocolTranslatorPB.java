@@ -64,8 +64,10 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDataEncryptionKeyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
@@ -280,7 +282,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     if (previous != null) 
       req.setPrevious(PBHelper.convert(previous)); 
     if (excludeNodes != null) 
-      req.addAllExcludeNodes(Arrays.asList(PBHelper.convert(excludeNodes)));
+      req.addAllExcludeNodes(PBHelper.convert(excludeNodes));
     try {
       return PBHelper.convert(rpcProxy.addBlock(null, req.build()).getBlock());
     } catch (ServiceException e) {
@@ -298,8 +300,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .newBuilder()
         .setSrc(src)
         .setBlk(PBHelper.convert(blk))
-        .addAllExistings(Arrays.asList(PBHelper.convert(existings)))
-        .addAllExcludes(Arrays.asList(PBHelper.convert(excludes)))
+        .addAllExistings(PBHelper.convert(existings))
+        .addAllExcludes(PBHelper.convert(excludes))
         .setNumAdditionalNodes(numAdditionalNodes)
         .setClientName(clientName)
         .build();
@@ -758,7 +760,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setRenewer(renewer.toString())
         .build();
     try {
-      return PBHelper.convertDelegationToken(rpcProxy.getDelegationToken(null, req).getToken());
+      GetDelegationTokenResponseProto resp = rpcProxy.getDelegationToken(null, req);
+      return resp.hasToken() ? PBHelper.convertDelegationToken(resp.getToken())
+          : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -815,8 +819,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
     GetDataEncryptionKeyRequestProto req = GetDataEncryptionKeyRequestProto
         .newBuilder().build();
     try {
-      return PBHelper.convert(rpcProxy.getDataEncryptionKey(null, req)
-          .getDataEncryptionKey());
+      GetDataEncryptionKeyResponseProto rsp = 
+          rpcProxy.getDataEncryptionKey(null, req);
+      return rsp.hasDataEncryptionKey() ? 
+          PBHelper.convert(rsp.getDataEncryptionKey()) : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

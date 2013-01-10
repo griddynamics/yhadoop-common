@@ -540,6 +540,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Credentials fsTokens;
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
+  
+  private JobStateInternal forcedState = null;
 
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
@@ -548,7 +550,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       Credentials fsTokenCredentials, Clock clock,
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, MRAppMetrics metrics,
       boolean newApiCommitter, String userName,
-      long appSubmitTime, List<AMInfo> amInfos, AppContext appContext) {
+      long appSubmitTime, List<AMInfo> amInfos, AppContext appContext,
+      JobStateInternal forcedState, String forcedDiagnostic) {
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = jobId;
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
@@ -579,6 +582,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
     stateMachine = stateMachineFactory.make(this);
+    this.forcedState  = forcedState;
+    if(forcedDiagnostic != null) {
+      this.diagnostics.add(forcedDiagnostic);
+    }
   }
 
   protected StateMachine<JobStateInternal, JobEventType, JobEvent> getStateMachine() {
@@ -818,7 +825,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobState getState() {
     readLock.lock();
     try {
-      return getExternalState(getStateMachine().getCurrentState());
+      return getExternalState(getInternalState());
     } finally {
       readLock.unlock();
     }
@@ -868,6 +875,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobStateInternal getInternalState() {
     readLock.lock();
     try {
+      if(forcedState != null) {
+        return forcedState;
+      }
      return getStateMachine().getCurrentState();
     } finally {
       readLock.unlock();
@@ -1040,6 +1050,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
             MRJobConfig.DEFAULT_MR_AM_VMEM_MB);
 
+    long sysCPUSizeForUberSlot =
+        conf.getInt(MRJobConfig.MR_AM_CPU_VCORES,
+            MRJobConfig.DEFAULT_MR_AM_CPU_VCORES);
+
     boolean uberEnabled =
         conf.getBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     boolean smallNumMapTasks = (numMapTasks <= sysMaxMaps);
@@ -1051,6 +1065,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             conf.getLong(MRJobConfig.REDUCE_MEMORY_MB, 0))
             <= sysMemSizeForUberSlot)
             || (sysMemSizeForUberSlot == JobConf.DISABLED_MEMORY_LIMIT));
+    boolean smallCpu =
+        (
+            Math.max(
+                conf.getInt(MRJobConfig.MAP_CPU_VCORES, 1), 
+                conf.getInt(MRJobConfig.REDUCE_CPU_VCORES, 1)) < 
+             sysCPUSizeForUberSlot
+        );
     boolean notChainJob = !isChainJob(conf);
 
     // User has overall veto power over uberization, or user can modify
@@ -1061,7 +1082,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     // while "uber-AM" (MR AM + LocalContainerLauncher) loops over tasks
     // and thus requires sequential execution.
     isUber = uberEnabled && smallNumMapTasks && smallNumReduceTasks
-        && smallInput && smallMemory && notChainJob && isValidUberMaxReduces;
+        && smallInput && smallMemory && smallCpu 
+        && notChainJob && isValidUberMaxReduces;
 
     if (isUber) {
       LOG.info("Uberizing job " + jobId + ": " + numMapTasks + "m+"
