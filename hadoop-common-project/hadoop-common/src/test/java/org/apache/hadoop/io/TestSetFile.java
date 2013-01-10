@@ -73,9 +73,10 @@ public class TestSetFile extends TestCase {
     return new SetFile.Reader(fs, FILE, 
         WritableComparator.get(IntWritable.class), conf);    
   }
-
+  
+  @SuppressWarnings("deprecation")
   private void writeData(FileSystem fs, int elementSize) throws IOException {
-    MapFile.delete(fs, FILE);
+    MapFile.delete(fs, FILE);    
     SetFile.Writer writer = new SetFile.Writer(fs, FILE, IntWritable.class);
     for (int i = 0; i < elementSize; i++)
       writer.append(new IntWritable(i));
