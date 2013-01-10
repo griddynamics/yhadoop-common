@@ -33,7 +33,7 @@ import org.junit.Assert;
  */
 public final class FileContextTestHelper {
   // The test root is relative to the <wd>/build/test/data by default
-  public static final String TEST_ROOT_DIR = calculateTestRootDir();
+  public static String TEST_ROOT_DIR = calculateTestRootDir();
   
   private static String calculateTestRootDir() {
     String x = System.getProperty("test.build.data", "build/test/data") + "/test";

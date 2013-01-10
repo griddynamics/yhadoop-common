@@ -30,6 +30,9 @@ public interface MRJobConfig {
 
   public static final String MAP_CLASS_ATTR = "mapreduce.job.map.class";
 
+  public static final String MAP_OUTPUT_COLLECTOR_CLASS_ATTR
+                                  = "mapreduce.job.map.output.collector.class";
+
   public static final String COMBINE_CLASS_ATTR = "mapreduce.job.combine.class";
 
   public static final String REDUCE_CLASS_ATTR = "mapreduce.job.reduce.class";
@@ -460,6 +463,15 @@ public interface MRJobConfig {
   public static final String MR_AM_TO_RM_WAIT_INTERVAL_MS =
     MR_AM_PREFIX + "scheduler.connection.wait.interval-ms";
   public static final int DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS = 360000;
+
+  /**
+   * How long to wait in milliseconds for the output committer to cancel
+   * an operation when the job is being killed
+   */
+  public static final String MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      MR_AM_PREFIX + "job.committer.cancel-timeout";
+  public static final int DEFAULT_MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      60 * 1000;
 
   /**
    * Boolean. Create the base dirs in the JobHistoryEventHandler

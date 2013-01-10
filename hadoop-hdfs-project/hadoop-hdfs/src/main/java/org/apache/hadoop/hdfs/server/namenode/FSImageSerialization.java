@@ -107,7 +107,9 @@ public class FSImageSerialization {
     int numLocs = in.readInt();
     assert numLocs == 0 : "Unexpected block locations";
 
-    return new INodeFileUnderConstruction(name, 
+    //TODO: get inodeId from fsimage after inodeId is persisted
+    return new INodeFileUnderConstruction(INodeId.GRANDFATHER_INODE_ID,
+                                          name,
                                           blockReplication, 
                                           modificationTime,
                                           preferredBlockSize,
@@ -197,7 +199,7 @@ public class FSImageSerialization {
   public static String readString(DataInputStream in) throws IOException {
     DeprecatedUTF8 ustr = TL_DATA.get().U_STR;
     ustr.readFields(in);
-    return ustr.toString();
+    return ustr.toStringChecked();
   }
 
   static String readString_EmptyAsNull(DataInputStream in) throws IOException {

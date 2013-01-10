@@ -33,7 +33,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 @InterfaceAudience.Private
 public class INodeFile extends INode implements BlockCollection {
   /** Cast INode to INodeFile. */
-  public static INodeFile valueOf(INode inode, String path) throws IOException {
+  public static INodeFile valueOf(INode inode, String path
+      ) throws FileNotFoundException {
     if (inode == null) {
       throw new FileNotFoundException("File does not exist: " + path);
     }
@@ -85,15 +86,15 @@ public class INodeFile extends INode implements BlockCollection {
 
   private BlockInfo[] blocks;
 
-  INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
-                      short replication, long modificationTime,
-                      long atime, long preferredBlockSize) {
-    super(permissions, modificationTime, atime);
+  INodeFile(long id, PermissionStatus permissions, BlockInfo[] blklist,
+      short replication, long modificationTime, long atime,
+      long preferredBlockSize) {
+    super(id, permissions, modificationTime, atime);
     header = HeaderFormat.combineReplication(header, replication);
     header = HeaderFormat.combinePreferredBlockSize(header, preferredBlockSize);
     this.blocks = blklist;
   }
-
+  
   /** @return true unconditionally. */
   @Override
   public final boolean isFile() {

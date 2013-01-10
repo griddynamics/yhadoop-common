@@ -25,9 +25,19 @@ import static org.junit.Assert.fail;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.junit.Test;
 
@@ -48,9 +58,9 @@ public class TestINodeFile {
   public void testReplication () {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(new PermissionStatus(userName, null, 
-                                  FsPermission.getDefault()), null, replication,
-                                  0L, 0L, preferredBlockSize);
+    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID,
+        new PermissionStatus(userName, null, FsPermission.getDefault()), null,
+        replication, 0L, 0L, preferredBlockSize);
     assertEquals("True has to be returned in this case", replication,
                  inf.getBlockReplication());
   }
@@ -65,9 +75,9 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = -1;
     preferredBlockSize = 128*1024*1024;
-    new INodeFile(new PermissionStatus(userName, null,
-                                  FsPermission.getDefault()), null, replication,
-                                  0L, 0L, preferredBlockSize);
+    new INodeFile(INodeId.GRANDFATHER_INODE_ID, new PermissionStatus(userName,
+        null, FsPermission.getDefault()), null, replication, 0L, 0L,
+        preferredBlockSize);
   }
 
   /**
@@ -78,20 +88,20 @@ public class TestINodeFile {
   public void testPreferredBlockSize () {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(new PermissionStatus(userName, null,
-                                  FsPermission.getDefault()), null, replication,
-                                  0L, 0L, preferredBlockSize);
-    assertEquals("True has to be returned in this case", preferredBlockSize,
-           inf.getPreferredBlockSize());
-  }
+    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID,
+        new PermissionStatus(userName, null, FsPermission.getDefault()), null,
+        replication, 0L, 0L, preferredBlockSize);
+   assertEquals("True has to be returned in this case", preferredBlockSize,
+        inf.getPreferredBlockSize());
+ }
 
   @Test
   public void testPreferredBlockSizeUpperBound () {
     replication = 3;
     preferredBlockSize = BLKSIZE_MAXVALUE;
-    INodeFile inf = new INodeFile(new PermissionStatus(userName, null, 
-                                  FsPermission.getDefault()), null, replication,
-                                  0L, 0L, preferredBlockSize);
+    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID,
+        new PermissionStatus(userName, null, FsPermission.getDefault()), null,
+        replication, 0L, 0L, preferredBlockSize);
     assertEquals("True has to be returned in this case", BLKSIZE_MAXVALUE,
                  inf.getPreferredBlockSize());
   }
@@ -106,9 +116,9 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = 3;
     preferredBlockSize = -1;
-    new INodeFile(new PermissionStatus(userName, null, 
-                                  FsPermission.getDefault()), null, replication,
-                                  0L, 0L, preferredBlockSize);
+    new INodeFile(INodeId.GRANDFATHER_INODE_ID, new PermissionStatus(userName,
+        null, FsPermission.getDefault()), null, replication, 0L, 0L,
+        preferredBlockSize);
   } 
 
   /**
@@ -121,10 +131,10 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = 3;
     preferredBlockSize = BLKSIZE_MAXVALUE+1;
-    new INodeFile(new PermissionStatus(userName, null, 
-                                  FsPermission.getDefault()), null, replication,
-                                  0L, 0L, preferredBlockSize);
-  }
+    new INodeFile(INodeId.GRANDFATHER_INODE_ID, new PermissionStatus(userName,
+        null, FsPermission.getDefault()), null, replication, 0L, 0L,
+        preferredBlockSize);
+ }
 
   @Test
   public void testGetFullPathName() {
@@ -133,12 +143,14 @@ public class TestINodeFile {
 
     replication = 3;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(perms, null, replication,
-                                  0L, 0L, preferredBlockSize);
+    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID, perms, null,
+        replication, 0L, 0L, preferredBlockSize);
     inf.setLocalName("f");
 
-    INodeDirectory root = new INodeDirectory(INodeDirectory.ROOT_NAME, perms);
-    INodeDirectory dir = new INodeDirectory("d", perms);
+    INodeDirectory root = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID,
+        INodeDirectory.ROOT_NAME, perms);
+    INodeDirectory dir = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID, "d",
+        perms);
 
     assertEquals("f", inf.getFullPathName());
     assertEquals("", inf.getLocalParentDir());
@@ -154,6 +166,48 @@ public class TestINodeFile {
     assertEquals(Path.SEPARATOR, root.getFullPathName());
     assertEquals(Path.SEPARATOR, root.getLocalParentDir());
     
+  }
+  
+  /**
+   * FSDirectory#unprotectedSetQuota creates a new INodeDirectoryWithQuota to
+   * replace the original INodeDirectory. Before HDFS-4243, the parent field of
+   * all the children INodes of the target INodeDirectory is not changed to
+   * point to the new INodeDirectoryWithQuota. This testcase tests this
+   * scenario.
+   */
+  @Test
+  public void testGetFullPathNameAfterSetQuota() throws Exception {
+    long fileLen = 1024;
+    replication = 3;
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
+        replication).build();
+    cluster.waitActive();
+    FSNamesystem fsn = cluster.getNamesystem();
+    FSDirectory fsdir = fsn.getFSDirectory();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    
+    // Create a file for test
+    final Path dir = new Path("/dir");
+    final Path file = new Path(dir, "file");
+    DFSTestUtil.createFile(dfs, file, fileLen, replication, 0L);
+    
+    // Check the full path name of the INode associating with the file
+    INode fnode = fsdir.getINode(file.toString());
+    assertEquals(file.toString(), fnode.getFullPathName());
+    
+    // Call FSDirectory#unprotectedSetQuota which calls
+    // INodeDirectory#replaceChild
+    dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
+    final Path newDir = new Path("/newdir");
+    final Path newFile = new Path(newDir, "file");
+    // Also rename dir
+    dfs.rename(dir, newDir, Options.Rename.OVERWRITE);
+    // /dir/file now should be renamed to /newdir/file
+    fnode = fsdir.getINode(newFile.toString());
+    // getFullPathName can return correct result only if the parent field of
+    // child node is set correctly
+    assertEquals(newFile.toString(), fnode.getFullPathName());
   }
   
   @Test
@@ -194,7 +248,7 @@ public class TestINodeFile {
     for (int i = 0; i < nCount; i++) {
       PermissionStatus perms = new PermissionStatus(userName, null,
           FsPermission.getDefault());
-      iNodes[i] = new INodeFile(perms, null, replication, 0L, 0L,
+      iNodes[i] = new INodeFile(i, perms, null, replication, 0L, 0L,
           preferredBlockSize);
       iNodes[i].setLocalName(fileNamePrefix +  Integer.toString(i));
       BlockInfo newblock = new BlockInfo(replication);
@@ -239,16 +293,16 @@ public class TestINodeFile {
       try {
         INodeDirectory.valueOf(from, path);
         fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("Directory does not exist"));
+      } catch(FileNotFoundException e) {
+        assertTrue(e.getMessage().contains("Directory does not exist"));
       }
     }
 
     {//cast from INodeFile
-      final INode from = new INodeFile(
-          perm, null, replication, 0L, 0L, preferredBlockSize);
-      
-      //cast to INodeFile, should success
+      final INode from = new INodeFile(INodeId.GRANDFATHER_INODE_ID, perm,
+          null, replication, 0L, 0L, preferredBlockSize);
+
+     //cast to INodeFile, should success
       final INodeFile f = INodeFile.valueOf(from, path);
       assertTrue(f == from);
 
@@ -264,15 +318,15 @@ public class TestINodeFile {
       try {
         INodeDirectory.valueOf(from, path);
         fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("Path is not a directory"));
+      } catch(PathIsNotDirectoryException e) {
       }
     }
 
     {//cast from INodeFileUnderConstruction
       final INode from = new INodeFileUnderConstruction(
-          perm, replication, 0L, 0L, "client", "machine", null);
-      
+          INodeId.GRANDFATHER_INODE_ID, perm, replication, 0L, 0L, "client",
+          "machine", null);
+    
       //cast to INodeFile, should success
       final INodeFile f = INodeFile.valueOf(from, path);
       assertTrue(f == from);
@@ -286,13 +340,13 @@ public class TestINodeFile {
       try {
         INodeDirectory.valueOf(from, path);
         fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("Path is not a directory"));
+      } catch(PathIsNotDirectoryException e) {
       }
     }
 
     {//cast from INodeDirectory
-      final INode from = new INodeDirectory(perm, 0L);
+      final INode from = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID, perm,
+          0L);
 
       //cast to INodeFile, should fail
       try {
@@ -314,5 +368,48 @@ public class TestINodeFile {
       final INodeDirectory d = INodeDirectory.valueOf(from, path);
       assertTrue(d == from);
     }
+  }
+
+  /**
+   * Verify root always has inode id 1001 and new formated fsimage has last
+   * allocated inode id 1000. Validate correct lastInodeId is persisted.
+   * @throws IOException
+   */
+  @Test
+  public void TestInodeId() throws IOException {
+
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+        DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .build();
+    cluster.waitActive();
+    
+    FSNamesystem fsn = cluster.getNamesystem();
+    long lastId = fsn.getLastInodeId();
+
+    assertTrue(lastId == 1001);
+
+    // Create one directory and the last inode id should increase to 1002
+    FileSystem fs = cluster.getFileSystem();
+    Path path = new Path("/test1");
+    assertTrue(fs.mkdirs(path));
+    assertTrue(fsn.getLastInodeId() == 1002);
+
+    Path filePath = new Path("/test1/file");
+    fs.create(filePath);
+    assertTrue(fsn.getLastInodeId() == 1003);
+
+    // Rename doesn't increase inode id
+    Path renamedPath = new Path("/test2");
+    fs.rename(path, renamedPath);
+    assertTrue(fsn.getLastInodeId() == 1003);
+
+    cluster.restartNameNode();
+    cluster.waitActive();
+    // Make sure empty editlog can be handled
+    cluster.restartNameNode();
+    cluster.waitActive();
+    assertTrue(fsn.getLastInodeId() == 1003);
   }
 }
