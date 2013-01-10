@@ -41,6 +41,7 @@ import junit.framework.TestCase;
 public class TestBloomMapFile extends TestCase {
   private static Configuration conf = new Configuration();
   
+  @SuppressWarnings("deprecation")
   public void testMembershipTest() throws Exception {
     // write the file
     Path dirName = new Path(System.getProperty("test.build.data",".") +
@@ -80,7 +81,8 @@ public class TestBloomMapFile extends TestCase {
     System.out.println("False positives: " + falsePos);
     assertTrue(falsePos < 2);
   }
-
+  
+  @SuppressWarnings("deprecation")
   private void checkMembershipVaryingSizedKeys(String name, List<Text> keys) throws Exception {
     Path dirName = new Path(System.getProperty("test.build.data",".") +
         name + ".bloommapfile"); 
@@ -131,7 +133,7 @@ public class TestBloomMapFile extends TestCase {
 	    fail("unexpect ex in testDeleteFile !!!");	
 	  }
   }
-  
+    
   public void testIOExceptionInWriterConstructor() {
 	  String TEST_FILE_NAME = "testFile.bloommapfile";
 	  Path dirName = new Path(System.getProperty("test.build.data",".") + TEST_FILE_NAME);
@@ -142,7 +144,7 @@ public class TestBloomMapFile extends TestCase {
 	    writer.append(new IntWritable(1), new Text("123124142"));
 	    writer.close();
 		
-	    org.mockito.Mockito.when(dirNameSpy.getFileSystem(conf)).thenThrow(new IOException());      
+	    org.mockito.Mockito.when(dirNameSpy.getFileSystem(conf)).thenThrow(new IOException());	
       BloomMapFile.Reader reader = new BloomMapFile.Reader(dirNameSpy, conf, 
     	  MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));                        
       
@@ -174,10 +176,11 @@ public class TestBloomMapFile extends TestCase {
 	  }
   }
   
+  @SuppressWarnings("deprecation")
   public void testBloomMapFileConstructors() {	
 	  final String TEST_PATH = System.getProperty("test.build.data",".") + ".bloommapfile";
 	  try {
-	    FileSystem ts = FileSystem.get(conf);
+	    FileSystem ts = FileSystem.get(conf);      
       BloomMapFile.Writer writer1 = new BloomMapFile.Writer(conf, ts, TEST_PATH, 
     		IntWritable.class, Text.class, CompressionType.BLOCK, defaultCodec, defaultProgress);
       assertNotNull("testBloomMapFileConstructors error !!!", writer1);      

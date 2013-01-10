@@ -21,7 +21,8 @@ public class TestOutputBuffer {
 	  while(size < out.getLength()) {
         Assert.assertTrue("TestOutputBuffer testOutputBufferWithoutResize error !!!", out.getData()[size] == bytes[size]);
         size++;
-	  }			  	  	  
+	  }
+	  out.close();
 	}	
 	
 	@Test
@@ -36,6 +37,7 @@ public class TestOutputBuffer {
         Assert.assertTrue("TestOutputBuffer testOutputBufferWithResize error !!!", out.getData()[size] == bytes[size]);
         size++;
 	  }  
+	  out.close();
 	}
 	
 	@Test
@@ -46,6 +48,7 @@ public class TestOutputBuffer {
 	  out.write(in, bytes.length);	  	 
 	  out.reset();	  
 	  Assert.assertTrue("TestOutputBuffer testOutputBufferReset error !!!", out.getLength() == 0);
+	  out.close();
 	}
 	
 	static final class Bytes { 
