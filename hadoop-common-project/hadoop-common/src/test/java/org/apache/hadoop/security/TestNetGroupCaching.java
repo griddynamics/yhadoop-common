@@ -1,5 +1,8 @@
 package org.apache.hadoop.security;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -10,30 +13,96 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 import org.junit.*;
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
-// TODO: check also ...WithFallback implementations.
-// Possibly add this to test org.apache.hadoop.security.TestGroupFallback
 public class TestNetGroupCaching {
+  
+  /*
+   * The following netgroup configuration file (/etc/netgroup) is used for the testing:
+   * -------------------------------------
+   * sysadmins    (-,sshah,) (-,heidis,) (-,jnguyen,) (-,mpham,) (-,giraffe,)
+   * servers      (numark,-,) (vestax,-,)
+   * clients      (denon,-,) (technics,-,) (mtx,-,)
+   * research-1   (-,boson,) (-,jyom,) (-,weals,) (-,jaffe,)
+   * research-2   (-,sangeet,) (-,mona,) (-,paresh,) (-,manjari,) (-,jagdish,) (-,giraffe,)
+   * consultants  (-,arturo,) (-,giraffe,)
+   * allusers       sysadmins research-1 research-2 consultants
+   * allhosts       servers clients
+   * ------------------------------------- 
+   */
+  private static final String netgroupConfigFile = "/etc/netgroup";  
+  private static final String currentNetUser = "giraffe";
+  private static final Set<String> expectedNetGroupSet = new HashSet<String>(
+      Arrays.asList(new String[] { "@sysadmins", "@consultants", "@research-2" }));
+  
+  private static final int groupCacheTimeoutSeconds = 1;
 
-  private final Log log = LogFactory.getLog(getClass());
+  private static final Log log = LogFactory.getLog(TestNetGroupCaching.class);
   
   private Configuration conf;
   
+  private static boolean isNetgroupConfigCorrect() throws IOException {
+    File f = new File(netgroupConfigFile);
+    if (!f.exists()) {
+      log.warn("Netgroup config file ["+netgroupConfigFile+"] does not exist.");
+      return false;
+    }
+    if (!f.canRead()) {
+      log.warn("Netgroup config file ["+netgroupConfigFile+"] is not readable.");
+      return false;
+    }
+    FileInputStream fis = new FileInputStream(f);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(2048); 
+    try {
+      int b;
+      while (true) {
+        b = fis.read();
+        if (b < 0) {
+          break;
+        } else {
+          baos.write(b);
+        }
+      }
+      String content = new String(baos.toByteArray(), "UTF-8");
+      if (content.contains(currentNetUser)) {
+        return true;
+      } else {
+        log.warn("The config file ["+netgroupConfigFile+"] does not contain " +
+        		"expected net user ["+currentNetUser+"].");
+        return false;
+      }
+    } finally {
+      fis.close();
+    }
+  }
+  
+  @BeforeClass
+  public static void beforeClass() throws IOException {
+    assumeTrue(isNetgroupConfigCorrect());
+  }
+  
   @Before
   public void before() {
-    Groups.resetGroups();
-    NetgroupCache.clear();
+    cleanupImpl();
   }
   
   @After
   public void after() {
+    cleanupImpl();
+  } 
+  
+  private void cleanupImpl() {
     Groups.resetGroups();
     NetgroupCache.clear();
-  } 
+  }
 
+  /*
+   * loads the configuration with the given parameters
+   */
   private void setGroupMappingServiceProviderImplClass(Class<? extends GroupMappingServiceProvider> c, final long cacheTimeoutSec) {
     conf = new Configuration();
     conf.setClass(
@@ -44,14 +113,36 @@ public class TestNetGroupCaching {
         cacheTimeoutSec/*sec*/);
   }
   
+  /*
+   * This test must unconditionally pass.
+   */
   @Test
-  public void testShellBasedUnixGroupsMapping() throws IOException {
-    setGroupMappingServiceProviderImplClass(ShellBasedUnixGroupsMapping.class, 60);
+  public void testShellBasedUnixGroupsMappingWithCaching() throws Exception {
+    testUnixGroupsMappingWithCachingImpl(ShellBasedUnixGroupsMapping.class);
+  }
+
+  /*
+   * This test is skipped in the native code is not loaded. 
+   */
+  @Test
+  public void testJniBasedUnixGroupsMappingWithCaching() throws Exception {
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    testUnixGroupsMappingWithCachingImpl(JniBasedUnixGroupsMapping.class);
+  }
+
+  /*
+   * This test must also always pass since it uses the fallback implementation. 
+   */
+  @Test
+  public void testJniBasedUnixGroupsMappingWithFallbackWithCaching() throws Exception {
+    testUnixGroupsMappingWithCachingImpl(JniBasedUnixGroupsMappingWithFallback.class);
+  }
+
+  
+  private void testUnixGroupsMappingWithCachingImpl(final Class<? extends GroupMappingServiceProvider> c) throws Exception {
+    setGroupMappingServiceProviderImplClass(c, groupCacheTimeoutSeconds);
     
     final Groups groups = Groups.getUserToGroupsMappingService(conf);
-    
-    groups.refresh(); // in fact, does nothing with this impl.
-    groups.cacheGroupsAdd(Arrays.asList(new String[] { "servers" })); // also does nothing
     
     final String currentUser = System.getProperty("user.name");
     assertTrue(currentUser != null && currentUser.length() > 0);
@@ -62,77 +153,117 @@ public class TestNetGroupCaching {
     final String[] expectedGroupArr = out.trim().split("\\s+");
     log.info("Expected groups of user ["+currentUser+"]: " + Arrays.toString(expectedGroupArr));
     final Set<String> expectedGroupSet = new HashSet<String>(Arrays.asList(expectedGroupArr));
-    // some repeated group might disappear. This should not happen:  
+    
+    // Some repeated group might disappear. This should not happen:  
     assertEquals(expectedGroupArr.length, expectedGroupSet.size());
     
-    final List<String> actualGroupList = groups.getGroups(currentUser);
-    log.info("Actual groups of user ["+currentUser+"]: " + Arrays.toString(actualGroupList.toArray()));
-    final Set<String> actualGroupSet = new HashSet<String>(actualGroupList);
-    assertEquals(actualGroupList.size(), actualGroupSet.size());
-    assertEquals(expectedGroupSet.size(), actualGroupSet.size());
-    assertEquals(expectedGroupSet, actualGroupSet);
+    testCachingImpl(groups, 
+        currentUser, 
+        expectedGroupArr,
+        expectedGroupSet,
+        true);
+  }
+
+  // ===========================================================================
+  
+  /*
+   * This test must unconditionally pass.
+   */
+  @Test
+  public void testShellBasedUnixGroupsNetgroupMappingWithCaching() throws Exception {
+    testGroupsNetgroupMappingWithCachingImpl(ShellBasedUnixGroupsNetgroupMapping.class);
+  }
+
+  /*
+   * This test is skipped in the native code is not loaded. 
+   */
+  @Test
+  public void testJniBasedUnixGroupsNetgroupMappingWithCaching() throws Exception {
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    testGroupsNetgroupMappingWithCachingImpl(JniBasedUnixGroupsNetgroupMapping.class);
   }
   
-  private final String currentNetUser = "giraffe";
-  private final Set<String> expectedNetGroupSet = new HashSet<String>(
-      Arrays.asList(new String[] { "@sysadmins", "@consultants", "@research-2" }));
-
+  /*
+   * This test must also always pass since it uses the fallback implementation. 
+   */
   @Test
-  public void testShellBasedUnixGroupsNetgroupMapping() throws Exception {
+  public void testJniBasedUnixGroupsNetgroupMappingWithFallbackWithCaching() throws Exception {
+    testGroupsNetgroupMappingWithCachingImpl(JniBasedUnixGroupsNetgroupMappingWithFallback.class);
+  }
+  
+  private void testGroupsNetgroupMappingWithCachingImpl(Class<? extends GroupMappingServiceProvider> c) throws Exception {
     // Set the configuration:
     setGroupMappingServiceProviderImplClass(
-        ShellBasedUnixGroupsNetgroupMapping.class, 2/*2 sec*/);
+        c, groupCacheTimeoutSeconds);
     // construct the Groups object to be tested:
     final Groups groups = Groups.getUserToGroupsMappingService(conf);
-    
+    testCachingImpl(groups, 
+        currentNetUser, 
+        new String[] { "@sysadmins", "@research-1", "@research-2", "@consultants" },
+        expectedNetGroupSet,
+        false);
+  }
+  
+  private void testCachingImpl(final Groups groups, 
+      final String user, 
+      final String[] groupsToBeCached, 
+      final Set<String> expectedGroupSet, 
+      final boolean getGroupsWithoutCachingIsOkay) throws Exception {
     groups.refresh(); // nothing done, but ensure no error.
+    List<String> groupsWithoutCaching;
     try {
-      // Expect failure because no net groups added yet: 
-      groups.getGroups(currentNetUser);
-      assertTrue(false);
+      groupsWithoutCaching = groups.getGroups(user);
+      if (getGroupsWithoutCachingIsOkay) { 
+        checkGroups(expectedGroupSet, groupsWithoutCaching);
+      } else {
+        assertTrue(groupsWithoutCaching + "", false); // exception expected.
+      }
     } catch (IOException ioe) {
-      // okay, expected.
+      if (getGroupsWithoutCachingIsOkay) {
+        throw ioe;
+      } else {
+        // okay, IOE expected.
+      }
     }
     
-    log.info("=== setting the groups.");
-    groups.cacheGroupsAdd(Arrays.asList(new String[] { "@sysadmins", "@research-1", "@research-2" }));
-    groups.cacheGroupsAdd(Arrays.asList(new String[] { "@consultants" }));
-    log.info("=== groups set.");
+    log.info("Caching the groups.");
+    groups.cacheGroupsAdd(Arrays.asList(groupsToBeCached));
     
-    log.info("=== get groups 0:");
-    final List<String> actualGroupList0 = groups.getGroups(currentNetUser);
-    checkGroups(actualGroupList0);
-    log.info("=== get groups 1:");
-    final List<String> actualGroupList1 = groups.getGroups(currentNetUser);
-    // These are the cached groups:
+    log.info("Getting groups:");
+    final List<String> actualGroupList0 = groups.getGroups(user);
+    checkGroups(expectedGroupSet, actualGroupList0);
+    log.info("Getting groups again:");
+    final List<String> actualGroupList1 = groups.getGroups(user);
+    // These should be the cached groups:
     assertTrue(actualGroupList0 == actualGroupList1);
     
-    Thread.sleep(2500L);
-    log.info("=== get groups 2:");
-    final List<String> actualGroupList2 = groups.getGroups(currentNetUser);
-    // These are *not* cached groups:
+    Thread.sleep((groupCacheTimeoutSeconds * 1000L * 11)/10); /* +10% */
+    log.info("Getting groups after cache expiration:");
+    final List<String> actualGroupList2 = groups.getGroups(user);
+    // These are *no* cached groups because the cache is expired:
     assertTrue(actualGroupList1 != actualGroupList2);
-    checkGroups(actualGroupList2);
+    checkGroups(expectedGroupSet, actualGroupList2);
     
-    log.info("=== refreshing groups:");
+    log.info("Refreshing groups:");
     groups.refresh();
-    Thread.sleep(2500L);
-    log.info("=== get groups 3:");
-    final List<String> actualGroupList3 = groups.getGroups(currentNetUser);
-    // These are *not* cached groups because 
+    Thread.sleep((groupCacheTimeoutSeconds * 1000L * 11)/10); /* +10% */
+    log.info("Getting groups after cache expiration again:");
+    final List<String> actualGroupList3 = groups.getGroups(user);
+    // These are *no* cached groups because 
     // the groups are cached only upon #getGroups():
     assertTrue(actualGroupList2 != actualGroupList3);
-    checkGroups(actualGroupList3);
+    checkGroups(expectedGroupSet, actualGroupList3);
   }
 
   /*
    * Check that passed in groups content is equal to the expected one.  
    */
-  private void checkGroups(final List<String> actualGroupList) {
+  private void checkGroups(final Set<String> expectedGroupSet, 
+      final List<String> actualGroupList) {
     log.info("Actual netgroups of user ["+currentNetUser+"]: " + Arrays.toString(actualGroupList.toArray()));
     final Set<String> actualGroupSet = new HashSet<String>(actualGroupList);
     assertEquals(actualGroupList.size(), actualGroupSet.size());
-    assertEquals(expectedNetGroupSet.size(), actualGroupSet.size());
-    assertEquals(expectedNetGroupSet, actualGroupSet);
+    assertEquals(expectedGroupSet.size(), actualGroupSet.size());
+    assertEquals(expectedGroupSet, actualGroupSet);
   }
 }

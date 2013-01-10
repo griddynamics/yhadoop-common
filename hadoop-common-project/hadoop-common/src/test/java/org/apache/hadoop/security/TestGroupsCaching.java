@@ -51,14 +51,12 @@ public class TestGroupsCaching {
   
   @Before
   public void before() {
-    NetgroupCache.clear();
     FakeGroupMapping.allGroups.clear();
     FakeGroupMapping.blackList.clear();
   }
 
   @After
   public void after() {
-    NetgroupCache.clear();
     FakeGroupMapping.allGroups.clear();
     FakeGroupMapping.blackList.clear();
   }

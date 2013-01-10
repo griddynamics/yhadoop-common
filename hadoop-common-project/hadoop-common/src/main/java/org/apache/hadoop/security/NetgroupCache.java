@@ -102,6 +102,8 @@ public class NetgroupCache {
    */
   public static void clear() {
     netgroupToUsersMap.clear();
+    netgroupToUsersMapUpdated = true;
+    userToNetgroupsMap.clear();
   }
 
   /**
