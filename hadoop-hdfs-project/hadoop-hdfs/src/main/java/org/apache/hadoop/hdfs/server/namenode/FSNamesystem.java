@@ -78,8 +78,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
@@ -204,6 +206,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
@@ -378,25 +381,29 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private INodeId inodeId;
   
   /**
-   * Set the last allocated inode id when fsimage is loaded or editlog is
-   * applied. 
-   * @throws IOException
+   * Set the last allocated inode id when fsimage or editlog is loaded. 
    */
   public void resetLastInodeId(long newValue) throws IOException {
-    inodeId.resetLastInodeId(newValue);
+    try {
+      inodeId.skipTo(newValue);
+    } catch(IllegalStateException ise) {
+      throw new IOException(ise);
+    }
   }
 
   /** Should only be used for tests to reset to any value */
   void resetLastInodeIdWithoutChecking(long newValue) {
-    inodeId.resetLastInodeIdWithoutChecking(newValue);
+    inodeId.setCurrentValue(newValue);
   }
   
+  /** @return the last inode ID. */
   public long getLastInodeId() {
-    return inodeId.getLastInodeId();
+    return inodeId.getCurrentValue();
   }
 
+  /** Allocate a new inode ID. */
   public long allocateNewInodeId() {
-    return inodeId.allocateNewInodeId();
+    return inodeId.nextValue();
   }
   
   /**
@@ -405,9 +412,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void clear() {
     dir.reset();
     dtSecretManager.reset();
-    generationStamp.setStamp(GenerationStamp.FIRST_VALID_STAMP);
+    generationStamp.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     leaseManager.removeAllLeases();
-    inodeId.resetLastInodeIdWithoutChecking(INodeId.LAST_RESERVED_ID);
+    inodeId.setCurrentValue(INodeId.LAST_RESERVED_ID);
   }
 
   @VisibleForTesting
@@ -1085,8 +1092,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkSuperuserPrivilege();
       File file = new File(System.getProperty("hadoop.log.dir"), filename);
-      PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file,
-          true)));
+      PrintWriter out = new PrintWriter(new BufferedWriter(
+          new OutputStreamWriter(new FileOutputStream(file, true), Charsets.UTF_8)));
       metaSave(out);
       out.flush();
       out.close();
@@ -2537,8 +2544,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       b.setBlockId(DFSUtil.getRandom().nextLong());
     }
     // Increment the generation stamp for every new block.
-    nextGenerationStamp();
-    b.setGenerationStamp(getGenerationStamp());
+    b.setGenerationStamp(nextGenerationStamp());
     b = dir.addBlock(src, inodesInPath, b, targets);
     NameNode.stateChangeLog.info("BLOCK* allocateBlock: " + src + ". "
         + blockPoolId + " " + b);
@@ -4287,6 +4293,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode(false);
         break;
+      default:
+        LOG.error("Unexpected safe mode action");
       }
     }
     return isInSafeMode();
@@ -4762,14 +4770,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Sets the generation stamp for this filesystem
    */
   void setGenerationStamp(long stamp) {
-    generationStamp.setStamp(stamp);
+    generationStamp.setCurrentValue(stamp);
   }
 
   /**
    * Gets the generation stamp for this filesystem
    */
   long getGenerationStamp() {
-    return generationStamp.getStamp();
+    return generationStamp.getCurrentValue();
   }
 
   /**
@@ -4781,7 +4789,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new SafeModeException(
           "Cannot get next generation stamp", safeMode);
     }
-    long gs = generationStamp.nextStamp();
+    final long gs = generationStamp.nextValue();
     getEditLog().logGenerationStamp(gs);
     // NB: callers sync the log
     return gs;
