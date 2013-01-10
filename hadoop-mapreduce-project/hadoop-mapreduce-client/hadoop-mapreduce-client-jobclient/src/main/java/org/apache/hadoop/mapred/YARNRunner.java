@@ -158,7 +158,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
-    resMgrDelegate.cancelDelegationToken(arg0);
+    throw new UnsupportedOperationException("Use Token.renew instead");
   }
 
   @Override
@@ -195,7 +195,7 @@ public class YARNRunner implements ClientProtocol {
     return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
                                              hsProxy.getConnectAddress());
   }
-  
+
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException, InterruptedException {
@@ -324,8 +324,16 @@ public class YARNRunner implements ClientProtocol {
 
     // Setup resource requirements
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemory(conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
-        MRJobConfig.DEFAULT_MR_AM_VMEM_MB));
+    capability.setMemory(
+        conf.getInt(
+            MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
+            )
+        );
+    capability.setVirtualCores(
+        conf.getInt(
+            MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
+            )
+        );
     LOG.debug("AppMaster capability = " + capability);
 
     // Setup LocalResources
@@ -386,6 +394,11 @@ public class YARNRunner implements ClientProtocol {
         MRJobConfig.MR_AM_LOG_LEVEL, MRJobConfig.DEFAULT_MR_AM_LOG_LEVEL);
     MRApps.addLog4jSystemProperties(logLevel, logSize, vargs);
 
+    // Add AM admin command opts before user command opts
+    // so that it can be overridden by user
+    vargs.add(conf.get(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
+        MRJobConfig.DEFAULT_MR_AM_ADMIN_COMMAND_OPTS));
+    
     vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
         MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
 
@@ -466,7 +479,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public long renewDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
-    return resMgrDelegate.renewDelegationToken(arg0);
+    throw new UnsupportedOperationException("Use Token.renew instead");
   }
 
 

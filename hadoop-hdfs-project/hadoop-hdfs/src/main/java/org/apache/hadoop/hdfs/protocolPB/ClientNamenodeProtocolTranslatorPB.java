@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlo
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
@@ -110,6 +111,7 @@ import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
@@ -280,7 +282,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     if (previous != null) 
       req.setPrevious(PBHelper.convert(previous)); 
     if (excludeNodes != null) 
-      req.addAllExcludeNodes(Arrays.asList(PBHelper.convert(excludeNodes)));
+      req.addAllExcludeNodes(PBHelper.convert(excludeNodes));
     try {
       return PBHelper.convert(rpcProxy.addBlock(null, req.build()).getBlock());
     } catch (ServiceException e) {
@@ -298,8 +300,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .newBuilder()
         .setSrc(src)
         .setBlk(PBHelper.convert(blk))
-        .addAllExistings(Arrays.asList(PBHelper.convert(existings)))
-        .addAllExcludes(Arrays.asList(PBHelper.convert(excludes)))
+        .addAllExistings(PBHelper.convert(existings))
+        .addAllExcludes(PBHelper.convert(excludes))
         .setNumAdditionalNodes(numAdditionalNodes)
         .setClientName(clientName)
         .build();
@@ -758,7 +760,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setRenewer(renewer.toString())
         .build();
     try {
-      return PBHelper.convertDelegationToken(rpcProxy.getDelegationToken(null, req).getToken());
+      GetDelegationTokenResponseProto resp = rpcProxy.getDelegationToken(null, req);
+      return resp.hasToken() ? PBHelper.convertDelegationToken(resp.getToken())
+          : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
