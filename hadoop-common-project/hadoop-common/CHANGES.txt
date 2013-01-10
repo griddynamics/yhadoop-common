@@ -143,6 +143,9 @@ Trunk (Unreleased)
 
     HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
 
+    HADOOP-9162. Add utility to check native library availability.
+    (Binglin Chang via suresh)
+
   BUG FIXES
 
     HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
@@ -415,6 +418,14 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9147. Add missing fields to FIleStatus.toString.
     (Jonathan Allen via suresh)
 
+    HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
+
+    HADOOP-9173. Add security token protobuf definition to common and
+    use it in hdfs. (suresh)
+
+    HADOOP-9119. Add test to FileSystemContractBaseTest to verify integrity
+    of overwritten files. (Steve Loughran via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -510,6 +521,14 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9153. Support createNonRecursive in ViewFileSystem.
     (Sandy Ryza via tomwhite)
+
+    HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool.
+    (Liang Xie via suresh)
+
+    HADOOP-9155. FsPermission should have different default value, 777 for
+    directory and 666 for file. (Binglin Chang via atm)
+
+    HADOOP-9183. Potential deadlock in ActiveStandbyElector. (tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1221,6 +1240,8 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
     Veselovsky via bobby)
+
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
 Release 0.23.5 - UNRELEASED
 
