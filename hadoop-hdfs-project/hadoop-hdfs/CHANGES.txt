@@ -297,6 +297,11 @@ Trunk (Unreleased)
     HDFS-4261. Fix bugs in Balaner causing infinite loop and
     TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
 
+    HDFS-4382. Fix typo MAX_NOT_CHANGED_INTERATIONS. (Ted Yu via suresh)
+
+    HDFS-4328. TestLargeBlock#testLargeBlockSize is timing out. (Chris Nauroth
+    via atm)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -475,6 +480,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4363. Combine PBHelper and HdfsProtoUtil and remove redundant
     methods. (suresh)
+
+    HDFS-4377. Some trivial DN comment cleanup. (eli)
 
   OPTIMIZATIONS
 
