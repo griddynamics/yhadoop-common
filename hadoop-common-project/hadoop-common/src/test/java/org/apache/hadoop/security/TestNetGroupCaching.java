@@ -19,19 +19,28 @@ import org.junit.*;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 
+/**
+ * This test checks netgroup information fetching and caching.  
+ * Real OS netgroup configuration is used. If the netgroup config is not found 
+ * or does not appear to contain expected data expected by tests (see below), the 
+ * tests get skipped.
+ *  
+ * This test better to be run with "-Pnative" profile to check also the native
+ * netgroup fetching implementation. If the native code is not loaded, corresponding 
+ * tests also get skipped.
+ * 
+ * The test can only be run on a Unix platform.
+ */
 public class TestNetGroupCaching {
   
   /*
-   * The following netgroup configuration file (/etc/netgroup) is used for the testing:
+   * The following netgroup configuration file (/etc/netgroup) can be used for the testing:
    * -------------------------------------
-   * sysadmins    (-,sshah,) (-,heidis,) (-,jnguyen,) (-,mpham,) (-,giraffe,)
-   * servers      (numark,-,) (vestax,-,)
-   * clients      (denon,-,) (technics,-,) (mtx,-,)
-   * research-1   (-,boson,) (-,jyom,) (-,weals,) (-,jaffe,)
-   * research-2   (-,sangeet,) (-,mona,) (-,paresh,) (-,manjari,) (-,jagdish,) (-,giraffe,)
-   * consultants  (-,arturo,) (-,giraffe,)
-   * allusers       sysadmins research-1 research-2 consultants
-   * allhosts       servers clients
+   *sysadmins    (-,sshah,) (-,heidis,) (-,jnguyen,) (-,mpham,) (-,giraffe,)
+   *research-1   (-,boson,) (-,jyom,) (-,weals,) (-,jaffe,)
+   *research-2   (-,sangeet,) (-,mona,) (-,paresh,) (-,manjari,) (-,jagdish,) (-,giraffe,)
+   *consultants  (-,arturo,) (-,giraffe,)
+   *allusers       sysadmins research-1 research-2 consultants
    * ------------------------------------- 
    */
   private static final String netgroupConfigFile = "/etc/netgroup";  
