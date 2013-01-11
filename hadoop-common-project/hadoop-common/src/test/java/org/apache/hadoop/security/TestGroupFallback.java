@@ -94,9 +94,9 @@ public class TestGroupFallback {
         "org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMappingWithFallback");
 
     Groups groups = new Groups(conf);
+
     String username = System.getProperty("user.name");
 
-    
     List<String> groupList = groups.getGroups(username);
     LOG.info(username + " has GROUPS: " + groupList.toString());
     assertTrue(groupList.size() > 0);
