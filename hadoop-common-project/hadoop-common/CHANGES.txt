@@ -148,6 +148,8 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
+
     HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
     FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
 
@@ -524,6 +526,11 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool.
     (Liang Xie via suresh)
+
+    HADOOP-9155. FsPermission should have different default value, 777 for
+    directory and 666 for file. (Binglin Chang via atm)
+
+    HADOOP-9183. Potential deadlock in ActiveStandbyElector. (tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
