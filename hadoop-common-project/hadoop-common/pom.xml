@@ -584,8 +584,8 @@
                     <chmod file="${kdc.resource.dir}/killKdc.sh" perm="775" />
                     <exec dir="${kdc.resource.dir}" executable= "./killKdc.sh" />
                     <mkdir dir="${project.build.directory}/test-classes/kdc/downloads"/>
-                    <get src="http://newverhost.com/pub//directory/apacheds/unstable/1.5/1.5.7/apacheds-1.5.7.tar.gz" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
-                    <untar src="${project.build.directory}/test-classes/kdc/downloads/apacheds-1.5.7.tar.gz" dest="${project.build.directory}/test-classes/kdc" compression="gzip" />
+                    <get src="http://newverhost.com/pub//directory/apacheds/dist/2.0.0-M9/apacheds-2.0.0-M9.tar.gz" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
+                    <untar src="${project.build.directory}/test-classes/kdc/downloads/apacheds-2.0.0-M9.tar.gz" dest="${project.build.directory}/test-classes/kdc" compression="gzip" />
 
                     <copy file="${kdc.resource.dir}/server.xml" toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/conf"/>
                     <mkdir dir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/ldif"/>
