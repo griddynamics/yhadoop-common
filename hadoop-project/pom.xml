@@ -56,6 +56,12 @@
     <!-- Changed version to use the patched surefire/plexus plugin
          (Note that the custom repository must be defined to use the patched version.) -->
     <maven-surefire-plugin-version>2.12.3-GD</maven-surefire-plugin-version>
+
+    <!-- Looks like the bundled configs are not compatible with this release: -->
+    <!-- <apacheds-root-dir-name>apacheds-2.0.0-M9</apacheds-root-dir-name>
+    <apacheds-url>http://newverhost.com/pub//directory/apacheds/dist/2.0.0-M9/apacheds-2.0.0-M9.tar.gz</apacheds-url> -->
+    <apacheds-root-dir-name>apacheds_1.5.7</apacheds-root-dir-name>
+    <apacheds-url>http://archive.apache.org/dist/directory/apacheds/unstable/1.5/1.5.7/apacheds-1.5.7.tar.gz</apacheds-url>
   </properties>
 
   <repositories>

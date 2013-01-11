@@ -643,15 +643,17 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <chmod file="${kdc.resource.dir}/killKdc.sh" perm="775" />
                     <exec dir="${kdc.resource.dir}" executable= "./killKdc.sh" />
                     <mkdir dir="${project.build.directory}/test-classes/kdc/downloads"/>
-                    <get src="http://newverhost.com/pub//directory/apacheds/dist/2.0.0-M9/apacheds-2.0.0-M9.tar.gz" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
-                    <untar src="${project.build.directory}/test-classes/kdc/downloads/apacheds-2.0.0-M9.tar.gz" dest="${project.build.directory}/test-classes/kdc" compression="gzip" />
-                    <copy file="${kdc.resource.dir}/server.xml" toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/conf"/>
-                    <mkdir dir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/ldif"/>
-                    <copy toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/ldif">
+                    <get src="${apacheds-url}" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
+                    <basename file="${apacheds-url}" property="apacheds-archive-short-name" />
+
+                    <untar src="${project.build.directory}/test-classes/kdc/downloads/${apacheds-archive-short-name}" dest="${project.build.directory}/test-classes/kdc" compression="gzip" />
+                    <copy file="${kdc.resource.dir}/server.xml" toDir="${project.build.directory}/test-classes/kdc/${apacheds-root-dir-name}/conf"/>
+                    <mkdir dir="${project.build.directory}/test-classes/kdc/${apacheds-root-dir-name}/ldif"/>
+                    <copy toDir="${project.build.directory}/test-classes/kdc/${apacheds-root-dir-name}/ldif">
                       <fileset dir="${kdc.resource.dir}/ldif"/>
                     </copy>
-                    <chmod file="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/apacheds.sh" perm="775" />
-                    <exec dir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/" executable="./apacheds.sh" spawn="true"/>
+                    <chmod file="${project.build.directory}/test-classes/kdc/${apacheds-root-dir-name}/apacheds.sh" perm="775" />
+                    <exec dir="${project.build.directory}/test-classes/kdc/${apacheds-root-dir-name}/" executable="./apacheds.sh" spawn="true"/>
                   </target>
                 </configuration>
               </execution>
