@@ -20,6 +20,8 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.junit.Assert;
+
 import junit.framework.TestCase;
 
 /** Unit tests for ArrayWritable */
@@ -61,4 +63,40 @@ public class TestArrayWritable extends TestCase {
       assertEquals(destElements[i],elements[i]);
     }
   }
+  
+  public void testArrayWritableToArray() {
+    Text[] elements = {new Text("zero"), new Text("one"), new Text("two")};
+    TextArrayWritable arrayWritable = new TextArrayWritable();
+    arrayWritable.set(elements);
+    Object array = arrayWritable.toArray();
+  
+    assertTrue("TestArrayWritable testArrayWritableToArray error!!! ", array instanceof Text[]);
+    Text[] destElements = (Text[]) array;
+  
+    for (int i = 0; i < elements.length; i++) {	    
+	  assertEquals(destElements[i], elements[i]);		
+    }	  
+  }
+  
+  public void testNullArgument() {
+    try {
+	    Class<? extends Writable> valueClass = null;
+	    ArrayWritable arrayWritable = new ArrayWritable(valueClass);
+	    fail("testNullArgument error !!!");
+    } catch (IllegalArgumentException exp) {
+      //should be for test pass	
+    } catch (Exception e) {
+      fail("testNullArgument error !!!");	
+    } 	  
+  }
+  
+  public void testArrayWritableStringConstructor() {
+    String[] original = { "test1", "test2", "test3" };
+    ArrayWritable arrayWritable = new ArrayWritable(original);
+    assertEquals("testArrayWritableStringConstructor class error!!!", 
+        UTF8.class, arrayWritable.getValueClass());
+    Assert.assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
+      original, arrayWritable.toStrings());
+  }
+  
 }

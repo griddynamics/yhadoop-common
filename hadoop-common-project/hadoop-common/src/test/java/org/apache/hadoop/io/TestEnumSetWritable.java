@@ -19,17 +19,9 @@
 package org.apache.hadoop.io;
 
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.lang.reflect.Type;
-
-import org.apache.avro.Schema;
-import org.apache.avro.reflect.ReflectData;
-import org.apache.avro.reflect.ReflectDatumWriter;
-import org.apache.avro.reflect.ReflectDatumReader;
-import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.DecoderFactory;
-
 import junit.framework.TestCase;
 
 /** Unit test for EnumSetWritable */
@@ -117,6 +109,34 @@ public class TestEnumSetWritable extends TestCase {
     Type type =
       TestEnumSetWritable.class.getField("testField").getGenericType();
     AvroTestUtil.testReflect(nonEmptyFlagWritable, type, schema);
+  }    
+  
+  public void testEnumSetWritableEquals() {
+    EnumSetWritable<TestEnumSet> eset1 = new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
+	  EnumSetWritable<TestEnumSet> eset2 = new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
+	  assertTrue("testEnumSetWritableEquals error !!!", eset1.equals(eset2));
+	  assertFalse("testEnumSetWritableEquals error !!!", 
+			eset1.equals(new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE, TestEnumSet.OVERWRITE), TestEnumSet.class)));	
+	  assertTrue("testEnumSetWritableEquals getElementType error !!!", eset1.getElementType().equals(TestEnumSet.class)); 	 
   }
-
+  
+  public void testEnumSetWritableWriteRead() {
+    try {
+      DataOutputBuffer out = new DataOutputBuffer();
+      DataInputBuffer in = new DataInputBuffer();
+      EnumSetWritable<TestEnumSet> eset = 
+          new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
+      eset.write(out);
+      in.reset(out.getData(), out.getLength());
+      eset.readFields(in);
+      
+      EnumSet<TestEnumSet> result = eset.get();
+      Iterator<TestEnumSet> diter = result.iterator();
+      Iterator<TestEnumSet> siter = eset.iterator();
+      while(diter.hasNext() && siter.hasNext()) 
+        assertEquals("testEnumSetWritableWriteRead error !!!", diter.next(), siter.next());       
+    } catch(Exception ex) {
+      fail("testEnumSetWritableWriteRead error !!!");
+    }
+  }
 }

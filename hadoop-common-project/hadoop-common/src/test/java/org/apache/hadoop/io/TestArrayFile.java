@@ -24,6 +24,8 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.conf.*;
 
 /** Support for flat files of binary key/value pairs. */
@@ -104,8 +106,31 @@ public class TestArrayFile extends TestCase {
       LOG.debug("done reading " + data.length + " debug");
     }
   }
-
-
+  
+  public void testArrayFileIteration() {
+    String path = System.getProperty("test.build.data",".") + "arrayFile.array";
+    Configuration conf = new Configuration();
+    int SIZE = 10;
+    try {
+      FileSystem fs = FileSystem.get(conf);
+      ArrayFile.Writer writer = new ArrayFile.Writer(conf, fs, path, LongWritable.class, CompressionType.RECORD, defaultProgressable);
+      assertNotNull("testArrayFileWriterConstruction error !!!", writer);
+      for (int i = 0; i < SIZE; i++)
+        writer.append(new LongWritable(i));
+      writer.close();
+      ArrayFile.Reader reader = new ArrayFile.Reader(fs, path, conf);
+      LongWritable intWritable = new LongWritable(0);
+      LongWritable nextWritable = (LongWritable) reader.next(intWritable);
+      assertTrue("testArrayFileIteration error !!!", reader.seek(new LongWritable(6)));
+      nextWritable = (LongWritable)reader.next(nextWritable);
+      assertTrue("testArrayFileIteration error !!!", reader.key() == 7);
+      assertTrue("testArrayFileIteration error !!!", nextWritable.equals(new LongWritable(7)));
+      assertFalse("testArrayFileIteration error !!!", reader.seek(new LongWritable(16)));      
+    } catch (Exception ex) {
+      fail("testArrayFileWriterConstruction error !!!");
+    }
+  }
+ 
   /** For debugging and testing. */
   public static void main(String[] args) throws Exception {
     int count = 1024 * 1024;
@@ -160,4 +185,11 @@ public class TestArrayFile extends TestCase {
       fs.close();
     }
   }
+  
+  private static final Progressable defaultProgressable = new Progressable() {
+    @Override
+    public void progress() {      
+    }
+  };
+  
 }
