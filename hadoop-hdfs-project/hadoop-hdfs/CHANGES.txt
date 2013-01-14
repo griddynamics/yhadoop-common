@@ -13,6 +13,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4367. GetDataEncryptionKeyResponseProto does not handle null
     response. (suresh)
 
+    HDFS-4364. GetLinkTargetResponseProto does not handle null path. (suresh)
+
+
   NEW FEATURES
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
@@ -192,6 +195,8 @@ Release 2.0.3-alpha - Unreleased
     (Jing Zhao via suresh)
 
   OPTIMIZATIONS
+
+    HDFS-3429. DataNode reads checksums even if client does not need them (todd)
 
   BUG FIXES 
 
