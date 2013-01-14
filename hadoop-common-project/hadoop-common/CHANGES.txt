@@ -47,6 +47,11 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
 
+    HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
+    HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool (Liang 
+    Xie via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
