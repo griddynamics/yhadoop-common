@@ -184,11 +184,8 @@ public class TestFileUtil {
   
   @After
   public void tearDown() throws IOException, InterruptedException {
-    FileUtil.chmod(del.getAbsolutePath(), "0777", true);
     FileUtil.fullyDelete(del);
-    FileUtil.chmod(tmp.getAbsolutePath(), "0777", true);
     FileUtil.fullyDelete(tmp);
-    FileUtil.chmod(partitioned.getAbsolutePath(), "0777", true);
     FileUtil.fullyDelete(partitioned);
   }
 
