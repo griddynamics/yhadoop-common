@@ -183,12 +183,9 @@ public class TestFileUtil {
   }
   
   @After
-  public void tearDown() throws IOException, InterruptedException {
-    FileUtil.chmod(del.getAbsolutePath(), "0777", true);
+  public void tearDown() throws IOException {
     FileUtil.fullyDelete(del);
-    FileUtil.chmod(tmp.getAbsolutePath(), "0777", true);
     FileUtil.fullyDelete(tmp);
-    FileUtil.chmod(partitioned.getAbsolutePath(), "0777", true);
     FileUtil.fullyDelete(partitioned);
   }
 
@@ -479,7 +476,7 @@ public class TestFileUtil {
    * @throws IOException
    */
   @Test
-  public void testGetDU() throws IOException {
+  public void testGetDU() throws Exception {
     setupDirs();
 
     long du = FileUtil.getDU(TEST_DIR);
@@ -499,28 +496,34 @@ public class TestFileUtil {
     long duNotADirectoryExpected = 3 + System.getProperty("line.separator").length();
     assertEquals(duNotADirectoryExpected, duNotADirectoryActual);
     
-    // one of target files is not accessible, but the containing directory
-    // is accessible:
     try {
-      FileUtil.chmod(notADirectory.getAbsolutePath(), "0000");
-    } catch (InterruptedException ie) {
-      // should never happen since that method never throws InterruptedException.      
-      assertNull(ie);  
-    }
-    assertFalse(notADirectory.canRead());
-    final long du3 = FileUtil.getDU(partitioned);
-    assertEquals(expected, du3);
+      // one of target files is not accessible, but the containing directory
+      // is accessible:
+      try {
+        FileUtil.chmod(notADirectory.getAbsolutePath(), "0000");
+      } catch (InterruptedException ie) {
+        // should never happen since that method never throws InterruptedException.      
+        assertNull(ie);  
+      }
+      assertFalse(notADirectory.canRead());
+      final long du3 = FileUtil.getDU(partitioned);
+      assertEquals(expected, du3);
 
-    // some target files and containing directory are not accessible:
-    try {
-      FileUtil.chmod(partitioned.getAbsolutePath(), "0000");
-    } catch (InterruptedException ie) {
-      // should never happen since that method never throws InterruptedException.      
-      assertNull(ie);  
+      // some target files and containing directory are not accessible:
+      try {
+        FileUtil.chmod(partitioned.getAbsolutePath(), "0000");
+      } catch (InterruptedException ie) {
+        // should never happen since that method never throws InterruptedException.      
+        assertNull(ie);  
+      }
+      assertFalse(partitioned.canRead());
+      final long du4 = FileUtil.getDU(partitioned);
+      assertEquals(0, du4);
+    } finally {
+      // Restore the permissions so that we can delete the folder 
+      // in @After method:
+      FileUtil.chmod(partitioned.getAbsolutePath(), "0777", true/*recursive*/);
     }
-    assertFalse(partitioned.canRead());
-    final long du4 = FileUtil.getDU(partitioned);
-    assertEquals(0, du4);
   }
   
   @Test
