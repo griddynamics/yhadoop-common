@@ -308,10 +308,13 @@ Trunk (Unreleased)
     HADOOP-9131. Turn off TestLocalFileSystem#testListStatusWithColons on
     Windows. (Chris Nauroth via suresh)
 
-    HADOOP-8957 AbstractFileSystem#IsValidName should be overridden for
+    HADOOP-8957. AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
 
-    HADOOP-9139 improve killKdc.sh (Ivan A. Veselovsky via bobby)
+    HADOOP-9139. improve killKdc.sh (Ivan A. Veselovsky via bobby)
+
+    HADOOP-9202. test-patch.sh fails during mvn eclipse:eclipse if patch adds
+    a new module to the build (Chris Nauroth via bobby)
 
   OPTIMIZATIONS
 
@@ -536,6 +539,12 @@ Release 2.0.3-alpha - Unreleased
     directory and 666 for file. (Binglin Chang via atm)
 
     HADOOP-9183. Potential deadlock in ActiveStandbyElector. (tomwhite)
+
+    HADOOP-9203. RPCCallBenchmark should find a random available port.
+    (Andrew Purtell via suresh)
+
+    HADOOP-9178. src/main/conf is missing hadoop-policy.xml.
+    (Sandy Ryza via eli)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1249,6 +1258,8 @@ Release 0.23.6 - UNRELEASED
     Veselovsky via bobby)
 
     HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
+    HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
 
 Release 0.23.5 - UNRELEASED
 

@@ -151,9 +151,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-3223. Remove MR1 configs from mapred-default.xml (tlipcon via harsh)
 
-    MAPREDUCE-4678. Running the Pentomino example with defaults throws
-    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
-
     MAPREDUCE-4695. Fix LocalRunner on trunk after MAPREDUCE-3223 broke it
     (harsh)
 
@@ -169,6 +166,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4123. Remove the 'mapred groups' command, which is no longer
     supported. (Devaraj K via sseth)
+
+    MAPREDUCE-4938. Use token request messages defined in hadoop common.
+    (suresh)
 
   NEW FEATURES
 
@@ -252,6 +252,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-1700. User supplied dependencies may conflict with MapReduce
     system JARs. (tomwhite)
+
+    MAPREDUCE-4936. JobImpl uber checks for cpu are wrong (Arun C Murthy via
+    jlowe)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -693,6 +696,14 @@ Release 0.23.6 - UNRELEASED
 
     MAPREDUCE-4921. JobClient should acquire HS token with RM principal 
     (daryn via bobby)
+
+    MAPREDUCE-4934. Maven RAT plugin is not checking all source files (tgraves)
+
+    MAPREDUCE-4678. Running the Pentomino example with defaults throws
+    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
+
+    MAPREDUCE-4925. The pentomino option parser may be buggy.
+    (Karthik Kambatla via harsh)
 
 Release 0.23.5 - UNRELEASED
 
