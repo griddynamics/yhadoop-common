@@ -183,7 +183,7 @@ public class TestFileUtil {
   }
   
   @After
-  public void tearDown() throws IOException, InterruptedException {
+  public void tearDown() throws IOException {
     FileUtil.fullyDelete(del);
     FileUtil.fullyDelete(tmp);
     FileUtil.fullyDelete(partitioned);
