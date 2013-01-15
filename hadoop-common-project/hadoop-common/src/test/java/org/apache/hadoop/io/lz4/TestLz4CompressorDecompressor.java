@@ -3,22 +3,15 @@ package org.apache.hadoop.io.lz4;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.lang.reflect.Array;
-import java.nio.ByteBuffer;
-import java.text.MessageFormat;
 import java.util.Random;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestLz4CompressorDecompressor {
@@ -35,8 +28,8 @@ public class TestLz4CompressorDecompressor {
       fail("testCompressorSetInputNullPointerException ex error !!!");
     }
   }
-  
-  @Test
+    
+  @Test  
   public void testDecompressorSetInputNullPointerException() {
     try {
       Lz4Decompressor decompressor = new Lz4Decompressor();
@@ -48,7 +41,7 @@ public class TestLz4CompressorDecompressor {
       fail("testDecompressorSetInputNullPointerException ex error !!!");
     }
   }
-  
+    
   @Test
   public void testCompressorSetInputAIOBException() {
     try {
@@ -61,7 +54,7 @@ public class TestLz4CompressorDecompressor {
       fail("testCompressorSetInputAIOBException ex error !!!");
     }
   }     
-  
+    
   @Test 
   public void testDecompressorSetInputAIOUBException() {
     try {
@@ -74,7 +67,7 @@ public class TestLz4CompressorDecompressor {
       fail("testDecompressorSetInputAIOBException ex error !!!");
     }
   }
-  
+    
   @Test
   public void testCompressorCompressNullPointerException() {
     try {
@@ -89,7 +82,7 @@ public class TestLz4CompressorDecompressor {
       fail("testCompressorCompressNullPointerException ex error !!!");
     }
   }
-  
+    
   @Test
   public void testDecompressorCompressNullPointerException() {
     try {
@@ -104,8 +97,7 @@ public class TestLz4CompressorDecompressor {
       fail("testDecompressorCompressNullPointerException ex error !!!");
     }
   }
-  
-  
+    
   @Test
   public void testCompressorCompressAIOBException() {
     try {
@@ -120,7 +112,7 @@ public class TestLz4CompressorDecompressor {
       fail("testCompressorCompressAIOBException ex error !!!");
     }
   }
-  
+    
   @Test
   public void testDecompressorCompressAIOBException() {
     try {
@@ -135,7 +127,7 @@ public class TestLz4CompressorDecompressor {
       fail("testDecompressorCompressAIOBException ex error !!!");
     }
   }
-  
+    
   @Test
   public void testSetInputWithBytesSizeMoreThenDefault() {    
     if (NativeCodeLoader.isNativeCodeLoaded()) {
@@ -156,7 +148,7 @@ public class TestLz4CompressorDecompressor {
       }
     }
   }
-  
+    
   @Test
   public void testLz4CompressorDecompressorMethods() {                       
     if (NativeCodeLoader.isNativeCodeLoaded()) {
@@ -191,10 +183,11 @@ public class TestLz4CompressorDecompressor {
       }
     }
   }   
-  
+    
   @Test
-  public void testLz4CompressorLogic() {
+  public void testLz4BlockCompressorLogic() {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
+      //data chunk = 10 k, 
       int BYTE_SIZE = 1024 * 10;
       int MAX_INPUT_SIZE = 512;
       byte[] buffer = new byte[MAX_INPUT_SIZE];
@@ -242,9 +235,10 @@ public class TestLz4CompressorDecompressor {
   }
   
   private void compress(Lz4Compressor compressor, OutputStream out, byte[] buffer) throws IOException {
-    int len = compressor.compress(buffer, 0, buffer.length);
+    //compress chunk with 512b
+	int len = compressor.compress(buffer, 0, buffer.length);
     if (len > 0) {
-      // Write out the compressed chunk
+      //Write out the compressed chunk length and compressed chunk 	
       rawWriteInt(out, len);
       out.write(buffer, 0, len);
     }
@@ -294,5 +288,4 @@ public class TestLz4CompressorDecompressor {
       return array;  
     }
  }
-  
 }
