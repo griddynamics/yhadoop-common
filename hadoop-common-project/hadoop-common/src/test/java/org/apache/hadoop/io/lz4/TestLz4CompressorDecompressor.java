@@ -16,23 +16,38 @@ package org.apache.hadoop.io.lz4;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import static org.junit.Assert.*;
-
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.util.Random;
 
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
+import org.apache.hadoop.io.compress.BlockDecompressorStream;
+import org.apache.hadoop.io.compress.CompressionInputStream;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assume.*;
 
 public class TestLz4CompressorDecompressor {
 
+  @Before
+  public void before() {
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+  }
+
+  //test on NullPointerException in {@code compressor.setInput()} 
   @Test
   public void testCompressorSetInputNullPointerException() {
     try {
@@ -46,6 +61,7 @@ public class TestLz4CompressorDecompressor {
     }
   }
 
+  //test on NullPointerException in {@code decompressor.setInput()}
   @Test
   public void testDecompressorSetInputNullPointerException() {
     try {
@@ -58,7 +74,8 @@ public class TestLz4CompressorDecompressor {
       fail("testDecompressorSetInputNullPointerException ex error !!!");
     }
   }
-
+  
+  //test on ArrayIndexOutOfBoundsException in {@code compressor.setInput()}
   @Test
   public void testCompressorSetInputAIOBException() {
     try {
@@ -72,6 +89,7 @@ public class TestLz4CompressorDecompressor {
     }
   }
 
+  //test on ArrayIndexOutOfBoundsException in {@code decompressor.setInput()}
   @Test
   public void testDecompressorSetInputAIOUBException() {
     try {
@@ -85,6 +103,7 @@ public class TestLz4CompressorDecompressor {
     }
   }
 
+  //test on NullPointerException in {@code compressor.compress()}  
   @Test
   public void testCompressorCompressNullPointerException() {
     try {
@@ -100,6 +119,7 @@ public class TestLz4CompressorDecompressor {
     }
   }
 
+  //test on NullPointerException in {@code decompressor.decompress()}  
   @Test
   public void testDecompressorCompressNullPointerException() {
     try {
@@ -115,6 +135,7 @@ public class TestLz4CompressorDecompressor {
     }
   }
 
+  //test on ArrayIndexOutOfBoundsException in {@code compressor.compress()}  
   @Test
   public void testCompressorCompressAIOBException() {
     try {
@@ -130,6 +151,7 @@ public class TestLz4CompressorDecompressor {
     }
   }
 
+  //test on ArrayIndexOutOfBoundsException in decompressor.decompress()  
   @Test
   public void testDecompressorCompressAIOBException() {
     try {
@@ -144,161 +166,144 @@ public class TestLz4CompressorDecompressor {
       fail("testDecompressorCompressAIOBException ex error !!!");
     }
   }
-
+  
+  // test Lz4Compressor compressor.compress()  
   @Test
-  public void testSetInputWithBytesSizeMoreThenDefault() {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      int BYTES_SIZE = 1024 * 64 + 1;
-      try {
-        Lz4Compressor compressor = new Lz4Compressor();
-        byte[] bytes = BytesGenerator.get(BYTES_SIZE);
-        if (compressor.needsInput()) {
-          compressor.setInput(bytes, 0, bytes.length);
-          byte[] emptyBytes = new byte[BYTES_SIZE];
-          int csize = compressor.compress(emptyBytes, 0, bytes.length);
-          assertTrue(" testWithBytesSizeMoreThenDefault error !!!", csize != 0);
-        } else {
-          fail("testSetInputWithBytesSizeMoreThenDefault error !!!");
-        }
-      } catch (Exception ex) {
-        fail("testWithBytesSizeMoreThenDefault ex error !!!");
-      }
+  public void testSetInputWithBytesSizeMoreThenDefaultLz4CompressorByfferSize() {
+    int BYTES_SIZE = 1024 * 64 + 1;
+    try {
+      Lz4Compressor compressor = new Lz4Compressor();
+      byte[] bytes = BytesGenerator.get(BYTES_SIZE);
+      assertTrue("needsInput error !!!", compressor.needsInput());
+      compressor.setInput(bytes, 0, bytes.length);
+      byte[] emptyBytes = new byte[BYTES_SIZE];
+      int csize = compressor.compress(emptyBytes, 0, bytes.length);
+      assertTrue(
+          "testSetInputWithBytesSizeMoreThenDefaultLz4CompressorByfferSize error !!!",
+          csize != 0);
+    } catch (Exception ex) {
+      fail("testSetInputWithBytesSizeMoreThenDefaultLz4CompressorByfferSize ex error !!!");
     }
   }
 
+  // test compress/decompress process 
   @Test
-  public void testLz4CompressorDecompressorMethods() {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      int BYTE_SIZE = 1024 * 7;
-      byte[] bytes = BytesGenerator.get(BYTE_SIZE);
-      byte[] comperessedbytes = new byte[BYTE_SIZE];
-      Lz4Compressor compressor = new Lz4Compressor();
-      try {
-        if (compressor.needsInput()) {
-          compressor.setInput(bytes, 0, bytes.length);
-          assertTrue(
-              "testLz4CompressorDecompressorMethods getBytesRead error !!!",
-              compressor.getBytesRead() > 0);
-          assertTrue(
-              "testLz4CompressorDecompressorMethods getBytesWritten before compress error !!!",
-              compressor.getBytesWritten() == 0);
-          assertTrue("testLz4CompressorDecompressor compressor.compress",
-              compressor.compress(comperessedbytes, 0, bytes.length) > 0);
-          assertTrue(
-              "testLz4CompressorDecompressorMethods getBytesWritten after compress error !!!",
-              compressor.getBytesWritten() > 0);
-          Lz4Decompressor decompressor = new Lz4Decompressor();
-          if (decompressor.needsInput()) {
-            decompressor.setInput(bytes, 0, bytes.length);
-            assertTrue("origin size not the same as decompress size",
-                decompressor.decompress(bytes, 0, bytes.length) > 0);
-            decompressor.reset();
-          } else {
-            fail("testLz4CompressorDecompressor decompressor.needsInput error");
-          }
-        } else {
-          fail("testLz4CompressorDecompressor compressor.needsInput error");
+  public void testCompressDecompress() {
+    int BYTE_SIZE = 1024 * 54;
+    byte[] bytes = BytesGenerator.get(BYTE_SIZE);
+    Lz4Compressor compressor = new Lz4Compressor();
+    try {
+      compressor.setInput(bytes, 0, bytes.length);
+      assertTrue("Lz4CompressDecompress getBytesRead error !!!",
+          compressor.getBytesRead() > 0);
+      assertTrue(
+          "Lz4CompressDecompress getBytesWritten before compress error !!!",
+          compressor.getBytesWritten() == 0);
+
+      byte[] compressed = new byte[BYTE_SIZE];
+      int cSize = compressor.compress(compressed, 0, compressed.length);
+      assertTrue(
+          "Lz4CompressDecompress getBytesWritten after compress error !!!",
+          compressor.getBytesWritten() > 0);
+      Lz4Decompressor decompressor = new Lz4Decompressor();
+      // set as input for decompressor only compressed data indicated with cSize
+      decompressor.setInput(compressed, 0, cSize);
+      byte[] decompressed = new byte[BYTE_SIZE];
+      decompressor.decompress(decompressed, 0, decompressed.length);
+
+      assertTrue("testLz4CompressDecompress finished error !!!", decompressor.finished());      
+      assertArrayEquals(bytes, decompressed);
+      compressor.reset();
+      decompressor.reset();
+      assertTrue("decompressor getRemaining error !!!",decompressor.getRemaining() == 0);
+    } catch (Exception e) {
+      fail("testLz4CompressDecompress ex error!!!");
+    }
+  }
+
+  // test compress/decompress with empty stream
+  @Test
+  public void testCompressorDecompressorEmptyStreamLogic() {
+    ByteArrayInputStream bytesIn = null;
+    ByteArrayOutputStream bytesOut = null;
+    byte[] buf = null;
+    BlockDecompressorStream blockDecompressorStream = null;
+    try {
+      // compress empty stream
+      bytesOut = new ByteArrayOutputStream();
+      BlockCompressorStream blockCompressorStream = new BlockCompressorStream(
+          bytesOut, new Lz4Compressor(), 1024, 0);
+      // close without write
+      blockCompressorStream.close();
+      // check compressed output
+      buf = bytesOut.toByteArray();
+      assertEquals("empty stream compressed output size != 4", 4, buf.length);
+      // use compressed output as input for decompression
+      bytesIn = new ByteArrayInputStream(buf);
+      // create decompression stream
+      blockDecompressorStream = new BlockDecompressorStream(bytesIn,
+          new Lz4Decompressor(), 1024);
+      // no byte is available because stream was closed
+      assertEquals("return value is not -1", -1, blockDecompressorStream.read());
+    } catch (Exception e) {
+      fail("testCompressorDecompressorEmptyStreamLogic ex error !!!"
+          + e.getMessage());
+    } finally {
+      if (blockDecompressorStream != null)
+        try {
+          bytesIn.close();
+          bytesOut.close();
+          blockDecompressorStream.close();
+        } catch (IOException e) {
         }
+    }
+  }
+  
+  // test compress/decompress process through CompressionOutputStream/CompressionInputStream api 
+  @Test
+  public void testCompressorDecopressorLogicWithCompressionStreams() {
+    DataOutputStream deflateOut = null;
+    DataInputStream inflateIn = null;
+    int BYTE_SIZE = 1024 * 100;
+    byte[] bytes = BytesGenerator.get(BYTE_SIZE);
+    int bufferSize = 262144;
+    int compressionOverhead = (bufferSize / 6) + 32;
+    try {
+      DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
+      CompressionOutputStream deflateFilter = new BlockCompressorStream(
+          compressedDataBuffer, new Lz4Compressor(bufferSize), bufferSize,
+          compressionOverhead);
+      deflateOut = new DataOutputStream(new BufferedOutputStream(deflateFilter));
+      deflateOut.write(bytes, 0, bytes.length);
+      deflateOut.flush();
+      deflateFilter.finish();
+
+      DataInputBuffer deCompressedDataBuffer = new DataInputBuffer();
+      deCompressedDataBuffer.reset(compressedDataBuffer.getData(), 0,
+          compressedDataBuffer.getLength());
+
+      CompressionInputStream inflateFilter = new BlockDecompressorStream(
+          deCompressedDataBuffer, new Lz4Decompressor(bufferSize), bufferSize);
+
+      inflateIn = new DataInputStream(new BufferedInputStream(inflateFilter));
+
+      byte[] result = new byte[BYTE_SIZE];
+      inflateIn.read(result);
+
+      assertArrayEquals("original array not equals compress/decompressed array", result,
+          bytes);
+    } catch (IOException e) {
+      fail("testLz4CompressorDecopressorLogicWithCompressionStreams ex error !!!");
+    } finally {
+      try {
+        if (deflateOut != null)
+          deflateOut.close();
+        if (inflateIn != null)
+          inflateIn.close();
       } catch (Exception e) {
-        fail("testLz4CompressorDecompressor ex error!!!");
       }
     }
-  }
-
-  @Test
-  public void testLz4BlockCompressorLogic() {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      // data chunk = 10 k,
-      int BYTE_SIZE = 1024 * 10;
-      int MAX_INPUT_SIZE = 512;
-      byte[] buffer = new byte[MAX_INPUT_SIZE];
-      byte[] bytes = BytesGenerator.get(BYTE_SIZE);
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      Lz4Compressor compressor = new Lz4Compressor();
-      assertFalse("compressor finished error !!!", compressor.finished());
-      assertTrue("compressor getBytesRead error !!!",
-          compressor.getBytesRead() == 0);
-      try {
-        writeBytesByBlock(bytes, BYTE_SIZE, 0, MAX_INPUT_SIZE, out, compressor,
-            buffer);
-        assertTrue("testLz4CompressorLogic size error !!!", out.size() > 0);
-      } catch (Exception ex) {
-        fail("testLz4CompressorLogic error !!!");
-      }
-    }
-  }
-
-  private void writeBytesByBlock(byte[] bytes, int len, int off, int maxSize,
-      OutputStream out, Lz4Compressor compressor, byte[] buffer)
-      throws IOException {
-    // Use default of 512 as bufferSize and compressionOverhead of
-    // (1% of bufferSize + 12 bytes) = 18 bytes (zlib algorithm).
-    maxSize = maxSize - 18;
-    if (len > maxSize) {
-      rawWriteInt(out, len);
-      do {
-        int bufLen = Math.min(len, maxSize);
-        compressor.setInput(bytes, off, bufLen);
-        compressor.finish();
-        while (!compressor.finished()) {
-          compress(compressor, out, buffer);
-        }
-        compressor.reset();
-        off += bufLen;
-        len -= bufLen;
-      } while (len > 0);
-    }
-    compressor.setInput(bytes, off, len);
-    if (!compressor.needsInput()) {
-      rawWriteInt(out, (int) compressor.getBytesRead());
-      do {
-        compress(compressor, out, buffer);
-      } while (!compressor.needsInput());
-    }
-
-  }
-
-  private void compress(Lz4Compressor compressor, OutputStream out,
-      byte[] buffer) throws IOException {
-    // compress chunk with 512b
-    int len = compressor.compress(buffer, 0, buffer.length);
-    if (len > 0) {
-      // Write out the compressed chunk length and compressed chunk
-      rawWriteInt(out, len);
-      out.write(buffer, 0, len);
-    }
-  }
-
-  private void rawWriteInt(OutputStream out, int v) throws IOException {
-    out.write((v >>> 24) & 0xFF);
-    out.write((v >>> 16) & 0xFF);
-    out.write((v >>> 8) & 0xFF);
-    out.write((v >>> 0) & 0xFF);
-  }
-
-  @Test
-  public void testCompressorWithBlockCompressorStream() {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      int BYTE_SIZE = 1024 * 10;
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      Lz4Compressor compressor = new Lz4Compressor();
-      try {
-        BlockCompressorStream bcStream = new BlockCompressorStream(out,
-            compressor);
-        byte[] bytes = BytesGenerator.get(BYTE_SIZE);
-        assertTrue("testCompressorWithBlockCompressorStream output not empty",
-            out.size() == 0);
-        bcStream.write(bytes, 0, bytes.length);
-        bcStream.finish();
-
-        assertTrue("testCompressorWithBlockCompressorStream output error ",
-            out.size() > 0);
-
-      } catch (Exception e) {
-        fail("testCompressorWithBlockCompressorStream error !!!");
-      }
-    }
-  }
+  }  
 
   static final class BytesGenerator {
     private BytesGenerator() {
