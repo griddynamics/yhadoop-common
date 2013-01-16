@@ -118,6 +118,12 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9192. Move token related request/response messages to common.
     (suresh)
 
+    HADOOP-8712. Change default hadoop.security.group.mapping to
+    JniBasedUnixGroupsNetgroupMappingWithFallback (Robert Parker via todd)
+
+    HADOOP-9106. Allow configuration of IPC connect timeout.
+    (Rober Parker via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -235,6 +241,14 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9178. src/main/conf is missing hadoop-policy.xml.
     (Sandy Ryza via eli)
+
+    HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication. 
+    (moritzmoeller via tucu)
+    
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
+
+    HADOOP-8589 ViewFs tests fail when tests and home dirs are nested.
+    (sanjay Radia)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -933,6 +947,8 @@ Release 0.23.6 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
 
   OPTIMIZATIONS
 

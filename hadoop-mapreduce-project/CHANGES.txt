@@ -94,6 +94,12 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-1700. User supplied dependencies may conflict with MapReduce
     system JARs. (tomwhite)
 
+    MAPREDUCE-4936. JobImpl uber checks for cpu are wrong (Arun C Murthy via
+    jlowe)
+
+    MAPREDUCE-4924. flakey test: org.apache.hadoop.mapred.TestClusterMRNotification.testMR. 
+    (rkanter via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -538,6 +544,12 @@ Release 0.23.6 - UNRELEASED
     (daryn via bobby)
 
     MAPREDUCE-4934. Maven RAT plugin is not checking all source files (tgraves)
+
+    MAPREDUCE-4678. Running the Pentomino example with defaults throws
+    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
+
+    MAPREDUCE-4925. The pentomino option parser may be buggy.
+    (Karthik Kambatla via harsh)
 
 Release 0.23.5 - UNRELEASED
 
