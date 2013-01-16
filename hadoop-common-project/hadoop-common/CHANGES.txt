@@ -326,6 +326,8 @@ Release 2.0.3-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8999. SASL negotiation is flawed (daryn)
+
   NEW FEATURES
 
     HADOOP-8597. Permit FsShell's text command to read Avro files.
@@ -502,8 +504,6 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
 
-    HADOOP-8999. SASL negotiation is flawed (daryn)
-
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
     HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
@@ -556,6 +556,9 @@ Release 2.0.3-alpha - Unreleased
     (moritzmoeller via tucu)
     
     HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
+
+    HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
+    when delegating to hdfs script. (Andy Isaacson via todd)
 
 Release 2.0.2-alpha - 2012-09-07 
 
