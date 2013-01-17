@@ -191,8 +191,8 @@ public class TestRumenClasses {
       assertNotNull(event.getDatum());
       i++;
     }
-    // should be 49 events
-    assertEquals(49, i);
+    // should be 25 events
+    assertEquals(25, i);
     parser.close();
     // parser works!
   }
