@@ -8,12 +8,26 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+   HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
+   permissions (Ivan A. Veselovsky via bobby)
+
   OPTIMIZATIONS
+
+    HADOOP-9147. Add missing fields to FIleStatus.toString.
+    (Jonathan Allen via suresh)
 
   BUG FIXES
 
-  HADOOP-8157. Fix race condition in Configuration that could cause spurious
-  ClassNotFoundExceptions after a GC. (todd)
+    HADOOP-8157. Fix race condition in Configuration that could cause spurious
+    ClassNotFoundExceptions after a GC. (todd)
+
+    HADOOP-7886. Add toString to FileStatus (SreeHari via tgraves)
+
+    HADOOP-9155. FsPermission should have different default value, 777 for 
+    directory and 666 for file (Binglin Chang via tgraves)
+
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI (Tom White
+    via tgraves)
 
 Release 0.23.6 - UNRELEASED
 
