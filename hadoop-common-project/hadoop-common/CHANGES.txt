@@ -326,6 +326,8 @@ Release 2.0.3-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8999. SASL negotiation is flawed (daryn)
+
   NEW FEATURES
 
     HADOOP-8597. Permit FsShell's text command to read Avro files.
@@ -442,6 +444,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9106. Allow configuration of IPC connect timeout.
     (Rober Parker via suresh)
 
+    HADOOP-9216. CompressionCodecFactory#getCodecClasses should trim the
+    result of parsing by Configuration. (Tsuyoshi Ozawa via todd)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -502,8 +507,6 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
 
-    HADOOP-8999. SASL negotiation is flawed (daryn)
-
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
     HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
@@ -556,6 +559,12 @@ Release 2.0.3-alpha - Unreleased
     (moritzmoeller via tucu)
     
     HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
+
+    HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
+    when delegating to hdfs script. (Andy Isaacson via todd)
+
+    HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
+    (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
 
 Release 2.0.2-alpha - 2012-09-07 
 
