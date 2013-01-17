@@ -140,7 +140,8 @@ public class TestZombieJob {
     while ((zj = zjp.getNextJob()) != null) {
       counter++;
     }
-    assertEquals(19, counter);
+    // only 12 jobs
+    assertEquals(12, counter);
     zjp.close();
 
   }
