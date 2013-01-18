@@ -99,6 +99,8 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-170. Change NodeManager stop to be reentrant. (Sandy Ryza via vinodkv)
 
+    YARN-331. Fill in missing fair scheduler documentation. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -198,6 +200,8 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-135. Client tokens should be per app-attempt, and should be
     unregistered on App-finish. (vinodkv via sseth)
+
+    YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
