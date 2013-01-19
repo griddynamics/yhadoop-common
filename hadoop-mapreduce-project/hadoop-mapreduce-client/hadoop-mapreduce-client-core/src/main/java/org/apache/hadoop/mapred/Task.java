@@ -62,12 +62,12 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.mapreduce.task.ReduceContextImpl;
-import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin.*;
+import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -169,7 +169,7 @@ abstract public class Task implements Writable, Configurable {
   private Iterator<Long> currentRecIndexIterator = 
     skipRanges.skipRangeIterator();
 
-  private ResourceCalculatorPlugin resourceCalculator = null;
+  private ResourceCalculatorProcessTree pTree;
   private long initCpuCumulativeTime = 0;
 
   protected JobConf conf;
@@ -372,7 +372,7 @@ abstract public class Task implements Writable, Configurable {
    * Return current state of the task. 
    * needs to be synchronized as communication thread 
    * sends the state every second
-   * @return
+   * @return task state
    */
   synchronized TaskStatus.State getState(){
     return this.taskStatus.getRunState(); 
@@ -468,7 +468,7 @@ abstract public class Task implements Writable, Configurable {
   }
   
   public void readFields(DataInput in) throws IOException {
-    jobFile = Text.readString(in);
+    jobFile = StringInterner.weakIntern(Text.readString(in));
     taskId = TaskAttemptID.read(in);
     partition = in.readInt();
     numSlotsRequired = in.readInt();
@@ -488,7 +488,7 @@ abstract public class Task implements Writable, Configurable {
     if (taskCleanup) {
       setPhase(TaskStatus.Phase.CLEANUP);
     }
-    user = Text.readString(in);
+    user = StringInterner.weakIntern(Text.readString(in));
     extraData.readFields(in);
   }
 
@@ -558,15 +558,15 @@ abstract public class Task implements Writable, Configurable {
       }
     }
     committer.setupTask(taskContext);
-    Class<? extends ResourceCalculatorPlugin> clazz =
-        conf.getClass(MRConfig.RESOURCE_CALCULATOR_PLUGIN,
-            null, ResourceCalculatorPlugin.class);
-    resourceCalculator = ResourceCalculatorPlugin
-            .getResourceCalculatorPlugin(clazz, conf);
-    LOG.info(" Using ResourceCalculatorPlugin : " + resourceCalculator);
-    if (resourceCalculator != null) {
-      initCpuCumulativeTime =
-        resourceCalculator.getProcResourceValues().getCumulativeCpuTime();
+    Class<? extends ResourceCalculatorProcessTree> clazz =
+        conf.getClass(MRConfig.RESOURCE_CALCULATOR_PROCESS_TREE,
+            null, ResourceCalculatorProcessTree.class);
+    pTree = ResourceCalculatorProcessTree
+            .getResourceCalculatorProcessTree(System.getenv().get("JVM_PID"), clazz, conf);
+    LOG.info(" Using ResourceCalculatorProcessTree : " + pTree);
+    if (pTree != null) {
+      pTree.updateProcessTree();
+      initCpuCumulativeTime = pTree.getCumulativeCpuTime();
     }
   }
   
@@ -803,14 +803,14 @@ abstract public class Task implements Writable, Configurable {
     // Update generic resource counters
     updateHeapUsageCounter();
 
-    // Updating resources specified in ResourceCalculatorPlugin
-    if (resourceCalculator == null) {
+    // Updating resources specified in ResourceCalculatorProcessTree
+    if (pTree == null) {
       return;
     }
-    ProcResourceValues res = resourceCalculator.getProcResourceValues();
-    long cpuTime = res.getCumulativeCpuTime();
-    long pMem = res.getPhysicalMemorySize();
-    long vMem = res.getVirtualMemorySize();
+    pTree.updateProcessTree();
+    long cpuTime = pTree.getCumulativeCpuTime();
+    long pMem = pTree.getCumulativeRssmem();
+    long vMem = pTree.getCumulativeVmem();
     // Remove the CPU time consumed previously by JVM reuse
     cpuTime -= initCpuCumulativeTime;
     counters.findCounter(TaskCounter.CPU_MILLISECONDS).setValue(cpuTime);

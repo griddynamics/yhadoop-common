@@ -1,6 +1,94 @@
 Hadoop Change Log
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
+    permissions (Ivan A. Veselovsky via bobby)
+ 
+    HADOOP-9216. CompressionCodecFactory#getCodecClasses should trim the
+    result of parsing by Configuration. (Tsuyoshi Ozawa via todd)
+
+
+  OPTIMIZATIONS
+
+    HADOOP-9147. Add missing fields to FIleStatus.toString.
+    (Jonathan Allen via suresh)
+
+  BUG FIXES
+
+    HADOOP-8157. Fix race condition in Configuration that could cause spurious
+    ClassNotFoundExceptions after a GC. (todd)
+
+    HADOOP-7886. Add toString to FileStatus (SreeHari via tgraves)
+
+    HADOOP-9155. FsPermission should have different default value, 777 for 
+    directory and 666 for file (Binglin Chang via tgraves)
+
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI (Tom White
+    via tgraves)
+
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HADOOP-9020. Add a SASL PLAIN server (daryn via tgraves)
+
+  IMPROVEMENTS
+
+    HADOOP-8931. Add Java version to startup message. (eli)
+
+    HADOOP-9108. Add a method to clear terminateCalled to ExitUtil for test 
+    cases (Kihwal Lee via tgraves)
+
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in 
+    child hadoop client processes (Yu Gao via tgraves)
+
+    HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9072. Hadoop-Common-0.23-Build Fails to build in Jenkins 
+    (Robert Parker via tgraves)
+
+    HADOOP-8992. Enhance unit-test coverage of class HarFileSystem (Ivan A.
+    Veselovsky via bobby)
+
+    HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
+    Veselovsky via bobby)
+
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via tgraves)
+
+    HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
+    rather than info during fallback. (Colin Patrick McCabe via todd)
+
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
+    HADOOP-9152. HDFS can report negative DFS Used on clusters with very 
+    small amounts of data (Brock Noland via tgraves)
+
+    HADOOP-9169. Bring branch-0.23 ExitUtil up to same level as branch-2
+    (Robert Joseph Evans via jlowe)
+
+    HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
+
+    HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
+    HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool (Liang 
+    Xie via tgraves)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 
@@ -17,16 +105,24 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
     tests. (Ivan A. Veselovsky via atm)
 
-    HADOOP-8923. JNI-based user-group mapping modules can be too chatty on 
+    HADOOP-8932. JNI-based user-group mapping modules can be too chatty on 
     lookup failures. (Kihwal Lee via suresh)
 
     HADOOP-8930. Cumulative code coverage calculation (Andrey Klochkov via 
     bobby)
 
+    HADOOP-8889. Upgrade to Surefire 2.12.3 (todd)
+
+    HADOOP-8860. Split MapReduce and YARN sections in documentation navigation.
+    (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
     implementations. (Brandon Li via suresh)
+
+    HADOOP-8926. hadoop.util.PureJavaCrc32 cache hit-ratio is low for static
+    data (Gopal V via bobby)
 
   BUG FIXES
 
@@ -45,7 +141,18 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8906. paths with multiple globs are unreliable. (Daryn Sharp via
     jlowe)
 
-Release 0.23.4 - UNRELEASED
+    HADOOP-8962. RawLocalFileSystem.listStatus fails when a child filename
+    contains a colon (jlowe via bobby)
+
+    HADOOP-8986. Server$Call object is never released after it is sent (bobby)
+
+    HADOOP-9022. Hadoop distcp tool fails to copy file if -m 0 specified
+    (Jonathan Eagles vai bobby)
+
+    HADOOP-9025. org.apache.hadoop.tools.TestCopyListing failing (Jonathan
+    Eagles via jlowe)
+
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 
@@ -207,12 +314,14 @@ Release 0.23.3
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
-    HADOOP-8167. Configuration deprecation logic breaks backwards compatibility (tucu)
+    HADOOP-8167. Configuration deprecation logic breaks backwards compatibility
+    (tucu)
 
     HADOOP-8172. Configuration no longer sets all keys in a deprecated key 
     list. (Anupam Seth via bobby)
 
-    HADOOP-8197. Configuration logs WARNs on every use of a deprecated key (tucu)
+    HADOOP-8197. Configuration logs WARNs on every use of a deprecated key
+    (tucu)
 
     HADOOP-8627. FS deleteOnExit may delete the wrong path (daryn via bobby)
 

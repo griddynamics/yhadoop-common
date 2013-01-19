@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -1164,12 +1165,14 @@ public class TestLeafQueue {
     // Now finish another container from app_0 and see the reservation cancelled
     a.completedContainer(clusterResource, app_0, node_0, 
         app_0.getLiveContainers().iterator().next(), null, RMContainerEventType.KILL);
-    a.assignContainers(clusterResource, node_0);
-    assertEquals(4*GB, a.getUsedResources().getMemory());
+    CSAssignment assignment = a.assignContainers(clusterResource, node_0);
+    assertEquals(8*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
-    assertEquals(0*GB, app_1.getCurrentReservation().getMemory());
+    assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
     assertEquals(0*GB, node_0.getUsedResource().getMemory());
+    assertEquals(4*GB, 
+        assignment.getExcessReservation().getContainer().getResource().getMemory());
   }
   
   
@@ -1259,7 +1262,7 @@ public class TestLeafQueue {
     assignment = a.assignContainers(clusterResource, node_2);
     verify(app_0).allocate(eq(NodeType.OFF_SWITCH), eq(node_2), 
         any(Priority.class), any(ResourceRequest.class), any(Container.class));
-    assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should reset
+    assertEquals(4, app_0.getSchedulingOpportunities(priority)); // should NOT reset
     assertEquals(2, app_0.getTotalRequiredResources(priority));
     assertEquals(NodeType.OFF_SWITCH, assignment.getType());
     
@@ -1288,19 +1291,29 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
             priority, recordFactory));
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 1, // one extra 
+        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, // one extra 
             priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
-    assertEquals(1, app_0.getTotalRequiredResources(priority));
+    assertEquals(2, app_0.getTotalRequiredResources(priority));
     
     String host_3 = "host_3"; // on rack_1
     SchedulerNode node_3 = TestUtils.getMockNode(host_3, rack_1, 0, 8*GB);
     
+    // Rack-delay
+    doReturn(1).when(a).getNodeLocalityDelay();
+    
+    // Shouldn't assign RACK_LOCAL yet
+    assignment = a.assignContainers(clusterResource, node_3);
+    assertEquals(1, app_0.getSchedulingOpportunities(priority));
+    assertEquals(2, app_0.getTotalRequiredResources(priority));
+    assertEquals(NodeType.NODE_LOCAL, assignment.getType()); // None->NODE_LOCAL
+
+    // Should assign RACK_LOCAL now
     assignment = a.assignContainers(clusterResource, node_3);
     verify(app_0).allocate(eq(NodeType.RACK_LOCAL), eq(node_3), 
         any(Priority.class), any(ResourceRequest.class), any(Container.class));
     assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should reset
-    assertEquals(0, app_0.getTotalRequiredResources(priority));
+    assertEquals(1, app_0.getTotalRequiredResources(priority));
     assertEquals(NodeType.RACK_LOCAL, assignment.getType());
   }
   
@@ -1398,11 +1411,11 @@ public class TestLeafQueue {
     assertEquals(0, app_0.getSchedulingOpportunities(priority_2));
     assertEquals(1, app_0.getTotalRequiredResources(priority_2));
 
-    // Another off-switch, shouldn allocate OFF_SWITCH P1
+    // Another off-switch, shouldn't allocate OFF_SWITCH P1
     a.assignContainers(clusterResource, node_2);
     verify(app_0).allocate(eq(NodeType.OFF_SWITCH), eq(node_2), 
         eq(priority_1), any(ResourceRequest.class), any(Container.class));
-    assertEquals(0, app_0.getSchedulingOpportunities(priority_1));
+    assertEquals(3, app_0.getSchedulingOpportunities(priority_1));
     assertEquals(1, app_0.getTotalRequiredResources(priority_1));
     verify(app_0, never()).allocate(any(NodeType.class), eq(node_2), 
         eq(priority_2), any(ResourceRequest.class), any(Container.class));
@@ -1428,7 +1441,7 @@ public class TestLeafQueue {
     assertEquals(0, app_0.getTotalRequiredResources(priority_1));
     verify(app_0).allocate(eq(NodeType.OFF_SWITCH), eq(node_1), 
         eq(priority_2), any(ResourceRequest.class), any(Container.class));
-    assertEquals(0, app_0.getSchedulingOpportunities(priority_2));
+    assertEquals(1, app_0.getSchedulingOpportunities(priority_2));
     assertEquals(0, app_0.getTotalRequiredResources(priority_2));
 
   }

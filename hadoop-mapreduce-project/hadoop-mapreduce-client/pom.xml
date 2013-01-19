@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.5-SNAPSHOT</version>
+    <version>0.23.7-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client</artifactId>
-  <version>0.23.5-SNAPSHOT</version>
+  <version>0.23.7-SNAPSHOT</version>
   <name>hadoop-mapreduce-client</name>
   <packaging>pom</packaging>
 
@@ -174,5 +174,6 @@
     <module>hadoop-mapreduce-client-app</module>
     <module>hadoop-mapreduce-client-jobclient</module>
     <module>hadoop-mapreduce-client-hs</module>
+    <module>hadoop-mapreduce-client-hs-plugins</module>
   </modules>
 </project>

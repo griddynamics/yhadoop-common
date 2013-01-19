@@ -506,6 +506,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch(IOException ie) {
       throw new YarnException("Failed to start secret manager threads", ie);
     }
+
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String hostname = getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+                                        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
+      hostname = (hostname.contains(":")) ? hostname.substring(0, hostname.indexOf(":")) : hostname;
+      int port = webApp.port();
+      String resolvedAddress = hostname + ":" + port;
+      conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, resolvedAddress);
+    }
     
     super.start();
 

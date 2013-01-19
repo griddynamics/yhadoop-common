@@ -30,6 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -65,8 +67,8 @@ public class TestCapacityScheduler {
   private static float B_CAPACITY = 89.5f;
   private static float A1_CAPACITY = 30;
   private static float A2_CAPACITY = 70;
-  private static float B1_CAPACITY = 50;
-  private static float B2_CAPACITY = 30;
+  private static float B1_CAPACITY = 79.2f;
+  private static float B2_CAPACITY = 0.8f;
   private static float B3_CAPACITY = 20;
 
   private ResourceManager resourceManager = null;
@@ -374,4 +376,65 @@ public class TestCapacityScheduler {
 
     Assert.assertEquals(4 * GB, cs.getClusterResources().getMemory());
   }
+
+  @Test
+  public void testRefreshQueuesWithNewQueue() throws Exception {
+    CapacityScheduler cs = new CapacityScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    cs.setConf(new YarnConfiguration());
+    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
+      new RMContainerTokenSecretManager(conf)));
+    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+
+    // Add a new queue b4
+    String B4 = B + ".b4";
+    float B4_CAPACITY = 10;
+    
+    B3_CAPACITY -= B4_CAPACITY;
+    try {
+      conf.setCapacity(A, 80f);
+      conf.setCapacity(B, 20f);
+      conf.setQueues(B, new String[] {"b1", "b2", "b3", "b4"});
+      conf.setCapacity(B1, B1_CAPACITY);
+      conf.setCapacity(B2, B2_CAPACITY);
+      conf.setCapacity(B3, B3_CAPACITY);
+      conf.setCapacity(B4, B4_CAPACITY);
+      cs.reinitialize(conf,null);
+      checkQueueCapacities(cs, 80f, 20f);
+      
+      // Verify parent for B4
+      CSQueue rootQueue = cs.getRootQueue();
+      CSQueue queueB = findQueue(rootQueue, B);
+      CSQueue queueB4 = findQueue(queueB, B4);
+
+      assertEquals(queueB, queueB4.getParent());
+    } finally {
+      B3_CAPACITY += B4_CAPACITY;
+    }
+  }
+  @Test
+  public void testCapacitySchedulerInfo() throws Exception {
+    QueueInfo queueInfo = resourceManager.getResourceScheduler().getQueueInfo("a", true, true);
+    Assert.assertEquals(queueInfo.getQueueName(), "a");
+    Assert.assertEquals(queueInfo.getChildQueues().size(), 2);
+
+    List<QueueUserACLInfo> userACLInfo = resourceManager.getResourceScheduler().getQueueUserAclInfo();
+    Assert.assertNotNull(userACLInfo);
+    for (QueueUserACLInfo queueUserACLInfo : userACLInfo) {
+      Assert.assertEquals(getQueueCount(userACLInfo, queueUserACLInfo.getQueueName()), 1);
+    }
+
+  }
+
+  private int getQueueCount(List<QueueUserACLInfo> queueInformation, String queueName) {
+    int result = 0;
+    for (QueueUserACLInfo queueUserACLInfo : queueInformation) {
+      if (queueName.equals(queueUserACLInfo.getQueueName())) {
+        result++;
+      }
+    }
+    return result;
+  }
+
 }

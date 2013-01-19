@@ -1129,8 +1129,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           createParent, replication, blockSize);
     } finally {
       writeUnlock();
+      // There might be transactions logged while trying to recover the lease.
+      // They need to be sync'ed even when an exception was thrown.
+      getEditLog().logSync();
     }
-    getEditLog().logSync();
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
@@ -1336,6 +1338,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       recoverLeaseInternal(inode, src, holder, clientMachine, true);
     } finally {
       writeUnlock();
+      // There might be transactions logged while trying to recover the lease.
+      // They need to be sync'ed even when an exception was thrown.
+      getEditLog().logSync();
     }
     return false;
   }
@@ -1437,8 +1442,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                         false, blockManager.maxReplication, (long)0);
     } finally {
       writeUnlock();
+      // There might be transactions logged while trying to recover the lease.
+      // They need to be sync'ed even when an exception was thrown.
+      getEditLog().logSync();
     }
-    getEditLog().logSync();
     if (lb != null) {
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
@@ -1848,15 +1855,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (isPermissionEnabled) {
       //We should not be doing this.  This is move() not renameTo().
       //but for now,
+      //NOTE: yes, this is bad!  it's assuming much lower level behavior
+      //      of rewriting the dst
       String actualdst = dir.isDir(dst)?
           dst + Path.SEPARATOR + new Path(src).getName(): dst;
       checkParentAccess(src, FsAction.WRITE);
       checkAncestorAccess(actualdst, FsAction.WRITE);
     }
 
-    HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
     if (dir.renameTo(src, dst)) {
-      unprotectedChangeLease(src, dst, dinfo);     // update lease with new filename
       return true;
     }
     return false;
@@ -1905,9 +1912,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkAncestorAccess(dst, FsAction.WRITE);
     }
 
-    HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
     dir.renameTo(src, dst, options);
-    unprotectedChangeLease(src, dst, dinfo); // update lease with new filename
   }
   
   /**
@@ -2171,7 +2176,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *         RecoveryInProgressException if lease recovery is in progress.<br>
    *         IOException in case of an error.
    * @return true  if file has been successfully finalized and closed or 
-   *         false if block recovery has been initiated
+   *         false if block recovery has been initiated. Since the lease owner
+   *         has been changed and logged, caller should call logSync().
    */
   boolean internalReleaseLease(Lease lease, String src, 
       String recoveryLeaseHolder) throws AlreadyBeingCreatedException, 
@@ -2303,6 +2309,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     if(newHolder == null)
       return lease;
+    // The following transaction is not synced. Make sure it's sync'ed later.
     logReassignLease(lease.getHolder(), src, newHolder);
     return reassignLeaseInternal(lease, src, newHolder, pendingFile);
   }
@@ -3890,31 +3897,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   // rename was successful. If any part of the renamed subtree had
   // files that were being written to, update with new filename.
-  void unprotectedChangeLease(String src, String dst, HdfsFileStatus dinfo) {
-    String overwrite;
-    String replaceBy;
+  void unprotectedChangeLease(String src, String dst) {
     assert hasWriteLock();
-
-    boolean destinationExisted = true;
-    if (dinfo == null) {
-      destinationExisted = false;
-    }
-
-    if (destinationExisted && dinfo.isDir()) {
-      Path spath = new Path(src);
-      Path parent = spath.getParent();
-      if (isRoot(parent)) {
-        overwrite = parent.toString();
-      } else {
-        overwrite = parent.toString() + Path.SEPARATOR;
-      }
-      replaceBy = dst + Path.SEPARATOR;
-    } else {
-      overwrite = src;
-      replaceBy = dst;
-    }
-
-    leaseManager.changeLease(src, dst, overwrite, replaceBy);
+    leaseManager.changeLease(src, dst);
   }
            
   private boolean isRoot(Path path) {
@@ -3929,28 +3914,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // lock on our behalf. If we took the read lock here, we could block
     // for fairness if a writer is waiting on the lock.
     synchronized (leaseManager) {
-      out.writeInt(leaseManager.countPath()); // write the size
-
-      for (Lease lease : leaseManager.getSortedLeases()) {
-        for(String path : lease.getPaths()) {
-          // verify that path exists in namespace
-          INode node;
-          try {
-            node = dir.getFileINode(path);
-          } catch (UnresolvedLinkException e) {
-            throw new AssertionError("Lease files should reside on this FS");
-          }
-          if (node == null) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but no matching entry in namespace.");
-          }
-          if (!node.isUnderConstruction()) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but is not under construction.");
-          }
-          INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
-          FSImageSerialization.writeINodeUnderConstruction(out, cons, path);
-        }
+      Map<String, INodeFileUnderConstruction> nodes =
+          leaseManager.getINodesUnderConstruction();
+      out.writeInt(nodes.size()); // write the size    
+      for (Map.Entry<String, INodeFileUnderConstruction> entry
+           : nodes.entrySet()) {
+        FSImageSerialization.writeINodeUnderConstruction(
+            out, entry.getValue(), entry.getKey());
       }
     }
   }
@@ -4225,13 +4195,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   private void logReassignLease(String leaseHolder, String src,
       String newHolder) throws IOException {
-    writeLock();
-    try {
-      getEditLog().logReassignLease(leaseHolder, src, newHolder);
-    } finally {
-      writeUnlock();
-    }
-    getEditLog().logSync();
+    assert hasWriteLock();
+    getEditLog().logReassignLease(leaseHolder, src, newHolder);
   }
   
   /**

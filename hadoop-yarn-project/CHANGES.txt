@@ -1,6 +1,75 @@
 Hadoop YARN Change Log
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    YARN-285. Added a temporary plugin interface for RM to be able to redirect to
+    JobHistory server for apps that it no longer tracks. Contributed by
+    Derek Dagit.
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-204. test coverage for org.apache.hadoop.tools (Aleksey Gorshkov via
+    bobby)
+
+    YARN-251. Proxy URI generation fails for blank tracking URIs (Tom White
+    via jlowe)
+
+    YARN-72. NM should handle cleaning up containers when it shuts down.
+    (Sandy Ryza via tomwhite)
+
+    YARN-258. RM web page UI shows Invalid Date for start and finish times
+    (Ravi Prakash via jlowe)
+
+    YARN-266. RM and JHS Web UIs are blank because AppsBlock is not escaping
+    string properly (Ravi Prakash via jlowe)
+
+    YARN-223. Change processTree interface to work better with native code
+    (Radim Kolar via tgraves)
+
+    YARN-280. RM does not reject app submission with invalid tokens 
+    (Daryn Sharp via tgraves)
+
+    YARN-225. Proxy Link in RM UI thows NPE in Secure mode 
+    (Devaraj K via bobby)
+
+    YARN-293. Node Manager leaks LocalizerRunner object for every Container
+    (Robert Joseph Evans via jlowe)
+
+    YARN-50. Implement renewal / cancellation of Delegation Tokens 
+    (Siddharth Seth via tgraves)
+
+    YARN-320. RM should always be able to renew its own tokens.
+    (Daryn Sharp via sseth)
+
+    YARN-325. RM CapacityScheduler can deadlock when getQueueInfo() is 
+    called and a container is completing (Arun C Murthy via tgraves)
+
+    YARN-334. Maven RAT plugin is not checking all source files (tgraves)
+
+    YARN-170. NodeManager stop() gets called twice on shutdown (Sandy Ryza
+    via tgraves)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 
@@ -29,6 +98,14 @@ Release 0.23.5 - UNRELEASED
     YARN-32. Fix TestApplicationTokens to not depend on test order and thus pass
     on JDK7. (vinodkv)
 
+    YARN-186. Coverage fixing LinuxContainerExecutor (Aleksey Gorshkov via
+    bobby)
+
+    YARN-216. Remove jquery theming support. (Robert Joseph Evans via jlowe)
+
+    YARN-80. Add support for delaying rack-local containers in
+    CapacityScheduler. (acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -36,7 +113,65 @@ Release 0.23.5 - UNRELEASED
     YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
     (Ahmed Radwan via sseth)
 
-Release 0.23.4 - UNRELEASED
+    YARN-163. Retrieving container log via NM webapp can hang with multibyte
+    characters in log (jlowe via bobby)
+
+    YARN-102. Move the apache header to the top of the file in MemStore.java.
+    (Devaraj K via sseth)
+
+    YARN-174. Modify NodeManager to pass the user's configuration even when
+    rebooting. (vinodkv)
+
+    YARN-177. CapacityScheduler - adding a queue while the RM is running has 
+    wacky results (acmurthy vai tgraves)
+
+    YARN-178. Fix custom ProcessTree instance creation (Radim Kolar via bobby)
+
+    YARN-180. Capacity scheduler - containers that get reserved create container
+    token to early (acmurthy and bobby)
+
+    YARN-139. Interrupted Exception within AsyncDispatcher leads to user
+    confusion. (Vinod Kumar Vavilapalli via jlowe)
+
+    YARN-165. RM should point tracking URL to RM web page for app when AM fails
+    (jlowe via bobby)
+
+    YARN-159. RM web ui applications page should be sorted to display last app
+    first (tgraves via bobby)
+
+    YARN-166. capacity scheduler doesn't allow capacity < 1.0 (tgraves via
+    bobby)
+
+    YARN-189. Fixed a deadlock between RM's ApplicationMasterService and the
+    dispatcher. (Thomas Graves via vinodkv)
+
+    YARN-202. Log Aggregation generates a storm of fsync() for namenode 
+    (Kihwal Lee via bobby)
+
+    YARN-201. Fix CapacityScheduler to be less conservative for starved 
+    off-switch requests. (jlowe via acmurthy) 
+
+    YARN-206. TestApplicationCleanup.testContainerCleanup occasionally fails
+    (jlowe via bobby)
+
+    YARN-212. NM state machine ignores an APPLICATION_CONTAINER_FINISHED event
+    when it shouldn't (Nathan Roberts via jlowe)
+
+    YARN-144. MiniMRYarnCluster launches RM and JHS on default ports (Robert
+    Parker via jlowe)
+
+    YARN-219. NM should aggregate logs when application finishes. (bobby)
+
+    YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
+    bobby)
+
+    YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
+    (jeagles via bobby)
+
+    YARN-151. Browser thinks RM main page JS is taking too long 
+    (Ravi Prakash via bobby)
+
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 

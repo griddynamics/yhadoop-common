@@ -399,6 +399,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
+  
+  public static final String YARN_TRACKING_URL_GENERATOR = 
+      YARN_PREFIX + "tracking.url.generator";
 
   /** Amount of memory in GB that can be allocated for containers.*/
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
@@ -566,6 +569,18 @@ public class YarnConfiguration extends Configuration {
 
   /** Container temp directory */
   public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";
+
+  public static final String IS_MINI_YARN_CLUSTER = YARN_PREFIX + ".is.minicluster";
+
+  /** Whether to use fixed ports with the minicluster. */
+  public static final String YARN_MINICLUSTER_FIXED_PORTS = YARN_PREFIX
+      + "minicluster.fixed.ports";
+
+  /**
+   * Default is false to be able to run tests concurrently without port
+   * conflicts.
+   */
+  public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
 
   public YarnConfiguration() {
     super();
