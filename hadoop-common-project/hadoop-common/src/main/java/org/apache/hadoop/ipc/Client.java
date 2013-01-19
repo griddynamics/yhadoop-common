@@ -63,11 +63,10 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
-import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
-import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcPayloadHeaderProto;
-import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcPayloadOperationProto;
-import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcResponseHeaderProto;
-import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcStatusProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
@@ -107,6 +106,8 @@ public class Client {
 
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
+
+  private final int connectionTimeout;
   
   final static int PING_CALL_ID = -1;
   
@@ -160,7 +161,16 @@ public class Client {
     }
     return -1;
   }
-  
+  /**
+   * set the connection timeout value in configuration
+   * 
+   * @param conf Configuration
+   * @param timeout the socket connect timeout value
+   */
+  public static final void setConnectTimeout(Configuration conf, int timeout) {
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY, timeout);
+  }
+
   /**
    * Increment this client's reference count
    *
@@ -191,7 +201,7 @@ public class Client {
    */
   private class Call {
     final int id;               // call id
-    final Writable rpcRequest;  // the serialized rpc request - RpcPayload
+    final Writable rpcRequest;  // the serialized rpc request
     Writable rpcResponse;       // null if rpc has error
     IOException error;          // exception, null if success
     final RPC.RpcKind rpcKind;      // Rpc EngineKind
@@ -266,7 +276,7 @@ public class Client {
     private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
     
-    private final Object sendParamsLock = new Object();
+    private final Object sendRpcRequestLock = new Object();
 
     public Connection(ConnectionId remoteId) throws IOException {
       this.remoteId = remoteId;
@@ -495,8 +505,7 @@ public class Client {
             }
           }
           
-          // connection time out is 20s
-          NetUtils.connect(this.socket, server, 20000);
+          NetUtils.connect(this.socket, server, connectionTimeout);
           if (rpcTimeout > 0) {
             pingInterval = rpcTimeout;  // rpcTimeout overwrites pingInterval
           }
@@ -768,7 +777,7 @@ public class Client {
           remoteId.getTicket(),
           authMethod).writeTo(buf);
       
-      // Write out the payload length
+      // Write out the packet length
       int bufLen = buf.getLength();
 
       out.writeInt(bufLen);
@@ -832,7 +841,7 @@ public class Client {
 
       try {
         while (waitForWork()) {//wait here for work - read or close connection
-          receiveResponse();
+          receiveRpcResponse();
         }
       } catch (Throwable t) {
         // This truly is unexpected, since we catch IOException in receiveResponse
@@ -849,11 +858,12 @@ public class Client {
             + connections.size());
     }
 
-    /** Initiates a call by sending the parameter to the remote server.
+    /** Initiates a rpc call by sending the rpc request to the remote server.
      * Note: this is not called from the Connection thread, but by other
      * threads.
+     * @param call - the rpc request
      */
-    public void sendParam(final Call call)
+    public void sendRpcRequest(final Call call)
         throws InterruptedException, IOException {
       if (shouldCloseConnection.get()) {
         return;
@@ -866,17 +876,17 @@ public class Client {
       //
       // Format of a call on the wire:
       // 0) Length of rest below (1 + 2)
-      // 1) PayloadHeader  - is serialized Delimited hence contains length
-      // 2) the Payload - the RpcRequest
+      // 1) RpcRequestHeader  - is serialized Delimited hence contains length
+      // 2) RpcRequest
       //
       // Items '1' and '2' are prepared here. 
       final DataOutputBuffer d = new DataOutputBuffer();
-      RpcPayloadHeaderProto header = ProtoUtil.makeRpcPayloadHeader(
-         call.rpcKind, RpcPayloadOperationProto.RPC_FINAL_PAYLOAD, call.id);
+      RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
+         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id);
       header.writeDelimitedTo(d);
       call.rpcRequest.write(d);
 
-      synchronized (sendParamsLock) {
+      synchronized (sendRpcRequestLock) {
         Future<?> senderFuture = SEND_PARAMS_EXECUTOR.submit(new Runnable() {
           @Override
           public void run() {
@@ -892,7 +902,7 @@ public class Client {
                 byte[] data = d.getData();
                 int totalLength = d.getLength();
                 out.writeInt(totalLength); // Total Length
-                out.write(data, 0, totalLength);//PayloadHeader + RpcRequest
+                out.write(data, 0, totalLength);// RpcRequestHeader + RpcRequest
                 out.flush();
               }
             } catch (IOException e) {
@@ -927,7 +937,7 @@ public class Client {
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
      */
-    private void receiveResponse() {
+    private void receiveRpcResponse() {
       if (shouldCloseConnection.get()) {
         return;
       }
@@ -1034,6 +1044,8 @@ public class Client {
     this.valueClass = valueClass;
     this.conf = conf;
     this.socketFactory = factory;
+    this.connectionTimeout = conf.getInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
   }
 
   /**
@@ -1194,12 +1206,12 @@ public class Client {
     Call call = new Call(rpcKind, rpcRequest);
     Connection connection = getConnection(remoteId, call);
     try {
-      connection.sendParam(call);                 // send the parameter
+      connection.sendRpcRequest(call);                 // send the rpc request
     } catch (RejectedExecutionException e) {
       throw new IOException("connection has been closed", e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      LOG.warn("interrupted waiting to send params to server", e);
+      LOG.warn("interrupted waiting to send rpc request to server", e);
       throw new IOException(e);
     }
 

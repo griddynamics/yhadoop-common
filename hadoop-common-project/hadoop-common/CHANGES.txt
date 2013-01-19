@@ -11,6 +11,9 @@ Trunk (Unreleased)
 
   NEW FEATURES
     
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
     HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
     szetszwo)
 
@@ -129,9 +132,6 @@ Trunk (Unreleased)
     HADOOP-8776. Provide an option in test-patch that can enable/disable
     compiling native code. (Chris Nauroth via suresh)
 
-    HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
-    via suresh)
-
     HADOOP-6616. Improve documentation for rack awareness. (Adam Faris via 
     jghoman)
 
@@ -141,7 +141,17 @@ Trunk (Unreleased)
     HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
     (suresh)
 
+    HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
+
+    HADOOP-9162. Add utility to check native library availability.
+    (Binglin Chang via suresh)
+
   BUG FIXES
+
+    HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
+
+    HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
+    FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
 
     HADOOP-8418. Update UGI Principal classes name for running with
     IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
@@ -298,8 +308,13 @@ Trunk (Unreleased)
     HADOOP-9131. Turn off TestLocalFileSystem#testListStatusWithColons on
     Windows. (Chris Nauroth via suresh)
 
-    HADOOP-8957 AbstractFileSystem#IsValidName should be overridden for
+    HADOOP-8957. AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
+
+    HADOOP-9139. improve killKdc.sh (Ivan A. Veselovsky via bobby)
+
+    HADOOP-9202. test-patch.sh fails during mvn eclipse:eclipse if patch adds
+    a new module to the build (Chris Nauroth via bobby)
 
   OPTIMIZATIONS
 
@@ -310,6 +325,8 @@ Trunk (Unreleased)
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
+
+    HADOOP-8999. SASL negotiation is flawed (daryn)
 
   NEW FEATURES
 
@@ -404,6 +421,32 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9127. Update documentation for ZooKeeper Failover Controller.
     (Daisuke Kobayashi via atm)
 
+    HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
+    via suresh)
+
+    HADOOP-9147. Add missing fields to FIleStatus.toString.
+    (Jonathan Allen via suresh)
+
+    HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
+
+    HADOOP-9173. Add security token protobuf definition to common and
+    use it in hdfs. (suresh)
+
+    HADOOP-9119. Add test to FileSystemContractBaseTest to verify integrity
+    of overwritten files. (Steve Loughran via suresh)
+
+    HADOOP-9192. Move token related request/response messages to common.
+    (suresh)
+
+    HADOOP-8712. Change default hadoop.security.group.mapping to
+    JniBasedUnixGroupsNetgroupMappingWithFallback (Robert Parker via todd)
+
+    HADOOP-9106. Allow configuration of IPC connect timeout.
+    (Rober Parker via suresh)
+
+    HADOOP-9216. CompressionCodecFactory#getCodecClasses should trim the
+    result of parsing by Configuration. (Tsuyoshi Ozawa via todd)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -464,8 +507,6 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
 
-    HADOOP-8999. SASL negotiation is flawed (daryn)
-
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
     HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
@@ -493,6 +534,37 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
     rather than info during fallback. (Colin Patrick McCabe via todd)
+
+    HADOOP-9152. HDFS can report negative DFS Used on clusters with very small
+    amounts of data. (Brock Noland via atm)
+
+    HADOOP-9153. Support createNonRecursive in ViewFileSystem.
+    (Sandy Ryza via tomwhite)
+
+    HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool.
+    (Liang Xie via suresh)
+
+    HADOOP-9155. FsPermission should have different default value, 777 for
+    directory and 666 for file. (Binglin Chang via atm)
+
+    HADOOP-9183. Potential deadlock in ActiveStandbyElector. (tomwhite)
+
+    HADOOP-9203. RPCCallBenchmark should find a random available port.
+    (Andrew Purtell via suresh)
+
+    HADOOP-9178. src/main/conf is missing hadoop-policy.xml.
+    (Sandy Ryza via eli)
+
+    HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication. 
+    (moritzmoeller via tucu)
+    
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
+
+    HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
+    when delegating to hdfs script. (Andy Isaacson via todd)
+
+    HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
+    (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1184,6 +1256,21 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
+    permissions (Ivan A. Veselovsky via bobby)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1191,6 +1278,8 @@ Release 0.23.6 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
 
   OPTIMIZATIONS
 
@@ -1205,7 +1294,12 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
     Veselovsky via bobby)
 
-Release 0.23.5 - UNRELEASED
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
+    HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
+Release 0.23.5 - 2012-11-28
+
 
   INCOMPATIBLE CHANGES
 
