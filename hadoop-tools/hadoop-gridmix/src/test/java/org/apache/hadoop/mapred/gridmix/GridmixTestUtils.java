@@ -43,6 +43,10 @@ public class GridmixTestUtils {
   public static void initCluster() throws IOException {
     Configuration conf = new Configuration();
     conf.set("mapred.queue.names", "default,q1,q2");
+    conf.set("yarn.scheduler.capacity.root.queues", "default");
+    conf.set("yarn.scheduler.capacity.root.default.capacity", "100.0");
+
+
     dfsCluster = new MiniDFSCluster(conf, 3, true, null);
     dfs = dfsCluster.getFileSystem();
     conf.set(JTConfig.JT_RETIREJOBS, "false");
