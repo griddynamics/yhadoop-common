@@ -344,4 +344,51 @@ public class TestMetricsSystemImpl {
   private static String getPluginUrlsAsString() {
     return "file:metrics2-test-plugin.jar";
   }
+  
+  @Test
+  public void testIvanExperimental() {
+    MetricsSystemImpl ms = new MetricsSystemImpl("Test");
+    ms.start();
+    
+    TestSource s1 = ms.register("s1", "s1 desc", new TestSource("s1"));
+    s1.c1.incr();
+    TestSource s2 = ms.register("s2", "s2 desc", new TestSource("s2"));
+    s2.c1.incr();
+    s2.c1.incr();
+    
+    IvanSink sink1 = new IvanSink();
+    ms.register("ivan", "Ivan sink!", sink1);
+    ms.publishMetricsNow();
+    
+    assertEquals(0L, ms.droppedPubAll.value());
+    
+    System.out.println("sink put count = " + sink1.putCount);
+    
+    ms.stop();
+    ms.shutdown();
+    
+    System.out.println("sink put count = " + sink1.putCount);
+  }
+  
+  private static class IvanSink implements MetricsSink {
+    int putCount = 0;
+    @Override
+    public void init(SubsetConfiguration conf) {
+    }
+    @Override
+    public void putMetrics(MetricsRecord record) {
+      for (MetricsTag tag: record.tags()) {
+        System.out.println("tag: " + tag);
+      }
+      for (AbstractMetric am: record.metrics()) {
+        System.out.println("metric: " + am.name() + " = " + am.value());
+      }
+      System.out.println("============================");
+      //System.out.println("put: " + record);
+      putCount++;
+    }
+    @Override
+    public void flush() {
+    }
+  }
 }

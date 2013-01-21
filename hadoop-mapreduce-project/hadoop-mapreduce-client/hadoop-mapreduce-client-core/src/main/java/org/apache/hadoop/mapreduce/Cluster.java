@@ -109,6 +109,7 @@ public class Cluster {
           }
         } 
         catch (Exception e) {
+          e.printStackTrace();
           LOG.info("Failed to use " + provider.getClass().getName()
               + " due to error: " + e.getMessage());
         }

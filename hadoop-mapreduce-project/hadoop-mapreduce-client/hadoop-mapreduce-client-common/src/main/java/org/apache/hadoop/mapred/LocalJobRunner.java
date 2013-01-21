@@ -88,6 +88,7 @@ public class LocalJobRunner implements ClientProtocol {
 
   private static final Counters EMPTY_COUNTERS = new Counters();
 
+  @Override
   public long getProtocolVersion(String protocol, long clientVersion) {
     return ClientProtocol.versionID;
   }
@@ -127,6 +128,7 @@ public class LocalJobRunner implements ClientProtocol {
     
     private LocalDistributedCacheManager localDistributedCacheManager;
 
+    @Override
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TaskUmbilicalProtocol.versionID;
     }
@@ -205,6 +207,7 @@ public class LocalJobRunner implements ClientProtocol {
         this.localConf = new JobConf(job);
       }
 
+      @Override
       public void run() {
         try {
           TaskAttemptID mapId = new TaskAttemptID(new TaskID(
@@ -493,8 +496,10 @@ public class LocalJobRunner implements ClientProtocol {
 
     // TaskUmbilicalProtocol methods
 
+    @Override
     public JvmTask getTask(JvmContext context) { return null; }
     
+    @Override
     public synchronized boolean statusUpdate(TaskAttemptID taskId,
         TaskStatus taskStatus) throws IOException, InterruptedException {
       LOG.info(taskStatus.getStateString());
@@ -540,30 +545,36 @@ public class LocalJobRunner implements ClientProtocol {
      * Task is reporting that it is in commit_pending
      * and it is waiting for the commit Response
      */
+    @Override
     public void commitPending(TaskAttemptID taskid,
                               TaskStatus taskStatus) 
     throws IOException, InterruptedException {
       statusUpdate(taskid, taskStatus);
     }
 
+    @Override
     public void reportDiagnosticInfo(TaskAttemptID taskid, String trace) {
       // Ignore for now
     }
     
+    @Override
     public void reportNextRecordRange(TaskAttemptID taskid, 
         SortedRanges.Range range) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
     }
 
+    @Override
     public boolean ping(TaskAttemptID taskid) throws IOException {
       return true;
     }
     
+    @Override
     public boolean canCommit(TaskAttemptID taskid) 
     throws IOException {
       return true;
     }
     
+    @Override
     public void done(TaskAttemptID taskId) throws IOException {
       int taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
@@ -573,20 +584,24 @@ public class LocalJobRunner implements ClientProtocol {
       }
     }
 
+    @Override
     public synchronized void fsError(TaskAttemptID taskId, String message) 
     throws IOException {
       LOG.fatal("FSError: "+ message + "from task: " + taskId);
     }
 
+    @Override
     public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
       LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
     }
     
+    @Override
     public synchronized void fatalError(TaskAttemptID taskId, String msg) 
     throws IOException {
       LOG.fatal("Fatal: "+ msg + "from task: " + taskId);
     }
     
+    @Override
     public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
         int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
       return new MapTaskCompletionEventsUpdate(
@@ -617,6 +632,7 @@ public class LocalJobRunner implements ClientProtocol {
     return new org.apache.hadoop.mapreduce.JobID("local" + randid, ++jobid);
   }
 
+  @Override
   public org.apache.hadoop.mapreduce.JobStatus submitJob(
       org.apache.hadoop.mapreduce.JobID jobid, String jobSubmitDir,
       Credentials credentials) throws IOException {
@@ -626,11 +642,13 @@ public class LocalJobRunner implements ClientProtocol {
 
   }
 
+  @Override
   public void killJob(org.apache.hadoop.mapreduce.JobID id) {
     jobs.get(JobID.downgrade(id)).killed = true;
     jobs.get(JobID.downgrade(id)).interrupt();
   }
 
+  @Override
   public void setJobPriority(org.apache.hadoop.mapreduce.JobID id,
       String jp) throws IOException {
     throw new UnsupportedOperationException("Changing job priority " +
@@ -638,17 +656,20 @@ public class LocalJobRunner implements ClientProtocol {
   }
   
   /** Throws {@link UnsupportedOperationException} */
+  @Override
   public boolean killTask(org.apache.hadoop.mapreduce.TaskAttemptID taskId,
       boolean shouldFail) throws IOException {
     throw new UnsupportedOperationException("Killing tasks in " +
     "LocalJobRunner is not supported");
   }
 
+  @Override
   public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(
       org.apache.hadoop.mapreduce.JobID id, TaskType type) {
     return new org.apache.hadoop.mapreduce.TaskReport[0];
   }
 
+  @Override
   public org.apache.hadoop.mapreduce.JobStatus getJobStatus(
       org.apache.hadoop.mapreduce.JobID id) {
     Job job = jobs.get(JobID.downgrade(id));
@@ -658,6 +679,7 @@ public class LocalJobRunner implements ClientProtocol {
       return null;
   }
   
+  @Override
   public org.apache.hadoop.mapreduce.Counters getJobCounters(
       org.apache.hadoop.mapreduce.JobID id) {
     Job job = jobs.get(JobID.downgrade(id));
@@ -665,20 +687,24 @@ public class LocalJobRunner implements ClientProtocol {
     return new org.apache.hadoop.mapreduce.Counters(job.getCurrentCounters());
   }
 
+  @Override
   public String getFilesystemName() throws IOException {
     return fs.getUri().toString();
   }
   
+  @Override
   public ClusterMetrics getClusterMetrics() {
     int numMapTasks = map_tasks.get();
     return new ClusterMetrics(numMapTasks, reduce_tasks, numMapTasks,
         reduce_tasks, 0, 0, 1, 1, jobs.size(), 1, 0, 0);
   }
 
+  @Override
   public JobTrackerStatus getJobTrackerStatus() {
     return JobTrackerStatus.RUNNING;
   }
 
+  @Override
   public long getTaskTrackerExpiryInterval() throws IOException, InterruptedException {
     return 0;
   }
@@ -687,6 +713,7 @@ public class LocalJobRunner implements ClientProtocol {
    * Get all active trackers in cluster. 
    * @return array of TaskTrackerInfo
    */
+  @Override
   public TaskTrackerInfo[] getActiveTrackers() 
       throws IOException, InterruptedException {
     return new TaskTrackerInfo[0];
@@ -696,17 +723,20 @@ public class LocalJobRunner implements ClientProtocol {
    * Get all blacklisted trackers in cluster. 
    * @return array of TaskTrackerInfo
    */
+  @Override
   public TaskTrackerInfo[] getBlacklistedTrackers() 
       throws IOException, InterruptedException {
     return new TaskTrackerInfo[0];
   }
 
+  @Override
   public TaskCompletionEvent[] getTaskCompletionEvents(
       org.apache.hadoop.mapreduce.JobID jobid
       , int fromEventId, int maxEvents) throws IOException {
     return TaskCompletionEvent.EMPTY_ARRAY;
   }
   
+  @Override
   public org.apache.hadoop.mapreduce.JobStatus[] getAllJobs() {return null;}
 
   
@@ -714,6 +744,7 @@ public class LocalJobRunner implements ClientProtocol {
    * Returns the diagnostic information for a particular task in the given job.
    * To be implemented
    */
+  @Override
   public String[] getTaskDiagnostics(
       org.apache.hadoop.mapreduce.TaskAttemptID taskid) throws IOException{
 	  return new String [0];
@@ -722,6 +753,7 @@ public class LocalJobRunner implements ClientProtocol {
   /**
    * @see org.apache.hadoop.mapreduce.protocol.ClientProtocol#getSystemDir()
    */
+  @Override
   public String getSystemDir() {
     Path sysDir = new Path(
       conf.get(JTConfig.JT_SYSTEM_DIR, "/tmp/hadoop/mapred/system"));  
@@ -731,6 +763,7 @@ public class LocalJobRunner implements ClientProtocol {
   /**
    * @see org.apache.hadoop.mapreduce.protocol.ClientProtocol#getQueueAdmins(String)
    */
+  @Override
   public AccessControlList getQueueAdmins(String queueName) throws IOException {
 	  return new AccessControlList(" ");// no queue admins for local job runner
   }
@@ -738,6 +771,7 @@ public class LocalJobRunner implements ClientProtocol {
   /**
    * @see org.apache.hadoop.mapreduce.protocol.ClientProtocol#getStagingAreaDir()
    */
+  @Override
   public String getStagingAreaDir() throws IOException {
     Path stagingRootDir = new Path(conf.get(JTConfig.JT_STAGING_AREA_ROOT, 
         "/tmp/hadoop/mapred/staging"));
@@ -752,6 +786,7 @@ public class LocalJobRunner implements ClientProtocol {
     return fs.makeQualified(new Path(stagingRootDir, user+"/.staging")).toString();
   }
   
+  @Override
   public String getJobHistoryDir() {
     return null;
   }
@@ -858,6 +893,5 @@ public class LocalJobRunner implements ClientProtocol {
     }
     return taskDir;
   }
-  
   
 }

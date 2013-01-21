@@ -23,67 +23,124 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSystem;
+//import org.apache.hadoop.metrics.MetricsContext;
+//import org.apache.hadoop.metrics.MetricsRecord;
+//import org.apache.hadoop.metrics.MetricsUtil;
+//import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.impl.MsInfo;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.Interns;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
-public class ShuffleClientMetrics implements Updater {
+public class ShuffleClientMetrics implements MetricsSource {
 
-  private MetricsRecord shuffleMetrics = null;
+  private static final String CONTEXT = "mapred"; 
+  private static final String RECORD_NAME = "shuffleInput";
+  
+  private static final MetricsInfo tagUser = Interns.info("user", "");
+  private static final MetricsInfo tagJobName = Interns.info("jobName", "");
+  private static final MetricsInfo tagJobId = Interns.info("jobId", "");
+  private static final MetricsInfo tagTaskId = Interns.info("taskId", "");
+  
+  private static final MetricsInfo shuffleInputBytesMI 
+    = Interns.info("shuffle_input_bytes", "Shuffle input bytes.");
+  private static final MetricsInfo shuffleFailedFetchesMI 
+    = Interns.info("shuffle_failed_fetches", "Shuffle failed fetches.");
+  private static final MetricsInfo shuffleSuccessFetchesMI 
+    = Interns.info("shuffle_success_fetches", "Shuffle success fetches.");
+  private static final MetricsInfo shuffleFetchersBusyPercentMI 
+    = Interns.info("shuffle_fetchers_busy_percent", "Shuffle fetches busy percent.");
+  
+  // metrics:
   private int numFailedFetches = 0;
   private int numSuccessFetches = 0;
   private long numBytes = 0;
   private int numThreadsBusy = 0;
+  
   private final int numCopiers;
   
-  ShuffleClientMetrics(TaskAttemptID reduceId, JobConf jobConf) {
-    this.numCopiers = jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
-
-    MetricsContext metricsContext = MetricsUtil.getContext("mapred");
-    this.shuffleMetrics = 
-      MetricsUtil.createRecord(metricsContext, "shuffleInput");
-    this.shuffleMetrics.setTag("user", jobConf.getUser());
-    this.shuffleMetrics.setTag("jobName", jobConf.getJobName());
-    this.shuffleMetrics.setTag("jobId", reduceId.getJobID().toString());
-    this.shuffleMetrics.setTag("taskId", reduceId.toString());
-    this.shuffleMetrics.setTag("sessionId", jobConf.getSessionId());
-    metricsContext.registerUpdater(this);
+  private final TaskAttemptID reduceId;
+  private final JobConf jobConf;
+  
+  ShuffleClientMetrics(TaskAttemptID reduceId0, JobConf jobConf0) {
+    reduceId = reduceId0;
+    jobConf = jobConf0;
+    
+    numCopiers = jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
+    
+    final MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
+    //DefaultMetricsSystem.setMiniClusterMode(true); // ???
+    metricsSystem.init(CONTEXT);
+    metricsSystem.register(getClass().getName(), 
+        "Metrics source ShuffleClient.", this);
+    
   }
+  
   public synchronized void inputBytes(long numBytes) {
     this.numBytes += numBytes;
   }
+  
   public synchronized void failedFetch() {
     ++numFailedFetches;
   }
+  
   public synchronized void successFetch() {
     ++numSuccessFetches;
   }
+  
   public synchronized void threadBusy() {
     ++numThreadsBusy;
   }
+  
   public synchronized void threadFree() {
     --numThreadsBusy;
   }
-  public void doUpdates(MetricsContext unused) {
+  
+  @Override
+  public void getMetrics(final MetricsCollector collector, boolean all) {
+    final MetricsRecordBuilder mrb = collector.addRecord(RECORD_NAME);
+    mrb.setContext(CONTEXT);
+    
+    mrb.tag(tagUser, jobConf.getUser());
+    mrb.tag(tagJobName, jobConf.getJobName());
+    mrb.tag(tagJobId, reduceId.getJobID().toString());
+    mrb.tag(tagTaskId, reduceId.toString());
+    mrb.tag(MsInfo.SessionId, jobConf.getSessionId());
+    
     synchronized (this) {
-      shuffleMetrics.incrMetric("shuffle_input_bytes", numBytes);
-      shuffleMetrics.incrMetric("shuffle_failed_fetches", 
-                                numFailedFetches);
-      shuffleMetrics.incrMetric("shuffle_success_fetches", 
-                                numSuccessFetches);
+      //shuffleMetrics.incrMetric("shuffle_input_bytes", numBytes);
+      mrb.addGauge(shuffleInputBytesMI, numBytes);
+      
+//      shuffleMetrics.incrMetric("shuffle_failed_fetches", 
+//                                numFailedFetches);
+      mrb.addGauge(shuffleFailedFetchesMI, numFailedFetches);
+      
+//      shuffleMetrics.incrMetric("shuffle_success_fetches", 
+//                                numSuccessFetches);
+      mrb.addGauge(shuffleSuccessFetchesMI, numSuccessFetches);
+      
+      final float busyPercent;
       if (numCopiers != 0) {
-        shuffleMetrics.setMetric("shuffle_fetchers_busy_percent",
-            100*((float)numThreadsBusy/numCopiers));
+//        shuffleMetrics.setMetric("shuffle_fetchers_busy_percent",
+//            100*((float)numThreadsBusy/numCopiers));
+        busyPercent = 100*((float)numThreadsBusy/numCopiers);
       } else {
-        shuffleMetrics.setMetric("shuffle_fetchers_busy_percent", 0);
+//        shuffleMetrics.setMetric("shuffle_fetchers_busy_percent", 0);
+        busyPercent = 0f;
       }
+      mrb.addGauge(shuffleFetchersBusyPercentMI, busyPercent);
+      mrb.endRecord();
+      
       numBytes = 0;
       numSuccessFetches = 0;
       numFailedFetches = 0;
     }
-    shuffleMetrics.update();
+    
   }
 }
