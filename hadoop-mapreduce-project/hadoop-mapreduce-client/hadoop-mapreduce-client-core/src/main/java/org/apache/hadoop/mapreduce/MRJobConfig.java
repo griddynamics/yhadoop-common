@@ -353,6 +353,11 @@ public interface MRJobConfig {
     MR_AM_PREFIX+"command-opts";
   public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1024m";
 
+  /** Admin command opts passed to the MR app master.*/
+  public static final String MR_AM_ADMIN_COMMAND_OPTS =
+      MR_AM_PREFIX+"admin-command-opts";
+  public static final String DEFAULT_MR_AM_ADMIN_COMMAND_OPTS = "";
+  
   /** Root Logging level passed to the MR app master.*/
   public static final String MR_AM_LOG_LEVEL = 
     MR_AM_PREFIX+"log.level";
@@ -458,6 +463,25 @@ public interface MRJobConfig {
   public static final String MR_AM_TO_RM_WAIT_INTERVAL_MS =
     MR_AM_PREFIX + "scheduler.connection.wait.interval-ms";
   public static final int DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS = 360000;
+
+  /**
+   * How long to wait in milliseconds for the output committer to cancel
+   * an operation when the job is being killed
+   */
+  public static final String MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      MR_AM_PREFIX + "job.committer.cancel-timeout";
+  public static final int DEFAULT_MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      60 * 1000;
+
+  /**
+   * Defines a time window in milliseconds for output committer operations.
+   * If contact with the RM has occurred within this window then commit
+   * operations are allowed, otherwise the AM will not allow output committer
+   * operations until contact with the RM has been re-established.
+   */
+  public static final String MR_AM_COMMIT_WINDOW_MS =
+      MR_AM_PREFIX + "job.committer.commit-window";
+  public static final int DEFAULT_MR_AM_COMMIT_WINDOW_MS = 10 * 1000;
 
   /**
    * Boolean. Create the base dirs in the JobHistoryEventHandler

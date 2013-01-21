@@ -1,5 +1,17 @@
 Hadoop MapReduce Change Log
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -10,6 +22,19 @@ Release 0.23.6 - UNRELEASED
 
     MAPREDUCE-4811. JobHistoryServer should show when it was started in WebUI
     About page (Ravi Prakash via jlowe)
+
+    MAPREDUCE-4845. ClusterStatus.getMaxMemory() and getUsedMemory() exist in 
+    MR1 but not MR2 (Sandy Ryza via tgraves)
+
+    MAPREDUCE-4899. Implemented a MR specific plugin for tracking finished
+    applications that YARN's ResourceManager doesn't keep track off anymore
+    (Derek Dagit via vinodkv)
+
+    MAPREDUCE-4894. Renewal / cancellation of JobHistory tokens (Siddharth
+    Seth via tgraves)
+
+    MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
+    tgraves)
 
   OPTIMIZATIONS
 
@@ -23,7 +48,60 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4817. Hardcoded task ping timeout kills tasks localizing large 
     amounts of data (tgraves)
 
-Release 0.23.5 - UNRELEASED
+    MAPREDUCE-4836. Elapsed time for running tasks on AM web UI tasks page is 0
+    (Ravi Prakash via jeagles)
+
+    MAPREDUCE-4895. Fix compilation failure of org.apache.hadoop.mapred.
+    gridmix.TestResourceUsageEmulators (Dennis Y via tgraves)
+
+    MAPREDUCE-4861. Cleanup: Remove unused mapreduce.security.token.
+    DelegationTokenRenewal  (Karthik Kambatla via tgraves)
+
+    MAPREDUCE-4856. TestJobOutputCommitter uses same directory as TestJobCleanup 
+    (Sandy Ryza via tgraves)
+
+    MAPREDUCE-4842. Shuffle race can hang reducer (Mariappan Asokan via jlowe)
+
+    MAPREDUCE-4833. Task can get stuck in FAIL_CONTAINER_CLEANUP (Robert
+    Parker via jlowe)
+
+    MAPREDUCE-4793. Problem with adding resources when using both -files and
+    -file to hadoop streaming (jlowe)
+
+    MAPREDUCE-4890. Invalid TaskImpl state transitions when task fails while
+    speculating (jlowe)
+
+    MAPREDUCE-4902. Fix typo "receievd" should be "received" in log output
+    (Albert Chu via jlowe)
+
+    MAPREDUCE-4813. AM timing out during job commit (jlowe via bobby)
+
+    MAPREDUCE-4279. getClusterStatus() fails with null pointer exception when
+    running jobs in local mode (Devaraj K via bobby)
+
+    MAPREDUCE-4832. MR AM can get in a split brain situation (jlowe)
+
+    MAPREDUCE-4819. AM can rerun job after reporting final job status to the
+    client (bobby and Bikas Saha via bobby)
+
+    MAPREDUCE-4913. TestMRAppMaster#testMRAppMasterMissingStaging occasionally 
+    exits (Jason Lowe via tgraves)
+
+    MAPREDUCE-4848. TaskAttemptContext cast error during AM recovery (Jerry
+    Chen via jlowe)
+
+    MAPREDUCE-4934. Maven RAT plugin is not checking all source files (tgraves)
+
+    MAPREDUCE-4678. Running the Pentomino example with defaults throws
+    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
+
+    MAPREDUCE-4925. The pentomino option parser may be buggy.
+    (Karthik Kambatla via harsh)
+
+    MAPREDUCE-4921. JobClient should acquire HS token with RM principal 
+    (Daryn Sharp via bobby)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 

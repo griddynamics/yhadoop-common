@@ -17,12 +17,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.6-SNAPSHOT</version>
+    <version>0.23.7-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn</artifactId>
-  <version>0.23.6-SNAPSHOT</version>
+  <version>0.23.7-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>hadoop-yarn</name>
 
@@ -195,9 +195,10 @@
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
+          <excludes>
+            <exclude>conf/slaves</exclude>
+            <exclude>conf/container-executor.cfg</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
