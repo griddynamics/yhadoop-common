@@ -42,18 +42,12 @@ public class TestHadoopLogsAnalyzer {
     final PrintStream oldOut = System.out;
     System.setOut(out);
     try {
-      if (!workSpace.exists()) {
-        workSpace.mkdirs();
-      }
-      String[] args = new String[1];
-
-      args[0] = workSpace.getAbsolutePath();
-      HadoopLogsAnalyzer.main(args);
+  
 
       if (!outspace.exists()) {
         outspace.mkdirs();
       }
-      args = new String[14];
+      String[] args = new String[14];
       // for jobs trace output
       args[0] = "-write-job-trace";
       args[1] = outspace.getAbsolutePath() + File.separator + "job-trace";
