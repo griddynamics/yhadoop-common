@@ -127,6 +127,10 @@ public interface MRJobConfig {
 
   public static final String MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "mapreduce.job.user.classpath.first";
 
+  public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
+
+  public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
+
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
   public static final String IO_SORT_MB = "mapreduce.task.io.sort.mb";
@@ -525,6 +529,9 @@ public interface MRJobConfig {
   
   public static final String MR_AM_ENV =
       MR_AM_PREFIX + "env";
+  
+  public static final String MR_AM_ADMIN_USER_ENV =
+      MR_AM_PREFIX + "admin.user.env";
   
   public static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
       "mapreduce.admin.map.child.java.opts";
