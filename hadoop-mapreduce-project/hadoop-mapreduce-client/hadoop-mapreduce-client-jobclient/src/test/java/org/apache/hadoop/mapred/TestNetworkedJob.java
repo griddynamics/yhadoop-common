@@ -263,19 +263,7 @@ public class TestNetworkedJob {
       
       // test JobClient
       
-      try {
-        long l = client.renewDelegationToken(token);
-      } catch (UnsupportedOperationException e) {
-
-        assertTrue(e.getMessage().endsWith(
-            "is not supported  for RM_DELEGATION_TOKEN tokens"));
-      }
-      try {
-        client.cancelDelegationToken(token);
-      } catch (UnsupportedOperationException e) {
-        assertTrue(e.getMessage().endsWith(
-            "is not supported  for RM_DELEGATION_TOKEN tokens"));
-      }
+   
       // The following asserts read JobStatus twice and ensure the returned
       // JobStatus objects correspond to the same Job.
       assertEquals("Expected matching JobIDs", jobId, client.getJob(jobId)
