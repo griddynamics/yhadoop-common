@@ -259,6 +259,11 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4924. flakey test: org.apache.hadoop.mapred.TestClusterMRNotification.testMR. 
     (rkanter via tucu)
 
+    MAPREDUCE-4923. Add toString method to TaggedInputSplit. (sandyr via tucu)
+
+    MAPREDUCE-4948. Fix a failing unit test TestYARNRunner.testHistoryServerToken.
+    (Junping Du via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -646,6 +651,9 @@ Release 0.23.7 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
+    (Robert Parker via jeagles)
 
 Release 0.23.6 - UNRELEASED
 

@@ -491,6 +491,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4392. Use NetUtils#getFreeSocketPort in MiniDFSCluster.
     (Andrew Purtell via suresh)
 
+    HDFS-4393. Make empty request and responses in protocol translators can be
+    static final members. (Brandon Li via suresh)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)
@@ -715,6 +718,12 @@ Release 2.0.3-alpha - Unreleased
     shutdown. (Chris Nauroth via suresh)
 
     HDFS-1245. Pluggable block id generation. (shv)
+
+    HDFS-4415. HostnameFilter should handle hostname resolution failures and
+    continue processing. (Robert Kanter via atm)
+
+    HDFS-4359. Slow RPC responses from NN can prevent metrics collection on
+    DNs. (liang xie via atm)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
