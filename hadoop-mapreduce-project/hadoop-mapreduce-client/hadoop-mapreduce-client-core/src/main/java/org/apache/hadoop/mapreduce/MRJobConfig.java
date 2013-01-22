@@ -353,6 +353,11 @@ public interface MRJobConfig {
     MR_AM_PREFIX+"command-opts";
   public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1024m";
 
+  /** Admin command opts passed to the MR app master.*/
+  public static final String MR_AM_ADMIN_COMMAND_OPTS =
+      MR_AM_PREFIX+"admin-command-opts";
+  public static final String DEFAULT_MR_AM_ADMIN_COMMAND_OPTS = "";
+  
   /** Root Logging level passed to the MR app master.*/
   public static final String MR_AM_LOG_LEVEL = 
     MR_AM_PREFIX+"log.level";
@@ -460,6 +465,25 @@ public interface MRJobConfig {
   public static final int DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS = 360000;
 
   /**
+   * How long to wait in milliseconds for the output committer to cancel
+   * an operation when the job is being killed
+   */
+  public static final String MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      MR_AM_PREFIX + "job.committer.cancel-timeout";
+  public static final int DEFAULT_MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      60 * 1000;
+
+  /**
+   * Defines a time window in milliseconds for output committer operations.
+   * If contact with the RM has occurred within this window then commit
+   * operations are allowed, otherwise the AM will not allow output committer
+   * operations until contact with the RM has been re-established.
+   */
+  public static final String MR_AM_COMMIT_WINDOW_MS =
+      MR_AM_PREFIX + "job.committer.commit-window";
+  public static final int DEFAULT_MR_AM_COMMIT_WINDOW_MS = 10 * 1000;
+
+  /**
    * Boolean. Create the base dirs in the JobHistoryEventHandler
    * Set to false for multi-user clusters.  This is an internal config that
    * is set by the MR framework and read by it too.
@@ -489,6 +513,9 @@ public interface MRJobConfig {
   
   public static final String MR_AM_ENV =
       MR_AM_PREFIX + "env";
+  
+  public static final String MR_AM_ADMIN_USER_ENV =
+      MR_AM_PREFIX + "admin.user.env";
   
   public static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
       "mapreduce.admin.map.child.java.opts";

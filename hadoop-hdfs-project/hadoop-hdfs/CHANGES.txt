@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.7 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -12,7 +12,47 @@ Release 0.23.6 - UNRELEASED
 
   BUG FIXES
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+    HDFS-4233. NN keeps serving even after no journals started while rolling
+    edit. (Kihwal Lee via suresh)
+
+    HDFS-4242. Map.Entry is incorrectly used in LeaseManager since the behavior
+    of it is undefined after the iteration or modifications of the map.
+    (szetszwo via daryn)
+
+    HDFS-4254. testAllEditsDirsFailOnFlush makes subsequent test cases fail
+    (0.23.6 only) (Kihwal Lee via daryn)
+
+    HDFS-4247. saveNamespace should be tolerant of dangling lease (daryn)
+
+    HDFS-4248. Renaming directories may incorrectly remove the paths in leases
+    under the tree.  (daryn via szetszwo)
+
+    HDFS-4315. DNs with multiple BPs can have BPOfferServices fail to start
+    due to unsynchronized map access. (atm via tgraves)
+
+    HDFS-4270. Replications of the highest priority should be allowed to 
+    choose a source datanode that has reached its max replication limit 
+    (Derek Dagit via tgraves)
+
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
+
+    HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
+
+    HDFS-4399. precommit release audit warnings (tgraves)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 
@@ -100,6 +140,45 @@ Release 0.23.4
 
 Release 0.23.3
 
+<<<<<<< .working
+=======
+    HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
+    (Vinay via umamahesh)
+
+    HDFS-1490. TransferFSImage should timeout (Dmytro Molkov and Vinay via todd)
+
+    HDFS-3828. Block Scanner rescans blocks too frequently.
+    (Andy Isaacson via eli)
+
+    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
+
+    HDFS-3895. hadoop-client must include commons-cli (tucu)
+
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
+    
+  BREAKDOWN OF HDFS-3042 SUBTASKS
+
+    HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
+    
+    HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
+    
+    HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
+    
+    HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
+    
+    HDFS-3159. Document NN auto-failover setup and configuration (todd)
+    
+    HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
+    
+    HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
+
+    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
+    read/write. (Brandon Li via suresh)
+
+Release 2.0.0-alpha - 05-23-2012
+
+>>>>>>> .merge-right.r1382409
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
