@@ -26,22 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestOutputBuffer {
-	
-	@Test
-	public void testOutputBufferWithoutResize() throws IOException {
-	  byte[] bytes = Bytes.get(10);
-	  InputStream in = new ByteArrayInputStream(bytes);
-	  OutputBuffer out = new OutputBuffer();
-	  out.write(in, bytes.length);
-	  int size = 0;
-	    	  
-	  while(size < out.getLength()) {
-        Assert.assertTrue("TestOutputBuffer testOutputBufferWithoutResize error !!!", out.getData()[size] == bytes[size]);
-        size++;
-	  }
-	  out.close();
-	}	
-	
+  
 	@Test
 	public void testOutputBufferWithResize() throws IOException {
 	  byte[] bytes = Bytes.get(33);
@@ -57,6 +42,10 @@ public class TestOutputBuffer {
 	  out.close();
 	}
 	
+	/**
+	 * test {@code OutputBuffer}
+	 * reset() method	
+	 */
 	@Test
 	public void testOutputBufferReset() throws IOException {	  
 	  byte[] bytes = Bytes.get(3);

@@ -133,7 +133,11 @@ public class TestBytesWritable {
     assertTrue("buffer created with (array, len) has bad length",
         zeroBuf.getLength() == copyBuf.getLength());
   }
-  
+    
+  /**
+   * test {@link ByteWritable} 
+   * methods compareTo(), toString(), equals()
+   */
   @Test
   public void testObjectCommonMethods() {    
     byte b = 0x9;

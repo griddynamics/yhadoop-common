@@ -112,6 +112,9 @@ public class TestEnumSetWritable extends TestCase {
     AvroTestUtil.testReflect(nonEmptyFlagWritable, type, schema);
   }    
   
+  /**
+   * test {@link EnumSetWritable} equals() method
+   */
   public void testEnumSetWritableEquals() {
     EnumSetWritable<TestEnumSet> eset1 = new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
 	  EnumSetWritable<TestEnumSet> eset2 = new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
@@ -121,6 +124,10 @@ public class TestEnumSetWritable extends TestCase {
 	  assertTrue("testEnumSetWritableEquals getElementType error !!!", eset1.getElementType().equals(TestEnumSet.class)); 	 
   }
   
+  /** 
+   * test {@code EnumSetWritable.write(DataOutputBuffer out)} 
+   *  and iteration by TestEnumSet through iterator().
+   */
   public void testEnumSetWritableWriteRead() {
     try {
       DataOutputBuffer out = new DataOutputBuffer();

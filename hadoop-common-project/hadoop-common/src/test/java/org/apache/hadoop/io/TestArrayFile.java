@@ -106,26 +106,41 @@ public class TestArrayFile extends TestCase {
       LOG.debug("done reading " + data.length + " debug");
     }
   }
-  
+
+  /** 
+   * test on {@link ArrayFile.Reader} iteration methods
+   * <pre> 
+   * {@code next(), seek()} in and out of range.
+   * </pre>
+   */
   public void testArrayFileIteration() {
-    String path = System.getProperty("test.build.data",".") + "arrayFile.array";
-    Configuration conf = new Configuration();
     int SIZE = 10;
+    String path = System.getProperty("test.build.data",".") + "arrayFile.array";
+    Configuration conf = new Configuration();    
     try {
       FileSystem fs = FileSystem.get(conf);
       ArrayFile.Writer writer = new ArrayFile.Writer(conf, fs, path, LongWritable.class, CompressionType.RECORD, defaultProgressable);
-      assertNotNull("testArrayFileWriterConstruction error !!!", writer);
+      assertNotNull("testArrayFileIteration error !!!", writer);
+      
       for (int i = 0; i < SIZE; i++)
         writer.append(new LongWritable(i));
+      
       writer.close();
+      
       ArrayFile.Reader reader = new ArrayFile.Reader(fs, path, conf);
-      LongWritable intWritable = new LongWritable(0);
-      LongWritable nextWritable = (LongWritable) reader.next(intWritable);
-      assertTrue("testArrayFileIteration error !!!", reader.seek(new LongWritable(6)));
+      LongWritable nextWritable = new LongWritable(0);
+      
+      for (int i = 0; i < SIZE; i++) {
+        nextWritable = (LongWritable)reader.next(nextWritable);
+        assertEquals(nextWritable.get(), i);
+      }
+        
+      assertTrue("testArrayFileIteration seek error !!!", reader.seek(new LongWritable(6)));
       nextWritable = (LongWritable)reader.next(nextWritable);
       assertTrue("testArrayFileIteration error !!!", reader.key() == 7);
       assertTrue("testArrayFileIteration error !!!", nextWritable.equals(new LongWritable(7)));
-      assertFalse("testArrayFileIteration error !!!", reader.seek(new LongWritable(16)));      
+      assertFalse("testArrayFileIteration error !!!", reader.seek(new LongWritable(SIZE + 5)));
+      reader.close();
     } catch (Exception ex) {
       fail("testArrayFileWriterConstruction error !!!");
     }
