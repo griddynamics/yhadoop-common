@@ -54,6 +54,10 @@ public class TestSetFile extends TestCase {
     }
   }
   
+  /**
+   * test {@code SetFile.Reader} methods 
+   * next(), get() in combination 
+   */
   public void testSetFileAccessMethods() {    
     try {             
       FileSystem fs = FileSystem.getLocal(conf);

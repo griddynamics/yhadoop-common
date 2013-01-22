@@ -64,6 +64,9 @@ public class TestArrayWritable extends TestCase {
     }
   }
   
+ /**
+  * test {@link ArrayWritable} toArray() method 
+  */
   public void testArrayWritableToArray() {
     Text[] elements = {new Text("zero"), new Text("one"), new Text("two")};
     TextArrayWritable arrayWritable = new TextArrayWritable();
@@ -74,10 +77,13 @@ public class TestArrayWritable extends TestCase {
     Text[] destElements = (Text[]) array;
   
     for (int i = 0; i < elements.length; i++) {	    
-	  assertEquals(destElements[i], elements[i]);		
-    }	  
+      assertEquals(destElements[i], elements[i]);		
+    }
   }
   
+  /**
+   * test {@link ArrayWritable} constructor with null
+   */
   public void testNullArgument() {
     try {
 	    Class<? extends Writable> valueClass = null;
@@ -90,6 +96,9 @@ public class TestArrayWritable extends TestCase {
     } 	  
   }
   
+  /**
+   * test {@link ArrayWritable} constructor with {@code String[]} as a parameter
+   */
   public void testArrayWritableStringConstructor() {
     String[] original = { "test1", "test2", "test3" };
     ArrayWritable arrayWritable = new ArrayWritable(original);

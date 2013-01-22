@@ -29,6 +29,11 @@ import org.junit.Test;
 
 public class TestCompressedWritable {
 
+  /**
+   * test {@code CompressedWritable} 
+   * write(DataOutputBuffer out) method
+   *  
+   */
   @Test
   public void testCompressedWritableWriteHeader() {
     byte[] header = new byte[0];
@@ -55,7 +60,9 @@ public class TestCompressedWritable {
         "TestCompressedWritable testCompressedWritableWriteHeader error !!!",
         header.length, out.getLength());
   }
-
+  /**
+   * test {@link CompressedWritable} readFields() method
+   */
   @Test
   public void testCompressedWritableReadFields() {
     CompressedWritable cWritable = new CompressedWritable() {

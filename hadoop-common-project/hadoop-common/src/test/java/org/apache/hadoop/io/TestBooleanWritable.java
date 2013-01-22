@@ -51,6 +51,9 @@ public class TestBooleanWritable {
     return out;
   }
   
+  /**
+   * test {@link BooleanWritable} methods hashCode(), equals(), compareTo() 
+   */
   @Test
   public void testCommonMethods() {    
     assertTrue("testCommonMethods1 error !!!", newInstance(true).equals(newInstance(true)));
