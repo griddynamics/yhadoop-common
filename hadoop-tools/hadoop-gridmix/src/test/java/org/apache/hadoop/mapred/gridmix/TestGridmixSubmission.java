@@ -44,6 +44,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -76,11 +77,15 @@ public class TestGridmixSubmission {
   private static final int NJOBS = 3;
   private static final long GENDATA = 30; // in megabytes
   private static final int GENSLOP = 100 * 1024; // +/- 100k for logs
+  private static File inSpace = new File("src" + File.separator + "test"
+      + File.separator + "resources" + File.separator + "data");
 
 
   @BeforeClass
   public static void init() throws IOException {
     GridmixTestUtils.initCluster();
+    System.setProperty("src.test.data", inSpace.getAbsolutePath());
+
 
     
   }
@@ -407,6 +412,7 @@ public class TestGridmixSubmission {
    */
   @Test
   public void testTraceReader() throws Exception {
+  //  System.setProperty("src.test.data",);
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
     Path rootInputDir = new Path(System.getProperty("src.test.data"));
