@@ -68,6 +68,10 @@ public class TestTwoDArrayWritable extends TestCase {
     }
   }
 
+  /**
+   * {@code TwoDArrayWritable} constructor
+   *  with String[][] argument
+   */
   public void test2DArrayConstructor() {
     TwoDArrayWritable twoDArrayWritable = new TwoDArrayWritable(Text.class,
         elements);

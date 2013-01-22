@@ -267,6 +267,9 @@ public class TestText extends TestCase {
        "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.io.Text\"}");
   }
   
+  /**
+   * 
+   */
   public void testCharAt() {
     String line = "adsawseeeeegqewgasddga";
     Text text = new Text(line);
@@ -277,6 +280,9 @@ public class TestText extends TestCase {
     assertEquals("testCharAt error3 !!!", -1, text.charAt(100));
   }    
   
+  /**
+   * test {@code Text} readFields/write operations
+   */
   public void testReadWriteOperations() {
     String line = "adsawseeeeegqewgasddga";
     byte[] inputBytes = line.getBytes();       
@@ -299,6 +305,11 @@ public class TestText extends TestCase {
     }        
   }
   
+  /**
+   * test {@code Text.bytesToCodePoint(bytes) } 
+   * with {@code BufferUnderflowException}
+   * 
+   */
   public void testBytesToCodePoint() {
     try {
       ByteBuffer bytes = ByteBuffer.wrap(new byte[] {-2, 45, 23, 12, 76, 89});                                      

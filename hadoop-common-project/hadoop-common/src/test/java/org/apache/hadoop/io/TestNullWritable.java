@@ -21,7 +21,10 @@ package org.apache.hadoop.io;
 import junit.framework.TestCase;
 
 public class TestNullWritable extends TestCase {
-
+  
+  /**
+   * test {@code NullWritable} get(), equals() methods
+   */
   public void testNullableWritable() {
     NullWritable nullWritable = NullWritable.get();
     assertTrue("testNullableWritable equals error!!!",

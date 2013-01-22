@@ -39,6 +39,10 @@ public class TestWritableComparator {
 	  } catch(Exception ex) {}
 	}
 	
+	/**
+	 * test {@code WritableComparator.compare()}
+	 * method 
+	 */
 	@Test
 	public void testWritableComparator() {
 	  byte[] tbyte1 = new Text("111111").copyBytes();
@@ -49,6 +53,10 @@ public class TestWritableComparator {
 	  assertTrue("testCompareTest equal error", wCmp.compare(tbyte1, 0, tbyte1.length, tbyte1, 0, tbyte1.length) == 0);	  
 	}
 	
+	/**
+	 *  test static methods {@code WritableComparator readUnsignedShort()/readVInt()/readVLong}
+	 *  with different parameters
+	 */
 	@Test
 	public void testReadTypes() {
 	  try {  
