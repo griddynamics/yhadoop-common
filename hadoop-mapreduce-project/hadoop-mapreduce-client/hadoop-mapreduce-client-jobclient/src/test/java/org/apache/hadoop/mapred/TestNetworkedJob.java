@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 
 import static org.junit.Assert.*;
 
+import java.util.List;
+
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.*;
 
 public class TestNetworkedJob {
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testGetNullCounters() throws Exception {
     //mock creation
