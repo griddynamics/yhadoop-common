@@ -36,12 +36,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
   <distributionManagement>
     <repository>
-      <id>apache.staging.https</id>
-      <name>Apache Release Distribution Repository</name>
-      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
+      <id>${distMgmtStagingId}</id>
+      <name>${distMgmtStagingName}</name>
+      <url>${distMgmtStagingUrl}</url>
     </repository>
     <snapshotRepository>
-      <id>apache.snapshots.https</id>
+      <id>${distMgmtSnapshotsId}</id>
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
     </snapshotRepository>
@@ -53,7 +53,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
   <repositories>
     <repository>
-      <id>apache.snapshots.https</id>
+      <id>${distMgmtSnapshotsId}</id>
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
     </repository>
@@ -79,8 +79,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   </organization>
 
   <properties>
+    <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
+    <distMgmtStagingId>apache.staging.https</distMgmtStagingId>
+    <distMgmtStagingName>Apache Release Distribution Repository</distMgmtStagingName>
+    <distMgmtStagingUrl>https://repository.apache.org/service/local/staging/deploy/maven2</distMgmtStagingUrl>
   </properties>
 
   <modules>
@@ -539,11 +543,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <exclude>**/yarn/proto/*.java</exclude>
                 <exclude>**/hadoop/yarn/ipc/*.java</exclude>
                 <exclude>**/yarn/server/resourcemanager/tools/*.java</exclude>
-                <!-- NB: exclude all sources from project "hadoop-maven-plugins" 
-                     because they seem to be executed only on project build stage, so no need to gather their coverage.  
-                    (The classes from this project are executed by Maven without the 
-                     Clover's jar in the classpath by default.) -->
-                <exclude>**/org/apache/hadoop/maven/plugin/**/*.java</exclude>
               </excludes>
             </configuration>
             <executions>
