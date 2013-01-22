@@ -44,7 +44,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -68,8 +67,7 @@ import static org.junit.Assert.*;
 public class TestGridmixSubmission {
   static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
   public static final Log LOG = LogFactory.getLog(Gridmix.class);
-  private static File workSpace = new File("src" + File.separator + "test"
-      + File.separator + "resources" + File.separator + "data");
+
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.mapred.gridmix")
         ).getLogger().setLevel(Level.DEBUG);
@@ -79,9 +77,12 @@ public class TestGridmixSubmission {
   private static final long GENDATA = 30; // in megabytes
   private static final int GENSLOP = 100 * 1024; // +/- 100k for logs
 
+
   @BeforeClass
   public static void init() throws IOException {
     GridmixTestUtils.initCluster();
+
+    
   }
 
   @AfterClass
@@ -97,7 +98,6 @@ public class TestGridmixSubmission {
 
     public TestMonitor(int expected, Statistics stats) {
       super(10,TimeUnit.SECONDS,stats,1);
-
       this.expected = expected;
       retiredJobs = new LinkedBlockingQueue<Job>();
     }
@@ -409,8 +409,7 @@ public class TestGridmixSubmission {
   public void testTraceReader() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
-    
-    Path rootInputDir = new Path(workSpace.getAbsolutePath());
+    Path rootInputDir = new Path(System.getProperty("src.test.data"));
     rootInputDir
       = rootInputDir.makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
     Path rootTempDir
@@ -449,7 +448,7 @@ public class TestGridmixSubmission {
       lfs.delete(rootTempDir, true);
     }
   }
-/*
+
   @Test
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
@@ -541,6 +540,6 @@ public class TestGridmixSubmission {
        root.getFileSystem(conf).delete(root,true);
      }
    }
-*/
+
 
 }
