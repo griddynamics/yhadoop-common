@@ -59,7 +59,7 @@ public class TestDistCacheEmulation {
 
   @BeforeClass
   public static void init() throws IOException {
-    GridmixTestUtils.initCluster();
+    GridmixTestUtils.initCluster(TestDistCacheEmulation.class);
   }
 
   @AfterClass
@@ -74,7 +74,7 @@ public class TestDistCacheEmulation {
    * @throws IOException 
    * @throws FileNotFoundException 
    */
-  private void validateDistCacheData(JobConf jobConf, long[] sortedFileSizes)
+  private void validateDistCacheData(Configuration jobConf, long[] sortedFileSizes)
       throws FileNotFoundException, IOException {
     Path distCachePath = dce.getDistributedCacheDir();
     String filesListFile =
@@ -175,7 +175,7 @@ public class TestDistCacheEmulation {
    * @throws IOException
    * @throws InterruptedException
    */
-  private JobConf runSetupGenerateDistCacheData(boolean generate,
+  private Configuration runSetupGenerateDistCacheData(boolean generate,
       long[] sortedFileSizes) throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     long[] fileSizes = configureDummyDistCacheFiles(conf);
@@ -186,8 +186,8 @@ public class TestDistCacheEmulation {
     final int numJobs = 3;
     DebugJobProducer jobProducer = new DebugJobProducer(numJobs, conf);
 
-    JobConf jobConf =
-        GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
+    Configuration jobConf =
+        GridmixTestUtils.mrvl.getConfig();
     Path ioPath = new Path("testSetupGenerateDistCacheData")
                     .makeQualified(GridmixTestUtils.dfs);
     FileSystem fs = FileSystem.get(jobConf);
@@ -212,7 +212,7 @@ public class TestDistCacheEmulation {
    * job configuration <code>jobConf</code>.
    * @param jobConf job configuration
    */
-  private void resetDistCacheConfigProperties(JobConf jobConf) {
+  private void resetDistCacheConfigProperties(Configuration jobConf) {
     // reset current/latest property names
     jobConf.setStrings(MRJobConfig.CACHE_FILES, "");
     jobConf.setStrings(MRJobConfig.CACHE_FILES_SIZES, "");
@@ -232,7 +232,7 @@ public class TestDistCacheEmulation {
   @Test
   public void testGenerateDistCacheData() throws Exception {
     long[] sortedFileSizes = new long[5];
-    JobConf jobConf =
+    Configuration jobConf =
         runSetupGenerateDistCacheData(true, sortedFileSizes);
     GridmixJob gridmixJob = new GenerateDistCacheData(jobConf);
     Job job = gridmixJob.call();
@@ -249,7 +249,7 @@ public class TestDistCacheEmulation {
    *  <li> content of the generated sequence file. This includes validation of
    *       dist cache file paths and their file sizes.
    */
-  private void validateSetupGenDC(JobConf jobConf, long[] sortedFileSizes)
+  private void validateSetupGenDC(Configuration jobConf, long[] sortedFileSizes)
       throws IOException, InterruptedException {
     // build things needed for validation
     long sumOfFileSizes = 0;
@@ -340,7 +340,7 @@ public class TestDistCacheEmulation {
   public void testSetupGenerateDistCacheData()
       throws IOException, InterruptedException {
     long[] sortedFileSizes = new long[5];
-    JobConf jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes);
+    Configuration jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes);
     validateSetupGenDC(jobConf, sortedFileSizes);
 
     // Verify if correct exit code is seen when -generate option is missing and
@@ -368,9 +368,8 @@ public class TestDistCacheEmulation {
    */
   @Test
   public void testDistCacheEmulationConfigurability() throws IOException {
-    Configuration conf = new Configuration();
-    JobConf jobConf = GridmixTestUtils.mrCluster.createJobConf(
-        new JobConf(conf));
+   // Configuration conf = new Configuration();
+    Configuration jobConf = GridmixTestUtils.mrvl.getConfig();
     Path ioPath = new Path("testDistCacheEmulationConfigurability")
         .makeQualified(GridmixTestUtils.dfs);
     FileSystem fs = FileSystem.get(jobConf);

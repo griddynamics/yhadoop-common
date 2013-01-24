@@ -6,10 +6,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.MiniMRClientCluster;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -36,24 +38,25 @@ public class GridmixTestUtils {
   static final Path DEST = new Path("/gridmix");
   static FileSystem dfs = null;
   static MiniDFSCluster dfsCluster = null;
-  static MiniMRCluster mrCluster = null;
+ // static MiniMRCluster mrCluster = null;
+  
+  static MiniMRClientCluster mrvl=null; 
 
-  public static void initCluster() throws IOException {
+  public static void initCluster(Class caller) throws IOException {
     Configuration conf = new Configuration();
     conf.set("mapred.queue.names", "default,q1,q2");
     conf.set("yarn.scheduler.capacity.root.queues", "default");
     conf.set("yarn.scheduler.capacity.root.default.capacity", "100.0");
 
-    dfsCluster = new  MiniDFSCluster.Builder(conf).numDataNodes(3).format(true).build();//  MiniDFSCluster(conf, 3, true, null);
+    dfsCluster = new  MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();//  MiniDFSCluster(conf, 3, true, null);
     dfs = dfsCluster.getFileSystem();
     conf.set(JTConfig.JT_RETIREJOBS, "false");
-    mrCluster = new MiniMRCluster(3, dfs.getUri().toString(), 1, null, null, 
-                                  new JobConf(conf));
+    mrvl=  MiniMRClientClusterFactory.create(caller, 1, conf);
   }
 
   public static void shutdownCluster() throws IOException {
-    if (mrCluster != null) {
-      mrCluster.shutdown();
+    if (mrvl != null) {
+      mrvl.stop();
     }
     if (dfsCluster != null) {
       dfsCluster.shutdown();
@@ -66,6 +69,33 @@ public class GridmixTestUtils {
    * @param conf
    */
   public static void createHomeAndStagingDirectory(String user, JobConf conf) {
+    try {
+      FileSystem fs = dfsCluster.getFileSystem();
+      String path = "/user/" + user;
+      Path homeDirectory = new Path(path);
+      if(fs.exists(homeDirectory)) {
+        fs.delete(homeDirectory,true);
+      }
+      LOG.info("Creating Home directory : " + homeDirectory);
+      fs.mkdirs(homeDirectory);
+      changePermission(user,homeDirectory, fs);
+      Path stagingArea = 
+        new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
+                          "/tmp/hadoop/mapred/staging"));
+      LOG.info("Creating Staging root directory : " + stagingArea);
+      fs.mkdirs(stagingArea);
+      fs.setPermission(stagingArea, new FsPermission((short) 0777));
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+  }
+
+  /**
+   * Methods to generate the home directory for dummy users.
+   *
+   * @param conf
+   */
+  public static void createHomeAndStagingDirectory(String user, Configuration conf) {
     try {
       FileSystem fs = dfsCluster.getFileSystem();
       String path = "/user/" + user;
