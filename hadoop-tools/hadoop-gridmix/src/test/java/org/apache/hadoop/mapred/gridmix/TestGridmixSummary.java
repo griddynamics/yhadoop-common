@@ -360,7 +360,6 @@ public class TestGridmixSummary {
    * Test {@link ClusterSummarizer}.
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void testClusterSummarizer() throws IOException {
     ClusterSummarizer cs = new ClusterSummarizer();
     Configuration conf = new Configuration();
