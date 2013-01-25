@@ -45,9 +45,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.security.Permission;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,31 +65,31 @@ import java.util.zip.GZIPInputStream;
 import static org.junit.Assert.*;
 
 public class TestGridmixSubmission {
-  static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY; 
+  static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
   private static File inSpace = new File("src" + File.separator + "test"
-             + File.separator + "resources" + File.separator + "data");
-  private static File workspace = new File("target" + File.separator + TestGridmixSubmission.class.getName()+"-test");
+      + File.separator + "resources" + File.separator + "data");
+  private static File workspace = new File("target" + File.separator
+      + TestGridmixSubmission.class.getName() + "-test");
 
   public static final Log LOG = LogFactory.getLog(Gridmix.class);
 
   {
-    ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.mapred.gridmix")
-        ).getLogger().setLevel(Level.DEBUG);
+    ((Log4JLogger) LogFactory.getLog("org.apache.hadoop.mapred.gridmix"))
+        .getLogger().setLevel(Level.DEBUG);
   }
 
   private static final int NJOBS = 1;
   private static final long GENDATA = 3; // in megabytes
 
-
   @Before
-  public  void init() throws IOException {
+  public void init() throws IOException {
     GridmixTestUtils.initCluster(TestGridmixSubmission.class);
- 
+
     System.setProperty("src.test.data", inSpace.getAbsolutePath());
   }
 
   @After
-  public  void shutDown() throws IOException {
+  public void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }
 
@@ -96,7 +100,7 @@ public class TestGridmixSubmission {
     private final BlockingQueue<Job> retiredJobs;
 
     public TestMonitor(int expected, Statistics stats) {
-      super(10,TimeUnit.SECONDS,stats,1);
+      super(10, TimeUnit.SECONDS, stats, 1);
       this.expected = expected;
       retiredJobs = new LinkedBlockingQueue<Job>();
     }
@@ -104,34 +108,36 @@ public class TestGridmixSubmission {
     public void verify(ArrayList<JobStory> submitted) throws Exception {
       final ArrayList<Job> succeeded = new ArrayList<Job>();
       assertEquals("Bad job count", expected, retiredJobs.drainTo(succeeded));
-      final HashMap<String,JobStory> sub = new HashMap<String,JobStory>();
+      final HashMap<String, JobStory> sub = new HashMap<String, JobStory>();
       for (JobStory spec : submitted) {
         sub.put(spec.getJobID().toString(), spec);
       }
-      final JobClient client = new JobClient(
-        GridmixTestUtils.mrvl.getConfig() ); // mrCluster.createJobConf());
+      final JobClient client = new JobClient(GridmixTestUtils.mrvl.getConfig()); // mrCluster.createJobConf());
       for (Job job : succeeded) {
         final String jobName = job.getJobName();
         Configuration conf = job.getConfiguration();
         if (GenerateData.JOB_NAME.equals(jobName)) {
           verifyQueue(conf, jobName);
-          RemoteIterator<LocatedFileStatus> rit=GridmixTestUtils.dfs.listFiles(new Path("/"), true);
-          while(rit.hasNext()){
+          RemoteIterator<LocatedFileStatus> rit = GridmixTestUtils.dfs
+              .listFiles(new Path("/"), true);
+          while (rit.hasNext()) {
             System.out.println(rit.next().toString());
           }
-          // we've written to space! and we wrote compressed data 
-          Counter counter=job.getCounters().getGroup("org.apache.hadoop.mapreduce.FileSystemCounter").findCounter("HDFS_BYTES_WRITTEN");
-          assertEquals("Mismatched data gen",3120000, counter.getValue(), 150000);
+          // we've written to space! and we wrote compressed data
+          Counter counter = job.getCounters()
+              .getGroup("org.apache.hadoop.mapreduce.FileSystemCounter")
+              .findCounter("HDFS_BYTES_WRITTEN");
+          assertEquals("Mismatched data gen", 3120000, counter.getValue(),
+              150000);
           continue;
         } else if (GenerateDistCacheData.JOB_NAME.equals(jobName)) {
           verifyQueue(conf, jobName);
           continue;
         }
 
-        if (!conf.getBoolean(
-            GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
-          assertEquals(" Improper queue for  " + jobName + " " ,
-              conf.get("mapred.queue.name"), "q1" );
+        if (!conf.getBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
+          assertEquals(" Improper queue for  " + jobName + " ",
+              conf.get("mapred.queue.name"), "q1");
         } else {
           assertEquals(" Improper queue for  " + jobName + " ",
               conf.get("mapred.queue.name"),
@@ -145,51 +151,47 @@ public class TestGridmixSubmission {
         final String originalJobName = spec.getName();
         System.out.println("originalJobName=" + originalJobName
             + ";GridmixJobName=" + jobName + ";originalJobID=" + originalJobId);
-        assertTrue("Original job name is wrong.", originalJobName.equals(
-            conf.get(Gridmix.ORIGINAL_JOB_NAME)));
+        assertTrue("Original job name is wrong.",
+            originalJobName.equals(conf.get(Gridmix.ORIGINAL_JOB_NAME)));
 
         // Gridmix job seqNum contains 6 digits
         int seqNumLength = 6;
-        String jobSeqNum = new DecimalFormat("000000").format(
-            conf.getInt(GridmixJob.GRIDMIX_JOB_SEQ, -1));
+        String jobSeqNum = new DecimalFormat("000000").format(conf.getInt(
+            GridmixJob.GRIDMIX_JOB_SEQ, -1));
         // Original job name is of the format MOCKJOB<6 digit sequence number>
         // because MockJob jobNames are of this format.
         assertTrue(originalJobName.substring(
             originalJobName.length() - seqNumLength).equals(jobSeqNum));
 
         assertTrue("Gridmix job name is not in the expected format.",
-            jobName.equals(
-                GridmixJob.JOB_NAME_PREFIX + jobSeqNum));
-        final FileStatus stat =
-          GridmixTestUtils.dfs.getFileStatus(
-            new Path(GridmixTestUtils.DEST, "" + Integer.valueOf(jobSeqNum)));
+            jobName.equals(GridmixJob.JOB_NAME_PREFIX + jobSeqNum));
+        final FileStatus stat = GridmixTestUtils.dfs.getFileStatus(new Path(
+            GridmixTestUtils.DEST, "" + Integer.valueOf(jobSeqNum)));
         assertEquals("Wrong owner for " + jobName, spec.getUser(),
-                     stat.getOwner());
+            stat.getOwner());
         final int nMaps = spec.getNumberMaps();
         final int nReds = spec.getNumberReduces();
 
         // TODO Blocked by MAPREDUCE-118
-      //  if (true) return;
+        // if (true) return;
         // TODO
         System.out.println(jobName + ": " + nMaps + "/" + nReds);
-        final TaskReport[] mReports =
-          client.getMapTaskReports(JobID.downgrade(job.getJobID()));
+        final TaskReport[] mReports = client.getMapTaskReports(JobID
+            .downgrade(job.getJobID()));
         assertEquals("Mismatched map count", nMaps, mReports.length);
-        check(TaskType.MAP, job, spec, mReports,
-            0, 0, SLOPBYTES, nReds);
+        check(TaskType.MAP, job, spec, mReports, 0, 0, SLOPBYTES, nReds);
 
-        final TaskReport[] rReports =
-          client.getReduceTaskReports(JobID.downgrade(job.getJobID()));
+        final TaskReport[] rReports = client.getReduceTaskReports(JobID
+            .downgrade(job.getJobID()));
         assertEquals("Mismatched reduce count", nReds, rReports.length);
-        check(TaskType.REDUCE, job, spec, rReports,
-            nMaps * SLOPBYTES, 2 * nMaps, 0, 0);
+        check(TaskType.REDUCE, job, spec, rReports, nMaps * SLOPBYTES,
+            2 * nMaps, 0, 0);
       }
     }
 
     // Verify if correct job queue is used
     private void verifyQueue(Configuration conf, String jobName) {
-      if (!conf.getBoolean(
-          GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
+      if (!conf.getBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
         assertEquals(" Improper queue for " + jobName,
             conf.get("mapred.job.queue.name"), "q1");
       } else {
@@ -199,9 +201,9 @@ public class TestGridmixSubmission {
     }
 
     public void check(final TaskType type, Job job, JobStory spec,
-          final TaskReport[] runTasks,
-          long extraInputBytes, int extraInputRecords,
-          long extraOutputBytes, int extraOutputRecords) throws Exception {
+        final TaskReport[] runTasks, long extraInputBytes,
+        int extraInputRecords, long extraOutputBytes, int extraOutputRecords)
+        throws Exception {
 
       long[] runInputRecords = new long[runTasks.length];
       long[] runInputBytes = new long[runTasks.length];
@@ -216,60 +218,59 @@ public class TestGridmixSubmission {
         final TaskInfo specInfo;
         final Counters counters = runTasks[i].getCounters();
         switch (type) {
-          case MAP:
-             runInputBytes[i] = counters.findCounter("FileSystemCounters",
-                 "HDFS_BYTES_READ").getValue() - 
-                 counters.findCounter(TaskCounter.SPLIT_RAW_BYTES).getValue();
-             runInputRecords[i] =
-               (int)counters.findCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
-             runOutputBytes[i] =
-               counters.findCounter(TaskCounter.MAP_OUTPUT_BYTES).getValue();
-             runOutputRecords[i] =
-               (int)counters.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
+        case MAP:
+          runInputBytes[i] = counters.findCounter("FileSystemCounters",
+              "HDFS_BYTES_READ").getValue()
+              - counters.findCounter(TaskCounter.SPLIT_RAW_BYTES).getValue();
+          runInputRecords[i] = (int) counters.findCounter(
+              TaskCounter.MAP_INPUT_RECORDS).getValue();
+          runOutputBytes[i] = counters
+              .findCounter(TaskCounter.MAP_OUTPUT_BYTES).getValue();
+          runOutputRecords[i] = (int) counters.findCounter(
+              TaskCounter.MAP_OUTPUT_RECORDS).getValue();
 
-            specInfo = spec.getTaskInfo(TaskType.MAP, i);
-            specInputRecords[i] = specInfo.getInputRecords();
-            specInputBytes[i] = specInfo.getInputBytes();
-            specOutputRecords[i] = specInfo.getOutputRecords();
-            specOutputBytes[i] = specInfo.getOutputBytes();
-            System.out.printf(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
-                 specInputBytes[i], specOutputBytes[i],
-                 specInputRecords[i], specOutputRecords[i]);
-            System.out.printf(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
-                 runInputBytes[i], runOutputBytes[i],
-                 runInputRecords[i], runOutputRecords[i]);
-            break;
-          case REDUCE:
-            runInputBytes[i] = 0;
-            runInputRecords[i] =
-              (int)counters.findCounter(TaskCounter.REDUCE_INPUT_RECORDS).getValue();
-            runOutputBytes[i] =
-              counters.findCounter("FileSystemCounters",
-                  "HDFS_BYTES_WRITTEN").getValue();
-            runOutputRecords[i] =
-              (int)counters.findCounter(TaskCounter.REDUCE_OUTPUT_RECORDS).getValue();
+          specInfo = spec.getTaskInfo(TaskType.MAP, i);
+          specInputRecords[i] = specInfo.getInputRecords();
+          specInputBytes[i] = specInfo.getInputBytes();
+          specOutputRecords[i] = specInfo.getOutputRecords();
+          specOutputBytes[i] = specInfo.getOutputBytes();
+          System.out.printf(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
+              specInputBytes[i], specOutputBytes[i], specInputRecords[i],
+              specOutputRecords[i]);
+          System.out.printf(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
+              runInputBytes[i], runOutputBytes[i], runInputRecords[i],
+              runOutputRecords[i]);
+          break;
+        case REDUCE:
+          runInputBytes[i] = 0;
+          runInputRecords[i] = (int) counters.findCounter(
+              TaskCounter.REDUCE_INPUT_RECORDS).getValue();
+          runOutputBytes[i] = counters.findCounter("FileSystemCounters",
+              "HDFS_BYTES_WRITTEN").getValue();
+          runOutputRecords[i] = (int) counters.findCounter(
+              TaskCounter.REDUCE_OUTPUT_RECORDS).getValue();
 
-
-            specInfo = spec.getTaskInfo(TaskType.REDUCE, i);
-            // There is no reliable counter for reduce input bytes. The
-            // variable-length encoding of intermediate records and other noise
-            // make this quantity difficult to estimate. The shuffle and spec
-            // input bytes are included in debug output for reference, but are
-            // not checked
-            specInputBytes[i] = 0;
-            specInputRecords[i] = specInfo.getInputRecords();
-            specOutputRecords[i] = specInfo.getOutputRecords();
-            specOutputBytes[i] = specInfo.getOutputBytes();
-            System.out.printf(type + " SPEC: (%9d) -> %9d :: %5d -> %5d\n",
-                 specInfo.getInputBytes(), specOutputBytes[i],
-                 specInputRecords[i], specOutputRecords[i]);
-            System.out.printf(type + " RUN:  (%9d) -> %9d :: %5d -> %5d\n",
-                 counters.findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES).getValue(),
-                 runOutputBytes[i], runInputRecords[i], runOutputRecords[i]);
-            break;
-          default:
-            specInfo = null;
-            fail("Unexpected type: " + type);
+          specInfo = spec.getTaskInfo(TaskType.REDUCE, i);
+          // There is no reliable counter for reduce input bytes. The
+          // variable-length encoding of intermediate records and other noise
+          // make this quantity difficult to estimate. The shuffle and spec
+          // input bytes are included in debug output for reference, but are
+          // not checked
+          specInputBytes[i] = 0;
+          specInputRecords[i] = specInfo.getInputRecords();
+          specOutputRecords[i] = specInfo.getOutputRecords();
+          specOutputBytes[i] = specInfo.getOutputBytes();
+          System.out.printf(type + " SPEC: (%9d) -> %9d :: %5d -> %5d\n",
+              specInfo.getInputBytes(), specOutputBytes[i],
+              specInputRecords[i], specOutputRecords[i]);
+          System.out
+              .printf(type + " RUN:  (%9d) -> %9d :: %5d -> %5d\n", counters
+                  .findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES).getValue(),
+                  runOutputBytes[i], runInputRecords[i], runOutputRecords[i]);
+          break;
+        default:
+          specInfo = null;
+          fail("Unexpected type: " + type);
         }
       }
 
@@ -277,8 +278,8 @@ public class TestGridmixSubmission {
       Arrays.sort(specInputBytes);
       Arrays.sort(runInputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched " + type + " input bytes " +
-            specInputBytes[i] + "/" + runInputBytes[i],
+        assertTrue("Mismatched " + type + " input bytes " + specInputBytes[i]
+            + "/" + runInputBytes[i],
             eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes));
       }
 
@@ -286,30 +287,32 @@ public class TestGridmixSubmission {
       Arrays.sort(specInputRecords);
       Arrays.sort(runInputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched " + type + " input records " +
-            specInputRecords[i] + "/" + runInputRecords[i],
+        assertTrue(
+            "Mismatched " + type + " input records " + specInputRecords[i]
+                + "/" + runInputRecords[i],
             eqPlusMinus(runInputRecords[i], specInputRecords[i],
-              extraInputRecords));
+                extraInputRecords));
       }
 
       // Check output bytes
       Arrays.sort(specOutputBytes);
       Arrays.sort(runOutputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched " + type + " output bytes " +
-            specOutputBytes[i] + "/" + runOutputBytes[i],
-            eqPlusMinus(runOutputBytes[i], specOutputBytes[i],
-              extraOutputBytes));
+        assertTrue(
+            "Mismatched " + type + " output bytes " + specOutputBytes[i] + "/"
+                + runOutputBytes[i],
+            eqPlusMinus(runOutputBytes[i], specOutputBytes[i], extraOutputBytes));
       }
 
       // Check output records
       Arrays.sort(specOutputRecords);
       Arrays.sort(runOutputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched " + type + " output records " +
-            specOutputRecords[i] + "/" + runOutputRecords[i],
+        assertTrue(
+            "Mismatched " + type + " output records " + specOutputRecords[i]
+                + "/" + runOutputRecords[i],
             eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
-              extraOutputRecords));
+                extraOutputRecords));
       }
 
     }
@@ -323,6 +326,7 @@ public class TestGridmixSubmission {
     protected void onSuccess(Job job) {
       retiredJobs.add(job);
     }
+
     @Override
     protected void onFailure(Job job) {
       fail("Job failure: " + job);
@@ -335,23 +339,22 @@ public class TestGridmixSubmission {
     private TestMonitor monitor;
 
     public void checkMonitor() throws Exception {
-       monitor.verify(((DebugJobFactory.Debuggable)factory).getSubmitted());
+      monitor.verify(((DebugJobFactory.Debuggable) factory).getSubmitted());
     }
 
     @Override
-    protected JobMonitor createJobMonitor(Statistics stats, Configuration conf) 
+    protected JobMonitor createJobMonitor(Statistics stats, Configuration conf)
         throws IOException {
-      monitor=new TestMonitor(1,  stats);
-          return monitor;
-     }
-    
+      monitor = new TestMonitor(1, stats);
+      return monitor;
+    }
+
     @Override
-    protected JobFactory<?> createJobFactory(
-      JobSubmitter submitter, String traceIn, Path scratchDir, Configuration conf,
-      CountDownLatch startFlag, UserResolver userResolver)
-        throws IOException {
-      factory = DebugJobFactory.getFactory(
-        submitter, scratchDir, NJOBS, conf, startFlag, userResolver);
+    protected JobFactory<?> createJobFactory(JobSubmitter submitter,
+        String traceIn, Path scratchDir, Configuration conf,
+        CountDownLatch startFlag, UserResolver userResolver) throws IOException {
+      factory = DebugJobFactory.getFactory(submitter, scratchDir, NJOBS, conf,
+          startFlag, userResolver);
       return factory;
     }
   }
@@ -360,32 +363,36 @@ public class TestGridmixSubmission {
    * Verifies that the given {@code JobStory} corresponds to the checked-in
    * WordCount {@code JobStory}. The verification is effected via JUnit
    * assertions.
-   *
-   * @param js the candidate JobStory.
+   * 
+   * @param js
+   *          the candidate JobStory.
    */
   private void verifyWordCountJobStory(JobStory js) {
     assertNotNull("Null JobStory", js);
     String expectedJobStory = "WordCount:johndoe:default:1285322645148:3:1";
     String actualJobStory = js.getName() + ":" + js.getUser() + ":"
-      + js.getQueueName() + ":" + js.getSubmissionTime() + ":"
-      + js.getNumberMaps() + ":" + js.getNumberReduces();
+        + js.getQueueName() + ":" + js.getSubmissionTime() + ":"
+        + js.getNumberMaps() + ":" + js.getNumberReduces();
     assertEquals("Unexpected JobStory", expectedJobStory, actualJobStory);
   }
 
   /**
    * Expands a file compressed using {@code gzip}.
-   *
-   * @param fs the {@code FileSystem} corresponding to the given
-   * file.
-   *
-   * @param in the path to the compressed file.
-   *
-   * @param out the path to the uncompressed output.
-   *
-   * @throws Exception if there was an error during the operation.
+   * 
+   * @param fs
+   *          the {@code FileSystem} corresponding to the given file.
+   * 
+   * @param in
+   *          the path to the compressed file.
+   * 
+   * @param out
+   *          the path to the uncompressed output.
+   * 
+   * @throws Exception
+   *           if there was an error during the operation.
    */
   private void expandGzippedTrace(FileSystem fs, Path in, Path out)
-    throws Exception {
+      throws Exception {
     byte[] buff = new byte[4096];
     GZIPInputStream gis = new GZIPInputStream(fs.open(in));
     FSDataOutputStream fsdos = fs.create(out);
@@ -398,25 +405,25 @@ public class TestGridmixSubmission {
   }
 
   /**
-   * Tests the reading of traces in GridMix3. These traces are generated
-   * by Rumen and are in the JSON format. The traces can optionally be
-   * compressed and uncompressed traces can also be passed to GridMix3 via
-   * its standard input stream. The testing is effected via JUnit assertions.
-   *
-   * @throws Exception if there was an error.
+   * Tests the reading of traces in GridMix3. These traces are generated by
+   * Rumen and are in the JSON format. The traces can optionally be compressed
+   * and uncompressed traces can also be passed to GridMix3 via its standard
+   * input stream. The testing is effected via JUnit assertions.
+   * 
+   * @throws Exception
+   *           if there was an error.
    */
   @Test
   public void testTraceReader() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
     Path rootInputDir = new Path(System.getProperty("src.test.data"));
-    rootInputDir
-      = rootInputDir.makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
-    Path rootTempDir
-      = new Path(System.getProperty("test.build.data",
+    rootInputDir = rootInputDir.makeQualified(lfs.getUri(),
+        lfs.getWorkingDirectory());
+    Path rootTempDir = new Path(System.getProperty("test.build.data",
         System.getProperty("java.io.tmpdir")), "testTraceReader");
-    rootTempDir
-      = rootTempDir.makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
+    rootTempDir = rootTempDir.makeQualified(lfs.getUri(),
+        lfs.getWorkingDirectory());
     Path inputFile = new Path(rootInputDir, "wordcount.json.gz");
     Path tempFile = new Path(rootTempDir, "gridmix3-wc.json");
 
@@ -424,8 +431,8 @@ public class TestGridmixSubmission {
     InputStream tmpIs = null;
     try {
       DebugGridmix dgm = new DebugGridmix();
-      JobStoryProducer jsp
-        = dgm.createJobStoryProducer(inputFile.toString(), conf);
+      JobStoryProducer jsp = dgm.createJobStoryProducer(inputFile.toString(),
+          conf);
 
       System.out.println("Verifying JobStory from compressed trace...");
       verifyWordCountJobStory(jsp.getNextJob());
@@ -443,7 +450,7 @@ public class TestGridmixSubmission {
     } finally {
       System.setIn(origStdIn);
       if (tmpIs != null) {
-  tmpIs.close();
+        tmpIs.close();
       }
       lfs.delete(rootTempDir, true);
     }
@@ -453,32 +460,89 @@ public class TestGridmixSubmission {
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     System.out.println(" Replay started at " + System.currentTimeMillis());
-    doSubmission( false);
+    doSubmission(false);
     System.out.println(" Replay ended at " + System.currentTimeMillis());
 
   }
-  
+
   @Test
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     System.out.println(" Stress started at " + System.currentTimeMillis());
-    doSubmission( false);
+    doSubmission(false);
     System.out.println(" Stress ended at " + System.currentTimeMillis());
   }
 
+  // test empty request should be hint message
+  @Test
+  public void testMain() throws Exception {
 
- 
-  private void doSubmission(      boolean defaultOutputPath) throws Exception {
-    final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
- //     final Path in = new Path("foo");
-    final Path out = GridmixTestUtils.DEST.makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
+   SecurityManager securityManager = System.getSecurityManager();
+    System.setSecurityManager(new NoExitSecurityManager());
+    
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    System.setOut(out);
+    try {
+      String[] argv = new String[0];
+      DebugGridmix.main(argv);
+      String print = bytes.toString();
+      assertTrue(print
+          .indexOf("Usage: gridmix [-generate <MiB>] [-users URI] [-Dname=value ...] <iopath> <trace>") >= 0);
+      assertTrue(print.indexOf("e.g. gridmix -generate 100m foo -") >= 0);
+    }catch(ExitException e){
+      e.printStackTrace();
+    
+    } finally {
+      System.setOut(oldOut);
+      System.setSecurityManager(securityManager);
+    }
+  }
+
+  protected static class ExitException extends SecurityException {
+    private static final long serialVersionUID = -1982617086752946683L;
+    public final int status;
+
+    public ExitException(int status) {
+      super("There is no escape!");
+      this.status = status;
+    }
+  }
+
+  private static class NoExitSecurityManager extends SecurityManager {
+    @Override
+    public void checkPermission(Permission perm) {
+      // allow anything.
+    }
+
+    @Override
+    public void checkPermission(Permission perm, Object context) {
+      // allow anything.
+    }
+
+    @Override
+    public void checkExit(int status) {
+      super.checkExit(status);
+      throw new ExitException(status);
+    }
+  }
+  
+  private void doSubmission(boolean defaultOutputPath) throws Exception {
+    final Path in = new Path("foo").makeQualified(
+        GridmixTestUtils.dfs.getUri(),
+        GridmixTestUtils.dfs.getWorkingDirectory());
+    // final Path in = new Path("foo");
+    final Path out = GridmixTestUtils.DEST.makeQualified(
+        GridmixTestUtils.dfs.getUri(),
+        GridmixTestUtils.dfs.getWorkingDirectory());
     final Path root = new Path(workspace.getAbsolutePath());
-    if(!workspace.exists()){
+    if (!workspace.exists()) {
       workspace.mkdirs();
     }
     Configuration conf = null;
 
-    try{
+    try {
       ArrayList<String> argsList = new ArrayList<String>();
 
       argsList.add("-D" + FilePool.GRIDMIX_MIN_FILE + "=0");
@@ -488,37 +552,37 @@ public class TestGridmixSubmission {
       // Set the config property gridmix.output.directory only if
       // defaultOutputPath is false. If defaultOutputPath is true, then
       // let us allow gridmix to use the path foo/gridmix/ as output dir.
-     if (!defaultOutputPath) {
+      if (!defaultOutputPath) {
         argsList.add("-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out);
       }
       argsList.add("-generate");
       argsList.add(String.valueOf(GENDATA) + "m");
       argsList.add(in.toString());
       argsList.add("-"); // ignored by DebugGridmix
-  //    argsList.add(in.toString());
+      // argsList.add(in.toString());
 
       String[] argv = argsList.toArray(new String[argsList.size()]);
 
       DebugGridmix client = new DebugGridmix();
-      conf = GridmixTestUtils.mrvl.getConfig(); // mrCluster.createJobConf(new JobConf(conf));
-    CompressionEmulationUtil.setCompressionEmulationEnabled(conf,false);
-      conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy);
-    
-        conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true);
+      conf = GridmixTestUtils.mrvl.getConfig(); // mrCluster.createJobConf(new
+                                                // JobConf(conf));
+      CompressionEmulationUtil.setCompressionEmulationEnabled(conf, false);
+      conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
+
+      conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true);
       // allow synthetic users to create home directories
-      GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short)0777));
-      GridmixTestUtils.dfs.setPermission(root, new FsPermission((short)0777));
+      GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
+      GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 0777));
       int res = ToolRunner.run(conf, client, argv);
       assertEquals("Client exited with nonzero status", 0, res);
       client.checkMonitor();
-     } catch (Exception e) {
-       e.printStackTrace();
-     } finally {
-       in.getFileSystem(conf).delete(in, true);
-       out.getFileSystem(conf).delete(out, true);
-       root.getFileSystem(conf).delete(root,true);
-     }
-   }
-
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      in.getFileSystem(conf).delete(in, true);
+      out.getFileSystem(conf).delete(out, true);
+      root.getFileSystem(conf).delete(root, true);
+    }
+  }
 
 }
