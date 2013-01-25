@@ -390,7 +390,7 @@ public class BloomFilterCommonTester<T extends Filter> {
 
     WRITE_READ_STRATEGY(new FilterTesterStrategy() {
 
-      private int slotSize;
+      private int slotSize = 10;
 
       @Override
       public void assertWhat(Filter filter, int numInsertions, int hashId,

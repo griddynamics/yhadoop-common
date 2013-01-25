@@ -19,6 +19,7 @@ package org.apache.hadoop.util.bloom;
  */
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.AbstractCollection;
@@ -27,7 +28,6 @@ import java.util.Iterator;
 import org.apache.hadoop.util.bloom.BloomFilterCommonTester.BloomFilterTestStrategy;
 import org.apache.hadoop.util.hash.Hash;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -89,10 +89,9 @@ public class TestBloomFilters {
    */
   @Test
   public void testDynamicBloomFilter() {
-    int hashId = Hash.JENKINS_HASH;
-
+    int hashId = Hash.JENKINS_HASH;    
     Filter filter = new DynamicBloomFilter(bitSize, hashFunctionNumber,
-        Hash.JENKINS_HASH, 3);
+        Hash.JENKINS_HASH, 3);    
     BloomFilterCommonTester.of(hashId, numInsertions)
         .withFilterInstance(filter)
         .withTestCases(ImmutableSet.of(BloomFilterTestStrategy.KEY_TEST_STRATEGY,
@@ -101,6 +100,8 @@ public class TestBloomFilters {
                 BloomFilterTestStrategy.WRITE_READ_STRATEGY,
                 BloomFilterTestStrategy.ODD_EVEN_ABSENT_STRATEGY))
                 .test();
+    
+    assertNotNull("testDynamicBloomFilter error ", filter.toString());
   }
 
   /**
