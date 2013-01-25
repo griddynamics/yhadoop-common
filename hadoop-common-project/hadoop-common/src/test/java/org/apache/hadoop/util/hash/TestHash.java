@@ -84,8 +84,6 @@ public class TestHash {
           "multiple evaluation jenkins hash error !!!",
           jenkinsHash == Hash.getInstance(Hash.JENKINS_HASH).hash(
               LINE.getBytes(), 67));
-    }
-    
-  }
-  
+    }   
+  } 
 }
