@@ -18,6 +18,14 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
     vinodkv)
 
+    MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
+    (Avner BenHanoch via acmurthy) 
+
+    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
+
+    MAPREDUCE-4808. Refactor MapOutput and MergeManager to facilitate reuse 
+    by Shuffle implementations. (masokan via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-3678. The Map tasks logs should have the value of input
@@ -46,6 +54,9 @@ Release 2.0.3-alpha - Unreleased
     calls. (sandyr via tucu)
 
     MAPREDUCE-4949. Enable multiple pi jobs to run in parallel. (sandyr via tucu)
+
+    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
+    (masokan via tucu)
 
   OPTIMIZATIONS
 
@@ -106,6 +117,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4948. Fix a failing unit test TestYARNRunner.testHistoryServerToken.
     (Junping Du via sseth)
+
+    MAPREDUCE-2264. Job status exceeds 100% in some cases. 
+    (devaraj.k and sandyr via tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
