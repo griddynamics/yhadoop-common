@@ -147,6 +147,7 @@ public class TestDistCacheEmulation {
       throws IOException {
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
     conf.set("user.name", user);
+    
     // Set some dummy dist cache files in gridmix configuration so that they go
     // into the configuration of JobStory objects.
     String[] distCacheFiles = { "hdfs:///tmp/file1.txt",
@@ -412,6 +413,7 @@ public class TestDistCacheEmulation {
 
     DistributedCacheEmulator dce = new DistributedCacheEmulator(conf, ioPath);
     JobConf jobConf = new JobConf(conf);
+    jobConf.setUser(UserGroupInformation.getCurrentUser().getShortUserName());
     File fin=new File("src"+File.separator+"test"+File.separator+"resources"+File.separator+"data"+File.separator+"wordcount.json");
     dce.init(fin.getAbsolutePath(), JobCreator.LOADJOB, true);
     dce.configureDistCacheFiles(conf, jobConf);

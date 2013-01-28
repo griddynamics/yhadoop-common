@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
@@ -44,26 +43,26 @@ import static org.junit.Assert.*;
 
 public class TestLoadJob {
 
-  private File workspace= new File("target"+File.separator+this.getClass().getName());
   public static final Log LOG = LogFactory.getLog(Gridmix.class);
 
   {
     ((Log4JLogger) LogFactory.getLog("org.apache.hadoop.mapred.gridmix"))
-      .getLogger().setLevel(Level.DEBUG);
+        .getLogger().setLevel(Level.DEBUG);
+    ((Log4JLogger) LogFactory.getLog(StressJobFactory.class)).getLogger()
+        .setLevel(Level.DEBUG);
   }
 
   static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
   private static final int NJOBS = 2;
   private static final long GENDATA = 50; // in megabytes
 
-
   @Before
-  public  void init() throws IOException {
+  public void init() throws IOException {
     GridmixTestUtils.initCluster(TestLoadJob.class);
   }
 
   @After
-  public  void shutDown() throws IOException {
+  public void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }
 
@@ -72,7 +71,7 @@ public class TestLoadJob {
     private final int expected;
 
     public TestMonitor(int expected, Statistics stats) {
-      super(1,TimeUnit.SECONDS,stats,1);
+      super(1, TimeUnit.SECONDS, stats, 1);
       this.expected = expected;
       retiredJobs = new LinkedBlockingQueue<Job>();
     }
@@ -88,32 +87,29 @@ public class TestLoadJob {
       fail("Job failure: " + job);
     }
 
-    public void verify(ArrayList<JobStory> submitted) throws Exception  {
+    public void verify(ArrayList<JobStory> submitted) throws Exception {
       assertEquals("Bad job count", expected, retiredJobs.size());
     }
   }
-
 
   static class DebugGridmix extends Gridmix {
 
     private JobFactory<?> factory;
     private TestMonitor monitor;
 
-    
     @Override
-    protected JobMonitor createJobMonitor(Statistics stats, Configuration conf) 
+    protected JobMonitor createJobMonitor(Statistics stats, Configuration conf)
         throws IOException {
-      monitor=new TestMonitor(1,  stats);
-          return monitor;
-     }
-   
+      monitor = new TestMonitor(1, stats);
+      return monitor;
+    }
+
     @Override
-    protected JobFactory<?> createJobFactory(
-      JobSubmitter submitter, String traceIn, Path scratchDir,
-      Configuration conf, CountDownLatch startFlag, UserResolver userResolver)
-      throws IOException {
-      factory = DebugJobFactory.getFactory(
-        submitter, scratchDir, NJOBS, conf, startFlag, userResolver);
+    protected JobFactory<?> createJobFactory(JobSubmitter submitter,
+        String traceIn, Path scratchDir, Configuration conf,
+        CountDownLatch startFlag, UserResolver userResolver) throws IOException {
+      factory = DebugJobFactory.getFactory(submitter, scratchDir, NJOBS, conf,
+          startFlag, userResolver);
       return factory;
     }
 
@@ -122,7 +118,6 @@ public class TestLoadJob {
     }
   }
 
-
   @Test
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
@@ -130,6 +125,7 @@ public class TestLoadJob {
     doSubmission();
     System.out.println("Serial ended at " + System.currentTimeMillis());
   }
+
   @Test
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
@@ -138,38 +134,38 @@ public class TestLoadJob {
     System.out.println(" Replay ended at " + System.currentTimeMillis());
   }
 
- 
+  private void doSubmission(String... optional) throws Exception {
 
-  
-
- 
-
-  private void doSubmission(String...optional) throws Exception {
-    
-    final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
-    final Path out = GridmixTestUtils.DEST.makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
+    final Path in = new Path("foo").makeQualified(
+        GridmixTestUtils.dfs.getUri(),
+        GridmixTestUtils.dfs.getWorkingDirectory());
+    final Path out = GridmixTestUtils.DEST.makeQualified(
+        GridmixTestUtils.dfs.getUri(),
+        GridmixTestUtils.dfs.getWorkingDirectory());
     final Path root = new Path("/user");
     Configuration conf = null;
     try {
       // required options
-      final String[] required = {"-D" + FilePool.GRIDMIX_MIN_FILE + "=0",
-        "-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out,
-        "-D" + Gridmix.GRIDMIX_USR_RSV + "=" + EchoUserResolver.class.getName(),
-        "-D" + JobCreator.GRIDMIX_JOB_TYPE + "=" + JobCreator.LOADJOB.name(),
-        "-D" + SleepJob.GRIDMIX_SLEEP_INTERVAL +"=" +"10"
-      };
+      final String[] required = {
+          "-D" + FilePool.GRIDMIX_MIN_FILE + "=0",
+          "-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out,
+          "-D" + Gridmix.GRIDMIX_USR_RSV + "="
+              + EchoUserResolver.class.getName(),
+          "-D" + JobCreator.GRIDMIX_JOB_TYPE + "=" + JobCreator.LOADJOB.name(),
+          "-D" + SleepJob.GRIDMIX_SLEEP_INTERVAL + "=" + "10" };
       // mandatory arguments
-      
-      File fout= new File("src"+File.separator+"test"+File.separator+"resources"+File.separator+"data"+File.separator+"wordcount.json");
-      
-      
-      
-      final String[] mandatory = {
-          "-generate",String.valueOf(GENDATA) + "m", in.toString(),"file:///"+fout.getAbsolutePath() //"-"ddsa
-          // ignored by DebugGridmix
+
+      File fout = new File("src" + File.separator + "test" + File.separator
+          + "resources" + File.separator + "data" + File.separator
+          + "wordcount.json");
+
+      final String[] mandatory = { "-generate", String.valueOf(GENDATA) + "m",
+          in.toString(), "file:///" + fout.getAbsolutePath() // "-"ddsa
+      // ignored by DebugGridmix
       };
-      
-      ArrayList<String> argv = new ArrayList<String>(required.length+optional.length+mandatory.length);
+
+      ArrayList<String> argv = new ArrayList<String>(required.length
+          + optional.length + mandatory.length);
       for (String s : required) {
         argv.add(s);
       }
@@ -186,13 +182,13 @@ public class TestLoadJob {
       conf = GridmixTestUtils.mrvl.getConfig();
       // set timestamps
       conf.setStrings("1", "2");
-//    GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
+      // GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
       // allow synthetic users to create home directories
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 0777));
       String[] args = argv.toArray(new String[argv.size()]);
       System.out.println("Command line arguments:");
-      for (int i=0; i<args.length; ++i) {
+      for (int i = 0; i < args.length; ++i) {
         System.out.printf("    [%d] %s\n", i, args[i]);
       }
       int res = ToolRunner.run(conf, client, args);

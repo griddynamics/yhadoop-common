@@ -280,6 +280,21 @@ public class TestGridMixClasses {
     // by Reduce spec
     b2[2] = 1;
     assertEquals(-1, test.compare(b1, 0, 1, b2, 0, 1));
+    
+   
+    assertEquals(0,test.compare(new GridmixKey(GridmixKey.DATA,100,2), new GridmixKey(GridmixKey.DATA,100,2)));
+    // REDUSE SPEC
+    assertEquals(-1,test.compare(new GridmixKey(GridmixKey.REDUCE_SPEC,100,2), new GridmixKey(GridmixKey.DATA,100,2)));
+    assertEquals(1,test.compare(new GridmixKey(GridmixKey.DATA,100,2), new GridmixKey(GridmixKey.REDUCE_SPEC,100,2)));
+    // only DATA
+    assertEquals(1,test.compare(new GridmixKey(GridmixKey.DATA,102,2), new GridmixKey(GridmixKey.DATA,100,2)));
+
   }
- 
+  /*
+  @Test
+  public viod testCompareGridmixJob(){
+    Configureation conf= new Configuration();
+    GridmixJob j1= new GridmixJob();
+  }
+  */
 }
