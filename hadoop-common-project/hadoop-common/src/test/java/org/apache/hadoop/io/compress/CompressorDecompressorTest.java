@@ -47,13 +47,15 @@ public class CompressorDecompressorTest {
     byte[] rawData = BytesGenerator.get(SIZE);
     try {
       CompressDecompressTester.of(rawData)
-          .withCompressDecompressPair(new SnappyCompressor(),new SnappyDecompressor())
-          .withCompressDecompressPair(new Lz4Compressor(),new Lz4Decompressor())
-          .withCompressDecompressPair(new ZlibCompressor(),new ZlibDecompressor())
-          .withCompressDecompressPair(new BuiltInZlibDeflater(),new BuiltInZlibInflater())
-          .withTestCases(
-              ImmutableSet
-                  .of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
+          .withCompressDecompressPair(new SnappyCompressor(),
+              new SnappyDecompressor())
+          .withCompressDecompressPair(new Lz4Compressor(),
+              new Lz4Decompressor())
+          .withCompressDecompressPair(new ZlibCompressor(),
+              new ZlibDecompressor())
+          .withCompressDecompressPair(new BuiltInZlibDeflater(),
+              new BuiltInZlibInflater())
+          .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
@@ -70,8 +72,11 @@ public class CompressorDecompressorTest {
     byte[] rawData = BytesGenerator.get(BYTE_SIZE);
     try {
       CompressDecompressTester.of(rawData)
-          .withCompressDecompressPair(new SnappyCompressor(BYTE_SIZE + BYTE_SIZE/2), new SnappyDecompressor(BYTE_SIZE + BYTE_SIZE/2))
-          .withCompressDecompressPair(new Lz4Compressor(BYTE_SIZE), new Lz4Decompressor(BYTE_SIZE))
+          .withCompressDecompressPair(
+              new SnappyCompressor(BYTE_SIZE + BYTE_SIZE / 2),
+              new SnappyDecompressor(BYTE_SIZE + BYTE_SIZE / 2))
+          .withCompressDecompressPair(new Lz4Compressor(BYTE_SIZE),
+              new Lz4Decompressor(BYTE_SIZE))
           .withCompressDecompressPair(
               new ZlibCompressor(
                   org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel.BEST_COMPRESSION,
@@ -82,9 +87,7 @@ public class CompressorDecompressorTest {
                   org.apache.hadoop.io.compress.zlib.ZlibDecompressor.CompressionHeader.DEFAULT_HEADER,
                   BYTE_SIZE))
 
-          .withTestCases(
-              ImmutableSet
-                  .of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
+          .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))

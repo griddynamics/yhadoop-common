@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.snappy.SnappyCompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
@@ -46,7 +47,7 @@ import static org.junit.Assert.*;
 public class CompressDecompressTester<T extends Compressor, E extends Decompressor> {
 
   private static final Logger logger = Logger
-      .getLogger(CompressDecompressTester.class);  
+      .getLogger(CompressDecompressTester.class);
 
   private final byte[] originalRawData;
 
@@ -58,24 +59,24 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
   private ImmutableSet<CompressionTestStrategy> stateges = ImmutableSet.of();
 
   private PreAssertionTester<T, E> assertionDelegate;
-  
+
   private static final Visitor ASSERTION_VISITOR = new Visitor() {
-      
-      public boolean visit(SnappyCompressor compressor) {
-        return (isNativeSnappyLoadable());
-      }
-      
-      public boolean visit(ZlibCompressor compressor) {
-        return NativeCodeLoader.isNativeCodeLoaded();
-      }
-      
-      public boolean visit(Lz4Compressor compressor) {
-        return NativeCodeLoader.isNativeCodeLoaded();
-      }
-      
-      public boolean visit(BuiltInZlibDeflater compressor) {
-        return NativeCodeLoader.isNativeCodeLoaded();
-      }
+
+    public boolean visit(SnappyCompressor compressor) {
+      return (isNativeSnappyLoadable());
+    }
+
+    public boolean visit(ZlibCompressor compressor) {
+      return NativeCodeLoader.isNativeCodeLoaded();
+    }
+
+    public boolean visit(Lz4Compressor compressor) {
+      return NativeCodeLoader.isNativeCodeLoaded();
+    }
+
+    public boolean visit(BuiltInZlibDeflater compressor) {
+      return NativeCodeLoader.isNativeCodeLoaded();
+    }
   };
 
   public CompressDecompressTester(byte[] originalRawData) {
@@ -86,8 +87,9 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
       @Override
       public ImmutableList<TesterPair<T, E>> filterOnAssumeWhat(
           ImmutableList<TesterPair<T, E>> pairs) {
-        ImmutableList.Builder<TesterPair<T, E>> builder = ImmutableList.builder();
-        
+        ImmutableList.Builder<TesterPair<T, E>> builder = ImmutableList
+            .builder();
+
         for (TesterPair<T, E> pair : pairs) {
           if (pair.accept(ASSERTION_VISITOR))
             builder.add(pair);
@@ -103,7 +105,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     try {
       System.loadLibrary("snappy");
       logger.warn("Snappy native library is available");
-      snappyAvailable = true;    
+      snappyAvailable = true;
       boolean hadoopNativeAvailable = NativeCodeLoader.isNativeCodeLoaded();
       loaded = snappyAvailable && hadoopNativeAvailable;
       if (loaded) {
@@ -115,17 +117,19 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
       logger.warn("Failed to load snappy: ", t);
       return false;
     }
-    return loaded;       
+    return loaded;
   }
-  
+
   public static <T extends Compressor, E extends Decompressor> CompressDecompressTester<T, E> of(
       byte[] rawData) {
     return new CompressDecompressTester<T, E>(rawData);
   }
 
   public CompressDecompressTester<T, E> withCompressDecompressPair(
-      T compressor, E decompressor) {    
-    addPair(compressor, decompressor,
+      T compressor, E decompressor) {
+    addPair(
+        compressor,
+        decompressor,
         Joiner.on("_").join(compressor.getClass().getCanonicalName(),
             decompressor.getClass().getCanonicalName()));
     return this;
@@ -144,7 +148,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
   public void test() {
     pairs = builder.build();
     pairs = assertionDelegate.filterOnAssumeWhat(pairs);
-        
+
     for (TesterPair<T, E> pair : pairs) {
       for (CompressionTestStrategy strategy : stateges) {
         strategy.getTesterStrategy().assertCompression(pair.getName(),
@@ -152,7 +156,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
             Arrays.copyOf(originalRawData, originalRawData.length));
       }
     }
-    
+
     endAll(pairs);
 
   }
@@ -162,7 +166,6 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
       pair.end();
   }
 
-  
   interface PreAssertionTester<T extends Compressor, E extends Decompressor> {
     ImmutableList<TesterPair<T, E>> filterOnAssumeWhat(
         ImmutableList<TesterPair<T, E>> pairs);
@@ -178,15 +181,17 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
           Decompressor decompressor, byte[] rawData) {
         assertTrue(checkSetInputNullPointerException(compressor));
         assertTrue(checkSetInputNullPointerException(decompressor));
-        
-        assertTrue(checkCompressArrayIndexOutOfBoundsException(compressor, rawData));
-        assertTrue(checkCompressArrayIndexOutOfBoundsException(decompressor, rawData));
-        
+
+        assertTrue(checkCompressArrayIndexOutOfBoundsException(compressor,
+            rawData));
+        assertTrue(checkCompressArrayIndexOutOfBoundsException(decompressor,
+            rawData));
+
         assertTrue(checkCompressNullPointerException(compressor, rawData));
         assertTrue(checkCompressNullPointerException(decompressor, rawData));
-        
+
         assertTrue(checkSetInputArrayIndexOutOfBoundsException(compressor));
-        assertTrue(checkSetInputArrayIndexOutOfBoundsException(decompressor));                                        
+        assertTrue(checkSetInputArrayIndexOutOfBoundsException(decompressor));
       }
 
       private boolean checkSetInputNullPointerException(Compressor compressor) {
@@ -199,9 +204,10 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
               "checkSetInputNullPointerException error !!!"));
         }
         return false;
-      }                   
-      
-      private boolean checkCompressNullPointerException(Compressor compressor, byte[] rawData) {
+      }
+
+      private boolean checkCompressNullPointerException(Compressor compressor,
+          byte[] rawData) {
         try {
           compressor.setInput(rawData, 0, rawData.length);
           compressor.compress(null, 0, 1);
@@ -213,8 +219,9 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
         }
         return false;
       }
-      
-      private boolean checkCompressNullPointerException(Decompressor decompressor, byte[] rawData) {
+
+      private boolean checkCompressNullPointerException(
+          Decompressor decompressor, byte[] rawData) {
         try {
           decompressor.setInput(rawData, 0, rawData.length);
           decompressor.decompress(null, 0, 1);
@@ -226,8 +233,9 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
         }
         return false;
       }
-      
-      private boolean checkSetInputNullPointerException(Decompressor decompressor) {
+
+      private boolean checkSetInputNullPointerException(
+          Decompressor decompressor) {
         try {
           decompressor.setInput(null, 0, 1);
         } catch (NullPointerException npe) {
@@ -237,9 +245,10 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
               "checkSetInputNullPointerException error !!!"));
         }
         return false;
-      }             
-      
-      private boolean checkSetInputArrayIndexOutOfBoundsException(Compressor compressor) {
+      }
+
+      private boolean checkSetInputArrayIndexOutOfBoundsException(
+          Compressor compressor) {
         try {
           compressor.setInput(new byte[] { (byte) 0 }, 0, -1);
         } catch (ArrayIndexOutOfBoundsException e) {
@@ -250,8 +259,9 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
         }
         return false;
       }
-      
-      private boolean checkCompressArrayIndexOutOfBoundsException(Compressor compressor, byte[] rawData) {
+
+      private boolean checkCompressArrayIndexOutOfBoundsException(
+          Compressor compressor, byte[] rawData) {
         try {
           compressor.setInput(rawData, 0, rawData.length);
           compressor.compress(new byte[rawData.length], 0, -1);
@@ -264,7 +274,8 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
         return false;
       }
 
-      private boolean checkCompressArrayIndexOutOfBoundsException(Decompressor decompressor, byte[] rawData) {
+      private boolean checkCompressArrayIndexOutOfBoundsException(
+          Decompressor decompressor, byte[] rawData) {
         try {
           decompressor.setInput(rawData, 0, rawData.length);
           decompressor.decompress(new byte[rawData.length], 0, -1);
@@ -276,6 +287,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
         }
         return false;
       }
+
       private boolean checkSetInputArrayIndexOutOfBoundsException(
           Decompressor decompressor) {
         try {
@@ -293,87 +305,103 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
     COMPRESS_DECOMPRESS_SINGLE_BLOCK(new TesterCompressionStrategy() {
       final Joiner joiner = Joiner.on("- ");
-      
+
       @Override
       public void assertCompression(String name, Compressor compressor,
           Decompressor decompressor, byte[] rawData) {
-        
+
         int cSize = 0;
         int decompressedSize = 0;
         byte[] compressedResult = new byte[rawData.length];
         byte[] decompressedBytes = new byte[rawData.length];
         try {
-          assertTrue(joiner.join(name, "compressor.needsInput before error !!!"), compressor.needsInput());
-          assertTrue(joiner.join(name, "compressor.getBytesWritten before error !!!"), compressor.getBytesWritten() == 0);                    
-          compressor.setInput(rawData, 0, rawData.length);          
+          assertTrue(
+              joiner.join(name, "compressor.needsInput before error !!!"),
+              compressor.needsInput());
+          assertTrue(
+              joiner.join(name, "compressor.getBytesWritten before error !!!"),
+              compressor.getBytesWritten() == 0);
+          compressor.setInput(rawData, 0, rawData.length);
           compressor.finish();
           while (!compressor.finished()) {
-            cSize += compressor.compress(compressedResult, 0, compressedResult.length);
+            cSize += compressor.compress(compressedResult, 0,
+                compressedResult.length);
           }
-          compressor.reset();                                        
-         
-          assertTrue(joiner.join(name, "decompressor.needsInput() before error !!!"), decompressor.needsInput());
+          compressor.reset();
+
+          assertTrue(
+              joiner.join(name, "decompressor.needsInput() before error !!!"),
+              decompressor.needsInput());
           decompressor.setInput(compressedResult, 0, cSize);
-          assertFalse(joiner.join(name, "decompressor.needsInput() after error !!!"), decompressor.needsInput());          
-          while (!decompressor.finished()) {            
-            decompressedSize = decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);                     
+          assertFalse(
+              joiner.join(name, "decompressor.needsInput() after error !!!"),
+              decompressor.needsInput());
+          while (!decompressor.finished()) {
+            decompressedSize = decompressor.decompress(decompressedBytes, 0,
+                decompressedBytes.length);
           }
           decompressor.reset();
-          assertTrue(joiner.join(name, " byte size not equals error !!!"), decompressedSize == rawData.length);
-          assertArrayEquals(joiner.join(name, " byte arrays not equals error !!!"), rawData, decompressedBytes);
+          assertTrue(joiner.join(name, " byte size not equals error !!!"),
+              decompressedSize == rawData.length);
+          assertArrayEquals(
+              joiner.join(name, " byte arrays not equals error !!!"), rawData,
+              decompressedBytes);
         } catch (Exception ex) {
           fail(joiner.join(name, ex.getMessage()));
         }
       }
     }),
-    
+
     COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM(new TesterCompressionStrategy() {
       final Joiner joiner = Joiner.on("- ");
-      final ImmutableMap<Class<? extends Compressor>, Integer> emptySize = 
-          ImmutableMap.of(Lz4Compressor.class, 4, ZlibCompressor.class, 16, 
+      final ImmutableMap<Class<? extends Compressor>, Integer> emptySize = ImmutableMap
+          .of(Lz4Compressor.class, 4, ZlibCompressor.class, 16,
               SnappyCompressor.class, 4, BuiltInZlibDeflater.class, 16);
-      
+
       @Override
       void assertCompression(String name, Compressor compressor,
           Decompressor decompressor, byte[] originalRawData) {
         byte[] buf = null;
         ByteArrayInputStream bytesIn = null;
         BlockDecompressorStream blockDecompressorStream = null;
-        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();        
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
         // close without write
-        try {          
+        try {
           compressor.reset();
-          //decompressor.end();
-          BlockCompressorStream blockCompressorStream = 
-              new BlockCompressorStream(bytesOut, compressor, 1024, 0);
-          blockCompressorStream.close();        
+          // decompressor.end();
+          BlockCompressorStream blockCompressorStream = new BlockCompressorStream(
+              bytesOut, compressor, 1024, 0);
+          blockCompressorStream.close();
           // check compressed output
           buf = bytesOut.toByteArray();
           int emSize = emptySize.get(compressor.getClass());
-          Assert.assertEquals(joiner.join(name, "empty stream compressed output size != " + emSize), 
-            emSize , buf.length);
-          //  use compressed output as input for decompression
+          Assert.assertEquals(
+              joiner.join(name, "empty stream compressed output size != "
+                  + emSize), emSize, buf.length);
+          // use compressed output as input for decompression
           bytesIn = new ByteArrayInputStream(buf);
-          //  create decompression stream
-          blockDecompressorStream = new BlockDecompressorStream(bytesIn, decompressor, 1024);
+          // create decompression stream
+          blockDecompressorStream = new BlockDecompressorStream(bytesIn,
+              decompressor, 1024);
           // no byte is available because stream was closed
-          assertEquals(joiner.join(name, " return value is not -1"), 
-            -1, blockDecompressorStream.read());        
-        } catch (IOException e) {       
+          assertEquals(joiner.join(name, " return value is not -1"), -1,
+              blockDecompressorStream.read());
+        } catch (IOException e) {
           fail(joiner.join(name, e.getMessage()));
         } finally {
           if (blockDecompressorStream != null)
-            try {         
+            try {
               bytesOut.close();
               blockDecompressorStream.close();
               bytesIn.close();
               blockDecompressorStream.close();
-            } catch (IOException e) {}
+            } catch (IOException e) {
+            }
         }
-      } 
-      
+      }
+
     }),
-    
+
     COMPRESS_DECOMPRESS_BLOCK(new TesterCompressionStrategy() {
       private final Joiner joiner = Joiner.on("- ");
       private static final int BLOCK_SIZE = 512;
@@ -381,7 +409,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
       // Use default of 512 as bufferSize and compressionOverhead of
       // (1% of bufferSize + 12 bytes) = 18 bytes (zlib algorithm).
       private static final int overheadSpace = BLOCK_SIZE / 100 + 12;
-      
+
       @Override
       public void assertCompression(String name, Compressor compressor,
           Decompressor decompressor, byte[] originalRawData) {
@@ -423,7 +451,8 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
             decompressor.reset();
             off = off + step;
           }
-          assertArrayEquals(joiner.join(name, "byte arrays not equals error !!!"),
+          assertArrayEquals(
+              joiner.join(name, "byte arrays not equals error !!!"),
               originalRawData, decompressOut.toByteArray());
         } catch (Exception ex) {
           fail(joiner.join(name, ex.getMessage()));
@@ -445,17 +474,17 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     CompressionTestStrategy(TesterCompressionStrategy testStrategy) {
       this.testerStrategy = testStrategy;
     }
-    
+
     public TesterCompressionStrategy getTesterStrategy() {
       return testerStrategy;
     }
   }
-  
+
   static final class TesterPair<T extends Compressor, E extends Decompressor> {
     private final T compressor;
     private final E decompressor;
     private final String name;
-    
+
     TesterPair(String name, T compressor, E decompressor) {
       this.compressor = compressor;
       this.decompressor = decompressor;
@@ -463,6 +492,8 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     }
 
     public void end() {
+      Configuration cfg = new Configuration();
+      compressor.reinit(cfg);
       compressor.end();
       decompressor.end();
     }
@@ -478,28 +509,31 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     public String getName() {
       return name;
     }
-    
+
     public boolean accept(Visitor visitor) {
       if (compressor.getClass().isAssignableFrom(Lz4Compressor.class))
-        return visitor.visit((Lz4Compressor)getCompressor());
-      else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class))
-        return visitor.visit((BuiltInZlibDeflater)getCompressor());
-      else if(compressor.getClass().isAssignableFrom(ZlibCompressor.class))
-        return visitor.visit((ZlibCompressor)getCompressor());
-      else if(compressor.getClass().isAssignableFrom(SnappyCompressor.class))
-        return visitor.visit((SnappyCompressor)getCompressor());
+        return visitor.visit((Lz4Compressor) getCompressor());
+      else if (compressor.getClass()
+          .isAssignableFrom(BuiltInZlibDeflater.class))
+        return visitor.visit((BuiltInZlibDeflater) getCompressor());
+      else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class))
+        return visitor.visit((ZlibCompressor) getCompressor());
+      else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class))
+        return visitor.visit((SnappyCompressor) getCompressor());
       else
         return false;
     }
   }
 
-  interface Visitor {    
+  interface Visitor {
     boolean visit(ZlibCompressor compressor);
+
     boolean visit(Lz4Compressor compressor);
+
     boolean visit(BuiltInZlibDeflater compressor);
+
     boolean visit(SnappyCompressor compressor);
-  } 
-  
+  }
 
   abstract static class TesterCompressionStrategy {
 
