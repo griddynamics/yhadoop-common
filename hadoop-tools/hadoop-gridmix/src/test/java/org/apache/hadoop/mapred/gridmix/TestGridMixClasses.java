@@ -265,7 +265,7 @@ public class TestGridMixClasses {
     DataOutputStream dos = new DataOutputStream(data);
     WritableUtils.writeVInt(dos, 2);
     WritableUtils.writeVInt(dos, 1);
-    WritableUtils.writeVInt(dos, 4);
+    WritableUtils.writeVInt(dos, 0);
     WritableUtils.writeVInt(dos, 7);
     WritableUtils.writeVInt(dos, 4);
 
@@ -275,11 +275,11 @@ public class TestGridMixClasses {
 
     // int s1, int l1, byte[] b2, int s2, int l2
     assertEquals(0, test.compare(b1, 0, 1, b2, 0, 1));
-    b2[2] = 5;
-    assertEquals(0, test.compare(b1, 0, 1, b2, 0, 1));
+    b2[2] = 1;
+    assertEquals(-1, test.compare(b1, 0, 1, b2, 0, 1));
     // by Reduce spec
-    b2[2] = 0;
-    assertEquals(4, test.compare(b1, 0, 1, b2, 0, 1));
+    b2[2] = 1;
+    assertEquals(-1, test.compare(b1, 0, 1, b2, 0, 1));
   }
  
 }
