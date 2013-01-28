@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
@@ -31,6 +32,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
@@ -42,6 +44,7 @@ import static org.junit.Assert.*;
 
 public class TestLoadJob {
 
+  private File workspace= new File("target"+File.separator+this.getClass().getName());
   public static final Log LOG = LogFactory.getLog(Gridmix.class);
 
   {
@@ -156,8 +159,13 @@ public class TestLoadJob {
         "-D" + SleepJob.GRIDMIX_SLEEP_INTERVAL +"=" +"10"
       };
       // mandatory arguments
+      
+      File fout= new File("src"+File.separator+"test"+File.separator+"resources"+File.separator+"data"+File.separator+"wordcount.json");
+      
+      
+      
       final String[] mandatory = {
-          "-generate",String.valueOf(GENDATA) + "m", in.toString(), "-"
+          "-generate",String.valueOf(GENDATA) + "m", in.toString(),"file:///"+fout.getAbsolutePath() //"-"ddsa
           // ignored by DebugGridmix
       };
       
@@ -176,6 +184,8 @@ public class TestLoadJob {
       conf = new Configuration();
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
       conf = GridmixTestUtils.mrvl.getConfig();
+      // set timestamps
+      conf.setStrings("1", "2");
 //    GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
       // allow synthetic users to create home directories
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
