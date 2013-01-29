@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -403,6 +404,7 @@ public class TestDistCacheEmulation {
  * test method configureDistCacheFiles
  * 
  */
+  @Ignore
   @Test
   public void testDistCacheEmulator() throws Exception {
 
