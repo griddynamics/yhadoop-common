@@ -11,7 +11,11 @@ import java.util.Map;
 
 import org.apache.hadoop.CustomOutputCommitter;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.JobConf;
@@ -368,7 +372,8 @@ public class TestGridMixClasses {
 
   }
 
-  private class FakeInputStream extends InputStream {
+  private class FakeInputStream extends InputStream implements Seekable,
+      PositionedReadable {
     private long counter;
 
     @Override
@@ -389,34 +394,103 @@ public class TestGridMixClasses {
     public long getCounter() {
       return counter;
     }
+
+    @Override
+    public void seek(long pos) throws IOException {
+
+    }
+
+    @Override
+    public long getPos() throws IOException {
+      return counter;
+    }
+
+    @Override
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      return false;
+    }
+
+    @Override
+    public int read(long position, byte[] buffer, int offset, int length)
+        throws IOException {
+      return 0;
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer, int offset, int length)
+        throws IOException {
+
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer) throws IOException {
+
+    }
   }
-  @Ignore
+
+  private class FakeFSDataInputStream extends FSDataInputStream {
+
+    public FakeFSDataInputStream(InputStream in) throws IOException {
+      super(in);
+
+    }
+
+  }
+
   @Test
-  public void testLoadJobLoadRecordReader() throws Exception{
-    LoadJob.LoadRecordReader test = new  LoadJob.LoadRecordReader();
-    /*CombineFileSplit cfsplit, int maps, int id, long inputBytes, 
-    long inputRecords, long outputBytes, long outputRecords, 
-    double[] reduceBytes, double[] reduceRecords, 
-    long[] reduceOutputBytes, long[] reduceOutputRecords,
-    ResourceUsageMetrics metrics,
-    ResourceUsageMetrics[] rMetrics
-    */
-    Path[] paths= {new Path("tmp1"),new Path("tmp2")};
-    long[] start = {0,0};
-    long[] lengths={1000,1000};
-    String[] locations={"temp1","temp2"};
-    CombineFileSplit cfsplit = new CombineFileSplit(paths, start, lengths, locations);
-    double[] reduceBytes={100,100};
-     double[] reduceRecords={2,2}; 
-    long[] reduceOutputBytes={500,500};
-      long[] reduceOutputRecords={2,2};
-      ResourceUsageMetrics metrics= new ResourceUsageMetrics();
-      ResourceUsageMetrics[] rMetrics= {new ResourceUsageMetrics(), new ResourceUsageMetrics()};
-    LoadSplit input= new LoadSplit(cfsplit,2,3,1500L,2L,3000L,2L,reduceBytes,reduceRecords,reduceOutputBytes,reduceOutputRecords,metrics,rMetrics); 
+  public void testLoadJobLoadRecordReader() throws Exception {
+    LoadJob.LoadRecordReader test = new LoadJob.LoadRecordReader();
     Configuration conf = new Configuration();
-    TaskAttemptID taskId= new TaskAttemptID();
+
+    FileSystem fs1 = mock(FileSystem.class);
+    when(fs1.open((Path) anyObject())).thenReturn(
+        new FakeFSDataInputStream(new FakeInputStream()));
+    Path p1 = mock(Path.class);
+    when(p1.getFileSystem((JobConf) anyObject())).thenReturn(fs1);
+
+    FileSystem fs2 = mock(FileSystem.class);
+    when(fs2.open((Path) anyObject())).thenReturn(
+        new FakeFSDataInputStream(new FakeInputStream()));
+    Path p2 = mock(Path.class);
+    when(p2.getFileSystem((JobConf) anyObject())).thenReturn(fs2);
+
+    Path[] paths = { p1, p2 };
+
+    long[] start = { 0, 0 };
+    long[] lengths = { 1000, 1000 };
+    String[] locations = { "temp1", "temp2" };
+    CombineFileSplit cfsplit = new CombineFileSplit(paths, start, lengths,
+        locations);
+    double[] reduceBytes = { 100, 100 };
+    double[] reduceRecords = { 2, 2 };
+    long[] reduceOutputBytes = { 500, 500 };
+    long[] reduceOutputRecords = { 2, 2 };
+    ResourceUsageMetrics metrics = new ResourceUsageMetrics();
+    ResourceUsageMetrics[] rMetrics = { new ResourceUsageMetrics(),
+        new ResourceUsageMetrics() };
+    LoadSplit input = new LoadSplit(cfsplit, 2, 3, 1500L, 2L, 3000L, 2L,
+        reduceBytes, reduceRecords, reduceOutputBytes, reduceOutputRecords,
+        metrics, rMetrics);
+    TaskAttemptID taskId = new TaskAttemptID();
     TaskAttemptContext ctxt = new TaskAttemptContextImpl(conf, taskId);
     test.initialize(input, ctxt);
-    
+    GridmixRecord gr = test.getCurrentValue();
+    int counter =0;
+    while (test.nextKeyValue()) {
+      gr = test.getCurrentValue();
+      float d=test.getProgress();
+      if(counter==0){
+        assertEquals(0.5, test.getProgress(),0.001);
+      }else if(counter==1){
+        assertEquals(1.0, test.getProgress(),0.001);
+      }
+      assertEquals(1000, gr.getSize());
+      counter++;
+    }
+    assertEquals(1000, gr.getSize());
+    assertEquals(2, counter);
+   
+    test.close();
+
   }
 }
