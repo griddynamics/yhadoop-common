@@ -35,6 +35,7 @@ import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.yarn.YarnException;
 import org.jets3t.service.io.InputStreamWrapper;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
 
@@ -318,28 +319,30 @@ public class TestGridMixClasses {
     assertTrue(j1.equals(j2));
     assertEquals(0, j1.compareTo(j2));
   }
-/*
- * test ReadRecordFactory hould read all data from inputstream 
- */
+
+  /*
+   * test ReadRecordFactory hould read all data from inputstream
+   */
   @Test
-  public void testReadRecordFactory() throws Exception{
-    
-    // RecordFactory factory, InputStream src,    Configuration conf
-    RecordFactory rf= new FakeRecordFactory();
-    FakeInputStream input= new  FakeInputStream();
-    ReadRecordFactory test= new ReadRecordFactory(rf,input,new Configuration()) ;
-    GridmixKey key=new GridmixKey(GridmixKey.DATA, 100, 2);
-    GridmixRecord val= new GridmixRecord(200,2);
-    while( test.next(key, val)){
-      
+  public void testReadRecordFactory() throws Exception {
+
+    // RecordFactory factory, InputStream src, Configuration conf
+    RecordFactory rf = new FakeRecordFactory();
+    FakeInputStream input = new FakeInputStream();
+    ReadRecordFactory test = new ReadRecordFactory(rf, input,
+        new Configuration());
+    GridmixKey key = new GridmixKey(GridmixKey.DATA, 100, 2);
+    GridmixRecord val = new GridmixRecord(200, 2);
+    while (test.next(key, val)) {
+
     }
     // should be read 10* (GridmixKey.size +GridmixRecord.value)
     assertEquals(3000, input.getCounter());
     // shoutd be 0;
-    assertEquals(0, rf.getProgress(),0.01);
+    assertEquals(-1, rf.getProgress(), 0.01);
 
-    System.out.println("dd:"+input.getCounter());
-    System.out.println("rf:"+rf.getProgress());
+    System.out.println("dd:" + input.getCounter());
+    System.out.println("rf:" + rf.getProgress());
     test.close();
   }
 
@@ -355,18 +358,19 @@ public class TestGridMixClasses {
     @Override
     public boolean next(GridmixKey key, GridmixRecord val) throws IOException {
       counter--;
-      return counter>=0;
+      return counter >= 0;
     }
 
     @Override
     public float getProgress() throws IOException {
       return counter;
     }
-   
+
   }
 
   private class FakeInputStream extends InputStream {
     private long counter;
+
     @Override
     public int read() throws IOException {
       return 0;
@@ -375,14 +379,44 @@ public class TestGridMixClasses {
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
       int realLen = len - off;
-      counter+=realLen;
+      counter += realLen;
       for (int i = 0; i < b.length; i++) {
         b[i] = 0;
       }
       return realLen;
     }
-public long getCounter(){
-  return counter;
-}
+
+    public long getCounter() {
+      return counter;
+    }
+  }
+  @Ignore
+  @Test
+  public void testLoadJobLoadRecordReader() throws Exception{
+    LoadJob.LoadRecordReader test = new  LoadJob.LoadRecordReader();
+    /*CombineFileSplit cfsplit, int maps, int id, long inputBytes, 
+    long inputRecords, long outputBytes, long outputRecords, 
+    double[] reduceBytes, double[] reduceRecords, 
+    long[] reduceOutputBytes, long[] reduceOutputRecords,
+    ResourceUsageMetrics metrics,
+    ResourceUsageMetrics[] rMetrics
+    */
+    Path[] paths= {new Path("tmp1"),new Path("tmp2")};
+    long[] start = {0,0};
+    long[] lengths={1000,1000};
+    String[] locations={"temp1","temp2"};
+    CombineFileSplit cfsplit = new CombineFileSplit(paths, start, lengths, locations);
+    double[] reduceBytes={100,100};
+     double[] reduceRecords={2,2}; 
+    long[] reduceOutputBytes={500,500};
+      long[] reduceOutputRecords={2,2};
+      ResourceUsageMetrics metrics= new ResourceUsageMetrics();
+      ResourceUsageMetrics[] rMetrics= {new ResourceUsageMetrics(), new ResourceUsageMetrics()};
+    LoadSplit input= new LoadSplit(cfsplit,2,3,1500L,2L,3000L,2L,reduceBytes,reduceRecords,reduceOutputBytes,reduceOutputRecords,metrics,rMetrics); 
+    Configuration conf = new Configuration();
+    TaskAttemptID taskId= new TaskAttemptID();
+    TaskAttemptContext ctxt = new TaskAttemptContextImpl(conf, taskId);
+    test.initialize(input, ctxt);
+    
   }
 }
