@@ -530,6 +530,9 @@ public interface MRJobConfig {
   public static final String MR_AM_ENV =
       MR_AM_PREFIX + "env";
   
+  public static final String MR_AM_ADMIN_USER_ENV =
+      MR_AM_PREFIX + "admin.user.env";
+  
   public static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
       "mapreduce.admin.map.child.java.opts";
 
@@ -644,5 +647,18 @@ public interface MRJobConfig {
       "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*",
       "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*",
   };
+
+  public static final String WORKFLOW_ID = "mapreduce.workflow.id";
+  
+  public static final String WORKFLOW_NAME = "mapreduce.workflow.name";
+  
+  public static final String WORKFLOW_NODE_NAME =
+      "mapreduce.workflow.node.name";
+  
+  public static final String WORKFLOW_ADJACENCY_PREFIX_STRING =
+      "mapreduce.workflow.adjacency.";
+  
+  public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
+      "^mapreduce\\.workflow\\.adjacency\\..+";
   
 }
