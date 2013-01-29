@@ -404,7 +404,6 @@ public class TestDistCacheEmulation {
  * test method configureDistCacheFiles
  * 
  */
-  @Ignore
   @Test
   public void testDistCacheEmulator() throws Exception {
 
