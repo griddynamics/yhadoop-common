@@ -16,30 +16,39 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
+import org.apache.hadoop.mapred.RawKeyValueIterator;
+import org.apache.hadoop.mapred.gridmix.GridmixKey.Spec;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.ReduceContext;
 import org.apache.hadoop.mapreduce.StatusReporter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.counters.GenericCounter;
 import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.mapreduce.task.ReduceContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl.DummyReporter;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
-import org.apache.hadoop.yarn.YarnException;
-import org.jets3t.service.io.InputStreamWrapper;
-import org.junit.Ignore;
+import org.apache.hadoop.util.Progress;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
 
@@ -475,22 +484,134 @@ public class TestGridMixClasses {
     TaskAttemptContext ctxt = new TaskAttemptContextImpl(conf, taskId);
     test.initialize(input, ctxt);
     GridmixRecord gr = test.getCurrentValue();
-    int counter =0;
+    int counter = 0;
     while (test.nextKeyValue()) {
       gr = test.getCurrentValue();
-      float d=test.getProgress();
-      if(counter==0){
-        assertEquals(0.5, test.getProgress(),0.001);
-      }else if(counter==1){
-        assertEquals(1.0, test.getProgress(),0.001);
+      if (counter == 0) {
+        assertEquals(0.5, test.getProgress(), 0.001);
+      } else if (counter == 1) {
+        assertEquals(1.0, test.getProgress(), 0.001);
       }
       assertEquals(1000, gr.getSize());
       counter++;
     }
     assertEquals(1000, gr.getSize());
     assertEquals(2, counter);
-   
+
     test.close();
+  }
+
+  @Test
+  public void testLoadJobLoadReducer() throws Exception {
+    LoadJob.LoadReducer test = new LoadJob.LoadReducer();
+
+    Configuration conf = new Configuration();
+    conf.setInt(JobContext.NUM_REDUCES, 2);
+    CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
+    conf.setBoolean(FileOutputFormat.COMPRESS, true);
+
+    CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
+    conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
+    TaskAttemptID taskid = new TaskAttemptID();
+
+    RawKeyValueIterator input = new FakeRawKeyValueIterator();
+
+    Counter counter = new GenericCounter();
+    Counter inputValueCounter = new GenericCounter();
+    LoadRecordWriter output = new LoadRecordWriter();
+
+    OutputCommitter committer = new CustomOutputCommitter();
+
+    StatusReporter reporter = new DummyReporter();
+    RawComparator comparator = new FakeRawComparator();
+
+    ReduceContext<GridmixKey, GridmixRecord, NullWritable, GridmixRecord> reducecontext = new ReduceContextImpl<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>(
+        conf, taskid, input, counter, inputValueCounter, (RecordWriter)output, committer,
+        reporter, comparator, GridmixKey.class, GridmixRecord.class);
+    reducecontext.nextKeyValue();
+    org.apache.hadoop.mapreduce.Reducer<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>.Context context = new WrappedReducer<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>()
+        .getReducerContext(reducecontext);
+
+  // test.setup(context);
+    test.run(context);
+    assertEquals(9, counter.getValue());
+    assertEquals(10, inputValueCounter.getValue());
+    assertEquals(1,output.getData().size());
+    GridmixRecord record=(GridmixRecord)output.getData().values().iterator().next();
+    assertEquals(1593,record.getSize());
+    System.out.println("OK");
+  }
+
+  protected class FakeRawKeyValueIterator implements RawKeyValueIterator {
+
+    int counter = 10;
+
+    @Override
+    public DataInputBuffer getKey() throws IOException {
+      ByteArrayOutputStream dt = new ByteArrayOutputStream();
+      GridmixKey key = new GridmixKey(GridmixKey.REDUCE_SPEC,10* counter,1L);
+      Spec spec= new Spec();
+      spec.rec_in=counter;
+      spec.rec_out=counter;
+      spec.bytes_out=counter*100;
+      
+      key.setSpec(spec);
+      key.write(new DataOutputStream(dt));
+      DataInputBuffer result = new DataInputBuffer();
+      byte[] b = dt.toByteArray();
+      result.reset(b, 0, b.length);
+      return result;
+    }
+
+    @Override
+    public DataInputBuffer getValue() throws IOException {
+      ByteArrayOutputStream dt = new ByteArrayOutputStream();
+      GridmixRecord key = new GridmixRecord(100, 1);
+      key.write(new DataOutputStream(dt));
+      DataInputBuffer result = new DataInputBuffer();
+      byte[] b = dt.toByteArray();
+      result.reset(b, 0, b.length);
+      return result;
+    }
+
+    @Override
+    public boolean next() throws IOException {
+      counter--;
+      return counter >= 0;
+    }
+
+    @Override
+    public void close() throws IOException {
+
+    }
+
+    @Override
+    public Progress getProgress() {
+      return null;
+    }
+
+  }
+
+  private class FakeRawComparator implements RawComparator {
+
+    @Override
+    public int compare(Object o1, Object o2) {
+      return 0;
+    }
+
+    @Override
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+      if( (l1-s1) != (l2-s2) ){
+        return (l1-s1)- (l2-s2);
+      }
+      int len =l1-s1;
+      for (int i=0;i<len;i++){
+        if(b1[s1+i] != b2[s2+i] ){
+          return b1[s1+i] - b2[s2+i];
+        }
+      }
+      return 0;
+    }
 
   }
 }
