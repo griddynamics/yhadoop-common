@@ -54,6 +54,9 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9217. Print thread dumps when hadoop-common tests fail.
     (Andrey Klochkov via suresh)
 
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -87,6 +90,8 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool (Liang 
     Xie via tgraves)
+
+    HADOOP-9255. relnotes.py missing last jira (tgraves)
 
 Release 0.23.5 - 2012-11-28
 
