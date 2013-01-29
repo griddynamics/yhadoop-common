@@ -417,10 +417,9 @@ public class TestDistCacheEmulation {
     File fin=new File("src"+File.separator+"test"+File.separator+"resources"+File.separator+"data"+File.separator+"wordcount.json");
     dce.init(fin.getAbsolutePath(), JobCreator.LOADJOB, true);
     dce.configureDistCacheFiles(conf, jobConf);
+    
     String[] caches=conf.getStrings(MRJobConfig.CACHE_FILES);
-    // only one   "/tmp/" + user + "/.staging/job_1/file2.txt", is local temp file
-    assertEquals(5, caches.length);
     String[] tmpfiles=conf.getStrings("tmpfiles");
-    assertEquals(1, tmpfiles.length);
+    assertEquals(6, (caches.length+tmpfiles.length));
   }
 }
