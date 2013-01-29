@@ -13,6 +13,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -28,8 +29,11 @@ import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 
 import static org.junit.Assert.*;
@@ -287,14 +291,26 @@ public class TestGridMixClasses {
     assertEquals(-1,test.compare(new GridmixKey(GridmixKey.REDUCE_SPEC,100,2), new GridmixKey(GridmixKey.DATA,100,2)));
     assertEquals(1,test.compare(new GridmixKey(GridmixKey.DATA,100,2), new GridmixKey(GridmixKey.REDUCE_SPEC,100,2)));
     // only DATA
-    assertEquals(1,test.compare(new GridmixKey(GridmixKey.DATA,102,2), new GridmixKey(GridmixKey.DATA,100,2)));
+    assertEquals(2,test.compare(new GridmixKey(GridmixKey.DATA,102,2), new GridmixKey(GridmixKey.DATA,100,2)));
 
   }
-  /*
+  
   @Test
-  public viod testCompareGridmixJob(){
-    Configureation conf= new Configuration();
-    GridmixJob j1= new GridmixJob();
+  public void testCompareGridmixJob() throws Exception{
+    Configuration conf= new Configuration();
+    Path outRoot= new Path("target");
+    JobStory jobdesc = mock(JobStory.class);
+    when(jobdesc.getName()).thenReturn("JobName");
+    when(jobdesc.getJobConf()).thenReturn(new JobConf(conf));
+    UserGroupInformation ugi=  UserGroupInformation.getCurrentUser();
+    //final Configuration conf, long submissionMillis,
+    //final JobStory jobdesc, Path outRoot, UserGroupInformation ugi, 
+    //final int seq
+    
+    GridmixJob j1= new LoadJob(conf, 1000L,jobdesc,outRoot,ugi,0);
+    GridmixJob j2= new LoadJob(conf, 1000L,jobdesc,outRoot,ugi,0);
+    assertTrue(j1.equals(j2));
+    assertEquals(0, j1.compareTo(j2));
   }
-  */
+  
 }
