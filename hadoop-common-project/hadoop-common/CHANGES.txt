@@ -132,7 +132,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9231. Parametrize staging URL for the uniformity of
     distributionManagement. (Konstantin Boudnik via suresh)
 
-    HADOOP-9241. DU refresh interval is not configurable (harsh)
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
 
   OPTIMIZATIONS
 
@@ -998,6 +999,8 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
     HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
+    HADOOP-9255. relnotes.py missing last jira (tgraves)
 
 Release 0.23.5 - 2012-11-28
 
