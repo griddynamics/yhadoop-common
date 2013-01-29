@@ -212,6 +212,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
     (masokan via tucu)
 
+    MAPREDUCE-4838. Add additional fields like Locality, Avataar to the
+    JobHistory logs. (Zhijie Shen via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -269,8 +272,8 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4948. Fix a failing unit test TestYARNRunner.testHistoryServerToken.
     (Junping Du via sseth)
 
-    MAPREDUCE-2264. Job status exceeds 100% in some cases. 
-    (devaraj.k and sandyr via tucu)
+    MAPREDUCE-4803. Remove duplicate copy of TestIndexCache. (Mariappan Asokan
+    via sseth)
 
 Release 2.0.2-alpha - 2012-09-07 
 
