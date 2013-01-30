@@ -446,15 +446,12 @@ public class TestJspHelper {
   }
   
   @Test
-  public void testSortNodeByFields() throws Exception {
-    DatanodeID dnId1 = new DatanodeID("127.0.0.1", "localhost1", "storage1",
-        1234, 2345, 3456);
-    DatanodeID dnId2 = new DatanodeID("127.0.0.2", "localhost2", "storage2",
-        1235, 2346, 3457);
-    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, "rack1", 1024,
-        100, 924, 100, 10, 2);
-    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, "rack2", 2500,
-        200, 1848, 200, 20, 1);
+  public void testSortNodeByFields() throws Exception {    
+    DatanodeID dnId1 = new DatanodeID("localhost1", "storage1", 1234, 2345);
+    DatanodeID dnId2 = new DatanodeID("localhost2", "storage2", 1235, 2346);
+
+    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, 1024, 100, 924, 100, 10, 2);
+    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, 2500, 200, 1848, 200, 20, 1);
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     live.add(dnDesc1);
     live.add(dnDesc2);
@@ -509,11 +506,11 @@ public class TestJspHelper {
     final StringBuffer buffer = new StringBuffer();
     
     ArgumentCaptor<String> arg = ArgumentCaptor.forClass(String.class);
-    doAnswer(new Answer<Object>() {      
+    doAnswer(new Answer<String>() {      
       @Override
-      public Object answer(InvocationOnMock invok) {
+      public String answer(InvocationOnMock invok) {
         Object[] args = invok.getArguments();
-        buffer.append((String)args[0]);
+        buffer.append(args[0]);
         return null;
       }
     }).when(out).print(arg.capture());
@@ -564,7 +561,7 @@ public class TestJspHelper {
   public void testUpgradeStatusReport() {
     short status = 6;
     int version = 15;
-    String EXPECTED__NOTF_PATTERN = "Upgrade for version {0} has been completed.\nUpgrade is not finalized.";
+    String EXPECTED_NOTF_PATTERN = "Upgrade for version {0} has been completed.\nUpgrade is not finalized.";
     String EXPECTED_PATTERN = "Upgrade for version {0} is in progress. Status = {1}%";
 
     UpgradeStatusReport upgradeStatusReport = new UpgradeStatusReport(version,
@@ -580,10 +577,10 @@ public class TestJspHelper {
     upgradeStatusReport = new UpgradeStatusReport(version, status, false);
     assertFalse(upgradeStatusReport.isFinalized());
     assertTrue(upgradeStatusReport.toString().equals(
-        MessageFormat.format(EXPECTED__NOTF_PATTERN, version)));
+        MessageFormat.format(EXPECTED_NOTF_PATTERN, version)));
     assertTrue(upgradeStatusReport.getStatusText(false).equals(
-        MessageFormat.format(EXPECTED__NOTF_PATTERN, version)));
+        MessageFormat.format(EXPECTED_NOTF_PATTERN, version)));
     assertTrue(upgradeStatusReport.getStatusText(true).equals(
-        MessageFormat.format(EXPECTED__NOTF_PATTERN, version)));
+        MessageFormat.format(EXPECTED_NOTF_PATTERN, version)));
   }  
 }
