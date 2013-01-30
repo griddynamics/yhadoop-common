@@ -4,10 +4,14 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.CustomOutputCommitter;
 import org.apache.hadoop.conf.Configuration;
@@ -47,7 +51,9 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl.DummyReporter;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
+import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
+import org.apache.hadoop.tools.rumen.ZombieJobProducer;
 import org.apache.hadoop.util.Progress;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
@@ -526,19 +532,20 @@ public class TestGridMixClasses {
     RawComparator comparator = new FakeRawComparator();
 
     ReduceContext<GridmixKey, GridmixRecord, NullWritable, GridmixRecord> reducecontext = new ReduceContextImpl<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>(
-        conf, taskid, input, counter, inputValueCounter, (RecordWriter)output, committer,
-        reporter, comparator, GridmixKey.class, GridmixRecord.class);
+        conf, taskid, input, counter, inputValueCounter, (RecordWriter) output,
+        committer, reporter, comparator, GridmixKey.class, GridmixRecord.class);
     reducecontext.nextKeyValue();
     org.apache.hadoop.mapreduce.Reducer<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>.Context context = new WrappedReducer<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>()
         .getReducerContext(reducecontext);
 
-  // test.setup(context);
+    // test.setup(context);
     test.run(context);
     assertEquals(9, counter.getValue());
     assertEquals(10, inputValueCounter.getValue());
-    assertEquals(1,output.getData().size());
-    GridmixRecord record=(GridmixRecord)output.getData().values().iterator().next();
-    assertEquals(1593,record.getSize());
+    assertEquals(1, output.getData().size());
+    GridmixRecord record = (GridmixRecord) output.getData().values().iterator()
+        .next();
+    assertEquals(1593, record.getSize());
     System.out.println("OK");
   }
 
@@ -549,12 +556,12 @@ public class TestGridMixClasses {
     @Override
     public DataInputBuffer getKey() throws IOException {
       ByteArrayOutputStream dt = new ByteArrayOutputStream();
-      GridmixKey key = new GridmixKey(GridmixKey.REDUCE_SPEC,10* counter,1L);
-      Spec spec= new Spec();
-      spec.rec_in=counter;
-      spec.rec_out=counter;
-      spec.bytes_out=counter*100;
-      
+      GridmixKey key = new GridmixKey(GridmixKey.REDUCE_SPEC, 10 * counter, 1L);
+      Spec spec = new Spec();
+      spec.rec_in = counter;
+      spec.rec_out = counter;
+      spec.bytes_out = counter * 100;
+
       key.setSpec(spec);
       key.write(new DataOutputStream(dt));
       DataInputBuffer result = new DataInputBuffer();
@@ -601,17 +608,76 @@ public class TestGridMixClasses {
 
     @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
-      if( (l1-s1) != (l2-s2) ){
-        return (l1-s1)- (l2-s2);
+      if ((l1 - s1) != (l2 - s2)) {
+        return (l1 - s1) - (l2 - s2);
       }
-      int len =l1-s1;
-      for (int i=0;i<len;i++){
-        if(b1[s1+i] != b2[s2+i] ){
-          return b1[s1+i] - b2[s2+i];
+      int len = l1 - s1;
+      for (int i = 0; i < len; i++) {
+        if (b1[s1 + i] != b2[s2 + i]) {
+          return b1[s1 + i] - b2[s2 + i];
         }
       }
       return 0;
     }
 
+  }
+
+  @Test
+  public void testSerialReaderThread() throws Exception {
+    /*
+     * JobSubmitter submitter, JobStoryProducer jobProducer, Path scratch,
+     * Configuration conf, CountDownLatch startFlag, UserResolver resolver
+     */
+    Configuration conf = new Configuration();
+    File fin = new File("src" + File.separator + "test" + File.separator
+        + "resources" + File.separator + "data" + File.separator
+        + "wordcount.json");
+
+    JobStoryProducer jobProducer = new ZombieJobProducer(new Path(
+        fin.getAbsolutePath()), null, conf);
+    CountDownLatch startFlag = new CountDownLatch(1);
+    UserResolver resolver = new SubmitterUserResolver();
+    FakeJobSubmitter submitter = new FakeJobSubmitter();
+    File ws = new File("target" + File.separator + this.getClass().getName());
+    if (!ws.exists()) {
+      ws.mkdirs();
+    }
+
+    SerialJobFactory jobfactory = new SerialJobFactory(submitter, jobProducer,
+        new Path(ws.getAbsolutePath()), conf, startFlag, resolver);
+
+    Path ioPath = new Path(ws.getAbsolutePath());
+    jobfactory.setDistCacheEmulator(new DistributedCacheEmulator(conf, ioPath));
+    Thread test = jobfactory.createReaderThread();
+    test.start();
+    Thread.sleep(1000);
+    // SerialReaderThread waits startFlag
+    assertEquals(0, submitter.getJobs().size());
+    startFlag.countDown();
+    while (test.isAlive()) {
+      Thread.sleep(1000);
+      jobfactory.update(null);
+    }
+    // submitter was called only once
+    assertEquals(1, submitter.getJobs().size());
+  }
+
+  private class FakeJobSubmitter extends JobSubmitter {
+    // counter for submitted jobs
+    private List<GridmixJob> jobs = new ArrayList<GridmixJob>();
+
+    public FakeJobSubmitter() {
+      super(null, 1, 1, null, null);
+
+    }
+
+    @Override
+    public void add(GridmixJob job) throws InterruptedException {
+      jobs.add(job);
+    }
+
+    public List<GridmixJob> getJobs() {
+      return jobs;
+    }
   }
 }

@@ -508,7 +508,6 @@ class DistributedCacheEmulator {
           // didn't have public, private Distributed Caches separately.
           boolean visibility =
             (visibilities == null) ? true : Boolean.valueOf(visibilities[i]);
-          System.out.println("user:"+user+" visibility:"+visibility);
           if (isLocalDistCacheFile(files[i], user, visibility)) {
             // local FS based distributed cache file.
             // Create this file on the pseudo local FS.

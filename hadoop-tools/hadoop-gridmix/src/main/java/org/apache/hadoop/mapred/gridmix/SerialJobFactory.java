@@ -175,4 +175,7 @@ public class SerialJobFactory extends JobFactory<JobStats> {
     LOG.info(" Starting Serial submission ");
     this.rThread.start();
   }
+  void setDistCacheEmulator(DistributedCacheEmulator e) {
+    jobCreator.setDistCacheEmulator(e);
+  }
 }
