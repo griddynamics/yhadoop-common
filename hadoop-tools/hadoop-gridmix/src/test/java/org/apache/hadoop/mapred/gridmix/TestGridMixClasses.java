@@ -707,10 +707,12 @@ public class TestGridMixClasses {
     Context context = new WrappedMapper().getMapContext(mapcontext);
    
     long start = System.currentTimeMillis();
+    System.out.println("start:"+start);
     LongWritable key = new LongWritable(start+2000);
     LongWritable value = new LongWritable(start+2000);
     
     test.map(key, value, context);
+    System.out.println("finish:"+System.currentTimeMillis());
     assertTrue(System.currentTimeMillis()>(start+2000));
     
     test.cleanup(context);
