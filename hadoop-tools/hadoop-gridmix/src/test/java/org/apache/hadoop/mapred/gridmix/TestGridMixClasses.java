@@ -98,9 +98,10 @@ public class TestGridMixClasses {
         copy.getReduceResourceUsageMetrics(0).getCumulativeCpuUsage());
 
   }
-/*
- *  simple test GridmixSplit (copy, getters, write, read..)
- */
+
+  /*
+   * simple test GridmixSplit (copy, getters, write, read..)
+   */
   @Test
   public void testGridmixSplit() throws Exception {
     Path[] files = { new Path("one"), new Path("two") };
@@ -139,9 +140,10 @@ public class TestGridMixClasses {
     assertEquals(test.getReduceRecords(0), copy.getReduceRecords(0));
 
   }
-/*
- * test LoadMapper loadMapper should write to writer record for each reduce  
- */
+
+  /*
+   * test LoadMapper loadMapper should write to writer record for each reduce
+   */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   @Test
   public void testLoadMapper() throws Exception {
@@ -153,32 +155,31 @@ public class TestGridMixClasses {
     conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
 
     TaskAttemptID taskid = new TaskAttemptID();
-    RecordReader reader = new FakeRecordReader();
+    RecordReader<NullWritable, GridmixRecord> reader = new FakeRecordReader();
 
-    LoadRecordWriter writer = new LoadRecordWriter();
+    LoadRecordGkGrWriter writer = new LoadRecordGkGrWriter();
 
     OutputCommitter committer = new CustomOutputCommitter();
     StatusReporter reporter = new TaskAttemptContextImpl.DummyReporter();
     LoadSplit split = getLoadSplit();
 
-    MapContext mapcontext = new MapContextImpl(conf, taskid, reader, writer,
-        committer, reporter, split);
-    // context 
-    Context ctxt = new WrappedMapper().getMapContext(mapcontext);
+    MapContext<NullWritable, GridmixRecord, GridmixKey, GridmixRecord> mapcontext = new MapContextImpl<NullWritable, GridmixRecord, GridmixKey, GridmixRecord>(
+        conf, taskid, reader, writer, committer, reporter, split);
+    // context
+    Context ctxt = new WrappedMapper<NullWritable, GridmixRecord, GridmixKey, GridmixRecord>()
+        .getMapContext(mapcontext);
 
     reader.initialize(split, ctxt);
     ctxt.getConfiguration().setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
     CompressionEmulationUtil.setCompressionEmulationEnabled(
         ctxt.getConfiguration(), true);
 
-    // when(ctxt.getCounter(TaskCounter.SPILLED_RECORDS)).thenReturn(counter);
-
     LoadJob.LoadMapper mapper = new LoadJob.LoadMapper();
-// setup, map, clean
+    // setup, map, clean
     mapper.run(ctxt);
-    
-    Map<NullWritable, GridmixRecord> data = writer.getData();
-    // check result 
+
+    Map<GridmixKey, GridmixRecord> data = writer.getData();
+    // check result
     assertEquals(2, data.size());
 
   }
@@ -207,7 +208,49 @@ public class TestGridMixClasses {
     return result;
   }
 
-  protected class FakeRecordReader extends
+  private class FakeRecordLLReader extends
+      RecordReader<LongWritable, LongWritable> {
+
+    int counter = 10;
+
+    @Override
+    public void initialize(InputSplit split, TaskAttemptContext context)
+        throws IOException, InterruptedException {
+
+    }
+
+    @Override
+    public boolean nextKeyValue() throws IOException, InterruptedException {
+      counter--;
+      return counter > 0;
+    }
+
+    @Override
+    public LongWritable getCurrentKey() throws IOException,
+        InterruptedException {
+
+      return new LongWritable(counter);
+    }
+
+    @Override
+    public LongWritable getCurrentValue() throws IOException,
+        InterruptedException {
+      return new LongWritable(counter * 10);
+    }
+
+    @Override
+    public float getProgress() throws IOException, InterruptedException {
+      return counter / 10.0f;
+    }
+
+    @Override
+    public void close() throws IOException {
+      // restore data
+      counter = 10;
+    }
+  }
+
+  private class FakeRecordReader extends
       RecordReader<NullWritable, GridmixRecord> {
 
     int counter = 10;
@@ -249,6 +292,48 @@ public class TestGridMixClasses {
     }
   }
 
+  private class LoadRecordGkGrWriter extends
+      RecordWriter<GridmixKey, GridmixRecord> {
+    private Map<GridmixKey, GridmixRecord> data = new HashMap<GridmixKey, GridmixRecord>();
+
+    @Override
+    public void write(GridmixKey key, GridmixRecord value) throws IOException,
+        InterruptedException {
+      data.put(key, value);
+    }
+
+    @Override
+    public void close(TaskAttemptContext context) throws IOException,
+        InterruptedException {
+    }
+
+    public Map<GridmixKey, GridmixRecord> getData() {
+      return data;
+    }
+
+  };
+
+  private class LoadRecordGkNullWriter extends
+      RecordWriter<GridmixKey, NullWritable> {
+    private Map<GridmixKey, NullWritable> data = new HashMap<GridmixKey, NullWritable>();
+
+    @Override
+    public void write(GridmixKey key, NullWritable value) throws IOException,
+        InterruptedException {
+      data.put(key, value);
+    }
+
+    @Override
+    public void close(TaskAttemptContext context) throws IOException,
+        InterruptedException {
+    }
+
+    public Map<GridmixKey, NullWritable> getData() {
+      return data;
+    }
+
+  };
+
   private class LoadRecordWriter extends
       RecordWriter<NullWritable, GridmixRecord> {
     private Map<NullWritable, GridmixRecord> data = new HashMap<NullWritable, GridmixRecord>();
@@ -269,9 +354,10 @@ public class TestGridMixClasses {
     }
 
   };
-/*
- * test LoadSortComparator 
- */
+
+  /*
+   * test LoadSortComparator
+   */
   @Test
   public void testLoadJobLoadSortComparator() throws Exception {
     LoadJob.LoadSortComparator test = new LoadJob.LoadSortComparator();
@@ -291,19 +377,20 @@ public class TestGridMixClasses {
     // the same data should be equals
     assertEquals(0, test.compare(b1, 0, 1, b2, 0, 1));
     b2[2] = 5;
-    // compare like GridMixKey first byte: shift count -1=4-5 
+    // compare like GridMixKey first byte: shift count -1=4-5
     assertEquals(-1, test.compare(b1, 0, 1, b2, 0, 1));
     b2[2] = 2;
-    // compare like GridMixKey first byte: shift count 2=4-2 
+    // compare like GridMixKey first byte: shift count 2=4-2
     assertEquals(2, test.compare(b1, 0, 1, b2, 0, 1));
     // compare arrays by first byte witch offset (2-1) because 4==4
     b2[2] = 4;
     assertEquals(1, test.compare(b1, 0, 1, b2, 1, 1));
 
   }
-/*
- * test SpecGroupingComparator
- */
+
+  /*
+   * test SpecGroupingComparator
+   */
   @Test
   public void testGridmixJobSpecGroupingComparator() throws Exception {
     GridmixJob.SpecGroupingComparator test = new GridmixJob.SpecGroupingComparator();
@@ -329,10 +416,10 @@ public class TestGridMixClasses {
     // by Reduce spec
     b2[2] = 1; // 1: DATA SPEC
     assertEquals(-1, test.compare(b1, 0, 1, b2, 0, 1));
-// compare GridmixKey the same objects should be equals
+    // compare GridmixKey the same objects should be equals
     assertEquals(0, test.compare(new GridmixKey(GridmixKey.DATA, 100, 2),
         new GridmixKey(GridmixKey.DATA, 100, 2)));
-    // REDUSE SPEC 
+    // REDUSE SPEC
     assertEquals(-1, test.compare(
         new GridmixKey(GridmixKey.REDUCE_SPEC, 100, 2), new GridmixKey(
             GridmixKey.DATA, 100, 2)));
@@ -343,9 +430,10 @@ public class TestGridMixClasses {
         new GridmixKey(GridmixKey.DATA, 100, 2)));
 
   }
-/*
- * test CompareGridmixJob only equals and compare  
- */
+
+  /*
+   * test CompareGridmixJob only equals and compare
+   */
   @Test
   public void testCompareGridmixJob() throws Exception {
     Configuration conf = new Configuration();
@@ -363,15 +451,14 @@ public class TestGridMixClasses {
     assertEquals(0, j1.compareTo(j2));
     // Only one parameter matters
     assertFalse(j1.equals(j3));
-    // compare id and  submissionMillis
+    // compare id and submissionMillis
     assertEquals(-1, j1.compareTo(j3));
     assertEquals(-1, j1.compareTo(j4));
 
-    
   }
 
   /*
-   * test ReadRecordFactory.  should read all data from inputstream
+   * test ReadRecordFactory. should read all data from inputstream
    */
   @Test
   public void testReadRecordFactory() throws Exception {
@@ -480,9 +567,10 @@ public class TestGridMixClasses {
     }
 
   }
-/*
- * test LoadRecordReader. It class reads data from some files.
- */
+
+  /*
+   * test LoadRecordReader. It class reads data from some files.
+   */
   @Test
   public void testLoadJobLoadRecordReader() throws Exception {
     LoadJob.LoadRecordReader test = new LoadJob.LoadRecordReader();
@@ -528,10 +616,10 @@ public class TestGridMixClasses {
         // read first file
         assertEquals(0.5, test.getProgress(), 0.001);
       } else if (counter == 1) {
-        // read second file 
+        // read second file
         assertEquals(1.0, test.getProgress(), 0.001);
       }
-      // 
+      //
       assertEquals(1000, gr.getSize());
       counter++;
     }
@@ -541,9 +629,10 @@ public class TestGridMixClasses {
 
     test.close();
   }
-/*
- * test LoadReducer
- */
+
+  /*
+   * test LoadReducer
+   */
 
   @Test
   public void testLoadJobLoadReducer() throws Exception {
@@ -585,7 +674,7 @@ public class TestGridMixClasses {
     assertEquals(1, output.getData().size());
     GridmixRecord record = (GridmixRecord) output.getData().values().iterator()
         .next();
-  
+
     assertEquals(1593, record.getSize());
   }
 
@@ -661,17 +750,18 @@ public class TestGridMixClasses {
     }
 
   }
-/*
- * test SerialJobFactory 
- */
+
+  /*
+   * test SerialJobFactory
+   */
   @Test
   public void testSerialReaderThread() throws Exception {
-    
+
     Configuration conf = new Configuration();
     File fin = new File("src" + File.separator + "test" + File.separator
         + "resources" + File.separator + "data" + File.separator
         + "wordcount2.json");
-// read couple jobs  from wordcount2.json
+    // read couple jobs from wordcount2.json
     JobStoryProducer jobProducer = new ZombieJobProducer(new Path(
         fin.getAbsolutePath()), null, conf);
     CountDownLatch startFlag = new CountDownLatch(1);
@@ -692,7 +782,7 @@ public class TestGridMixClasses {
     Thread.sleep(1000);
     // SerialReaderThread waits startFlag
     assertEquals(0, submitter.getJobs().size());
-    // start! 
+    // start!
     startFlag.countDown();
     while (test.isAlive()) {
       Thread.sleep(1000);
@@ -720,14 +810,15 @@ public class TestGridMixClasses {
       return jobs;
     }
   }
-/*
- * test SleepMapper
- */
-  @SuppressWarnings({ "rawtypes", "unchecked" })
+
+  /*
+   * test SleepMapper
+   */
+  // @SuppressWarnings({ "rawtypes", "unchecked" })
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test
   public void testSleepMapper() throws Exception {
     SleepJob.SleepMapper test = new SleepJob.SleepMapper();
-    
 
     Configuration conf = new Configuration();
     conf.setInt(JobContext.NUM_REDUCES, 2);
@@ -735,26 +826,27 @@ public class TestGridMixClasses {
     CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
     conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
     TaskAttemptID taskid = new TaskAttemptID();
-    RecordReader reader = new FakeRecordReader();
-    LoadRecordWriter writer = new LoadRecordWriter();
+    FakeRecordLLReader reader = new FakeRecordLLReader();
+    LoadRecordGkNullWriter writer = new LoadRecordGkNullWriter();
     OutputCommitter committer = new CustomOutputCommitter();
     StatusReporter reporter = new TaskAttemptContextImpl.DummyReporter();
     SleepSplit split = getSleepSplit();
-    MapContext mapcontext = new MapContextImpl(conf, taskid, reader, writer,
-        committer, reporter, split);
-    Context context = new WrappedMapper().getMapContext(mapcontext);
+    MapContext<LongWritable, LongWritable, GridmixKey, NullWritable> mapcontext = new MapContextImpl<LongWritable, LongWritable, GridmixKey, NullWritable>(
+        conf, taskid, reader, writer, committer, reporter, split);
+    Context context = new WrappedMapper<LongWritable, LongWritable, GridmixKey, NullWritable>()
+        .getMapContext(mapcontext);
 
     long start = System.currentTimeMillis();
     LOG.debug("start:" + start);
     LongWritable key = new LongWritable(start + 2000);
     LongWritable value = new LongWritable(start + 2000);
-// should slip 2 sec
+    // should slip 2 sec
     test.map(key, value, context);
     LOG.debug("finish:" + System.currentTimeMillis());
     assertTrue(System.currentTimeMillis() > (start + 2000));
 
     test.cleanup(context);
-    assertEquals(1, writer.data.size());
+    assertEquals(1, writer.getData().size());
   }
 
   private SleepSplit getSleepSplit() throws Exception {
@@ -765,9 +857,10 @@ public class TestGridMixClasses {
     SleepSplit result = new SleepSplit(0, 2000L, reduceDurations, 2, locations);
     return result;
   }
-/*
- * test SleepReducer
- */
+
+  /*
+   * test SleepReducer
+   */
   @Test
   public void testSleepReducer() throws Exception {
     Configuration conf = new Configuration();
@@ -801,7 +894,7 @@ public class TestGridMixClasses {
     test.setup(context);
     // status has been changed
     assertEquals("Sleeping... 900 ms left", context.getStatus());
- // should sleep 0.9 sec
+    // should sleep 0.9 sec
 
     assertTrue(System.currentTimeMillis() > (start + 900));
     test.cleanup(context);
