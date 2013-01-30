@@ -519,22 +519,32 @@ public class TestJspHelper {
     JspHelper.createTitle(out, req, "testfile.txt");
     verify(out, times(1)).print(anyString());
     
+    JspHelper.createTitle(out, req, null);
+    verify(out, times(1 + 1)).print(anyString());
+    
     JspHelper.addTableHeader(out);
-    verify(out, times(1 + 2)).print(anyString());                  
+    verify(out, times(1 + 1 + 2)).print(anyString());                  
      
     JspHelper.addTableRow(out, new String[] {" row11", "row12 "});
-    verify(out, times(1 + 2 + 4)).print(anyString());      
+    verify(out, times(1 + 1 + 2 + 4)).print(anyString());      
     
     JspHelper.addTableRow(out, new String[] {" row11", "row12 "}, 3);
-    verify(out, times(1 + 2 + 4 + 4)).print(Mockito.anyString());
+    verify(out, times(1 + 1 + 2 + 4 + 4)).print(Mockito.anyString());
       
     JspHelper.addTableRow(out, new String[] {" row21", "row22"});
-    verify(out, times(1 + 2 + 4 + 4 + 4)).print(anyString());      
+    verify(out, times(1 + 1 + 2 + 4 + 4 + 4)).print(anyString());      
       
     JspHelper.addTableFooter(out);
-    verify(out, times(1 + 2 + 4 + 4 + 4 + 1)).print(anyString());
+    verify(out, times(1 + 1 + 2 + 4 + 4 + 4 + 1)).print(anyString());
     
-    assertFalse(isNullOrEmpty(buffer.toString()));               
+    assertFalse(isNullOrEmpty(buffer.toString()));
+    
+    assertTrue(JspHelper.validateLong("1223452372") == 1223452372l);
+    assertTrue(JspHelper.getUrlParam("name", "123", "/").equals("/name=123"));          
+    
+    Configuration cfg = new Configuration();
+    cfg.setStrings(JspHelper.WEB_UGI_PROPERTY_NAME, "testUser");
+    assertNotNull(JspHelper.getDefaultWebUser(cfg));        
   }
   
   @Test
