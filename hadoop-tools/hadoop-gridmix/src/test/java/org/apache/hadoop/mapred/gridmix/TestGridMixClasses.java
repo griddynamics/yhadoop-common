@@ -843,7 +843,7 @@ public class TestGridMixClasses {
     // should slip 2 sec
     test.map(key, value, context);
     LOG.info("finish:" + System.currentTimeMillis());
-    assertTrue(System.currentTimeMillis() > (start + 2000));
+    assertTrue(System.currentTimeMillis() >= (start + 2000));
 
     test.cleanup(context);
     assertEquals(1, writer.getData().size());
