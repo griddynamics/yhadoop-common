@@ -78,7 +78,7 @@ public class TestLoadJob {
 
     @Override
     protected void onSuccess(Job job) {
-      System.out.println(" Job Sucess " + job);
+      LOG.info(" Job Sucess " + job);
       retiredJobs.add(job);
     }
 
@@ -121,17 +121,17 @@ public class TestLoadJob {
   @Test
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
-    System.out.println("Serial started at " + System.currentTimeMillis());
+    LOG.info("Serial started at " + System.currentTimeMillis());
     doSubmission();
-    System.out.println("Serial ended at " + System.currentTimeMillis());
+    LOG.info("Serial ended at " + System.currentTimeMillis());
   }
 
   @Test
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
-    System.out.println(" Replay started at " + System.currentTimeMillis());
+    LOG.info(" Replay started at " + System.currentTimeMillis());
     doSubmission();
-    System.out.println(" Replay ended at " + System.currentTimeMillis());
+    LOG.info(" Replay ended at " + System.currentTimeMillis());
   }
 
   private void doSubmission(String... optional) throws Exception {
@@ -187,7 +187,7 @@ public class TestLoadJob {
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 0777));
       String[] args = argv.toArray(new String[argv.size()]);
-      System.out.println("Command line arguments:");
+      LOG.info("Command line arguments:");
       for (int i = 0; i < args.length; ++i) {
         System.out.printf("    [%d] %s\n", i, args[i]);
       }

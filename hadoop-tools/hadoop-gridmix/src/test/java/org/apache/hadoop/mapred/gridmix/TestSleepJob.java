@@ -79,7 +79,6 @@ public class TestSleepJob {
 
     @Override
     protected void onSuccess(Job job) {
-      System.out.println(" Job Sucess " + job);
       retiredJobs.add(job);
     }
 
@@ -154,26 +153,26 @@ public class TestSleepJob {
   @Test
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
-    System.out.println("Serial started at " + System.currentTimeMillis());
+    LOG.info("Serial started at " + System.currentTimeMillis());
     doSubmission();
-    System.out.println("Serial ended at " + System.currentTimeMillis());
+    LOG.info("Serial ended at " + System.currentTimeMillis());
   }
   @Test
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
-    System.out.println(" Replay started at " + System.currentTimeMillis());
+    LOG.info(" Replay started at " + System.currentTimeMillis());
     doSubmission();
-    System.out.println(" Replay ended at " + System.currentTimeMillis());
+    LOG.info(" Replay ended at " + System.currentTimeMillis());
   }
 
  
   @Test
   public void testLimitTaskSleepTimeSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
-    System.out.println(" Limit sleep time only at " + System.currentTimeMillis());
+    LOG.info(" Limit sleep time only at " + System.currentTimeMillis());
     doSubmission("-D" + SleepJob.GRIDMIX_SLEEP_MAX_MAP_TIME + "=100", "-D"
         + SleepJob.GRIDMIX_SLEEP_MAX_REDUCE_TIME + "=200");
-    System.out.println(" Limit sleep time ended at " + System.currentTimeMillis());
+    LOG.info(" Limit sleep time ended at " + System.currentTimeMillis());
   }
 
  
@@ -238,12 +237,11 @@ public class TestSleepJob {
       conf = new Configuration();
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
       conf = GridmixTestUtils.mrvl.getConfig();
-//    GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
       // allow synthetic users to create home directories
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 0777));
       String[] args = argv.toArray(new String[argv.size()]);
-      System.out.println("Command line arguments:");
+      LOG.info("Command line arguments:");
       for (int i=0; i<args.length; ++i) {
         System.out.printf("    [%d] %s\n", i, args[i]);
       }
