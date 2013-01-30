@@ -52,6 +52,7 @@ public class TestViewFsFileStatusHdfs {
   static final String testfilename = "/tmp/testFileStatusSerialziation";
   static final String someFile = "/hdfstmp/someFileForTestGetFileChecksum";
 
+  private static final FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static Configuration CONF = new Configuration();
@@ -59,7 +60,7 @@ public class TestViewFsFileStatusHdfs {
   private static FileSystem vfs;
   
   @BeforeClass
-  public static void clusterSetupAtBegining() throws IOException,
+  public void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
@@ -79,7 +80,7 @@ public class TestViewFsFileStatusHdfs {
   @Test
   public void testFileStatusSerialziation()
       throws IOException, URISyntaxException {
-   long len = FileSystemTestHelper.createFile(fHdfs, testfilename);
+   long len = fileSystemTestHelper.createFile(fHdfs, testfilename);
     FileStatus stat = vfs.getFileStatus(new Path(testfilename));
     assertEquals(len, stat.getLen());
     // check serialization/deserialization
@@ -95,8 +96,8 @@ public class TestViewFsFileStatusHdfs {
   @Test
   public void testGetFileChecksum() throws IOException, URISyntaxException {
     // Create two different files in HDFS
-    FileSystemTestHelper.createFile(fHdfs, someFile);
-    FileSystemTestHelper.createFile(fHdfs, FileSystemTestHelper
+    fileSystemTestHelper.createFile(fHdfs, someFile);
+    fileSystemTestHelper.createFile(fHdfs, fileSystemTestHelper
       .getTestRootPath(fHdfs, someFile + "other"), 1, 512);
     // Get checksum through ViewFS
     FileChecksum viewFSCheckSum = vfs.getFileChecksum(
@@ -116,7 +117,7 @@ public class TestViewFsFileStatusHdfs {
   }
 
   @AfterClass
-  public static void cleanup() throws IOException {
+  public void cleanup() throws IOException {
     fHdfs.delete(new Path(testfilename), true);
     fHdfs.delete(new Path(someFile), true);
     fHdfs.delete(new Path(someFile + "other"), true);
