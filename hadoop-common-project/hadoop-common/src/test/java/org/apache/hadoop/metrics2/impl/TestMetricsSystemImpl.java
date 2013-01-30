@@ -51,6 +51,8 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.*;
 import static org.apache.hadoop.metrics2.lib.Interns.*;
+
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
@@ -357,10 +359,44 @@ public class TestMetricsSystemImpl {
     s2.c1.incr();
     
     IvanSink sink1 = new IvanSink();
+    // NB: register the sink:
     ms.register("ivan", "Ivan sink!", sink1);
     ms.publishMetricsNow();
     
     assertEquals(0L, ms.droppedPubAll.value());
+    
+    System.out.println("sink put count = " + sink1.putCount);
+    
+    ms.stop();
+    ms.shutdown();
+    
+    System.out.println("sink put count = " + sink1.putCount);
+  }
+
+  @Test
+  public void testIvanExperimentalWithDefaultMetricsSystem() {
+    // NB: take the default metrics system:
+    //final MetricsSystem ms2 = DefaultMetricsSystem.initialize("Ivan");
+    //final MetricsSystem ms = DefaultMetricsSystem.initialize("");
+    final MetricsSystem ms = DefaultMetricsSystem.instance();
+    ms.init("");
+    //ms.init("bolvan");
+    //assertTrue(ms == ms2);
+    //assertTrue(ms == msDefault);
+    //ms.start();
+    
+    TestSource s1 = ms.register("s1", "s1 desc", new TestSource("s1"));
+    s1.c1.incr();
+    TestSource s2 = ms.register("s2", "s2 desc", new TestSource("s2"));
+    s2.c1.incr();
+    s2.c1.incr();
+    
+    IvanSink sink1 = new IvanSink();
+    // NB: register the sink:
+    ms.register("ivan", "Ivan sink!", sink1);
+    ms.publishMetricsNow();
+    
+    //assertEquals(0L, ms.droppedPubAll.value());
     
     System.out.println("sink put count = " + sink1.putCount);
     
@@ -377,6 +413,10 @@ public class TestMetricsSystemImpl {
     }
     @Override
     public void putMetrics(MetricsRecord record) {
+      String context = record.context();
+      String recordName = record.name();
+      System.out.println("========== record context: [" + context + "]");
+      System.out.println("              record name: [" + recordName + "]");
       for (MetricsTag tag: record.tags()) {
         System.out.println("tag: " + tag);
       }
