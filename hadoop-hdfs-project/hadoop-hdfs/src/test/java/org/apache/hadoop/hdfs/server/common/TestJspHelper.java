@@ -62,6 +62,8 @@ import org.mockito.stubbing.Answer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import com.google.common.collect.ImmutableSet;
+
 public class TestJspHelper {
 
   private Configuration conf = new HdfsConfiguration();
@@ -455,7 +457,7 @@ public class TestJspHelper {
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     live.add(dnDesc1);
     live.add(dnDesc2);
-      
+    
     JspHelper.sortNodeList(live, "unexists", "ASC");
     Assert.assertEquals(dnDesc1, live.get(0));
     Assert.assertEquals(dnDesc2, live.get(1));    
@@ -496,6 +498,60 @@ public class TestJspHelper {
     JspHelper.sortNodeList(live, "remaining", "DSC");
     Assert.assertEquals(dnDesc2, live.get(0));
     Assert.assertEquals(dnDesc1, live.get(1));
+    
+    //lastcontact
+    JspHelper.sortNodeList(live, "lastcontact", "ASC");
+    Assert.assertEquals(dnDesc2, live.get(0));
+    Assert.assertEquals(dnDesc1, live.get(1));
+    
+    JspHelper.sortNodeList(live, "lastcontact", "DSC");
+    Assert.assertEquals(dnDesc2, live.get(0));
+    Assert.assertEquals(dnDesc1, live.get(1));
+    
+    //pcused
+    JspHelper.sortNodeList(live, "pcused", "ASC");
+    Assert.assertEquals(dnDesc2, live.get(0));
+    Assert.assertEquals(dnDesc1, live.get(1));
+    
+    JspHelper.sortNodeList(live, "pcused", "DSC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    
+    //pcremaining
+    JspHelper.sortNodeList(live, "pcremaining", "ASC");
+    Assert.assertEquals(dnDesc2, live.get(0));
+    Assert.assertEquals(dnDesc1, live.get(1));
+    
+    JspHelper.sortNodeList(live, "pcremaining", "DSC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    
+    //blocks
+    JspHelper.sortNodeList(live, "blocks", "ASC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    
+    JspHelper.sortNodeList(live, "blocks", "DSC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    
+    //adminstate
+    JspHelper.sortNodeList(live, "adminstate", "ASC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    
+    JspHelper.sortNodeList(live, "adminstate", "DSC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    
+    //decommissioned
+    JspHelper.sortNodeList(live, "decommissioned", "ASC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    
+    JspHelper.sortNodeList(live, "decommissioned", "DSC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
   }
   
   @Test

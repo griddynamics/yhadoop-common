@@ -136,10 +136,6 @@ public class TestUpgradeObject {
     SortedSet<Upgradeable> result = UpgradeObjectCollection
         .getDistributedUpgrades(1, NodeType.DATA_NODE);
     assertTrue(result.size() != 0);
-    
-    UpgradeObjectCollection.UOSignature mock =
-        Mockito.mock(UpgradeObjectCollection.UOSignature.class);
-    Mockito.when(mock.getClassName()).thenThrow(new ClassNotFoundException());                
   }
 
   private static UpgradeObject createObjectInstance(int version,
