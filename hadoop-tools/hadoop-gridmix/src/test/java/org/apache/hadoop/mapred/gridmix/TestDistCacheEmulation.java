@@ -151,6 +151,7 @@ public class TestDistCacheEmulation {
     
     // Set some dummy dist cache files in gridmix configuration so that they go
     // into the configuration of JobStory objects.
+    System.out.println("!user:"+user);
     String[] distCacheFiles = { "hdfs:///tmp/file1.txt",
         "/tmp/" + user + "/.staging/job_1/file2.txt",
         "hdfs:///user/user1/file3.txt", "/home/user2/file4.txt",
@@ -421,6 +422,6 @@ public class TestDistCacheEmulation {
     
     String[] caches=conf.getStrings(MRJobConfig.CACHE_FILES);
     String[] tmpfiles=conf.getStrings("tmpfiles");
-    assertEquals(6, (caches.length+tmpfiles.length));
+    assertEquals(6, ((caches==null?0:caches.length)+(tmpfiles==null?0:tmpfiles.length)));
   }
 }
