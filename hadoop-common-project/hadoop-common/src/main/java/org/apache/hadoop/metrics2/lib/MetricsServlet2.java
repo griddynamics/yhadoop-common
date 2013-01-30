@@ -38,8 +38,11 @@ import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.mortbay.util.ajax.JSON;
 import org.mortbay.util.ajax.JSON.Output;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A servlet to print out metrics data. By default, the servlet returns a 
@@ -61,14 +64,36 @@ public class MetricsServlet2 extends HttpServlet {
     final MetricsSystem ms = DefaultMetricsSystem.instance();
     ms.init("");
     metricsSystem = ms;
-    servletSink = new ServletSink();
-    metricsSystem.register("MetricsServlet", "Metrics Servlet", servletSink);
+    servletSink = createServletSink();
+    final String sinkName = servletSink.getSinkName(); 
+    metricsSystem.register(sinkName, sinkName, servletSink);
+  }
+
+  /*
+   * This method is visible for testing, but may be re-defined also for 
+   * another need.
+   */
+  @VisibleForTesting
+  protected ServletSink createServletSink() {
+    return new ServletSink();
   }
   
-  private static class ServletSink implements MetricsSink {
+  protected static class ServletSink implements MetricsSink {
+    private static int numInstances = 0;
     // metrics data:
     private final Map<String, Map<String, List<TagsMetricsPair>>> metricsMap = 
         new TreeMap<String, Map<String, List<TagsMetricsPair>>>();
+    
+    public ServletSink() {
+      numInstances++;
+    }
+    
+    protected String getSinkName() {
+      // NB: register sinks with unique names to avoid collisions,
+      // because several instances of this servlet *may* in principle
+      // be created:
+      return "MetricsServlet2-Sink-"+numInstances;
+    } 
     
     @Override
     public void init(SubsetConfiguration conf) {
@@ -100,11 +125,15 @@ public class MetricsServlet2 extends HttpServlet {
       
       final TreeMap<String,String> tagMap = new TreeMap<String,String>();
       for (final MetricsTag metricsTag: record.tags()) {
-        String tagValue = metricsTag.value();
-        if (tagValue == null) {
-          tagValue = "";
+        // NB: ignore pre-defined tags to provide backwards compatibility with the
+        // legacy servlet:
+        if (metricsTag.info().getClass() != MsInfo.class) {
+          String tagValue = metricsTag.value();
+          if (tagValue == null) {
+            tagValue = "";
+          }
+          tagMap.put(metricsTag.name(), tagValue);
         }
-        tagMap.put(metricsTag.name(), tagValue);
       }
       
       final TreeMap<String,Number> metricMap = new TreeMap<String,Number>();
@@ -115,7 +144,7 @@ public class MetricsServlet2 extends HttpServlet {
       metricsAndTagsList.add(new TagsMetricsPair(tagMap, metricMap));
     }
     
-    Map<String, Map<String, List<TagsMetricsPair>>> getMetricsMap() {
+    protected final Map<String, Map<String, List<TagsMetricsPair>>> getMetricsMap() {
       return metricsMap;
     } 
      
@@ -123,10 +152,11 @@ public class MetricsServlet2 extends HttpServlet {
     public void flush() {
       // noop
     }
+    
     /*
      * clears the data stored in the sink
      */
-    void clear() {
+    protected void clear() {
       metricsMap.clear();
     }
   }
@@ -164,27 +194,20 @@ public class MetricsServlet2 extends HttpServlet {
                                                    request, response)) {
       return;
     }
-
-    // clear the data stored in the sink:
-    servletSink.clear();
-    // drop the metrics to sinks:   
-    metricsSystem.publishMetricsNow();
-    // take the collected metrics data:
-    final Map<String, Map<String, List<TagsMetricsPair>>> metricsMap 
-      = servletSink.getMetricsMap();
+    
+    final Map<String, Map<String, List<TagsMetricsPair>>> metricsMap = 
+        makeMap();
 
     final String format = request.getParameter("format");
+    final PrintWriter out = response.getWriter();
     if ("json".equals(format)) {
       response.setContentType("application/json; charset=utf-8");
-      PrintWriter out = response.getWriter();
       try {
-        // Uses Jetty's built-in JSON support to convert the map into JSON.
-        out.print(new JSON().toJSON(metricsMap));
+        printJson(out, metricsMap);
       } finally {
         out.close();
       }
     } else {
-      PrintWriter out = response.getWriter();
       try {
         printMap(out, metricsMap);
       } finally {
@@ -194,10 +217,29 @@ public class MetricsServlet2 extends HttpServlet {
     
     servletSink.clear();
   }
+
+  @VisibleForTesting
+  Map<String, Map<String, List<TagsMetricsPair>>> makeMap() {
+    // clear the data stored in the sink:
+    servletSink.clear();
+    // drop the metrics to sinks:   
+    metricsSystem.publishMetricsNow();
+    // take the collected metrics data:
+    final Map<String, Map<String, List<TagsMetricsPair>>> metricsMap 
+      = servletSink.getMetricsMap();
+    return metricsMap;
+  }
+  
+  @VisibleForTesting
+  void printJson(PrintWriter out, Map<String, Map<String, List<TagsMetricsPair>>> metricsMap) {
+     // Uses Jetty's built-in JSON support to convert the map into JSON.
+     out.print(new JSON().toJSON(metricsMap));
+  }
   
   /**
    * Prints metrics data in a multi-line text form.
    */
+  @VisibleForTesting
   void printMap(PrintWriter out, Map<String, Map<String, List<TagsMetricsPair>>> map) {
     for (Map.Entry<String, Map<String, List<TagsMetricsPair>>> context : map.entrySet()) {
       out.println(context.getKey());
