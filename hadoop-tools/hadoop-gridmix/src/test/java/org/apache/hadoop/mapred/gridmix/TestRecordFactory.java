@@ -51,7 +51,6 @@ public class TestRecordFactory {
       ++records;
       key.write(out);
       val.write(out);
-      assertTrue(f.getProgress()>0 || f.getProgress()<1);
     }
     assertEquals(targetRecs, records);
     assertEquals(targetBytes, out.getLength());
