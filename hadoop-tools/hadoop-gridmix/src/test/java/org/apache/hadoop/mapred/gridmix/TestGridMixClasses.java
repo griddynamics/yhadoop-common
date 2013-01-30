@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -28,6 +29,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.gridmix.GridmixKey.Spec;
+import org.apache.hadoop.mapred.gridmix.SleepJob.SleepReducer;
+import org.apache.hadoop.mapred.gridmix.SleepJob.SleepSplit;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -599,10 +602,10 @@ public class TestGridMixClasses {
 
   }
 
-  private class FakeRawComparator implements RawComparator {
+  private class FakeRawComparator implements RawComparator<GridmixKey> {
 
     @Override
-    public int compare(Object o1, Object o2) {
+    public int compare(GridmixKey o1, GridmixKey o2) {
       return 0;
     }
 
@@ -631,7 +634,7 @@ public class TestGridMixClasses {
     Configuration conf = new Configuration();
     File fin = new File("src" + File.separator + "test" + File.separator
         + "resources" + File.separator + "data" + File.separator
-        + "wordcount.json");
+        + "wordcount2.json");
 
     JobStoryProducer jobProducer = new ZombieJobProducer(new Path(
         fin.getAbsolutePath()), null, conf);
@@ -658,8 +661,8 @@ public class TestGridMixClasses {
       Thread.sleep(1000);
       jobfactory.update(null);
     }
-    // submitter was called only once
-    assertEquals(1, submitter.getJobs().size());
+    // submitter was called  twice
+    assertEquals(2, submitter.getJobs().size());
   }
 
   private class FakeJobSubmitter extends JobSubmitter {
@@ -679,5 +682,154 @@ public class TestGridMixClasses {
     public List<GridmixJob> getJobs() {
       return jobs;
     }
+  }
+  
+  @Test
+  public  void testSleepMapper() throws Exception{
+    SleepJob.SleepMapper test = new SleepJob.SleepMapper(); 
+    /**
+     * LongWritable key, LongWritable value, Context context
+     */
+  
+    Configuration conf = new Configuration();
+    conf.setInt(JobContext.NUM_REDUCES, 2);
+
+    CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
+    conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
+    TaskAttemptID taskid = new TaskAttemptID();
+    RecordReader reader = new FakeRecordReader();
+    LoadRecordWriter writer = new LoadRecordWriter();
+    OutputCommitter committer = new CustomOutputCommitter();
+    StatusReporter reporter = new TaskAttemptContextImpl.DummyReporter();
+    SleepSplit split = getSleepSplit();
+    MapContext mapcontext = new MapContextImpl(conf, taskid, reader, writer,
+        committer, reporter, split);
+    Context context = new WrappedMapper().getMapContext(mapcontext);
+   
+    long start = System.currentTimeMillis();
+    LongWritable key = new LongWritable(start+2000);
+    LongWritable value = new LongWritable(start+2000);
+    
+    test.map(key, value, context);
+    assertTrue(System.currentTimeMillis()>(start+2000));
+    
+    test.cleanup(context);
+    assertEquals(1, writer.data.size());
+  }
+  
+  private SleepSplit getSleepSplit() throws Exception {
+
+    String[] locations = { "locOne", "loctwo" };
+
+    long[] reduceDurations = { 101L, 102L };
+    SleepSplit result = new SleepSplit(0, 2000L, reduceDurations, 2, locations);
+    return result;
+  }
+  
+  @Test
+  public void testSleepReducer() throws Exception{
+    Configuration conf = new Configuration();
+    conf.setInt(JobContext.NUM_REDUCES, 2);
+    CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
+    conf.setBoolean(FileOutputFormat.COMPRESS, true);
+
+    CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
+    conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
+    TaskAttemptID taskid = new TaskAttemptID();
+
+    RawKeyValueIterator input = new FakeRawKeyValueReducerIterator();
+
+    Counter counter = new GenericCounter();
+    Counter inputValueCounter = new GenericCounter();
+    RecordWriter<NullWritable, NullWritable> output = new LoadRecordReduceWriter();
+
+    OutputCommitter committer = new CustomOutputCommitter();
+
+    StatusReporter reporter = new DummyReporter();
+    RawComparator<GridmixKey> comparator = new FakeRawComparator();
+
+    ReduceContext<GridmixKey, NullWritable, NullWritable, NullWritable> reducecontext = new ReduceContextImpl<GridmixKey, NullWritable, NullWritable, NullWritable>(
+        conf, taskid, input, counter, inputValueCounter, output,
+        committer, reporter, comparator, GridmixKey.class, NullWritable.class);
+    org.apache.hadoop.mapreduce.Reducer<GridmixKey, NullWritable, NullWritable, NullWritable>.Context context = new WrappedReducer<GridmixKey, NullWritable, NullWritable, NullWritable>()
+        .getReducerContext(reducecontext);
+
+    SleepReducer test=new SleepReducer();
+    long start = System.currentTimeMillis();
+    test.setup(context);
+    assertEquals("Sleeping... 900 ms left", context.getStatus());
+    assertTrue( System.currentTimeMillis()>(start+900));
+    test.cleanup(context);
+    assertEquals("Slept for 900", context.getStatus());
+
+    System.out.println("OK!");
+  }
+  private class LoadRecordReduceWriter extends RecordWriter<NullWritable, NullWritable> {
+    private Map<NullWritable, NullWritable> data = new HashMap<NullWritable, NullWritable>();
+
+    @Override
+    public void write(NullWritable key, NullWritable value) throws IOException,
+        InterruptedException {
+      data.put(key, value);
+    }
+
+    @Override
+    public void close(TaskAttemptContext context) throws IOException,
+        InterruptedException {
+    }
+
+    public Map<NullWritable, NullWritable> getData() {
+      return data;
+    }
+  };
+  
+  protected class FakeRawKeyValueReducerIterator implements RawKeyValueIterator {
+
+    int counter = 10;
+
+    @Override
+    public DataInputBuffer getKey() throws IOException {
+      ByteArrayOutputStream dt = new ByteArrayOutputStream();
+      GridmixKey key = new GridmixKey(GridmixKey.REDUCE_SPEC, 10 * counter, 1L);
+      Spec spec = new Spec();
+      spec.rec_in = counter;
+      spec.rec_out = counter;
+      spec.bytes_out = counter * 100;
+
+      key.setSpec(spec);
+      key.write(new DataOutputStream(dt));
+      DataInputBuffer result = new DataInputBuffer();
+      byte[] b = dt.toByteArray();
+      result.reset(b, 0, b.length);
+      return result;
+    }
+
+    @Override
+    public DataInputBuffer getValue() throws IOException {
+      ByteArrayOutputStream dt = new ByteArrayOutputStream();
+      NullWritable key =  NullWritable.get();
+      key.write(new DataOutputStream(dt));
+      DataInputBuffer result = new DataInputBuffer();
+      byte[] b = dt.toByteArray();
+      result.reset(b, 0, b.length);
+      return result;
+    }
+
+    @Override
+    public boolean next() throws IOException {
+      counter--;
+      return counter >= 0;
+    }
+
+    @Override
+    public void close() throws IOException {
+
+    }
+
+    @Override
+    public Progress getProgress() {
+      return null;
+    }
+
   }
 }
