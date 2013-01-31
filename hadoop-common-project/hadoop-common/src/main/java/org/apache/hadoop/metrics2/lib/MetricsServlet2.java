@@ -57,13 +57,12 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class MetricsServlet2 extends HttpServlet {
 
-  private final MetricsSystem metricsSystem;
+  private static final MetricsSystem metricsSystem 
+    = DefaultMetricsSystem.initialize("");
+  
   private final ServletSink servletSink;
   
   public MetricsServlet2() {
-    final MetricsSystem ms = DefaultMetricsSystem.instance();
-    ms.init("");
-    metricsSystem = ms;
     servletSink = createServletSink();
     final String sinkName = servletSink.getSinkName(); 
     metricsSystem.register(sinkName, sinkName, servletSink);
@@ -80,19 +79,21 @@ public class MetricsServlet2 extends HttpServlet {
   
   protected static class ServletSink implements MetricsSink {
     private static int numInstances = 0;
+    private final String sinkName;
     // metrics data:
     private final Map<String, Map<String, List<TagsMetricsPair>>> metricsMap = 
         new TreeMap<String, Map<String, List<TagsMetricsPair>>>();
     
     public ServletSink() {
       numInstances++;
-    }
-    
-    protected String getSinkName() {
       // NB: register sinks with unique names to avoid collisions,
       // because several instances of this servlet *may* in principle
       // be created:
-      return "MetricsServlet2-Sink-"+numInstances;
+      sinkName = "MetricsServlet2-Sink-"+numInstances; 
+    }
+    
+    protected final String getSinkName() {
+      return sinkName;
     } 
     
     @Override
@@ -110,7 +111,7 @@ public class MetricsServlet2 extends HttpServlet {
     public void putMetrics(final MetricsRecord record) {
       final String recordContext = record.context();
       final String recordName = record.name();
-      
+
       Map<String, List<TagsMetricsPair>> records = metricsMap.get(recordContext);
       if (records == null) {
         records = new TreeMap<String, List<TagsMetricsPair>>();
@@ -125,7 +126,8 @@ public class MetricsServlet2 extends HttpServlet {
       
       final TreeMap<String,String> tagMap = new TreeMap<String,String>();
       for (final MetricsTag metricsTag: record.tags()) {
-        // NB: ignore pre-defined tags to provide backwards compatibility with the
+        // NB: ignore pre-defined tags (like "Context" or "Hostname")  
+        // to provide backwards compatibility with the
         // legacy servlet:
         if (metricsTag.info().getClass() != MsInfo.class) {
           String tagValue = metricsTag.value();
