@@ -216,7 +216,7 @@ public class DebugJobProducer implements JobStoryProducer {
      if (user == null) {
        user = System.getProperty("user.name");
      }
-     GridmixTestUtils.createHomeAndStagingDirectory(user, (JobConf)conf);
+     GridmixTestUtils.createHomeAndStagingDirectory(user, conf);
      return user;
    }
 

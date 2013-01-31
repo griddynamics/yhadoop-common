@@ -156,7 +156,8 @@ public class TestLoadJob {
           "-D" + Gridmix.GRIDMIX_USR_RSV + "="
               + EchoUserResolver.class.getName(),
           "-D" + JobCreator.GRIDMIX_JOB_TYPE + "=" + JobCreator.LOADJOB.name(),
-          "-D" + SleepJob.GRIDMIX_SLEEP_INTERVAL + "=" + "10" };
+       //   "-D" + SleepJob.GRIDMIX_SLEEP_INTERVAL + "=" + "10" 
+          };
       // mandatory arguments
 
       File fout = new File("src" + File.separator + "test" + File.separator
@@ -184,8 +185,8 @@ public class TestLoadJob {
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
       conf = GridmixTestUtils.mrvl.getConfig();
       // set timestamps
-      conf.setStrings("1", "2");
-      // GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
+     // conf.setStrings("1", "2");
+       //GridmixTestUtils.createHomeAndStagingDirectory(conf);
       // allow synthetic users to create home directories
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 0777));
