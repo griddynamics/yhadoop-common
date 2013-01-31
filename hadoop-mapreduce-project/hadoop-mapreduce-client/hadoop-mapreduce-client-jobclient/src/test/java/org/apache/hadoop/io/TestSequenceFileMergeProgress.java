@@ -48,6 +48,7 @@ public class TestSequenceFileMergeProgress extends TestCase {
   }
 
   public void testMergeProgressWithBlockCompression() throws IOException {
+
     runTest(SequenceFile.CompressionType.BLOCK);
   }
 
