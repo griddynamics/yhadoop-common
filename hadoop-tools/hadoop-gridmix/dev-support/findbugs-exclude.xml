@@ -28,7 +28,6 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.mapred.gridmix.emulators.resourceusage.TotalHeapUsageEmulatorPlugin"/>
     <Bug pattern="MS_SHOULD_BE_FINAL" />
   </Match>
 </FindBugsFilter>
