@@ -102,12 +102,14 @@ public class LocalResourceRequest
         if(0 == ret) {
           String pattern = getPattern();
           String otherPattern = other.getPattern();
-          if(pattern != otherPattern) {
-            if(pattern != null) {
-              ret = pattern.compareTo(otherPattern);
+          if (pattern == null && otherPattern == null) {
+            ret = 0;
+          } else if (pattern == null) {
+            ret = -1;
+          } else if (otherPattern == null) {
+            ret = 1;
             } else {
-              ret = -1 * otherPattern.compareTo(pattern);
-            }
+            ret = pattern.compareTo(otherPattern);
           }
         }
       }
