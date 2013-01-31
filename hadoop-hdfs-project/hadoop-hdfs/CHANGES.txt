@@ -5,10 +5,14 @@ Release 0.23.7 - UNRELEASED
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+               via hairong)
 
   IMPROVEMENTS
 
   OPTIMIZATIONS
+    HDFS-2477. Optimize computing the diff between a block report and the
+               namenode state. (Tomasz Nykiel via hairong)
 
   BUG FIXES
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
