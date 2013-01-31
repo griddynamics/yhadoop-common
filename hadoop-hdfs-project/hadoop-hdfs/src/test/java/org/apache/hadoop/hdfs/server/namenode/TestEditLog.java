@@ -625,7 +625,7 @@ public class TestEditLog {
         // Directory layout looks like:
         // test/data/dfs/nameN/current/{fsimage_N,edits_...}
         File nameDir = new File(cluster.getNameDirs(0).iterator().next().getPath());
-        File dfsDir = nameDir.getParentFile().getParentFile();
+        File dfsDir = nameDir.getParentFile();
         assertEquals(dfsDir.getName(), "dfs"); // make sure we got right dir
         
         LOG.info("Copying data directory aside to a hot backup");
