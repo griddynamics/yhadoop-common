@@ -124,6 +124,7 @@ public class TestFileUtil {
   @Test
   public void testListFiles() throws IOException {
     setupDirs();
+
     //Test existing files case 
     File[] files = FileUtil.listFiles(partitioned);
     Assert.assertEquals(2, files.length);
