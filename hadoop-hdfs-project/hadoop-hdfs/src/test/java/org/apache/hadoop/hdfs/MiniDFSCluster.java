@@ -1416,10 +1416,19 @@ public class MiniDFSCluster {
     return nameNodes[nnIndex].nameNode.getServiceRpcAddress().getPort();
   }
     
+  
+  
   /**
    * Shutdown all the nodes in the cluster.
    */
   public void shutdown() {
+      shutdown(false);
+  }
+    
+  /**
+   * Shutdown all the nodes in the cluster.
+   */
+  public void shutdown(boolean deleteDfsDir) {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
@@ -1438,6 +1447,11 @@ public class MiniDFSCluster {
         nameNode.join();
         nameNode = null;
       }
+    }
+    if (deleteDfsDir) {
+        base_dir.delete();
+    } else {
+        base_dir.deleteOnExit();
     }
   }
   
