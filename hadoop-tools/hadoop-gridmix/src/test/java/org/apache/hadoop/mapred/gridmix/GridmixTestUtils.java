@@ -59,33 +59,7 @@ public class GridmixTestUtils {
     }
   }
 
-  /**
-   * Methods to generate the home directory for dummy users.
-   *
-   * @param conf
-   */
-  public static void createHomeAndStagingDirectory(String user, JobConf conf) {
-    try {
-      FileSystem fs = dfsCluster.getFileSystem();
-      String path = "/user/" + user;
-      Path homeDirectory = new Path(path);
-      if(fs.exists(homeDirectory)) {
-        fs.delete(homeDirectory,true);
-      }
-      LOG.info("Creating Home directory : " + homeDirectory);
-      fs.mkdirs(homeDirectory);
-      changePermission(user,homeDirectory, fs);
-      Path stagingArea = 
-        new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
-                          "/tmp/hadoop/mapred/staging"));
-      LOG.info("Creating Staging root directory : " + stagingArea);
-      fs.mkdirs(stagingArea);
-      fs.setPermission(stagingArea, new FsPermission((short) 0777));
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
-    }
-  }
-
+  
   /**
    * Methods to generate the home directory for dummy users.
    *

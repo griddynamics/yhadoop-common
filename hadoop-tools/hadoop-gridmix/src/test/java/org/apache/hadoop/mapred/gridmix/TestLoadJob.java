@@ -117,7 +117,9 @@ public class TestLoadJob {
       monitor.verify(((DebugJobFactory.Debuggable) factory).getSubmitted());
     }
   }
-
+/*
+ * test serial Policy
+ */
   @Test
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
@@ -125,7 +127,9 @@ public class TestLoadJob {
     doSubmission();
     LOG.info("Serial ended at " + System.currentTimeMillis());
   }
-
+  /*
+   * test reply Policy
+   */
   @Test
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
@@ -160,8 +164,7 @@ public class TestLoadJob {
           + "wordcount.json");
 
       final String[] mandatory = { "-generate", String.valueOf(GENDATA) + "m",
-          in.toString(), "file:///" + fout.getAbsolutePath() // "-"ddsa
-      // ignored by DebugGridmix
+          in.toString(), "file:///" + fout.getAbsolutePath() 
       };
 
       ArrayList<String> argv = new ArrayList<String>(required.length
@@ -191,9 +194,12 @@ public class TestLoadJob {
       for (int i = 0; i < args.length; ++i) {
         System.out.printf("    [%d] %s\n", i, args[i]);
       }
+      // run Gridmix
       int res = ToolRunner.run(conf, client, args);
       assertEquals("Client exited with nonzero status", 0, res);
+      // check result
       client.checkMonitor();
+      
     } catch (Exception e) {
       e.printStackTrace();
     } finally {

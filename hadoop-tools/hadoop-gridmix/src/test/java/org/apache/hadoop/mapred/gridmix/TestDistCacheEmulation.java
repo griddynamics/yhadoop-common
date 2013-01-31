@@ -48,7 +48,6 @@ import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -90,12 +89,12 @@ public class TestDistCacheEmulation {
     // under distributed cache directory
     Path listFile = new Path(filesListFile);
     assertTrue("Path of Distributed Cache files list file is wrong.",
-        distCachePath.equals(listFile.getParent().makeQualified(fs)));
+        distCachePath.equals(listFile.getParent().makeQualified(fs.getUri(), fs.getWorkingDirectory())));
 
     // Delete the dist cache files list file
     assertTrue(
         "Failed to delete distributed Cache files list file " + listFile,
-        fs.delete(listFile));
+        fs.delete(listFile,true));
 
     List<Long> fileSizes = new ArrayList<Long>();
     for (long size : sortedFileSizes) {
@@ -115,7 +114,7 @@ public class TestDistCacheEmulation {
    * @throws IOException
    * @throws FileNotFoundException
    */
-  private void validateDistCacheFiles(List filesSizesExpected, Path distCacheDir)
+  private void validateDistCacheFiles(List<Long> filesSizesExpected, Path distCacheDir)
       throws FileNotFoundException, IOException {
     // RemoteIterator<LocatedFileStatus> iter =
     FileStatus[] statuses = GridmixTestUtils.dfs.listStatus(distCacheDir);
@@ -199,7 +198,7 @@ public class TestDistCacheEmulation {
 
     Configuration jobConf = GridmixTestUtils.mrvl.getConfig();
     Path ioPath = new Path("testSetupGenerateDistCacheData")
-        .makeQualified(GridmixTestUtils.dfs);
+        .makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
     FileSystem fs = FileSystem.get(jobConf);
     if (fs.exists(ioPath)) {
       fs.delete(ioPath, true);
@@ -334,7 +333,7 @@ public class TestDistCacheEmulation {
       // Validate dist cache file path.
 
       // parent dir of dist cache file
-      Path parent = new Path(file).getParent().makeQualified(fs);
+      Path parent = new Path(file).getParent().makeQualified(fs.getUri(),fs.getWorkingDirectory());
       // should exist in dist cache dir
       assertTrue("Public dist cache file path is wrong.",
           distCacheDir.equals(parent));
@@ -382,7 +381,7 @@ public class TestDistCacheEmulation {
     // Configuration conf = new Configuration();
     Configuration jobConf = GridmixTestUtils.mrvl.getConfig();
     Path ioPath = new Path("testDistCacheEmulationConfigurability")
-        .makeQualified(GridmixTestUtils.dfs);
+        .makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
     FileSystem fs = FileSystem.get(jobConf);
     FileSystem.mkdirs(fs, ioPath, new FsPermission((short) 0777));
 
@@ -421,6 +420,7 @@ public class TestDistCacheEmulation {
     
     String[] caches=conf.getStrings(MRJobConfig.CACHE_FILES);
     String[] tmpfiles=conf.getStrings("tmpfiles");
+    // this method should fill caches AND tmpfiles  from MRJobConfig.CACHE_FILES property 
     assertEquals(6, ((caches==null?0:caches.length)+(tmpfiles==null?0:tmpfiles.length)));
   }
 }

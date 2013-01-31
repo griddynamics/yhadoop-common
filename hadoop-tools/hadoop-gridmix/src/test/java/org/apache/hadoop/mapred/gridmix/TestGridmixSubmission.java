@@ -172,9 +172,6 @@ public class TestGridmixSubmission {
         final int nMaps = spec.getNumberMaps();
         final int nReds = spec.getNumberReduces();
 
-        // TODO Blocked by MAPREDUCE-118
-        // if (true) return;
-        // TODO
         System.out.println(jobName + ": " + nMaps + "/" + nReds);
         final TaskReport[] mReports = client.getMapTaskReports(JobID
             .downgrade(job.getJobID()));
@@ -234,12 +231,13 @@ public class TestGridmixSubmission {
           specInputBytes[i] = specInfo.getInputBytes();
           specOutputRecords[i] = specInfo.getOutputRecords();
           specOutputBytes[i] = specInfo.getOutputBytes();
-          System.out.printf(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
+         
+          LOG.info(String.format(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
               specInputBytes[i], specOutputBytes[i], specInputRecords[i],
-              specOutputRecords[i]);
-          System.out.printf(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
+              specOutputRecords[i]));
+          LOG.info(String.format(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
               runInputBytes[i], runOutputBytes[i], runInputRecords[i],
-              runOutputRecords[i]);
+              runOutputRecords[i]));
           break;
         case REDUCE:
           runInputBytes[i] = 0;
@@ -260,13 +258,12 @@ public class TestGridmixSubmission {
           specInputRecords[i] = specInfo.getInputRecords();
           specOutputRecords[i] = specInfo.getOutputRecords();
           specOutputBytes[i] = specInfo.getOutputBytes();
-          System.out.printf(type + " SPEC: (%9d) -> %9d :: %5d -> %5d\n",
+          LOG.info(String.format(type + " SPEC: (%9d) -> %9d :: %5d -> %5d\n",
               specInfo.getInputBytes(), specOutputBytes[i],
-              specInputRecords[i], specOutputRecords[i]);
-          System.out
-              .printf(type + " RUN:  (%9d) -> %9d :: %5d -> %5d\n", counters
+              specInputRecords[i], specOutputRecords[i]));
+          LOG.info(String.format(type + " RUN:  (%9d) -> %9d :: %5d -> %5d\n", counters
                   .findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES).getValue(),
-                  runOutputBytes[i], runInputRecords[i], runOutputRecords[i]);
+                  runOutputBytes[i], runInputRecords[i], runOutputRecords[i]));
           break;
         default:
           specInfo = null;
@@ -434,17 +431,17 @@ public class TestGridmixSubmission {
       JobStoryProducer jsp = dgm.createJobStoryProducer(inputFile.toString(),
           conf);
 
-      System.out.println("Verifying JobStory from compressed trace...");
+      LOG.info("Verifying JobStory from compressed trace...");
       verifyWordCountJobStory(jsp.getNextJob());
 
       expandGzippedTrace(lfs, inputFile, tempFile);
       jsp = dgm.createJobStoryProducer(tempFile.toString(), conf);
-      System.out.println("Verifying JobStory from uncompressed trace...");
+      LOG.info("Verifying JobStory from uncompressed trace...");
       verifyWordCountJobStory(jsp.getNextJob());
 
       tmpIs = lfs.open(tempFile);
       System.setIn(tmpIs);
-      System.out.println("Verifying JobStory from trace in standard input...");
+      LOG.info("Verifying JobStory from trace in standard input...");
       jsp = dgm.createJobStoryProducer("-", conf);
       verifyWordCountJobStory(jsp.getNextJob());
     } finally {
@@ -459,18 +456,18 @@ public class TestGridmixSubmission {
   @Test
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
-    System.out.println(" Replay started at " + System.currentTimeMillis());
+    LOG.info(" Replay started at " + System.currentTimeMillis());
     doSubmission(false);
-    System.out.println(" Replay ended at " + System.currentTimeMillis());
+    LOG.info(" Replay ended at " + System.currentTimeMillis());
 
   }
 
   @Test
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
-    System.out.println(" Stress started at " + System.currentTimeMillis());
+    LOG.info(" Stress started at " + System.currentTimeMillis());
     doSubmission(false);
-    System.out.println(" Stress ended at " + System.currentTimeMillis());
+    LOG.info(" Stress ended at " + System.currentTimeMillis());
   }
 
   // test empty request should be hint message
@@ -483,21 +480,23 @@ public class TestGridmixSubmission {
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     final PrintStream out = new PrintStream(bytes);
     final PrintStream oldOut = System.out;
-    System.setOut(out);
+    System.setErr(out);
     try {
       String[] argv = new String[0];
       DebugGridmix.main(argv);
-      String print = bytes.toString();
-      assertTrue(print
-          .indexOf("Usage: gridmix [-generate <MiB>] [-users URI] [-Dname=value ...] <iopath> <trace>") >= 0);
-      assertTrue(print.indexOf("e.g. gridmix -generate 100m foo -") >= 0);
+   
     }catch(ExitException e){
-      e.printStackTrace();
+      assertEquals("There is no escape!", e.getMessage());
     
     } finally {
-      System.setOut(oldOut);
+      System.setErr(oldOut);
       System.setSecurityManager(securityManager);
     }
+    String print = bytes.toString();
+    // should be printed tip in std error stream
+    assertTrue(print
+        .indexOf("Usage: gridmix [-generate <MiB>] [-users URI] [-Dname=value ...] <iopath> <trace>") >= 0);
+    assertTrue(print.indexOf("e.g. gridmix -generate 100m foo -") >= 0);
   }
 
   protected static class ExitException extends SecurityException {
