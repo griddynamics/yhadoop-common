@@ -34,6 +34,7 @@ import com.google.common.collect.Lists;
 public class TestProxyUriUtils {
   @Test
   public void testGetPathApplicationId() {
+
     assertEquals("/proxy/application_100_0001", 
         ProxyUriUtils.getPath(BuilderUtils.newApplicationId(100l, 1)));
     assertEquals("/proxy/application_6384623_0005", 

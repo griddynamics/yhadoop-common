@@ -45,6 +45,7 @@ public class TestLogalyzer {
 
   @Test
   public void testLogalyzer() throws Exception {
+
     Path f = createLogFile();
 
     String[] args = new String[10];

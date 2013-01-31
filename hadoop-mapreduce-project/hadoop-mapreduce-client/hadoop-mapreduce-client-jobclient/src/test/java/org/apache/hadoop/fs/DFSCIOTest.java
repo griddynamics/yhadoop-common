@@ -112,6 +112,7 @@ public class DFSCIOTest extends TestCase {
   public static void testIOs(int fileSize, int nrFiles)
     throws IOException {
 
+
     FileSystem fs = FileSystem.get(fsConfig);
 
     createControlFile(fs, fileSize, nrFiles);

@@ -52,6 +52,7 @@ public class TestJobHistoryEvents {
 
   @Test
   public void testHistoryEvents() throws Exception {
+
     Configuration conf = new Configuration();
     MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(), true);
     app.submit(conf);

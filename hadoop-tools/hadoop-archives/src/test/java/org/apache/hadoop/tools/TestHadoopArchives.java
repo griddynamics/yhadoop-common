@@ -145,6 +145,7 @@ public class TestHadoopArchives {
 @Test
   public void testPathWithSpaces() throws Exception {
 
+
     fs.delete(archivePath, true);
 
     // create files/directories with spaces

@@ -60,6 +60,7 @@ public class TestDistCpUtils {
 
   @Test
   public void testGetRelativePathRoot() {
+
     Path root = new Path("/tmp/abc");
     Path child = new Path("/tmp/abc/xyz/file");
     Assert.assertEquals(DistCpUtils.getRelativePath(root, child), "/xyz/file");

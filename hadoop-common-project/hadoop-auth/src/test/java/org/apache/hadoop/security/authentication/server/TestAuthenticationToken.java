@@ -19,6 +19,7 @@ import junit.framework.TestCase;
 public class TestAuthenticationToken extends TestCase {
 
   public void testAnonymous() {
+
     assertNotNull(AuthenticationToken.ANONYMOUS);
     assertEquals(null, AuthenticationToken.ANONYMOUS.getUserName());
     assertEquals(null, AuthenticationToken.ANONYMOUS.getName());
