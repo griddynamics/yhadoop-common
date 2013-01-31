@@ -347,18 +347,18 @@ public class SecondaryNameNode implements Runnable {
       UserGroupInformation ugi = null;
       try { 
         ugi = UserGroupInformation.getLoginUser();
+        ugi.doAs(new PrivilegedAction<Object>() {
+          @Override
+          public Object run() {
+            doWork();
+            return null;
+          }
+        });
       } catch (IOException e) {
         LOG.error("Exception while getting login user", e);
         e.printStackTrace();
         terminate(-1);
       }
-      ugi.doAs(new PrivilegedAction<Object>() {
-        @Override
-        public Object run() {
-          doWork();
-          return null;
-        }
-      });
     } else {
       doWork();
     }
@@ -655,7 +655,7 @@ public class SecondaryNameNode implements Runnable {
     Configuration tconf = new HdfsConfiguration();
     SecondaryNameNode secondary = new SecondaryNameNode(tconf, opts);
 
-    if (opts.getCommand() != null) {
+    if (opts != null && opts.getCommand() != null) {
       int ret = secondary.processStartupCommand(opts);
       terminate(ret);
     }
