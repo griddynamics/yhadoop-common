@@ -649,21 +649,19 @@ public class SecondaryNameNode implements Runnable {
     if (opts == null) {
       LOG.fatal("Failed to parse options");
       terminate(1);
-    }
-    
-    StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
-    Configuration tconf = new HdfsConfiguration();
-    SecondaryNameNode secondary = new SecondaryNameNode(tconf, opts);
+    } else {// else added to avoid FindBugs warning
+      StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
+      Configuration tconf = new HdfsConfiguration();
+      SecondaryNameNode secondary = new SecondaryNameNode(tconf, opts);
 
-    if (opts != null && opts.getCommand() != null) {
-      int ret = secondary.processStartupCommand(opts);
-      terminate(ret);
-    }
+      if (opts.getCommand() != null) {
+        int ret = secondary.processStartupCommand(opts);
+        terminate(ret);
+      }
 
-    Daemon checkpointThread = new Daemon(secondary);
-    checkpointThread.start();
+      Daemon checkpointThread = new Daemon(secondary);
+      checkpointThread.start();
 
-    if (secondary != null) {
       secondary.join();
     }
   }
