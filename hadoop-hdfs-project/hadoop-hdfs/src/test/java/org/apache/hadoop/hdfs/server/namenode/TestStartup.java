@@ -450,7 +450,7 @@ public class TestStartup {
         // Directory layout looks like:
         // test/data/dfs/nameN/current/{fsimage,edits,...}
         File nameDir = new File(cluster.getNameDirs(0).iterator().next().getPath());
-        File dfsDir = nameDir.getParentFile().getParentFile();
+        File dfsDir = nameDir.getParentFile();
         assertEquals(dfsDir.getName(), "dfs"); // make sure we got right dir
         
         LOG.info("Shutting down cluster #1");

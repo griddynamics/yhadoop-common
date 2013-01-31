@@ -61,7 +61,6 @@ public class TestDFSUpgradeFromImage {
   
   private static final Log LOG = LogFactory
       .getLog(TestDFSUpgradeFromImage.class);
-  private static final String DFS_BASE_DIR = MiniDFSCluster.newBaseDfsDir();
   private static final String HADOOP_DFS_DIR_TXT = "hadoop-dfs-dir.txt";
   private static final String HADOOP22_IMAGE = "hadoop-22-dfs-dir.tgz";
   private static final String HADOOP1_BBW_IMAGE = "hadoop1-bbw.tgz";
@@ -76,9 +75,6 @@ public class TestDFSUpgradeFromImage {
   static {
     upgradeConf = new HdfsConfiguration();
     upgradeConf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // block scanning off
-    if (System.getProperty("test.build.data") == null) { // to allow test to be run outside of Maven
-      System.setProperty("test.build.data", "build/test/data");
-    }
   }
   
   LinkedList<ReferenceFileInfo> refList = new LinkedList<ReferenceFileInfo>();
@@ -86,18 +82,18 @@ public class TestDFSUpgradeFromImage {
   
   boolean printChecksum = false;
   
-  private void unpackStorage(String tarFileName)
+  private void unpackStorage(String tarFileName, File dataDir)
       throws IOException {
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
         + "/" + tarFileName;
-    String dataDir = System.getProperty("test.build.data", "build/test/data");
-    LOG.info("Unpacking " + tarFile);
-    FileUtil.unTar(new File(tarFile), new File(dataDir));
+    LOG.info("Unpacking " + tarFile + " into " + dataDir);
+    FileUtil.unTar(new File(tarFile), dataDir);
     //Now read the reference info
     
-    BufferedReader reader = new BufferedReader(new FileReader(
-        System.getProperty("test.cache.data", "build/test/cache")
-            + "/" + HADOOP_DFS_DIR_TXT));
+    String txtFile = System.getProperty("test.cache.data", "build/test/cache")
+            + "/" + HADOOP_DFS_DIR_TXT;
+    LOG.info("Reading " + txtFile);
+    BufferedReader reader = new BufferedReader(new FileReader(txtFile));
     String line;
     while ( (line = reader.readLine()) != null ) {
       
@@ -224,7 +220,8 @@ public class TestDFSUpgradeFromImage {
   public void testFailOnPreUpgradeImage() throws IOException {
     Configuration conf = new HdfsConfiguration();
 
-    File namenodeStorage = new File(DFS_BASE_DIR, "nnimage-0.3.0");
+    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    File namenodeStorage = new File(baseDir, "nnimage-0.3.0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
 
     // Set up a fake NN storage that looks like an ancient Hadoop dir circa 0.3.0
@@ -247,7 +244,7 @@ public class TestDFSUpgradeFromImage {
     // Now try to start an NN from it
 
     try {
-      new MiniDFSCluster.Builder(conf).baseDfsDir(DFS_BASE_DIR)
+      new MiniDFSCluster.Builder(conf).baseDfsDir(baseDir)
         .numDataNodes(0)
         .format(false)
         .manageDataDfsDirs(false)
@@ -267,9 +264,11 @@ public class TestDFSUpgradeFromImage {
    */
   @Test
   public void testUpgradeFromRel22Image() throws IOException {
-    unpackStorage(HADOOP22_IMAGE);
+    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    File dataDir = new File(baseDir).getParentFile();
+    unpackStorage(HADOOP22_IMAGE, dataDir);
     upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf)
-        .baseDfsDir(DFS_BASE_DIR)
+        .baseDfsDir(baseDir)
         .numDataNodes(4));
   }
   
@@ -279,20 +278,22 @@ public class TestDFSUpgradeFromImage {
    */
   @Test
   public void testUpgradeFromCorruptRel22Image() throws IOException {
-    unpackStorage(HADOOP22_IMAGE);
+    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    File dataDir = new File(baseDir).getParentFile();
+    unpackStorage(HADOOP22_IMAGE, dataDir);
     
     // Overwrite the md5 stored in the VERSION files
     FSImageTestUtil.corruptVersionFile(
-        new File(DFS_BASE_DIR, "name1/current/VERSION"),
+        new File(baseDir, "name1/current/VERSION"),
         "imageMD5Digest", "22222222222222222222222222222222");
     FSImageTestUtil.corruptVersionFile(
-        new File(DFS_BASE_DIR, "name2/current/VERSION"),
+        new File(baseDir, "name2/current/VERSION"),
         "imageMD5Digest", "22222222222222222222222222222222");
     
     // Upgrade should now fail
     try {
       upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf)
-          .baseDfsDir(DFS_BASE_DIR)    
+          .baseDfsDir(baseDir)    
           .numDataNodes(4));
       fail("Upgrade did not fail with bad MD5");
     } catch (IOException ioe) {
@@ -352,14 +353,16 @@ public class TestDFSUpgradeFromImage {
    */
   @Test
   public void testUpgradeFromRel1BBWImage() throws IOException {
-    unpackStorage(HADOOP1_BBW_IMAGE);
+    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    File dataDir = new File(baseDir).getParentFile();
+    unpackStorage(HADOOP1_BBW_IMAGE, dataDir);
     Configuration conf = new Configuration(upgradeConf);
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, 
-        DFS_BASE_DIR + File.separator + 
+        baseDir + File.separator + 
         "data" + File.separator + 
         "data1");
     upgradeAndVerify(new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(DFS_BASE_DIR)
+          .baseDfsDir(baseDir)
           .numDataNodes(1).enableManagedDfsDirsRedundancy(false).
           manageDataDfsDirs(false));
   }

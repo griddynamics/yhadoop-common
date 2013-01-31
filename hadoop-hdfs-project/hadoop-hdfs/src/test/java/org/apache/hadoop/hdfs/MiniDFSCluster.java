@@ -2119,7 +2119,7 @@ public class MiniDFSCluster {
    * @return a directory for use as a miniDFS filesystem.
    */
   public static String newBaseDfsDir() {
-    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/" + RandomStringUtils.randomAlphanumeric(10) + "/";
+    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10) + "/dfs/";
   }
 
   /**
