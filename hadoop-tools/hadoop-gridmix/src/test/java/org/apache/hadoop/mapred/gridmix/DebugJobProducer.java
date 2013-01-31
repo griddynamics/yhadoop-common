@@ -214,7 +214,7 @@ public class DebugJobProducer implements JobStoryProducer {
      // Otherwise use dummy user names.
      String user = conf.get(MRJobConfig.USER_NAME);
      if (user == null) {
-       user = String.format("foobar%d", id);
+       user = System.getProperty("user.name");
      }
      GridmixTestUtils.createHomeAndStagingDirectory(user, (JobConf)conf);
      return user;
