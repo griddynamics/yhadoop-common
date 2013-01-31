@@ -63,10 +63,12 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Daemon;
 
@@ -77,6 +79,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class BlockManager {
+
   static final Log LOG = LogFactory.getLog(BlockManager.class);
   static final Log blockLog = NameNode.blockStateChangeLog;
 
@@ -1518,7 +1521,10 @@ public class BlockManager {
     BlockInfo delimiter = new BlockInfo(new Block(), 1);
     boolean added = dn.addBlock(delimiter);
     assert added : "Delimiting block cannot be present in the node";
-    if(newReport == null)
+    int headIndex = 0; //currently the delimiter is in the head of the list
+    int curIndex;
+
+    if (newReport == null)
       newReport = new BlockListAsLongs();
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = newReport.getBlockReportIterator();
@@ -1528,8 +1534,9 @@ public class BlockManager {
       BlockInfo storedBlock = processReportedBlock(dn, iblk, iState,
                                   toAdd, toInvalidate, toCorrupt, toUC);
       // move block to the head of the list
-      if(storedBlock != null && storedBlock.findDatanode(dn) >= 0)
-        dn.moveBlockToHead(storedBlock);
+      if (storedBlock != null && (curIndex = storedBlock.findDatanode(dn)) >= 0) {
+        headIndex = dn.moveBlockToHead(storedBlock, curIndex, headIndex);
+      }
     }
     // collect blocks that have not been reported
     // all of them are next to the delimiter
@@ -2129,7 +2136,7 @@ public class BlockManager {
    * Modify (block-->datanode) map. Possibly generate replication tasks, if the
    * removed block is still valid.
    */
-  private void removeStoredBlock(Block block, DatanodeDescriptor node) {
+  public void removeStoredBlock(Block block, DatanodeDescriptor node) {
     if(blockLog.isDebugEnabled()) {
       blockLog.debug("BLOCK* removeStoredBlock: "
           + block + " from " + node.getName());
@@ -2248,27 +2255,48 @@ public class BlockManager {
     }
   }
 
-  /** The given node is reporting that it received a certain block. */
-  public void blockReceived(final DatanodeID nodeID, final String poolId,
-      final Block block, final String delHint) throws IOException {
+  /** The given node is reporting that it received/deleted certain blocks. */
+  public void blockReceivedAndDeleted(final DatanodeID nodeID, 
+     final String poolId, 
+     final ReceivedDeletedBlockInfo receivedAndDeletedBlocks[]
+  ) throws IOException {
     namesystem.writeLock();
+    int received = 0;
+    int deleted = 0;
     try {
       final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
       if (node == null || !node.isAlive) {
-        final String s = block + " is received from dead or unregistered node "
-            + nodeID.getName();
-        blockLog.warn("BLOCK* blockReceived: " + s);
-        throw new IOException(s);
-      } 
-
-      if (blockLog.isDebugEnabled()) {
-        blockLog.debug("BLOCK* blockReceived: " + block
-            + " is received from " + nodeID.getName());
+        blockLog.warn("BLOCK* blockReceivedDeleted"
+                + " is received from dead or unregistered node "
+                + nodeID.getName());
+        throw new IOException(
+            "Got blockReceivedDeleted message from unregistered or dead node");
       }
 
-      addBlock(node, block, delHint);
+      for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
+        if (receivedAndDeletedBlocks[i].isDeletedBlock()) {
+          removeStoredBlock(
+              receivedAndDeletedBlocks[i].getBlock(), node);
+          deleted++;
+        } else {
+          addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
+              receivedAndDeletedBlocks[i].getDelHints());
+          received++;
+        }
+        if (blockLog.isDebugEnabled()) {
+          blockLog.debug("BLOCK* block"
+              + (receivedAndDeletedBlocks[i].isDeletedBlock() ? "Deleted"
+                  : "Received") + ": " + receivedAndDeletedBlocks[i].getBlock()
+              + " is received from " + nodeID.getName());
+        }
+      }
     } finally {
       namesystem.writeUnlock();
+      if (blockLog.isDebugEnabled()) {
+          blockLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: " + "from "
+              + nodeID.getName() + " received: " + received + ", "
+              + " deleted: " + deleted);
+      }
     }
   }
 
@@ -2447,6 +2475,7 @@ public class BlockManager {
   }
 
   public void removeBlock(Block block) {
+    block.setNumBytes(BlockCommand.NO_ACK);
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
     blocksMap.removeBlock(block);
