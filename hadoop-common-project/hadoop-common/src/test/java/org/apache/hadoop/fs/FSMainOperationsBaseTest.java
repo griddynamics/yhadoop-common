@@ -62,7 +62,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   private static int numBlocks = 2;
   
 
-  protected final FileSystem fSys;
+  protected FileSystem fSys;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
@@ -85,18 +85,11 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
   
-  public FSMainOperationsBaseTest() {
-    try {
-      fSys = createFileSystem();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-  
   abstract protected FileSystem createFileSystem() throws Exception;
 
   @Before
   public void setUp() throws Exception {
+    fSys = createFileSystem();
     fSys.mkdirs(getTestRootPath(fSys, "test"));
   }
   

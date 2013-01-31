@@ -68,7 +68,7 @@ public class ViewFileSystemBaseTest {
   FileSystem fsTarget;  // the target file system - the mount will point here
   Path targetTestRoot;
   Configuration conf;
-  FileSystemTestHelper fileSystemTestHelper;
+  final FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
 
 
   @Before
@@ -99,8 +99,6 @@ public class ViewFileSystemBaseTest {
   }
   
   void initializeTargetTestRoot() throws IOException {
-      
-    fileSystemTestHelper = new FileSystemTestHelper();
     targetTestRoot = fileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
     new Exception("INIT TEST with TARGET ROOT: " + targetTestRoot).printStackTrace();
     // In case previous test was killed before cleanup
