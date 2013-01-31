@@ -36,6 +36,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.gridmix.GenerateData.DataStatistics;
 import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -366,7 +367,7 @@ public class Gridmix extends Configured implements Tool {
     final Configuration conf = getConf();
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-
+    conf.set(MRJobConfig.USER_NAME, ugi.getUserName());
     val = ugi.doAs(new PrivilegedExceptionAction<Integer>() {
       public Integer run() throws Exception {
         return runJob(conf, argv);

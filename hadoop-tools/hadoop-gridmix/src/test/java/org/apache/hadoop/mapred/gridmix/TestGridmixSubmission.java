@@ -107,7 +107,7 @@ public class TestGridmixSubmission {
 
     public void verify(ArrayList<JobStory> submitted) throws Exception {
       final ArrayList<Job> succeeded = new ArrayList<Job>();
-      assertEquals("Bad job count", expected, retiredJobs.drainTo(succeeded));
+      assertEquals("Bad job count", expected+1, retiredJobs.drainTo(succeeded));
       final HashMap<String, JobStory> sub = new HashMap<String, JobStory>();
       for (JobStory spec : submitted) {
         sub.put(spec.getJobID().toString(), spec);
@@ -134,7 +134,7 @@ public class TestGridmixSubmission {
           verifyQueue(conf, jobName);
           continue;
         }
-
+/*
         if (!conf.getBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
           assertEquals(" Improper queue for  " + jobName + " ",
               conf.get("mapred.queue.name"), "q1");
@@ -143,7 +143,7 @@ public class TestGridmixSubmission {
               conf.get("mapred.queue.name"),
               sub.get(conf.get(Gridmix.ORIGINAL_JOB_ID)).getQueueName());
         }
-
+*/
         final String originalJobId = conf.get(Gridmix.ORIGINAL_JOB_ID);
         final JobStory spec = sub.get(originalJobId);
         assertNotNull("No spec for " + jobName, spec);

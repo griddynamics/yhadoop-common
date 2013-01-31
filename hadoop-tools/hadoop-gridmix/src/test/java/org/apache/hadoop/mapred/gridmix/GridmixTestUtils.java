@@ -8,7 +8,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -37,12 +36,22 @@ public class GridmixTestUtils {
   static FileSystem dfs = null;
   static MiniDFSCluster dfsCluster = null;
   static MiniMRClientCluster mrvl = null;
+  protected static final String GRIDMIX_USE_QUEUE_IN_TRACE = 
+      "gridmix.job-submission.use-queue-in-trace";
+  protected static final String GRIDMIX_DEFAULT_QUEUE = 
+      "gridmix.job-submission.default-queue";
 
   public static void initCluster(Class<?> caller) throws IOException {
     Configuration conf = new Configuration();
-    conf.set("mapred.queue.names", "default,q1,q2");
+//    conf.set("mapred.queue.names", "default,q1,q2");
+  conf.set("mapred.queue.names", "default");
     conf.set("yarn.scheduler.capacity.root.queues", "default");
     conf.set("yarn.scheduler.capacity.root.default.capacity", "100.0");
+    
+    
+    conf.setBoolean(GRIDMIX_USE_QUEUE_IN_TRACE, false);
+    conf.set(GRIDMIX_DEFAULT_QUEUE, "default");
+    
 
     dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true)
         .build();// MiniDFSCluster(conf, 3, true, null);
@@ -82,11 +91,19 @@ public class GridmixTestUtils {
       FileSystem fs = dfsCluster.getFileSystem();
       String path = "/user/" + user;
       Path homeDirectory = new Path(path);
+      if (!fs.exists(homeDirectory)) {
+        LOG.info("Creating Home directory : " + homeDirectory);
+        fs.mkdirs(homeDirectory);
+        changePermission(user, homeDirectory, fs);
+
+      }    
+      /*
       if (fs.exists(homeDirectory)) {
         fs.delete(homeDirectory, true);
       }
       LOG.info("Creating Home directory : " + homeDirectory);
       fs.mkdirs(homeDirectory);
+      */
       changePermission(user, homeDirectory, fs);
       Path stagingArea = new Path(
           conf.get("mapreduce.jobtracker.staging.root.dir",
