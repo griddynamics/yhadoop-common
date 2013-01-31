@@ -100,7 +100,7 @@ public class TestDataNodeVolumeFailureToleration {
 
     // We use subdirectories 0 and 1 in order to have only a single
     // data dir's parent inject a failure.
-    File tld = new File(MiniDFSCluster.getBaseDirectory(), "badData");
+    File tld = new File(cluster.getDfsBaseDir(), "badData");
     File dataDir1 = new File(tld, "data1");
     File dataDir1Actual = new File(dataDir1, "1");
     dataDir1Actual.mkdirs();

@@ -57,6 +57,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -149,9 +150,18 @@ public class MiniDFSCluster {
     private boolean checkExitOnShutdown = true;
     private boolean checkDataNodeAddrConfig = false;
     private boolean checkDataNodeHostConfig = false;
+    private String baseDfsDir = null;
     
     public Builder(Configuration conf) {
       this.conf = conf;
+    }
+    
+    /**
+     * Default: auto generated temp dir
+     */
+    public Builder baseDfsDir(String baseDfsDir) {
+        this.baseDfsDir = baseDfsDir;
+        return this;
     }
     
     /**
@@ -331,7 +341,8 @@ public class MiniDFSCluster {
         builder.nnTopology.countNameNodes() + " namenodes.");
     nameNodes = new NameNodeInfo[builder.nnTopology.countNameNodes()];
       
-    initMiniDFSCluster(builder.conf,
+    initMiniDFSCluster(builder.baseDfsDir,
+                       builder.conf,
                        builder.numDataNodes,
                        builder.format,
                        builder.manageNameDfsDirs,
@@ -371,6 +382,7 @@ public class MiniDFSCluster {
   protected int numDataNodes;
   protected List<DataNodeProperties> dataNodes = 
                          new ArrayList<DataNodeProperties>();
+  private String dfsBaseDir;
   private File base_dir;
   private File data_dir;
   private boolean waitSafeMode = true;
@@ -584,7 +596,7 @@ public class MiniDFSCluster {
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
-    initMiniDFSCluster(conf, numDataNodes, format,
+    initMiniDFSCluster(null, conf, numDataNodes, format,
         manageNameDfsDirs, true, manageDataDfsDirs, manageDataDfsDirs,
         operation, racks, hosts,
         simulatedCapacities, null, true, false,
@@ -592,7 +604,7 @@ public class MiniDFSCluster {
   }
 
   private void initMiniDFSCluster(
-      Configuration conf,
+      String dfsBaseDir, Configuration conf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageNameDfsSharedDirs, boolean enableManagedDfsDirsRedundancy,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
@@ -609,7 +621,8 @@ public class MiniDFSCluster {
     }
 
     this.conf = conf;
-    base_dir = new File(determineDfsBaseDir());
+    this.dfsBaseDir = dfsBaseDir;
+    base_dir = new File(getDfsBaseDir());
     data_dir = new File(base_dir, "data");
     this.waitSafeMode = waitSafeMode;
     this.checkExitOnShutdown = checkExitOnShutdown;
@@ -1553,7 +1566,7 @@ public class MiniDFSCluster {
    * @return true if a replica was corrupted, false otherwise
    * Types: delete, write bad data, truncate
    */
-  public static boolean corruptReplica(int i, ExtendedBlock blk)
+  public boolean corruptReplica(int i, ExtendedBlock blk)
       throws IOException {
     File blockFile = getBlockFile(i, blk);
     return corruptBlock(blockFile);
@@ -1935,7 +1948,7 @@ public class MiniDFSCluster {
   }
 
   public void formatDataNodeDirs() throws IOException {
-    base_dir = new File(determineDfsBaseDir());
+    base_dir = new File(getDfsBaseDir());
     data_dir = new File(base_dir, "data");
     if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
       throw new IOException("Cannot remove data directory: " + data_dir);
@@ -2074,23 +2087,25 @@ public class MiniDFSCluster {
    * If this is null, then {@link #getBaseDirectory()} is called.
    * @return the base directory for this instance.
    */
-  protected String determineDfsBaseDir() {
-    String dfsdir = conf.get(HDFS_MINIDFS_BASEDIR, null);
-    if (dfsdir == null) {
-      dfsdir = getBaseDirectory();
+  public String getDfsBaseDir() {
+    if (dfsBaseDir == null) {
+      dfsBaseDir = conf.get(HDFS_MINIDFS_BASEDIR, null);
+      if (dfsBaseDir == null) {
+          dfsBaseDir = newBaseDfsDir();
+      }
     }
-    return dfsdir;
+    return dfsBaseDir;
   }
 
   /**
-   * Get the base directory for any DFS cluster whose configuration does
+   * Generate a new base directory name for any DFS cluster whose configuration does
    * not explicitly set it. This is done by retrieving the system property
    * {@link #PROP_TEST_BUILD_DATA} (defaulting to "build/test/data" ),
-   * and returning that directory with a subdir of /dfs.
+   * and returning that directory with a subdir of /dfs plus a random subdir.
    * @return a directory for use as a miniDFS filesystem.
    */
-  public static String getBaseDirectory() {
-    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/";
+  public static String newBaseDfsDir() {
+    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/" + RandomStringUtils.randomAlphanumeric(10) + "/";
   }
 
   /**
@@ -2121,8 +2136,8 @@ public class MiniDFSCluster {
    *          storage directory.
    * @return Storage directory
    */
-  public static File getStorageDir(int dnIndex, int dirIndex) {
-    return new File(getBaseDirectory(), getStorageDirPath(dnIndex, dirIndex));
+  public File getStorageDir(int dnIndex, int dirIndex) {
+    return new File(getDfsBaseDir(), getStorageDirPath(dnIndex, dirIndex));
   }
 
   /**
@@ -2227,10 +2242,10 @@ public class MiniDFSCluster {
    * @param dnIndex Index of the datanode to get block files for
    * @param block block for which corresponding files are needed
    */
-  public static File getBlockFile(int dnIndex, ExtendedBlock block) {
+  public File getBlockFile(int dnIndex, ExtendedBlock block) {
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
-      File storageDir = MiniDFSCluster.getStorageDir(dnIndex, i);
+      File storageDir = getStorageDir(dnIndex, i);
       File blockFile = getBlockFile(storageDir, block);
       if (blockFile.exists()) {
         return blockFile;

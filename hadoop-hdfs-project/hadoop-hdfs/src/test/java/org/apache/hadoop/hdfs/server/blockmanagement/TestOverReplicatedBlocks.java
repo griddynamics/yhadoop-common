@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
@@ -69,7 +68,7 @@ public class TestOverReplicatedBlocks {
       
       // corrupt the block on datanode 0
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
-      assertTrue(TestDatanodeBlockScanner.corruptReplica(block, 0));
+      assertTrue(TestDatanodeBlockScanner.corruptReplica(cluster, block, 0));
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       // remove block scanner log to trigger block scanning
       File scanLog = new File(MiniDFSCluster.getFinalizedDir(
@@ -207,7 +206,7 @@ public class TestOverReplicatedBlocks {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final BlockManager bm = namesystem.getBlockManager();
       FileSystem fs = cluster.getFileSystem();
-      Path p = new Path(MiniDFSCluster.getBaseDirectory(), "/foo1");
+      Path p = new Path(cluster.getDfsBaseDir(), "/foo1");
       FSDataOutputStream out = fs.create(p, (short) 2);
       out.writeBytes("HDFS-3119: " + p);
       out.hsync();

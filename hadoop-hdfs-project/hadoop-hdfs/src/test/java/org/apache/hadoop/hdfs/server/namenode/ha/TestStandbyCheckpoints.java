@@ -202,7 +202,7 @@ public class TestStandbyCheckpoints {
     // (only ~15MB)
     URI sharedUri = cluster.getSharedEditsDir(0, 1);
     File sharedDir = new File(sharedUri.getPath(), "current");
-    File tmpDir = new File(MiniDFSCluster.getBaseDirectory(),
+    File tmpDir = new File(cluster.getDfsBaseDir(),
         "testCheckpointCancellation-tmp");
     FSNamesystem fsn = cluster.getNamesystem(0);
     FSImageTestUtil.createAbortedLogWithMkdirs(tmpDir, NUM_DIRS_IN_LOG, 3,

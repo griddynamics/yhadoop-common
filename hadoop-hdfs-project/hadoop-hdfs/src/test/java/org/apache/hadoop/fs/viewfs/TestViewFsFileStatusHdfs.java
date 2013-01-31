@@ -60,7 +60,7 @@ public class TestViewFsFileStatusHdfs {
   private static FileSystem vfs;
   
   @BeforeClass
-  public void clusterSetupAtBegining() throws IOException,
+  public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
@@ -117,7 +117,7 @@ public class TestViewFsFileStatusHdfs {
   }
 
   @AfterClass
-  public void cleanup() throws IOException {
+  public static void cleanup() throws IOException {
     fHdfs.delete(new Path(testfilename), true);
     fHdfs.delete(new Path(someFile), true);
     fHdfs.delete(new Path(someFile + "other"), true);

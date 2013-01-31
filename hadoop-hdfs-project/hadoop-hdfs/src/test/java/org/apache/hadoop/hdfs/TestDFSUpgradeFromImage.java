@@ -61,8 +61,7 @@ public class TestDFSUpgradeFromImage {
   
   private static final Log LOG = LogFactory
       .getLog(TestDFSUpgradeFromImage.class);
-  private static File TEST_ROOT_DIR =
-                      new File(MiniDFSCluster.getBaseDirectory());
+  private static final String DFS_BASE_DIR = MiniDFSCluster.newBaseDfsDir();
   private static final String HADOOP_DFS_DIR_TXT = "hadoop-dfs-dir.txt";
   private static final String HADOOP22_IMAGE = "hadoop-22-dfs-dir.tgz";
   private static final String HADOOP1_BBW_IMAGE = "hadoop1-bbw.tgz";
@@ -92,10 +91,6 @@ public class TestDFSUpgradeFromImage {
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
         + "/" + tarFileName;
     String dataDir = System.getProperty("test.build.data", "build/test/data");
-    File dfsDir = new File(dataDir, "dfs");
-    if ( dfsDir.exists() && !FileUtil.fullyDelete(dfsDir) ) {
-      throw new IOException("Could not delete dfs directory '" + dfsDir + "'");
-    }
     LOG.info("Unpacking " + tarFile);
     FileUtil.unTar(new File(tarFile), new File(dataDir));
     //Now read the reference info
@@ -229,7 +224,7 @@ public class TestDFSUpgradeFromImage {
   public void testFailOnPreUpgradeImage() throws IOException {
     Configuration conf = new HdfsConfiguration();
 
-    File namenodeStorage = new File(TEST_ROOT_DIR, "nnimage-0.3.0");
+    File namenodeStorage = new File(DFS_BASE_DIR, "nnimage-0.3.0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
 
     // Set up a fake NN storage that looks like an ancient Hadoop dir circa 0.3.0
@@ -252,7 +247,8 @@ public class TestDFSUpgradeFromImage {
     // Now try to start an NN from it
 
     try {
-      new MiniDFSCluster.Builder(conf).numDataNodes(0)
+      new MiniDFSCluster.Builder(conf).baseDfsDir(DFS_BASE_DIR)
+        .numDataNodes(0)
         .format(false)
         .manageDataDfsDirs(false)
         .manageNameDfsDirs(false)
@@ -272,8 +268,9 @@ public class TestDFSUpgradeFromImage {
   @Test
   public void testUpgradeFromRel22Image() throws IOException {
     unpackStorage(HADOOP22_IMAGE);
-    upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf).
-        numDataNodes(4));
+    upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf)
+        .baseDfsDir(DFS_BASE_DIR)
+        .numDataNodes(4));
   }
   
   /**
@@ -285,18 +282,18 @@ public class TestDFSUpgradeFromImage {
     unpackStorage(HADOOP22_IMAGE);
     
     // Overwrite the md5 stored in the VERSION files
-    File baseDir = new File(MiniDFSCluster.getBaseDirectory());
     FSImageTestUtil.corruptVersionFile(
-        new File(baseDir, "name1/current/VERSION"),
+        new File(DFS_BASE_DIR, "name1/current/VERSION"),
         "imageMD5Digest", "22222222222222222222222222222222");
     FSImageTestUtil.corruptVersionFile(
-        new File(baseDir, "name2/current/VERSION"),
+        new File(DFS_BASE_DIR, "name2/current/VERSION"),
         "imageMD5Digest", "22222222222222222222222222222222");
     
     // Upgrade should now fail
     try {
-      upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf).
-          numDataNodes(4));
+      upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf)
+          .baseDfsDir(DFS_BASE_DIR)    
+          .numDataNodes(4));
       fail("Upgrade did not fail with bad MD5");
     } catch (IOException ioe) {
       String msg = StringUtils.stringifyException(ioe);
@@ -358,12 +355,12 @@ public class TestDFSUpgradeFromImage {
     unpackStorage(HADOOP1_BBW_IMAGE);
     Configuration conf = new Configuration(upgradeConf);
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, 
-        System.getProperty("test.build.data") + File.separator + 
-        "dfs" + File.separator + 
+        DFS_BASE_DIR + File.separator + 
         "data" + File.separator + 
         "data1");
-    upgradeAndVerify(new MiniDFSCluster.Builder(conf).
-          numDataNodes(1).enableManagedDfsDirsRedundancy(false).
+    upgradeAndVerify(new MiniDFSCluster.Builder(conf)
+          .baseDfsDir(DFS_BASE_DIR)
+          .numDataNodes(1).enableManagedDfsDirsRedundancy(false).
           manageDataDfsDirs(false));
   }
 }

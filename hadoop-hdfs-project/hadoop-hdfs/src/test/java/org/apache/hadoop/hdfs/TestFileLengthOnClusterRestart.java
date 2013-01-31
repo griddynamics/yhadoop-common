@@ -43,7 +43,7 @@ public class TestFileLengthOnClusterRestart {
         .numDataNodes(2).build();
     HdfsDataInputStream in = null;
     try {
-      Path path = new Path(MiniDFSCluster.getBaseDirectory(), "test");
+      Path path = new Path(cluster.getDfsBaseDir(), "test");
       DistributedFileSystem dfs = (DistributedFileSystem) cluster
           .getFileSystem();
       FSDataOutputStream out = dfs.create(path);
