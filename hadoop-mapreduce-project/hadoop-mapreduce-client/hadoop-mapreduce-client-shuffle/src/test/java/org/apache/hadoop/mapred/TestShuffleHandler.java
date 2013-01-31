@@ -60,6 +60,7 @@ public class TestShuffleHandler {
   }
 
   @Test public void testShuffleMetrics() throws Exception {
+
     MetricsSystem ms = new MetricsSystemImpl();
     ShuffleHandler sh = new ShuffleHandler(ms);
     ChannelFuture cf = make(stub(ChannelFuture.class).

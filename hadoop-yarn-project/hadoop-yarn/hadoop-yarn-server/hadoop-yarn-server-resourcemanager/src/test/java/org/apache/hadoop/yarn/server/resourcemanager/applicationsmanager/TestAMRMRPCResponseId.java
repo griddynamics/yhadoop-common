@@ -66,6 +66,7 @@ public class TestAMRMRPCResponseId {
   @Test
   public void testARRMResponseId() throws Exception {
 
+
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
 
     RMApp app = rm.submitApp(2000);

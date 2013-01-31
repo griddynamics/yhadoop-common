@@ -47,6 +47,7 @@ public class TestHFSTestCase extends HFSTestCase {
 
   @Test(expected = IllegalStateException.class)
   public void testJettyNoAnnotation() throws Exception {
+
     TestJettyHelper.getJettyServer();
   }
 

@@ -74,6 +74,7 @@ public class TestClientDistributedCacheManager {
   
   @Test
   public void testDetermineTimestamps() throws IOException {
+
     Job job = Job.getInstance(conf);
     job.addCacheFile(firstCacheFile.toUri());
     job.addCacheFile(secondCacheFile.toUri());

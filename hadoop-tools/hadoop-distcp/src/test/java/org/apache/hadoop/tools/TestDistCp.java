@@ -197,6 +197,7 @@ public class TestDistCp {
 
   @Test
   public void testRootPath() throws Exception {
+
     try {
       clearState();
       List<Path> sources = new ArrayList<Path>();

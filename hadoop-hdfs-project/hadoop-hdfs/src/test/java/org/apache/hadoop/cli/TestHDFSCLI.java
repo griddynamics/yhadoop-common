@@ -99,6 +99,7 @@ public class TestHDFSCLI extends CLITestHelperDFS {
   @Test
   @Override
   public void testAll () {
+
     super.testAll();
   }
 }
