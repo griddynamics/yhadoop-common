@@ -54,7 +54,7 @@ public class TestSleepJob {
 
   static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
   private static final int NJOBS = 2;
-  private static final long GENDATA = 50; // in megabytes
+  private static final long GENDATA = 1; // in megabytes
 
 
   @Before
@@ -102,7 +102,7 @@ public class TestSleepJob {
     @Override
     protected JobMonitor createJobMonitor(Statistics stats, Configuration conf) 
         throws IOException {
-      monitor=new TestMonitor(1,  stats);
+      monitor=new TestMonitor(3,  stats);
           return monitor;
      }
    
