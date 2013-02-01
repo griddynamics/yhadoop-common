@@ -38,12 +38,10 @@ import org.apache.hadoop.mapred.LocalJobRunner;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.junit.Assert.*;
 
-import org.junit.After;
 import org.junit.Test;
 
 /**
@@ -444,11 +442,6 @@ public class TestLocalRunner {
 
     boolean success = job.waitForCompletion(true);
     assertTrue("Empty job should work", success);
-  }
-  
-  @After
-  public void after() {
-    DefaultMetricsSystem.shutdown();
   }
 }
 
