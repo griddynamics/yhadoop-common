@@ -33,6 +33,7 @@ public class TestRecordFactory {
   
   @Test
   public void testPbRecordFactory() {
+
     RecordFactory pbRecordFactory = RecordFactoryPBImpl.get();
     
     try {

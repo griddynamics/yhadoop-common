@@ -63,6 +63,8 @@ public class TestRPC {
   
   @Test
   public void testUnknownCall() {
+
+
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.IPC_RPC_IMPL, HadoopYarnProtoRPC.class
         .getName());

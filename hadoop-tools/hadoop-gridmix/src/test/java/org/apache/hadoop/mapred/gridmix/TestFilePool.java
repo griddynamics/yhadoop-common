@@ -100,6 +100,7 @@ public class TestFilePool {
 
   @Test
   public void testUnsuitable() throws Exception {
+
     try {
       final Configuration conf = new Configuration();
       // all files 13k or less

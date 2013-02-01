@@ -59,6 +59,7 @@ public class TestGangliaMetrics {
 
   @Test
   public void testTagsForPrefix() throws Exception {
+
     ConfigBuilder cb = new ConfigBuilder()
       .add("test.sink.ganglia.tagsForPrefix.all", "*")
       .add("test.sink.ganglia.tagsForPrefix.some", "NumActiveSinks, NumActiveSources")

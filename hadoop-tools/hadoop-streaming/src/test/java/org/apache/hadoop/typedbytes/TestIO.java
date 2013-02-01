@@ -79,6 +79,7 @@ public class TestIO {
   @Test
   public void testIO() throws IOException {
     ArrayList<Object> vector = new ArrayList<Object>();
+
     vector.add("test");
     vector.add(false);
     vector.add(12345);

@@ -55,6 +55,7 @@ public class TestDataJoin extends TestCase {
   }
 
   public void testDataJoin() throws Exception {
+
     final int srcs = 4;
     JobConf job = new JobConf();
     job.setBoolean("mapreduce.fileoutputcommitter.marksuccessfuljobs", false);

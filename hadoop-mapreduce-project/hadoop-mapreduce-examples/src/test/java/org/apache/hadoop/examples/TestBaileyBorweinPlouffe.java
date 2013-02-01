@@ -34,6 +34,7 @@ public class TestBaileyBorweinPlouffe extends junit.framework.TestCase {
   }
 
   public void testHexDigit() {
+
     final long[] answers = {0x43F6, 0xA308, 0x29B7, 0x49F1, 0x8AC8, 0x35EA};
     long d = 1;
     for(int i = 0; i < answers.length; i++) {

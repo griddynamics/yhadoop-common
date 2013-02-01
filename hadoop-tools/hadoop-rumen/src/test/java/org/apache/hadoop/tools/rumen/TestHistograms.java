@@ -54,6 +54,7 @@ public class TestHistograms {
    */
   @Test
   public void testHistograms() throws IOException {
+
     final Configuration conf = new Configuration();
     final FileSystem lfs = FileSystem.getLocal(conf);
     final Path rootInputDir = new Path(

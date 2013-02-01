@@ -80,6 +80,7 @@ public class TestTaskAttemptListenerImpl {
   
   @Test
   public void testGetTask() throws IOException {
+
     AppContext appCtx = mock(AppContext.class);
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class); 
     RMHeartbeatHandler rmHeartbeatHandler =
