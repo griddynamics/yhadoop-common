@@ -374,6 +374,7 @@ public class TestReplication {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.75f"); // only 3 copies exist
       
       cluster = new MiniDFSCluster.Builder(conf)
+                                  .baseDfsDir(cluster.getDfsBaseDir())
                                   .numDataNodes(numDataNodes * 2)
                                   .format(false)
                                   .build();

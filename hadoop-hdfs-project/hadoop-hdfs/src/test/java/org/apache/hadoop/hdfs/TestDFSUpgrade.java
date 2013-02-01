@@ -153,6 +153,7 @@ public class TestDFSUpgrade extends UpgradeUtilities {
       Class<? extends Exception> exceptionClass, Pattern messagePattern) {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                                .baseDfsDir(dfsBaseDir)
                                                 .startupOption(operation)
                                                 .format(false)
                                                 .manageDataDfsDirs(false)

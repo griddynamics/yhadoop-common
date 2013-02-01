@@ -97,9 +97,10 @@ public class TestDFSRollback {
    * Attempts to start a NameNode with the given operation.  Starting
    * the NameNode should throw an exception.
    */
-  void startNameNodeShouldFail(StartupOption operation, String searchString) {
+  void startNameNodeShouldFail(String baseDfsDir, StartupOption operation, String searchString) {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                                .baseDfsDir(baseDfsDir)
                                                 .startupOption(operation)
                                                 .format(false)
                                                 .manageDataDfsDirs(false)
@@ -218,7 +219,7 @@ public class TestDFSRollback {
 
       log("NameNode rollback without existing previous dir", numDirs);
       util.createNameNodeStorageDirs(nameNodeDirs, "current");
-      startNameNodeShouldFail(StartupOption.ROLLBACK,
+      startNameNodeShouldFail(cluster.getDfsBaseDir(), StartupOption.ROLLBACK,
           "None of the storage directories contain previous fs state");
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
@@ -290,7 +291,7 @@ public class TestDFSRollback {
       util.createNameNodeStorageDirs(nameNodeDirs, "current");
       baseDirs = util.createNameNodeStorageDirs(nameNodeDirs, "previous");
       deleteMatchingFiles(baseDirs, "edits.*");
-      startNameNodeShouldFail(StartupOption.ROLLBACK,
+      startNameNodeShouldFail(dfsBaseDir, StartupOption.ROLLBACK,
           "Gap in transactions");
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
@@ -298,7 +299,7 @@ public class TestDFSRollback {
       util.createNameNodeStorageDirs(nameNodeDirs, "current");
       baseDirs = util.createNameNodeStorageDirs(nameNodeDirs, "previous");
       deleteMatchingFiles(baseDirs, "fsimage_.*");
-      startNameNodeShouldFail(StartupOption.ROLLBACK,
+      startNameNodeShouldFail(dfsBaseDir, StartupOption.ROLLBACK,
           "No valid image files found");
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
@@ -311,7 +312,7 @@ public class TestDFSRollback {
             "layoutVersion".getBytes(Charsets.UTF_8),
             "xxxxxxxxxxxxx".getBytes(Charsets.UTF_8));
       }
-      startNameNodeShouldFail(StartupOption.ROLLBACK,
+      startNameNodeShouldFail(dfsBaseDir, StartupOption.ROLLBACK,
           "file VERSION has layoutVersion missing");
 
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -326,7 +327,7 @@ public class TestDFSRollback {
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs,
           storageInfo, util.getCurrentBlockPoolID(cluster));
-      startNameNodeShouldFail(StartupOption.ROLLBACK,
+      startNameNodeShouldFail(dfsBaseDir, StartupOption.ROLLBACK,
           "Cannot rollback to storage version 1 using this version");
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
     } // end numDir loop

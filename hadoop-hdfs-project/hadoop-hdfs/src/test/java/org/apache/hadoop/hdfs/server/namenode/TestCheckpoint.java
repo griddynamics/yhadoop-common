@@ -628,7 +628,7 @@ public class TestCheckpoint {
     
     // Lock one of the saved directories, then start the NN, and make sure it
     // fails to start
-    assertClusterStartFailsWhenDirLocked(conf, savedSd);
+    assertClusterStartFailsWhenDirLocked(cluster.getDfsBaseDir(), conf, savedSd);
   }
 
   /**
@@ -667,7 +667,7 @@ public class TestCheckpoint {
     
     // Lock one of the saved directories, then start the NN, and make sure it
     // fails to start
-    assertClusterStartFailsWhenDirLocked(conf, savedSd);
+    assertClusterStartFailsWhenDirLocked(cluster.getDfsBaseDir(), conf, savedSd);
   }
   
   /**
@@ -774,11 +774,12 @@ public class TestCheckpoint {
    * @param sdToLock the storage directory to lock
    */
   private static void assertClusterStartFailsWhenDirLocked(
-      Configuration conf, StorageDirectory sdToLock) throws IOException {
+      String dfsBaseDir, Configuration conf, StorageDirectory sdToLock) throws IOException {
     // Lock the edits dir, then start the NN, and make sure it fails to start
     sdToLock.lock();
     try {      
       MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .baseDfsDir(dfsBaseDir)
         .format(false)
         .manageNameDfsDirs(false)
         .numDataNodes(0)

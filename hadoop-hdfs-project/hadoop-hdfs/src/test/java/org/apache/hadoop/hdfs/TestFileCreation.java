@@ -664,6 +664,7 @@ public class TestFileCreation {
       } catch (InterruptedException e) {
       }
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                               .baseDfsDir(cluster.getDfsBaseDir())
                                                .format(false)
                                                .build();
       cluster.waitActive();
@@ -676,6 +677,7 @@ public class TestFileCreation {
       } catch (InterruptedException e) {
       }
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .baseDfsDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
