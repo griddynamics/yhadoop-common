@@ -41,8 +41,8 @@ import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 
@@ -81,15 +81,15 @@ public class TestGridmixSubmission {
   private static final int NJOBS = 1;
   private static final long GENDATA = 3; // in megabytes
 
-  @Before
-  public void init() throws IOException {
+  @BeforeClass
+  public static void init() throws IOException {
     GridmixTestUtils.initCluster(TestGridmixSubmission.class);
 
     System.setProperty("src.test.data", inSpace.getAbsolutePath());
   }
 
-  @After
-  public void shutDown() throws IOException {
+  @AfterClass
+  public static void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }
 

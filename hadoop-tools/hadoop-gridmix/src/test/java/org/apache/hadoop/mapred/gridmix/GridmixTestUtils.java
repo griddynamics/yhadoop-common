@@ -97,13 +97,6 @@ public class GridmixTestUtils {
         changePermission(user, homeDirectory, fs);
 
       }    
-      /*
-      if (fs.exists(homeDirectory)) {
-        fs.delete(homeDirectory, true);
-      }
-      LOG.info("Creating Home directory : " + homeDirectory);
-      fs.mkdirs(homeDirectory);
-      */
       changePermission(user, homeDirectory, fs);
       Path stagingArea = new Path(
           conf.get("mapreduce.jobtracker.staging.root.dir",

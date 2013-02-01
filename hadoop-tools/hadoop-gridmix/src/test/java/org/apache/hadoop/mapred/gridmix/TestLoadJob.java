@@ -71,7 +71,7 @@ public class TestLoadJob {
     private final int expected;
 
     public TestMonitor(int expected, Statistics stats) {
-      super(1, TimeUnit.SECONDS, stats, 1);
+      super(3, TimeUnit.SECONDS, stats, 1);
       this.expected = expected;
       retiredJobs = new LinkedBlockingQueue<Job>();
     }
@@ -100,7 +100,7 @@ public class TestLoadJob {
     @Override
     protected JobMonitor createJobMonitor(Statistics stats, Configuration conf)
         throws IOException {
-      monitor = new TestMonitor(1, stats);
+      monitor = new TestMonitor(3, stats);
       return monitor;
     }
 
@@ -165,7 +165,7 @@ public class TestLoadJob {
           + "wordcount.json");
 
       final String[] mandatory = { "-generate", String.valueOf(GENDATA) + "m",
-          in.toString(), "file:///" + fout.getAbsolutePath() 
+          in.toString(), "-"//"file:///" + fout.getAbsolutePath() 
       };
 
       ArrayList<String> argv = new ArrayList<String>(required.length
