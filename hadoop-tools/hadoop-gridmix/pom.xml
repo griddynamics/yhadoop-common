@@ -131,6 +131,17 @@
          </archive>
         </configuration>
        </plugin>
+        <plugin>
+         <groupId>org.apache.rat</groupId>
+         <artifactId>apache-rat-plugin</artifactId>
+         <configuration>
+           <excludes>
+             <exclude>CHANGES.txt</exclude>
+             <exclude>.idea/**</exclude>
+             <exclude>src/test/resources/data/*</exclude>
+           </excludes>
+         </configuration>
+       </plugin>
     </plugins>
   </build>
 </project>
