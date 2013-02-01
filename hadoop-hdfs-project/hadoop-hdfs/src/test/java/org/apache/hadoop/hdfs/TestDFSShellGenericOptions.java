@@ -62,6 +62,7 @@ public class TestDFSShellGenericOptions {
     
   private void testConfOption(String[] args, String namenode) {
     // prepare configuration hdfs-site.xml
+
     File configDir = new File(new File("build", "test"), "minidfs");
     assertTrue(configDir.mkdirs());
     File siteFile = new File(configDir, "hdfs-site.xml");
