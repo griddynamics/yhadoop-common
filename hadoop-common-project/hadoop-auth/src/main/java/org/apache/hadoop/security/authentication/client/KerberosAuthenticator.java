@@ -114,7 +114,7 @@ public class KerberosAuthenticator implements Authenticator {
       return USER_KERBEROS_CONF;
     }
   }
-
+  
   private URL url;
   private HttpURLConnection conn;
   private Base64 base64;

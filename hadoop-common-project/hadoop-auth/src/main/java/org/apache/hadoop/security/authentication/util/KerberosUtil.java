@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.Oid;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Locale;
+
+import org.ietf.jgss.GSSException;
+import org.ietf.jgss.Oid;
 
 public class KerberosUtil {
 
@@ -35,8 +35,8 @@ public class KerberosUtil {
       ? "com.ibm.security.auth.module.Krb5LoginModule"
       : "com.sun.security.auth.module.Krb5LoginModule";
   }
-
-  public static Oid getOidInstance(String oidName)
+  
+  public static Oid getOidInstance(String oidName) 
       throws ClassNotFoundException, GSSException, NoSuchFieldException,
       IllegalAccessException {
     Class<?> oidClass;
@@ -49,9 +49,9 @@ public class KerberosUtil {
     return (Oid)oidField.get(oidClass);
   }
 
-  public static String getDefaultRealm()
-      throws ClassNotFoundException, NoSuchMethodException,
-      IllegalArgumentException, IllegalAccessException,
+  public static String getDefaultRealm() 
+      throws ClassNotFoundException, NoSuchMethodException, 
+      IllegalArgumentException, IllegalAccessException, 
       InvocationTargetException {
     Object kerbConf;
     Class<?> classRef;
@@ -68,17 +68,17 @@ public class KerberosUtil {
          new Class[0]);
     return (String)getDefaultRealmMethod.invoke(kerbConf, new Object[0]);
   }
-
+  
   /* Return fqdn of the current host */
   static String getLocalHostName() throws UnknownHostException {
     return InetAddress.getLocalHost().getCanonicalHostName();
   }
-
+  
   /**
    * Create Kerberos principal for a given service and hostname. It converts
    * hostname to lower case. If hostname is null or "0.0.0.0", it uses
    * dynamically looked-up fqdn of the current host instead.
-   *
+   * 
    * @param service
    *          Service for which you want to generate the principal.
    * @param hostname

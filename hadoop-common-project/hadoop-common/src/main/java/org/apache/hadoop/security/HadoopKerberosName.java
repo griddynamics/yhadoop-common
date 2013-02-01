@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.security;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
-
-import java.io.IOException;
 
 /**
  * This class implements parsing and handling of Kerberos principal names. In 
