@@ -1004,6 +1004,7 @@
         </plugins>
       </build>
     </profile>
+    <!-- Copied into specific modules supporting parallel testing. Will be uncommented as soon as all modules support this.
     <profile>
       <id>parallel-tests</id>
       <build>
@@ -1020,5 +1021,6 @@
         </plugins>
       </build>
     </profile>
+    -->
   </profiles>
 </project>
