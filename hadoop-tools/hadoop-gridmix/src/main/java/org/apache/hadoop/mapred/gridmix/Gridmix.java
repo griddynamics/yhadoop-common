@@ -801,6 +801,10 @@ public class Gridmix extends Configured implements Tool {
      */
     void abort();
   }
-
+  // it is need for tests
+  protected Summarizer getSummarizer() {
+    return summarizer;
+  }
+  
 }
 

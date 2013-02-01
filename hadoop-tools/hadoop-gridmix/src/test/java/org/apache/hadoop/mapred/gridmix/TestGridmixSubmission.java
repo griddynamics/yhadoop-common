@@ -34,8 +34,10 @@ import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.TaskReport;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.TaskInfo;
@@ -107,7 +109,7 @@ public class TestGridmixSubmission {
 
     public void verify(ArrayList<JobStory> submitted) throws Exception {
       final ArrayList<Job> succeeded = new ArrayList<Job>();
-      assertEquals("Bad job count", expected+1, retiredJobs.drainTo(succeeded));
+      assertEquals("Bad job count", expected, retiredJobs.drainTo(succeeded));
       final HashMap<String, JobStory> sub = new HashMap<String, JobStory>();
       for (JobStory spec : submitted) {
         sub.put(spec.getJobID().toString(), spec);
@@ -134,16 +136,7 @@ public class TestGridmixSubmission {
           verifyQueue(conf, jobName);
           continue;
         }
-/*
-        if (!conf.getBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
-          assertEquals(" Improper queue for  " + jobName + " ",
-              conf.get("mapred.queue.name"), "q1");
-        } else {
-          assertEquals(" Improper queue for  " + jobName + " ",
-              conf.get("mapred.queue.name"),
-              sub.get(conf.get(Gridmix.ORIGINAL_JOB_ID)).getQueueName());
-        }
-*/
+
         final String originalJobId = conf.get(Gridmix.ORIGINAL_JOB_ID);
         final JobStory spec = sub.get(originalJobId);
         assertNotNull("No spec for " + jobName, spec);
@@ -172,7 +165,6 @@ public class TestGridmixSubmission {
         final int nMaps = spec.getNumberMaps();
         final int nReds = spec.getNumberReduces();
 
-        System.out.println(jobName + ": " + nMaps + "/" + nReds);
         final TaskReport[] mReports = client.getMapTaskReports(JobID
             .downgrade(job.getJobID()));
         assertEquals("Mismatched map count", nMaps, mReports.length);
@@ -342,7 +334,7 @@ public class TestGridmixSubmission {
     @Override
     protected JobMonitor createJobMonitor(Statistics stats, Configuration conf)
         throws IOException {
-      monitor = new TestMonitor(1, stats);
+      monitor = new TestMonitor(2, stats);
       return monitor;
     }
 
@@ -569,9 +561,13 @@ public class TestGridmixSubmission {
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
 
       conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true);
+      UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+      conf.set(MRJobConfig.USER_NAME, ugi.getUserName());
+
       // allow synthetic users to create home directories
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 0777));
+      
       int res = ToolRunner.run(conf, client, argv);
       assertEquals("Client exited with nonzero status", 0, res);
       client.checkMonitor();
