@@ -118,6 +118,7 @@ public class TestSleepJob {
             System.out.println(rit.next().toString());
           }
           final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
+          // all files = compressed test size+ logs= 1000000/2 + logs 
           final ContentSummary generated =    GridmixTestUtils.dfs.getContentSummary(in);
           assertEquals( 550000, generated.getLength(),   10000);
           
@@ -127,6 +128,7 @@ public class TestSleepJob {
               .findCounter("HDFS_BYTES_WRITTEN");
           assertEquals("Mismatched data gen", 550000, counter.getValue(),
               20000);
+          // counter ok !
           assertEquals( generated.getLength(), counter.getValue());
           
           continue;
@@ -153,17 +155,7 @@ public class TestSleepJob {
         assertTrue(originalJobName.substring(
             originalJobName.length() - seqNumLength).equals(jobSeqNum));
 
-        assertTrue("Gridmix job name is not in the expected format.",
-            jobName.equals(GridmixJob.JOB_NAME_PREFIX + jobSeqNum));
-        final FileStatus stat = GridmixTestUtils.dfs.getFileStatus(new Path(
-            GridmixTestUtils.DEST, "" + Integer.valueOf(jobSeqNum)));
-        assertEquals("Wrong owner for " + jobName, spec.getUser(),
-            stat.getOwner());
-        final int nMaps = spec.getNumberMaps();
-        final TaskReport[] mReports = client.getMapTaskReports(JobID
-            .downgrade(job.getJobID()));
-        assertEquals("Mismatched map count", nMaps, mReports.length);
-     
+    
       }
       
     }
@@ -198,14 +190,17 @@ public class TestSleepJob {
     }
   }
 
-
+/*
+ * test RandomLocation
+ */
   @Test
   public void testRandomLocation() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    // testRandomLocation(0, 10, ugi);
+    
     testRandomLocation(1, 10, ugi);
     testRandomLocation(2, 10, ugi);
   }
+  
     @Test
   public void testMapTasksOnlySleepJobs()
       throws Exception {
@@ -226,9 +221,12 @@ public class TestSleepJob {
       assertEquals(0, job.getNumReduceTasks());
     }
     jobProducer.close();
+    assertEquals(6, seq);
   }
+    // test Serial submit
   @Test
   public void testSerialSubmit() throws Exception {
+    // set policy
     policy = GridmixJobSubmissionPolicy.SERIAL;
     LOG.info("Serial started at " + System.currentTimeMillis());
     DebugGridmix client=doSubmission();
@@ -236,7 +234,9 @@ public class TestSleepJob {
     assertEquals(2, summarizer.getExecutionSummarizer().getNumSuccessfulJobs());
     assertTrue( summarizer.getExecutionSummarizer().getNumMapTasksLaunched()>0);
     assertTrue( summarizer.getExecutionSummarizer().getNumReduceTasksLaunched()>0);
+    // the simulation takes time
     assertTrue( summarizer.getExecutionSummarizer().getSimulationTime()>0);
+    // check job policy
     assertEquals("SERIAL",summarizer.getExecutionSummarizer().getJobSubmissionPolicy());
 
     LOG.info("Serial ended at " + System.currentTimeMillis());
@@ -257,24 +257,6 @@ public class TestSleepJob {
   }
 
  
-  @Test
-  public void testLimitTaskSleepTimeSubmit() throws Exception {
-    policy = GridmixJobSubmissionPolicy.STRESS;
-    LOG.info(" Limit sleep time only at " + System.currentTimeMillis());
-    DebugGridmix client=doSubmission("-D" + SleepJob.GRIDMIX_SLEEP_MAX_MAP_TIME + "=100", "-D"
-        + SleepJob.GRIDMIX_SLEEP_MAX_REDUCE_TIME + "=200");
-    Summarizer  summarizer= client.getSummarizer();
-    assertEquals(2, summarizer.getExecutionSummarizer().getNumSuccessfulJobs());
-    assertTrue( summarizer.getExecutionSummarizer().getNumMapTasksLaunched()>0);
-    assertTrue( summarizer.getExecutionSummarizer().getNumReduceTasksLaunched()>0);
-    assertTrue( summarizer.getExecutionSummarizer().getSimulationTime()>0);
-    assertEquals("STRESS",summarizer.getExecutionSummarizer().getJobSubmissionPolicy());
-
-    LOG.info(" Limit sleep time ended at " + System.currentTimeMillis());
-  }
-
- 
-
   
   private void testRandomLocation(int locations, int njobs, UserGroupInformation ugi) throws Exception {
     Configuration conf = new Configuration();

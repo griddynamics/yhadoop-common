@@ -94,7 +94,8 @@ public class TestGridmixSubmission {
   public static void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }
-
+  
+// test monitor
   static class TestMonitor extends JobMonitor {
 
     static final long SLOPBYTES = 1024;
@@ -119,7 +120,6 @@ public class TestGridmixSubmission {
         final String jobName = job.getJobName();
         Configuration conf = job.getConfiguration();
         if (GenerateData.JOB_NAME.equals(jobName)) {
-          verifyQueue(conf, jobName);
           RemoteIterator<LocatedFileStatus> rit = GridmixTestUtils.dfs
               .listFiles(new Path("/"), true);
           while (rit.hasNext()) {
@@ -133,7 +133,6 @@ public class TestGridmixSubmission {
               150000);
           continue;
         } else if (GenerateDistCacheData.JOB_NAME.equals(jobName)) {
-          verifyQueue(conf, jobName);
           continue;
         }
 
@@ -178,17 +177,10 @@ public class TestGridmixSubmission {
       }
     }
 
-    // Verify if correct job queue is used
-    private void verifyQueue(Configuration conf, String jobName) {
-      if (!conf.getBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
-        assertEquals(" Improper queue for " + jobName,
-            conf.get("mapred.job.queue.name"), "q1");
-      } else {
-        assertEquals(" Improper queue for " + jobName,
-            conf.get("mapred.job.queue.name"), "default");
-      }
-    }
-
+  
+/*
+ * test count input / output bytes, records...
+ */
     public void check(final TaskType type, Job job, JobStory spec,
         final TaskReport[] runTasks, long extraInputBytes,
         int extraInputRecords, long extraOutputBytes, int extraOutputRecords)
@@ -321,7 +313,7 @@ public class TestGridmixSubmission {
       fail("Job failure: " + job);
     }
   }
-
+// class for test
   static class DebugGridmix extends Gridmix {
 
     private JobFactory<?> factory;

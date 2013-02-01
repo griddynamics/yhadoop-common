@@ -367,7 +367,7 @@ public class Gridmix extends Configured implements Tool {
     final Configuration conf = getConf();
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    conf.set(MRJobConfig.USER_NAME, ugi.getUserName());
+
     val = ugi.doAs(new PrivilegedExceptionAction<Integer>() {
       public Integer run() throws Exception {
         return runJob(conf, argv);

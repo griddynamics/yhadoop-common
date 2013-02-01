@@ -789,7 +789,7 @@ public class TestGridMixClasses {
       jobfactory.update(null);
     }
     // submitter was called twice
-    assertEquals(1, submitter.getJobs().size());
+    assertEquals(2, submitter.getJobs().size());
   }
 
   private class FakeJobSubmitter extends JobSubmitter {
