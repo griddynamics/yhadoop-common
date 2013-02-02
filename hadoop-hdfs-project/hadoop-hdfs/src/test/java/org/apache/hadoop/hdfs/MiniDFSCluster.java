@@ -124,6 +124,8 @@ public class MiniDFSCluster {
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
 
+  private static boolean MINI_CLUSTER_DEDICATED_DIRS = Boolean.valueOf(System.getProperty("miniClusterDedicatedDirs", "false")); 
+  
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
   /**
@@ -1586,8 +1588,11 @@ public class MiniDFSCluster {
    * 
    * @deprecated Use {@link #getInstanceStorageDir(int, int)} instead.
    */
-  public static File getStorageDir(int dbIndex, int dirIndex) {
-      return null;
+  public static File getStorageDir(int dnIndex, int dirIndex) {
+    if (MINI_CLUSTER_DEDICATED_DIRS) {
+      throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
+    }
+    return new File(getBaseDirectory(), getStorageDirPath(dnIndex, dirIndex));
   }
   
   /**
@@ -1604,9 +1609,11 @@ public class MiniDFSCluster {
    */
   public static boolean corruptReplica(int i, ExtendedBlock blk)
       throws IOException {
-    //File blockFile = getBlockFile(i, blk);
-    //return corruptBlock(blockFile);
-    return false;
+    if (MINI_CLUSTER_DEDICATED_DIRS) {
+      throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
+    }
+    File blockFile = getBlockFile(i, blk);
+    return corruptBlock(blockFile);
   }
   
   /**
@@ -2137,6 +2144,9 @@ public class MiniDFSCluster {
     * @deprecated Use {@link #getDfsBaseDir()} instead.
    */
   public static String getBaseDirectory() {
+      if (MINI_CLUSTER_DEDICATED_DIRS) {
+          throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
+      }
       return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/";
   }
 
@@ -2170,7 +2180,8 @@ public class MiniDFSCluster {
    * @return a directory for use as a miniDFS filesystem.
    */
   public static String newDfsBaseDir() {
-    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10) + "/dfs/";
+    String uniquePart = MINI_CLUSTER_DEDICATED_DIRS ? "/" + RandomStringUtils.randomAlphanumeric(10) : "";
+    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + uniquePart + "/dfs/";
   }
 
   /**
@@ -2292,6 +2303,9 @@ public class MiniDFSCluster {
    * @deprecated Use {@link #getBlockReplica(int, ExtendedBlock)} instead.
    */
   public static File getBlockFile(int dnIndex, ExtendedBlock block) {
+    if (MINI_CLUSTER_DEDICATED_DIRS) {
+      throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
+    }
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
       File storageDir = getStorageDir(dnIndex, i);
