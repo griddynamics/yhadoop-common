@@ -565,7 +565,7 @@ public class TestEditLog {
     
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .numDataNodes(NUM_DATA_NODES)
           .format(false).build();
       fail("should not be able to start");
@@ -656,7 +656,7 @@ public class TestEditLog {
         LOG.info("\n===========================================\n" +
         "Starting same cluster after simulated crash");
         cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .numDataNodes(NUM_DATA_NODES)
           .format(false)
           .build();
@@ -687,7 +687,7 @@ public class TestEditLog {
         cluster.shutdown();    
         
         cluster = new MiniDFSCluster.Builder(conf)
-            .baseDfsDir(cluster.getDfsBaseDir())
+            .dfsBaseDir(cluster.getDfsBaseDir())
             .numDataNodes(NUM_DATA_NODES)
             .format(false)
             .build();
@@ -781,7 +781,7 @@ public class TestEditLog {
     
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-        .baseDfsDir(cluster.getDfsBaseDir())
+        .dfsBaseDir(cluster.getDfsBaseDir())
         .numDataNodes(NUM_DATA_NODES)
         .format(false).build();
       if (!shouldSucceed) {

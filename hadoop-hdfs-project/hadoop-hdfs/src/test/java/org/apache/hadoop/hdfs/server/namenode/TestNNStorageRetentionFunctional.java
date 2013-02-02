@@ -57,7 +57,7 @@ public class TestNNStorageRetentionFunctional {
   @Test
   public void testPurgingWithNameEditsDirAfterFailure()
       throws IOException {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     MiniDFSCluster cluster = null;    
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
@@ -71,7 +71,7 @@ public class TestNNStorageRetentionFunctional {
 
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-        .baseDfsDir(baseDir)
+        .dfsBaseDir(baseDir)
         .numDataNodes(0)
         .manageNameDfsDirs(false)
         .format(true).build();

@@ -115,7 +115,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.shutdown();
 
       cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .numDataNodes(numDatanodes)
           .format(false).build();
       cluster.waitActive();
@@ -137,7 +137,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.shutdown();
 
       cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .numDataNodes(numDatanodes)
           .format(false).build();
       cluster.waitActive();
@@ -161,7 +161,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.shutdown();
 
       cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .numDataNodes(numDatanodes)
           .format(false).build();
       cluster.waitActive();

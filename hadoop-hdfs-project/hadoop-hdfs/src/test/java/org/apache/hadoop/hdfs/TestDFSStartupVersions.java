@@ -239,14 +239,14 @@ public class TestDFSStartupVersions {
    */
   @Test
   public void testVersions() throws Exception {
-    String dfsBaseDir = MiniDFSCluster.newBaseDfsDir();
+    String dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
     UpgradeUtilities util = new UpgradeUtilities(dfsBaseDir);
     Configuration conf = util.initializeStorageStateConf(1, 
                                                       new HdfsConfiguration());
     StorageData[] versions = initializeVersions(util);
     util.createNameNodeStorageDirs(
         conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY), "current");
-    cluster = new MiniDFSCluster.Builder(conf).baseDfsDir(dfsBaseDir)
+    cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir)
                                               .numDataNodes(0)
                                               .format(false)
                                               .manageDataDfsDirs(false)

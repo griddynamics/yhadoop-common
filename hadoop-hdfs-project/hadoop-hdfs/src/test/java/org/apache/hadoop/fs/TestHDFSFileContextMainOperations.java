@@ -64,7 +64,7 @@ public class TestHDFSFileContextMainOperations extends
       cluster.shutdown();
       cluster = null;
     }
-    cluster = new MiniDFSCluster.Builder(CONF).baseDfsDir(dfsBaseDir)
+    cluster = new MiniDFSCluster.Builder(CONF).dfsBaseDir(dfsBaseDir)
                                               .numDataNodes(1)
                                               .format(false).build();
     cluster.waitClusterUp();

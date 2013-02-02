@@ -92,7 +92,7 @@ public class TestDFSFinalize {
    */
   @Test
   public void testFinalize() throws Exception {
-    String dfsBaseDir = MiniDFSCluster.newBaseDfsDir();
+    String dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
     UpgradeUtilities util = new UpgradeUtilities(dfsBaseDir);
     
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
@@ -112,7 +112,7 @@ public class TestDFSFinalize {
       util.createNameNodeStorageDirs(nameNodeDirs, "previous");
       util.createDataNodeStorageDirs(dataNodeDirs, "current");
       util.createDataNodeStorageDirs(dataNodeDirs, "previous");
-      cluster = new MiniDFSCluster.Builder(conf).baseDfsDir(dfsBaseDir)
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir)
                                   .format(false)
                                   .manageDataDfsDirs(false)
                                   .manageNameDfsDirs(false)

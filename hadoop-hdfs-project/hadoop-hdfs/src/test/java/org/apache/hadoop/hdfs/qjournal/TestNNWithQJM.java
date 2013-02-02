@@ -66,14 +66,14 @@ public class TestNNWithQJM {
   
   @Test
   public void testLogAndRestart() throws IOException {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
             baseDir + "/TestNNWithQJM/image");
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         mjc.getQuorumJournalURI("myjournal").toString());
     
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-      .baseDfsDir(baseDir)
+      .dfsBaseDir(baseDir)
       .numDataNodes(0)
       .manageNameDfsDirs(false)
       .build();
@@ -98,7 +98,7 @@ public class TestNNWithQJM {
   
   @Test
   public void testNewNamenodeTakesOverWriter() throws Exception {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     File nn1Dir = new File(
         baseDir + "/TestNNWithQJM/image-nn1");
     File nn2Dir = new File(
@@ -110,7 +110,7 @@ public class TestNNWithQJM {
         mjc.getQuorumJournalURI("myjournal").toString());
     
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-      .baseDfsDir(baseDir)
+      .dfsBaseDir(baseDir)
       .numDataNodes(0)
       .manageNameDfsDirs(false)
       .checkExitOnShutdown(false)
@@ -132,7 +132,7 @@ public class TestNNWithQJM {
       conf2.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
           mjc.getQuorumJournalURI("myjournal").toString());
       MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf2)
-        .baseDfsDir(baseDir)
+        .dfsBaseDir(baseDir)
         .numDataNodes(0)
         .format(false)
         .manageNameDfsDirs(false)
@@ -161,7 +161,7 @@ public class TestNNWithQJM {
 
   @Test
   public void testMismatchedNNIsRejected() throws Exception {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
             baseDir + "/TestNNWithQJM/image");
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
@@ -170,7 +170,7 @@ public class TestNNWithQJM {
     // Start a NN, so the storage is formatted -- both on-disk
     // and QJM.
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-      .baseDfsDir(baseDir)
+      .dfsBaseDir(baseDir)
       .numDataNodes(0)
       .manageNameDfsDirs(false)
       .build();
@@ -185,7 +185,7 @@ public class TestNNWithQJM {
     // with the old namespace ID.
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-        .baseDfsDir(baseDir)
+        .dfsBaseDir(baseDir)
         .numDataNodes(0)
         .manageNameDfsDirs(false)
         .format(false)
@@ -199,7 +199,7 @@ public class TestNNWithQJM {
   
   @Test
   public void testWebPageHasQjmInfo() throws Exception {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         baseDir + "/TestNNWithQJM/image");
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
@@ -209,7 +209,7 @@ public class TestNNWithQJM {
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
     
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-      .baseDfsDir(baseDir)
+      .dfsBaseDir(baseDir)
       .numDataNodes(0)
       .manageNameDfsDirs(false)
       .build();

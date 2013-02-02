@@ -220,7 +220,7 @@ public class TestDFSUpgradeFromImage {
   public void testFailOnPreUpgradeImage() throws IOException {
     Configuration conf = new HdfsConfiguration();
 
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     File namenodeStorage = new File(baseDir, "nnimage-0.3.0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
 
@@ -244,7 +244,7 @@ public class TestDFSUpgradeFromImage {
     // Now try to start an NN from it
 
     try {
-      new MiniDFSCluster.Builder(conf).baseDfsDir(baseDir)
+      new MiniDFSCluster.Builder(conf).dfsBaseDir(baseDir)
         .numDataNodes(0)
         .format(false)
         .manageDataDfsDirs(false)
@@ -264,11 +264,11 @@ public class TestDFSUpgradeFromImage {
    */
   @Test
   public void testUpgradeFromRel22Image() throws IOException {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     File dataDir = new File(baseDir).getParentFile();
     unpackStorage(HADOOP22_IMAGE, dataDir);
     upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf)
-        .baseDfsDir(baseDir)
+        .dfsBaseDir(baseDir)
         .numDataNodes(4));
   }
   
@@ -278,7 +278,7 @@ public class TestDFSUpgradeFromImage {
    */
   @Test
   public void testUpgradeFromCorruptRel22Image() throws IOException {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     File dataDir = new File(baseDir).getParentFile();
     unpackStorage(HADOOP22_IMAGE, dataDir);
     
@@ -293,7 +293,7 @@ public class TestDFSUpgradeFromImage {
     // Upgrade should now fail
     try {
       upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf)
-          .baseDfsDir(baseDir)    
+          .dfsBaseDir(baseDir)    
           .numDataNodes(4));
       fail("Upgrade did not fail with bad MD5");
     } catch (IOException ioe) {
@@ -353,7 +353,7 @@ public class TestDFSUpgradeFromImage {
    */
   @Test
   public void testUpgradeFromRel1BBWImage() throws IOException {
-    String baseDir = MiniDFSCluster.newBaseDfsDir();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     File dataDir = new File(baseDir).getParentFile();
     unpackStorage(HADOOP1_BBW_IMAGE, dataDir);
     Configuration conf = new Configuration(upgradeConf);
@@ -362,7 +362,7 @@ public class TestDFSUpgradeFromImage {
         "data" + File.separator + 
         "data1");
     upgradeAndVerify(new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(baseDir)
+          .dfsBaseDir(baseDir)
           .numDataNodes(1).enableManagedDfsDirsRedundancy(false).
           manageDataDfsDirs(false));
   }

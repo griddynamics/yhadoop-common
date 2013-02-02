@@ -114,7 +114,7 @@ public class UpgradeUtilities {
       // format and start NameNode and start DataNode
       DFSTestUtil.formatNameNode(config);
       cluster =  new MiniDFSCluster.Builder(config)
-                                   .baseDfsDir(dfsBaseDir)
+                                   .dfsBaseDir(dfsBaseDir)
                                    .numDataNodes(1)
                                    .startupOption(StartupOption.REGULAR)
                                    .format(false)

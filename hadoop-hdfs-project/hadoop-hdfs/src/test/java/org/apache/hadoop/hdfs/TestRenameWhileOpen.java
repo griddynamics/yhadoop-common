@@ -106,7 +106,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -116,7 +116,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -182,7 +182,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -192,7 +192,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -251,7 +251,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -261,7 +261,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -317,7 +317,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -327,7 +327,7 @@ public class TestRenameWhileOpen {
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .baseDfsDir(cluster.getDfsBaseDir())
+                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();

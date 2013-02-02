@@ -93,7 +93,7 @@ import org.mockito.stubbing.Answer;
  */
 public class TestBlockRecovery {
   private static final Log LOG = LogFactory.getLog(TestBlockRecovery.class);
-  private static final String DFS_BASE_DIR = MiniDFSCluster.newBaseDfsDir();
+  private static final String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir();
   private static final String DATA_DIR = DFS_BASE_DIR + "data";
   private DataNode dn;
   private Configuration conf;
@@ -582,7 +582,7 @@ public class TestBlockRecovery {
 
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .baseDfsDir(DFS_BASE_DIR)
+        .dfsBaseDir(DFS_BASE_DIR)
         .nnTopology(MiniDFSNNTopology.simpleSingleNN(8020, 50070))
         .numDataNodes(1).build();
     try {

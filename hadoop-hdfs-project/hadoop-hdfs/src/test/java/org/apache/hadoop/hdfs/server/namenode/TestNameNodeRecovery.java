@@ -524,7 +524,7 @@ public class TestNameNodeRecovery {
     try {
       LOG.debug("trying to start normally (this should fail)...");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .enableManagedDfsDirsRedundancy(false).format(false).build();
       cluster.waitActive();
       cluster.shutdown();
@@ -549,7 +549,7 @@ public class TestNameNodeRecovery {
     try {
       LOG.debug("running recovery...");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .enableManagedDfsDirsRedundancy(false).format(false)
           .startupOption(recoverStartOpt).build();
     } catch (IOException e) {
@@ -566,7 +566,7 @@ public class TestNameNodeRecovery {
     try {
       LOG.debug("starting cluster normally after recovery...");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .enableManagedDfsDirsRedundancy(false).format(false).build();
       LOG.debug("successfully recovered the " + corruptor.getName() +
           " corrupted edit log");

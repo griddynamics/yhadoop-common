@@ -59,7 +59,7 @@ public class TestDFSUpgrade extends UpgradeUtilities {
   private MiniDFSCluster cluster = null;
     
   public TestDFSUpgrade() throws Exception {
-      super(MiniDFSCluster.newBaseDfsDir());
+      super(MiniDFSCluster.newDfsBaseDir());
   }
   
   /**
@@ -153,7 +153,7 @@ public class TestDFSUpgrade extends UpgradeUtilities {
       Class<? extends Exception> exceptionClass, Pattern messagePattern) {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-                                                .baseDfsDir(dfsBaseDir)
+                                                .dfsBaseDir(dfsBaseDir)
                                                 .startupOption(operation)
                                                 .format(false)
                                                 .manageDataDfsDirs(false)
@@ -197,7 +197,7 @@ public class TestDFSUpgrade extends UpgradeUtilities {
    * not manage its own directories or files
    */
   private MiniDFSCluster createCluster() throws IOException {
-    return new MiniDFSCluster.Builder(conf).baseDfsDir(dfsBaseDir)
+    return new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir)
                                            .numDataNodes(0)
                                            .format(false)
                                            .manageDataDfsDirs(false)

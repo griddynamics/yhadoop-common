@@ -79,7 +79,7 @@ public class TestSaveNamespace {
   }
   
   private static final Log LOG = LogFactory.getLog(TestSaveNamespace.class);
-  private static final String BASE_DIR = MiniDFSCluster.newBaseDfsDir();
+  private static final String BASE_DIR = MiniDFSCluster.newDfsBaseDir();
 
   private static class FaultySaveImage implements Answer<Void> {
     int count = 0;
@@ -584,7 +584,7 @@ public class TestSaveNamespace {
   @Test
   public void testSaveNamespaceWithRenamedLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
-        .baseDfsDir(BASE_DIR).numDataNodes(1).build();
+        .dfsBaseDir(BASE_DIR).numDataNodes(1).build();
     cluster.waitActive();
     DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
     OutputStream out = null;
@@ -607,7 +607,7 @@ public class TestSaveNamespace {
   @Test
   public void testSaveNamespaceWithDanglingLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
-        .baseDfsDir(BASE_DIR).numDataNodes(1).build();
+        .dfsBaseDir(BASE_DIR).numDataNodes(1).build();
     cluster.waitActive();
     DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
     try {

@@ -46,7 +46,7 @@ import org.mockito.Mockito;
 
 public class TestEditLogJournalFailures {
 
-  private final static String DFS_BASE_DIR = MiniDFSCluster.newBaseDfsDir(); 
+  private final static String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir(); 
     
   private int editsPerformed = 0;
   private MiniDFSCluster cluster;
@@ -64,7 +64,7 @@ public class TestEditLogJournalFailures {
   public void setUpMiniCluster(Configuration conf, boolean manageNameDfsDirs)
       throws IOException {
     cluster = new MiniDFSCluster.Builder(conf)
-        .baseDfsDir(DFS_BASE_DIR).numDataNodes(0)
+        .dfsBaseDir(DFS_BASE_DIR).numDataNodes(0)
         .manageNameDfsDirs(manageNameDfsDirs).checkExitOnShutdown(false).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();

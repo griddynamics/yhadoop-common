@@ -59,7 +59,7 @@ public class TestNameEditsConfigs {
 
   short replication = 3;
   
-  private final String DFS_BASE_DIR = MiniDFSCluster.newBaseDfsDir(); 
+  private final String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir(); 
   private final File BASE_DIR = new File(DFS_BASE_DIR, "dfs/");
 
   void checkImageAndEditsFilesExistence(File dir, 
@@ -157,7 +157,7 @@ public class TestNameEditsConfigs {
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     // Manage our own dfs directories
     cluster = new MiniDFSCluster.Builder(conf)
-                                .baseDfsDir(DFS_BASE_DIR)
+                                .dfsBaseDir(DFS_BASE_DIR)
                                 .numDataNodes(NUM_DATA_NODES)
                                 .manageNameDfsDirs(false).build();
 
@@ -192,7 +192,7 @@ public class TestNameEditsConfigs {
              "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     // Manage our own dfs directories. Do not format.
-    cluster = new MiniDFSCluster.Builder(conf).baseDfsDir(DFS_BASE_DIR)
+    cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(DFS_BASE_DIR)
                                               .numDataNodes(NUM_DATA_NODES)
                                               .format(false)
                                               .manageNameDfsDirs(false)
@@ -229,7 +229,7 @@ public class TestNameEditsConfigs {
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointEditsDir.getPath());
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     cluster = new MiniDFSCluster.Builder(conf)
-                                .baseDfsDir(DFS_BASE_DIR)
+                                .dfsBaseDir(DFS_BASE_DIR)
                                 .numDataNodes(NUM_DATA_NODES)
                                 .format(false)
                                 .manageNameDfsDirs(false)
@@ -275,7 +275,7 @@ public class TestNameEditsConfigs {
         "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     cluster = new MiniDFSCluster.Builder(conf)
-                                .baseDfsDir(DFS_BASE_DIR)
+                                .dfsBaseDir(DFS_BASE_DIR)
                                 .numDataNodes(NUM_DATA_NODES)
                                 .format(false)
                                 .manageNameDfsDirs(false)
@@ -339,7 +339,7 @@ public class TestNameEditsConfigs {
     try {
       // Manage our own dfs directories
       cluster = new MiniDFSCluster.Builder(conf)
-                                  .baseDfsDir(DFS_BASE_DIR)
+                                  .dfsBaseDir(DFS_BASE_DIR)
                                   .numDataNodes(NUM_DATA_NODES)
                                   .manageNameDfsDirs(false)
                                   .build();
@@ -374,7 +374,7 @@ public class TestNameEditsConfigs {
     try {
       // Manage our own dfs directories. Do not format.
       cluster = new MiniDFSCluster.Builder(conf)
-                                  .baseDfsDir(DFS_BASE_DIR)
+                                  .dfsBaseDir(DFS_BASE_DIR)
                                   .numDataNodes(NUM_DATA_NODES)
                                   .format(false)
                                   .manageNameDfsDirs(false)
@@ -408,7 +408,7 @@ public class TestNameEditsConfigs {
       conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, editsOnlyDir.getPath());
       replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
       cluster = new MiniDFSCluster.Builder(conf)
-                                  .baseDfsDir(DFS_BASE_DIR)
+                                  .dfsBaseDir(DFS_BASE_DIR)
                                   .numDataNodes(NUM_DATA_NODES)
                                   .format(false)
                                   .manageNameDfsDirs(false)
@@ -437,7 +437,7 @@ public class TestNameEditsConfigs {
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-                                  .baseDfsDir(DFS_BASE_DIR)
+                                  .dfsBaseDir(DFS_BASE_DIR)
                                   .numDataNodes(NUM_DATA_NODES)
                                   .format(false)
                                   .manageNameDfsDirs(false)
@@ -464,7 +464,7 @@ public class TestNameEditsConfigs {
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-                                  .baseDfsDir(DFS_BASE_DIR)
+                                  .dfsBaseDir(DFS_BASE_DIR)
                                   .numDataNodes(NUM_DATA_NODES)
                                   .format(false)
                                   .manageNameDfsDirs(false)

@@ -90,7 +90,7 @@ public class TestParallelImageWrite {
 
       // Here we restart the MiniDFScluster without formatting namenode
       cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir()).format(false)
+          .dfsBaseDir(cluster.getDfsBaseDir()).format(false)
           .numDataNodes(NUM_DATANODES).build();
       fsn = cluster.getNamesystem();
       FileSystem fs = cluster.getFileSystem();

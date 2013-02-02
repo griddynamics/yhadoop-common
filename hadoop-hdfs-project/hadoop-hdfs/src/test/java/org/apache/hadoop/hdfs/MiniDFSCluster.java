@@ -150,7 +150,7 @@ public class MiniDFSCluster {
     private boolean checkExitOnShutdown = true;
     private boolean checkDataNodeAddrConfig = false;
     private boolean checkDataNodeHostConfig = false;
-    private String baseDfsDir = null;
+    private String dfsBaseDir = null;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -159,8 +159,8 @@ public class MiniDFSCluster {
     /**
      * Default: auto generated temp dir
      */
-    public Builder baseDfsDir(String baseDfsDir) {
-        this.baseDfsDir = baseDfsDir;
+    public Builder dfsBaseDir(String dfsBaseDir) {
+        this.dfsBaseDir = dfsBaseDir;
         return this;
     }
     
@@ -341,7 +341,7 @@ public class MiniDFSCluster {
         builder.nnTopology.countNameNodes() + " namenodes.");
     nameNodes = new NameNodeInfo[builder.nnTopology.countNameNodes()];
       
-    initMiniDFSCluster(builder.baseDfsDir,
+    initMiniDFSCluster(builder.dfsBaseDir,
                        builder.conf,
                        builder.numDataNodes,
                        builder.format,
@@ -1563,13 +1563,52 @@ public class MiniDFSCluster {
   public String readBlockOnDataNode(int i, ExtendedBlock block)
       throws IOException {
     assert (i >= 0 && i < dataNodes.size()) : "Invalid datanode "+i;
-    File blockFile = getBlockFile(i, block);
+    File blockFile = getBlockReplica(i, block);
     if (blockFile != null && blockFile.exists()) {
       return DFSTestUtil.readFile(blockFile);
     }
     return null;
   }
 
+  /**
+   * Get a storage directory for a datanode. There are two storage directories
+   * per datanode:
+   * <ol>
+   * <li><base directory>/data/data<2*dnIndex + 1></li>
+   * <li><base directory>/data/data<2*dnIndex + 2></li>
+   * </ol>
+   * 
+   * @param dnIndex datanode index (starts from 0)
+   * @param dirIndex directory index (0 or 1). Index 0 provides access to the
+   *          first storage directory. Index 1 provides access to the second
+   *          storage directory.
+   * @return Storage directory
+   * 
+   * @deprecated Use {@link #getInstanceStorageDir(int, int)} instead.
+   */
+  public static File getStorageDir(int dbIndex, int dirIndex) {
+      return null;
+  }
+  
+  /**
+   * Corrupt a block on a particular datanode.
+   *
+   * @param i index of the datanode
+   * @param blk name of the block
+   * @throws IOException on error accessing the given block or if
+   * the contents of the block (on the same datanode) differ.
+   * @return true if a replica was corrupted, false otherwise
+   * Types: delete, write bad data, truncate
+   * 
+   * @deprecated Use {@link #corruptBlockReplica(int, ExtendedBlock)} instead.
+   */
+  public static boolean corruptReplica(int i, ExtendedBlock blk)
+      throws IOException {
+    //File blockFile = getBlockFile(i, blk);
+    //return corruptBlock(blockFile);
+    return false;
+  }
+  
   /**
    * Corrupt a block on a particular datanode.
    *
@@ -1580,9 +1619,9 @@ public class MiniDFSCluster {
    * @return true if a replica was corrupted, false otherwise
    * Types: delete, write bad data, truncate
    */
-  public boolean corruptReplica(int i, ExtendedBlock blk)
+  public boolean corruptBlockReplica(int i, ExtendedBlock blk)
       throws IOException {
-    File blockFile = getBlockFile(i, blk);
+    File blockFile = getBlockReplica(i, blk);
     return corruptBlock(blockFile);
   }
 
@@ -2090,6 +2129,18 @@ public class MiniDFSCluster {
   }
 
   /**
+   * Get the base directory for any DFS cluster whose configuration does
+    * not explicitly set it. This is done by retrieving the system property
+    * {@link #PROP_TEST_BUILD_DATA} (defaulting to "build/test/data" ),
+    * and returning that directory with a subdir of /dfs.
+    * 
+    * @deprecated Use {@link #getDfsBaseDir()} instead.
+   */
+  public static String getBaseDirectory() {
+      return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/";
+  }
+
+  /**
    * Get the base directory for this MiniDFS instance.
    * <p/>
    * Within the MiniDFCluster class and any subclasses, this method should be
@@ -2105,7 +2156,7 @@ public class MiniDFSCluster {
     if (dfsBaseDir == null) {
       dfsBaseDir = conf.get(HDFS_MINIDFS_BASEDIR, null);
       if (dfsBaseDir == null) {
-          dfsBaseDir = newBaseDfsDir();
+          dfsBaseDir = newDfsBaseDir();
       }
     }
     return dfsBaseDir;
@@ -2118,7 +2169,7 @@ public class MiniDFSCluster {
    * and returning that directory with a subdir of /dfs plus a random subdir.
    * @return a directory for use as a miniDFS filesystem.
    */
-  public static String newBaseDfsDir() {
+  public static String newDfsBaseDir() {
     return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10) + "/dfs/";
   }
 
@@ -2134,24 +2185,6 @@ public class MiniDFSCluster {
    */
   public File getInstanceStorageDir(int dnIndex, int dirIndex) {
     return new File(base_dir, getStorageDirPath(dnIndex, dirIndex));
-  }
-
-  /**
-   * Get a storage directory for a datanode. There are two storage directories
-   * per datanode:
-   * <ol>
-   * <li><base directory>/data/data<2*dnIndex + 1></li>
-   * <li><base directory>/data/data<2*dnIndex + 2></li>
-   * </ol>
-   * 
-   * @param dnIndex datanode index (starts from 0)
-   * @param dirIndex directory index (0 or 1). Index 0 provides access to the
-   *          first storage directory. Index 1 provides access to the second
-   *          storage directory.
-   * @return Storage directory
-   */
-  public File getStorageDir(int dnIndex, int dirIndex) {
-    return new File(getDfsBaseDir(), getStorageDirPath(dnIndex, dirIndex));
   }
 
   /**
@@ -2243,7 +2276,7 @@ public class MiniDFSCluster {
     if (dataNodes.size() == 0) return new File[0];
     ArrayList<File> list = new ArrayList<File>();
     for (int i=0; i < dataNodes.size(); i++) {
-      File blockFile = getBlockFile(i, block);
+      File blockFile = getBlockReplica(i, block);
       if (blockFile != null) {
         list.add(blockFile);
       }
@@ -2255,11 +2288,30 @@ public class MiniDFSCluster {
    * Get files related to a block for a given datanode
    * @param dnIndex Index of the datanode to get block files for
    * @param block block for which corresponding files are needed
+   * 
+   * @deprecated Use {@link #getBlockReplica(int, ExtendedBlock)} instead.
    */
-  public File getBlockFile(int dnIndex, ExtendedBlock block) {
+  public static File getBlockFile(int dnIndex, ExtendedBlock block) {
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
       File storageDir = getStorageDir(dnIndex, i);
+      File blockFile = getBlockFile(storageDir, block);
+      if (blockFile.exists()) {
+        return blockFile;
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * Get files related to a block for a given datanode
+   * @param dnIndex Index of the datanode to get block files for
+   * @param block block for which corresponding files are needed
+   */
+  public File getBlockReplica(int dnIndex, ExtendedBlock block) {
+    // Check for block file in the two storage directories of the datanode
+    for (int i = 0; i <=1 ; i++) {
+      File storageDir = getInstanceStorageDir(dnIndex, i);
       File blockFile = getBlockFile(storageDir, block);
       if (blockFile.exists()) {
         return blockFile;

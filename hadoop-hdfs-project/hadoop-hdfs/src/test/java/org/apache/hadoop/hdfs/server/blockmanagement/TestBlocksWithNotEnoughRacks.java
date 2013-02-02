@@ -209,7 +209,7 @@ public class TestBlocksWithNotEnoughRacks {
 
       // Corrupt a replica of the block
       int dnToCorrupt = DFSTestUtil.firstDnWithBlock(cluster, b);
-      assertTrue(cluster.corruptReplica(dnToCorrupt, b));
+      assertTrue(cluster.corruptBlockReplica(dnToCorrupt, b));
 
       // Restart the datanode so blocks are re-scanned, and the corrupt
       // block is detected.

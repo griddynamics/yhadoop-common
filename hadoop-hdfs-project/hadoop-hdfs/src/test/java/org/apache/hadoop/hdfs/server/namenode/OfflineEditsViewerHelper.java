@@ -95,7 +95,7 @@ public class OfflineEditsViewerHelper {
    * starts DelegationTokenSecretManager (to get security op codes)
    */
   public void startCluster() throws IOException {
-    String dfsDir = MiniDFSCluster.newBaseDfsDir();
+    String dfsDir = MiniDFSCluster.newDfsBaseDir();
     // same as manageDfsDirs but only one edits file instead of two
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
       Util.fileAsURI(new File(dfsDir, "name")).toString());
@@ -109,7 +109,7 @@ public class OfflineEditsViewerHelper {
     config.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     cluster =
-      new MiniDFSCluster.Builder(config).baseDfsDir(dfsDir).manageNameDfsDirs(false).build();
+      new MiniDFSCluster.Builder(config).dfsBaseDir(dfsDir).manageNameDfsDirs(false).build();
     cluster.waitClusterUp();
   }
 

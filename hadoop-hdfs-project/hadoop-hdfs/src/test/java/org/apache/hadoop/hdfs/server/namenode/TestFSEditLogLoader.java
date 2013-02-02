@@ -102,7 +102,7 @@ public class TestFSEditLogLoader {
     bld.append("Recent opcode offsets: (\\d+\\s*){4}$");
     try {
       cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir()).numDataNodes(NUM_DATA_NODES)
+          .dfsBaseDir(cluster.getDfsBaseDir()).numDataNodes(NUM_DATA_NODES)
           .enableManagedDfsDirsRedundancy(false).format(false).build();
       fail("should not be able to start");
     } catch (IOException e) {
@@ -142,7 +142,7 @@ public class TestFSEditLogLoader {
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
   
       cluster = new MiniDFSCluster.Builder(conf)
-        .baseDfsDir(cluster.getDfsBaseDir()).numDataNodes(2)
+        .dfsBaseDir(cluster.getDfsBaseDir()).numDataNodes(2)
         .format(false).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();

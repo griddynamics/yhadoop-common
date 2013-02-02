@@ -54,7 +54,7 @@ public class TestAllowFormat {
   public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
     LogFactory.getLog(TestAllowFormat.class.getName());
-  private static final String DFS_BASE_DIR = MiniDFSCluster.newBaseDfsDir();
+  private static final String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir();
   private static Configuration config;
   private static MiniDFSCluster cluster = null;
 
@@ -106,7 +106,7 @@ public class TestAllowFormat {
     NameNode nn;
     // 1. Create a new cluster and format DFS
     config.setBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, true);
-    cluster = new MiniDFSCluster.Builder(config).baseDfsDir(DFS_BASE_DIR)
+    cluster = new MiniDFSCluster.Builder(config).dfsBaseDir(DFS_BASE_DIR)
                                                 .manageDataDfsDirs(false)
                                                 .manageNameDfsDirs(false)
                                                 .build();

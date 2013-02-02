@@ -152,7 +152,7 @@ public class TestFsck {
       
       // restart the cluster; bring up namenode but not the data nodes
       cluster = new MiniDFSCluster.Builder(conf)
-          .baseDfsDir(cluster.getDfsBaseDir())
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .numDataNodes(0).format(false).build();
       outStr = runFsck(conf, 1, true, "/");
       // expect the result is corrupt
@@ -411,7 +411,7 @@ public class TestFsck {
         ExtendedBlock block = dfsClient.getNamenode().getBlockLocations(
             name, blockSize * corruptIdx, Long.MAX_VALUE).get(0).getBlock();
         for (int i = 0; i < numDataNodes; i++) {
-          File blockFile = cluster.getBlockFile(i, block);
+          File blockFile = cluster.getBlockReplica(i, block);
           if(blockFile != null && blockFile.exists()) {
             assertTrue(blockFile.delete());
           }
@@ -489,7 +489,7 @@ public class TestFsck {
       ExtendedBlock block = dfsClient.getNamenode().getBlockLocations(
           corruptFileName, 0, Long.MAX_VALUE).get(0).getBlock();
       for (int i=0; i<4; i++) {
-        File blockFile = cluster.getBlockFile(i, block);
+        File blockFile = cluster.getBlockReplica(i, block);
         if(blockFile != null && blockFile.exists()) {
           assertTrue(blockFile.delete());
         }
@@ -617,7 +617,7 @@ public class TestFsck {
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     
     // corrupt replicas
-    File blockFile = cluster.getBlockFile(0, block);
+    File blockFile = cluster.getBlockReplica(0, block);
     if (blockFile != null && blockFile.exists()) {
       RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
       FileChannel channel = raFile.getChannel();

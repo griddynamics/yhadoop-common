@@ -336,7 +336,7 @@ public class TestReplication {
       int fileCount = 0;
       // Choose 3 copies of block file - delete 1 and corrupt the remaining 2
       for (int dnIndex=0; dnIndex<3; dnIndex++) {
-        File blockFile = cluster.getBlockFile(dnIndex, block);
+        File blockFile = cluster.getBlockReplica(dnIndex, block);
         LOG.info("Checking for file " + blockFile);
         
         if (blockFile != null && blockFile.exists()) {
@@ -374,7 +374,7 @@ public class TestReplication {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.75f"); // only 3 copies exist
       
       cluster = new MiniDFSCluster.Builder(conf)
-                                  .baseDfsDir(cluster.getDfsBaseDir())
+                                  .dfsBaseDir(cluster.getDfsBaseDir())
                                   .numDataNodes(numDataNodes * 2)
                                   .format(false)
                                   .build();

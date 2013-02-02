@@ -307,7 +307,7 @@ public class TestDFSStorageStateRecovery {
   }
   
   private MiniDFSCluster createCluster(Configuration c) throws IOException {
-    return new MiniDFSCluster.Builder(c).baseDfsDir(dfsBaseDir)
+    return new MiniDFSCluster.Builder(c).dfsBaseDir(dfsBaseDir)
                              .numDataNodes(0)
                              .startupOption(StartupOption.REGULAR)
                              .format(false)
@@ -445,7 +445,7 @@ public class TestDFSStorageStateRecovery {
   @Before
   public void setUp() throws Exception {
     LOG.info("Setting up the directory structures.");
-    dfsBaseDir = MiniDFSCluster.newBaseDfsDir();
+    dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
     util = new UpgradeUtilities(dfsBaseDir);
   }
 

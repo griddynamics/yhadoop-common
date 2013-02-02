@@ -152,7 +152,7 @@ public class TestInjectionForSimulatedStorage {
       
       cluster = new MiniDFSCluster.Builder(conf)
                                   .numDataNodes(numDataNodes * 2)
-                                  .baseDfsDir(cluster.getDfsBaseDir())
+                                  .dfsBaseDir(cluster.getDfsBaseDir())
                                   .format(false)
                                   .build();
       cluster.waitActive();
