@@ -909,15 +909,16 @@ public class TestGridMixClasses {
     SleepReducer test = new SleepReducer();
     long start = System.currentTimeMillis();
     test.setup(context);
+    long sleeped=context.getCurrentKey().getReduceOutputBytes();
     // status has been changed
-    assertEquals("Sleeping... 900 ms left", context.getStatus());
+    assertEquals("Sleeping... "+sleeped+" ms left", context.getStatus());
     // should sleep 0.9 sec
 
-    assertTrue(System.currentTimeMillis() >= (start + 900));
+    assertTrue(System.currentTimeMillis() >= (start + sleeped));
     test.cleanup(context);
     // status has been changed again
 
-    assertEquals("Slept for 900", context.getStatus());
+    assertEquals("Slept for "+sleeped, context.getStatus());
 
   }
 
