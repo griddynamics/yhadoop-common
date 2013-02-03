@@ -913,7 +913,7 @@ public class TestGridMixClasses {
     assertEquals("Sleeping... 900 ms left", context.getStatus());
     // should sleep 0.9 sec
 
-    assertTrue(System.currentTimeMillis() > (start + 900));
+    assertTrue(System.currentTimeMillis() >= (start + 900));
     test.cleanup(context);
     // status has been changed again
 
