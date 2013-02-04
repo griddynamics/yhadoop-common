@@ -27,10 +27,6 @@ import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSystem;
-//import org.apache.hadoop.metrics.MetricsContext;
-//import org.apache.hadoop.metrics.MetricsRecord;
-//import org.apache.hadoop.metrics.MetricsUtil;
-//import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -101,6 +97,7 @@ public class ShuffleClientMetrics implements MetricsSource {
   }
   
   @Override
+  @SuppressWarnings("deprecation")
   public void getMetrics(final MetricsCollector collector, boolean all) {
     final MetricsRecordBuilder mrb = collector.addRecord(RECORD_NAME);
     mrb.setContext(CONTEXT);
