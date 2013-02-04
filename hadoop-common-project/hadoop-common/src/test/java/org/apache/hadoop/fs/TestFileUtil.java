@@ -37,7 +37,6 @@ import org.junit.Test;
 public class TestFileUtil {
   private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
 
-
   private static final String TEST_ROOT_DIR = System.getProperty(
       "test.build.data", "/tmp") + "/fu";
   private static final File TEST_DIR = new File(TEST_ROOT_DIR);
