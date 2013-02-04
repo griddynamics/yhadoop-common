@@ -26,7 +26,6 @@ import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.Interns;
 
-@SuppressWarnings("deprecation")
 class LocalJobRunnerMetrics implements MetricsSource {
   private static final String CONTEXT = "mapred";
   private static final String RECORD_NAME = "jobtracker";
@@ -50,6 +49,7 @@ class LocalJobRunnerMetrics implements MetricsSource {
   private int numWaitingMaps = 0;
   private int numWaitingReduces = 0;
   
+  @SuppressWarnings("deprecation")
   public LocalJobRunnerMetrics(JobConf conf) {
     sessionId = conf.getSessionId();
     
