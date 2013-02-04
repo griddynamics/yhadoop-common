@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.mapred.pipes;
 
 import java.io.ByteArrayOutputStream;
@@ -37,6 +55,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.junit.Assert;
@@ -227,14 +246,14 @@ public class TestPipeApplication {
     // store System.out
     PrintStream oldps = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ExitUtil.disableSystemExit();
     // test without parameters
     try {
-      System.setSecurityManager(new NoExitSecurityManager());
 
       System.setOut(new PrintStream(out));
       Submitter.main(new String[0]);
       fail();
-    } catch (ExitException e) {
+    } catch (ExitUtil.ExitException e) {
       // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
       assertTrue(out.toString().contains("bin/hadoop pipes"));
@@ -261,7 +280,7 @@ public class TestPipeApplication {
       assertTrue(out
           .toString()
           .contains(
-              "-conf <configuration file>     specify an application configuration file"));
+                  "-conf <configuration file>     specify an application configuration file"));
       assertTrue(out.toString().contains(
           "-D <property=value>            use value for given property"));
       assertTrue(out.toString().contains(
@@ -271,15 +290,15 @@ public class TestPipeApplication {
       assertTrue(out
           .toString()
           .contains(
-              "-files <comma separated list of files>    specify comma separated files to be copied to the map reduce cluster"));
+                  "-files <comma separated list of files>    specify comma separated files to be copied to the map reduce cluster"));
       assertTrue(out
           .toString()
           .contains(
-              "-libjars <comma separated list of jars>    specify comma separated jar files to include in the classpath."));
+                  "-libjars <comma separated list of jars>    specify comma separated jar files to include in the classpath."));
       assertTrue(out
           .toString()
           .contains(
-              "-archives <comma separated list of archives>    specify comma separated archives to be unarchived on the compute machines."));
+                  "-archives <comma separated list of archives>    specify comma separated archives to be unarchived on the compute machines."));
     } finally {
       System.setOut(oldps);
       // restore
@@ -293,7 +312,6 @@ public class TestPipeApplication {
     }
     // test call Submitter form command line
     try {
-      System.setSecurityManager(new NoExitSecurityManager());
       File fCommand = getFileCommand(null);
       String[] args = new String[22];
       File input = new File(workSpace + File.separator + "input");
@@ -328,7 +346,7 @@ public class TestPipeApplication {
 
       Submitter.main(args);
       fail();
-    } catch (ExitException e) {
+    } catch (ExitUtil.ExitException e) {
       // status should be 0
       assertEquals(e.status, 0);
 
@@ -630,34 +648,6 @@ public class TestPipeApplication {
     @Override
     public void close() throws IOException {
 
-    }
-  }
-
-  private static class NoExitSecurityManager extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkPermission(Permission perm, Object context) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkExit(int status) {
-      super.checkExit(status);
-      throw new ExitException(status);
-    }
-  }
-
-  protected static class ExitException extends SecurityException {
-    private static final long serialVersionUID = -1982617086752946683L;
-    public final int status;
-
-    public ExitException(int status) {
-      super("There is no escape!");
-      this.status = status;
     }
   }
 
