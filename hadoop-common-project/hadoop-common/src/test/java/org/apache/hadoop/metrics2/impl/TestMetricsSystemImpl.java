@@ -58,7 +58,6 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**
  * Test the MetricsSystemImpl class
@@ -395,88 +394,4 @@ public class TestMetricsSystemImpl {
     return "file:metrics2-test-plugin.jar";
   }
   
-  @Test
-  public void testIvanExperimental() {
-    MetricsSystemImpl ms = new MetricsSystemImpl("Test");
-    ms.start();
-    
-    TestSource s1 = ms.register("s1", "s1 desc", new TestSource("s1"));
-    s1.c1.incr();
-    TestSource s2 = ms.register("s2", "s2 desc", new TestSource("s2"));
-    s2.c1.incr();
-    s2.c1.incr();
-    
-    IvanSink sink1 = new IvanSink();
-    // NB: register the sink:
-    ms.register("ivan", "Ivan sink!", sink1);
-    ms.publishMetricsNow();
-    
-    assertEquals(0L, ms.droppedPubAll.value());
-    
-    System.out.println("sink put count = " + sink1.putCount);
-    
-    ms.stop();
-    ms.shutdown();
-    
-    System.out.println("sink put count = " + sink1.putCount);
-  }
-
-  @Test
-  public void testIvanExperimentalWithDefaultMetricsSystem() {
-    // NB: take the default metrics system:
-    //final MetricsSystem ms2 = DefaultMetricsSystem.initialize("Ivan");
-    //final MetricsSystem ms = DefaultMetricsSystem.initialize("");
-    final MetricsSystem ms = DefaultMetricsSystem.instance();
-    ms.init("");
-    //ms.init("bolvan");
-    //assertTrue(ms == ms2);
-    //assertTrue(ms == msDefault);
-    //ms.start();
-    
-    TestSource s1 = ms.register("s1", "s1 desc", new TestSource("s1"));
-    s1.c1.incr();
-    TestSource s2 = ms.register("s2", "s2 desc", new TestSource("s2"));
-    s2.c1.incr();
-    s2.c1.incr();
-    
-    IvanSink sink1 = new IvanSink();
-    // NB: register the sink:
-    ms.register("ivan", "Ivan sink!", sink1);
-    ms.publishMetricsNow();
-    
-    //assertEquals(0L, ms.droppedPubAll.value());
-    
-    System.out.println("sink put count = " + sink1.putCount);
-    
-    ms.stop();
-    ms.shutdown();
-    
-    System.out.println("sink put count = " + sink1.putCount);
-  }
-  
-  private static class IvanSink implements MetricsSink {
-    int putCount = 0;
-    @Override
-    public void init(SubsetConfiguration conf) {
-    }
-    @Override
-    public void putMetrics(MetricsRecord record) {
-      String context = record.context();
-      String recordName = record.name();
-      System.out.println("========== record context: [" + context + "]");
-      System.out.println("              record name: [" + recordName + "]");
-      for (MetricsTag tag: record.tags()) {
-        System.out.println("tag: " + tag);
-      }
-      for (AbstractMetric am: record.metrics()) {
-        System.out.println("metric: " + am.name() + " = " + am.value());
-      }
-      System.out.println("============================");
-      //System.out.println("put: " + record);
-      putCount++;
-    }
-    @Override
-    public void flush() {
-    }
-  }
 }

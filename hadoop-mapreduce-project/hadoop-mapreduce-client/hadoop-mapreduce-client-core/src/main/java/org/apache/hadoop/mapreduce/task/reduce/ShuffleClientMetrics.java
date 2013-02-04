@@ -75,11 +75,9 @@ public class ShuffleClientMetrics implements MetricsSource {
     numCopiers = jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
     
     final MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
-    //DefaultMetricsSystem.setMiniClusterMode(true); // ???
     metricsSystem.init(CONTEXT);
     metricsSystem.register(getClass().getName(), 
         "Metrics source ShuffleClient.", this);
-    
   }
   
   public synchronized void inputBytes(long numBytes) {
@@ -114,24 +112,13 @@ public class ShuffleClientMetrics implements MetricsSource {
     mrb.tag(MsInfo.SessionId, jobConf.getSessionId());
     
     synchronized (this) {
-      //shuffleMetrics.incrMetric("shuffle_input_bytes", numBytes);
       mrb.addGauge(shuffleInputBytesMI, numBytes);
-      
-//      shuffleMetrics.incrMetric("shuffle_failed_fetches", 
-//                                numFailedFetches);
       mrb.addGauge(shuffleFailedFetchesMI, numFailedFetches);
-      
-//      shuffleMetrics.incrMetric("shuffle_success_fetches", 
-//                                numSuccessFetches);
       mrb.addGauge(shuffleSuccessFetchesMI, numSuccessFetches);
-      
       final float busyPercent;
       if (numCopiers != 0) {
-//        shuffleMetrics.setMetric("shuffle_fetchers_busy_percent",
-//            100*((float)numThreadsBusy/numCopiers));
         busyPercent = 100*((float)numThreadsBusy/numCopiers);
       } else {
-//        shuffleMetrics.setMetric("shuffle_fetchers_busy_percent", 0);
         busyPercent = 0f;
       }
       mrb.addGauge(shuffleFetchersBusyPercentMI, busyPercent);
@@ -141,6 +128,5 @@ public class ShuffleClientMetrics implements MetricsSource {
       numSuccessFetches = 0;
       numFailedFetches = 0;
     }
-    
   }
 }
