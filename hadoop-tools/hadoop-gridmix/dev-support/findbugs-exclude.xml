@@ -26,8 +26,4 @@
   <Match>
     <Bug pattern="EI_EXPOSE_REP2" />
   </Match>
-
-  <Match>
-    <Bug pattern="MS_SHOULD_BE_FINAL" />
-  </Match>
 </FindBugsFilter>
