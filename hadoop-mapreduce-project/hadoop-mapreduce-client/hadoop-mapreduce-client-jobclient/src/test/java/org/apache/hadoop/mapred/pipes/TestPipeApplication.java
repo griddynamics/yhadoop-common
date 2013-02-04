@@ -14,7 +14,6 @@ import java.security.Permission;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +39,7 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -69,7 +69,7 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
 
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-          new Counters.Counter(), new Progress(), conf);
+          new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
@@ -77,7 +77,7 @@ public class TestPipeApplication {
           Text.class, null, null);
       output.setWriter(wr);
       // stub for client
-      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinRunabeClient");
+      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicationRunnableStub");
 
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
       // token for authorization
@@ -89,18 +89,18 @@ public class TestPipeApplication {
       TestTaskReporter reporter = new TestTaskReporter();
       PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text> runner = new PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text>();
 
-      initstdout(conf);
+      initStdOut(conf);
 
       runner.configure(conf);
       runner.run(rReader, output, reporter);
 
-      String stdout = readstdout(conf);
+      String stdOut = readStdOut(conf);
 
       // test part of translated data. As common file for client and test -
       // clients stdout
-      assertTrue(stdout.contains("s2: org.apache.hadoop.io.FloatWritable"));
-      assertTrue(stdout.contains("s2: org.apache.hadoop.io.NullWritable"));
-      assertTrue(stdout
+      assertTrue(stdOut.contains("s2: org.apache.hadoop.io.FloatWritable"));
+      assertTrue(stdOut.contains("s2: org.apache.hadoop.io.NullWritable"));
+      assertTrue(stdOut
           .contains("split:org.apache.hadoop.mapred.pipes.TestPipeApplication$FakeSplit"));
 
     } finally {
@@ -119,6 +119,7 @@ public class TestPipeApplication {
    * 
    * @throws Throwable
    */
+
   @Test
   public void testApplication() throws Throwable {
     JobConf conf = new JobConf();
@@ -126,7 +127,7 @@ public class TestPipeApplication {
     RecordReader<FloatWritable, NullWritable> rReader = new Reader();
 
     // client for test
-    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinClient");
+    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicationStub");
 
     TestTaskReporter reporter = new TestTaskReporter();
 
@@ -143,7 +144,7 @@ public class TestPipeApplication {
 
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-          new Counters.Counter(), new Progress(), conf);
+          new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
@@ -165,9 +166,9 @@ public class TestPipeApplication {
       wr.close();
 
       // check getDownlink().mapItem();
-      String stdout = readstdout(conf);
-      assertTrue(stdout.contains("map object1:txt"));
-      assertTrue(stdout.contains("map object:3"));
+      String stdOut = readStdOut(conf);
+      assertTrue(stdOut.contains("map object1:txt"));
+      assertTrue(stdOut.contains("map object:3"));
 
       // reporter test counter, and status should be sended
       assertEquals(1.0, reporter.getProgress(), 0.01);
@@ -297,15 +298,15 @@ public class TestPipeApplication {
       String[] args = new String[22];
       File input = new File(workSpace + File.separator + "input");
       if (!input.exists()) {
-        input.createNewFile();
+        Assert.assertTrue(input.createNewFile());
       }
-      File outpot = new File(workSpace + File.separator + "output");
-      FileUtil.fullyDelete(outpot);
+      File outPut = new File(workSpace + File.separator + "output");
+      FileUtil.fullyDelete(outPut);
 
       args[0] = "-input";
       args[1] = input.getAbsolutePath();// "input";
       args[2] = "-output";
-      args[3] = outpot.getAbsolutePath();// "output";
+      args[3] = outPut.getAbsolutePath();// "output";
       args[4] = "-inputformat";
       args[5] = "org.apache.hadoop.mapred.TextInputFormat";
       args[6] = "-map";
@@ -354,28 +355,28 @@ public class TestPipeApplication {
               "service"));
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
 
-      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerClient");
+      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerStub");
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
-      PipesReducer<BooleanWritable, Text, IntWritable, Text> reduser = new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
-      reduser.configure(conf);
+      PipesReducer<BooleanWritable, Text, IntWritable, Text> reducer = new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
+      reducer.configure(conf);
       BooleanWritable bw = new BooleanWritable(true);
 
       conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
-      initstdout(conf);
+      initStdOut(conf);
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-          new Counters.Counter(), new Progress(), conf);
+          new Counters.Counter(), new Progress());
       Reporter reporter = new TestTaskReporter();
-      List<Text> ltext = new ArrayList<Text>();
-      ltext.add(new Text("1 boolean"));
+      List<Text> texts = new ArrayList<Text>();
+      texts.add(new Text("1 boolean"));
 
-      reduser.reduce(bw, ltext.iterator(), output, reporter);
-      reduser.close();
-      String stdout= readstdout(conf);
+      reducer.reduce(bw, texts.iterator(), output, reporter);
+      reducer.close();
+      String stdOut= readStdOut(conf);
      // test data
-      assertTrue(stdout.contains("reducer key :true"));
-      assertTrue(stdout.contains("reduce value  :1 boolean"));
+      assertTrue(stdOut.contains("reducer key :true"));
+      assertTrue(stdOut.contains("reduce value  :1 boolean"));
 
       System.out.println("ok!");
     } finally {
@@ -396,8 +397,8 @@ public class TestPipeApplication {
   public void testPipesPartitioner() {
 
     PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
-    JobConf conf = new JobConf();
-    Submitter.getJavaPartitioner(conf);
+    JobConf configuration = new JobConf();
+    Submitter.getJavaPartitioner(configuration);
     partitioner.configure(new JobConf());
     IntWritable iw = new IntWritable(4);
     assertEquals(0, partitioner.getPartition(iw, new Text("test"), 2));
@@ -410,29 +411,28 @@ public class TestPipeApplication {
   /**
    * clean previous std  error and outs
    * 
-   * @param conf
    */
 
-  private void initstdout(JobConf conf) {
-    TaskAttemptID taskid = TaskAttemptID.forName(conf
-        .get(MRJobConfig.TASK_ATTEMPT_ID));
-    File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
-    File stderr = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDERR);
+  private void initStdOut(JobConf configuration) {
+    TaskAttemptID taskId = TaskAttemptID.forName(configuration
+            .get(MRJobConfig.TASK_ATTEMPT_ID));
+    File stdOut = TaskLog.getTaskLogFile(taskId, false, TaskLog.LogName.STDOUT);
+    File stdErr = TaskLog.getTaskLogFile(taskId, false, TaskLog.LogName.STDERR);
     // prepare folder
-    if (!stdout.getParentFile().exists()) {
-      stdout.getParentFile().mkdirs();
+    if (!stdOut.getParentFile().exists()) {
+      stdOut.getParentFile().mkdirs();
     } else { // clean logs
-      stdout.deleteOnExit();
-      stderr.deleteOnExit();
+      stdOut.deleteOnExit();
+      stdErr.deleteOnExit();
     }
   }
 
-  private String readstdout(JobConf conf) throws Exception {
-    TaskAttemptID taskid = TaskAttemptID.forName(conf
+  private String readStdOut(JobConf conf) throws Exception {
+    TaskAttemptID taskId = TaskAttemptID.forName(conf
         .get(MRJobConfig.TASK_ATTEMPT_ID));
-    File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
+    File stdOut = TaskLog.getTaskLogFile(taskId, false, TaskLog.LogName.STDOUT);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    InputStream is = new FileInputStream(stdout);
+    InputStream is = new FileInputStream(stdOut);
     byte[] buffer = new byte[1024];
     int counter = 0;
     while ((counter = is.read(buffer)) >= 0) {
@@ -459,7 +459,7 @@ public class TestPipeApplication {
     result[0] = new File("./jobTokenPassword");
     if (result[0].exists()) {
       FileUtil.chmod(result[0].getAbsolutePath(), "700");
-      result[0].delete();
+      assertTrue(result[0].delete());
     }
     result[1] = new File("./.jobTokenPassword.crc");
     if (result[1].exists()) {
@@ -490,14 +490,14 @@ public class TestPipeApplication {
     return fCommand;
   }
 
-  private class CombineOutputCollector<K extends Object, V extends Object>
+  private class CombineOutputCollector<K, V extends Object>
       implements OutputCollector<K, V> {
     private Writer<K, V> writer;
     private Counters.Counter outCounter;
     private Progressable progressable;
 
     public CombineOutputCollector(Counters.Counter outCounter,
-        Progressable progressable, Configuration conf) {
+        Progressable progressable) {
       this.outCounter = outCounter;
       this.progressable = progressable;
     }

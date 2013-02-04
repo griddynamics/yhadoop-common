@@ -18,31 +18,31 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 
-public class PipeApplicatoinClient {
+public class PipeApplicationStub {
 
   public static void main(String[] args) {
-    PipeApplicatoinClient client = new PipeApplicatoinClient();
+    PipeApplicationStub client = new PipeApplicationStub();
     client.binaryProtocolStub();
   }
 
   public void binaryProtocolStub() {
-    Socket socket =null;
+    Socket socket = null;
     try {
 
       int port = Integer
-          .parseInt(System.getenv("mapreduce.pipes.command.port"));
-      
-      java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
-      
-      
-      socket = new Socket(addr.getHostName(), port);
+              .parseInt(System.getenv("mapreduce.pipes.command.port"));
+
+      java.net.InetAddress address = java.net.InetAddress.getLocalHost();
+
+
+      socket = new Socket(address.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
 
       // try to read
       DataInputStream dataInput = new DataInputStream(input);
 
-      int i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
       String str = Text.readString(dataInput);
 
@@ -56,36 +56,35 @@ public class PipeApplicatoinClient {
 
       // start
 
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
-  // get conf
+      // get conf
       // should be MessageType.SET_JOB_CONF.code
-      i = WritableUtils.readVInt(dataInput);
-          // array length
+      WritableUtils.readVInt(dataInput);
+      // array length
 
       int j = WritableUtils.readVInt(dataInput);
-      for (i = 0; i < j; i++) {
+      for (int i = 0; i < j; i++) {
         Text.readString(dataInput);
         i++;
-         Text.readString(dataInput);
+        Text.readString(dataInput);
       }
-      System.out.println("cfg  ok:" + ":"+System.currentTimeMillis());
 
       // output code
       WritableUtils.writeVInt(dataout, 50);
-      IntWritable wt= new IntWritable();
+      IntWritable wt = new IntWritable();
       wt.set(123);
       writeObject(wt, dataout);
       writeObject(new Text("value"), dataout);
-      
-    //  PARTITIONED_OUTPUT
+
+      //  PARTITIONED_OUTPUT
       WritableUtils.writeVInt(dataout, 51);
       WritableUtils.writeVInt(dataout, 0);
       writeObject(wt, dataout);
       writeObject(new Text("value"), dataout);
 
-      
+
       // STATUS
 
       WritableUtils.writeVInt(dataout, 52);
@@ -108,35 +107,32 @@ public class PipeApplicatoinClient {
       WritableUtils.writeVLong(dataout, 2);
 
       // map item
-     i=  WritableUtils.readVInt(dataInput);
-     System.out.println("map item:"+i);
-     IntWritable iw= new IntWritable();
-     readObject(iw, dataInput);
-     System.out.println("map object:"+iw);
-     Text txt= new Text();
-     readObject(txt, dataInput);
-     System.out.println("map object1:"+txt);
+      WritableUtils.readVInt(dataInput);
+      IntWritable iw = new IntWritable();
+      readObject(iw, dataInput);
+      Text txt = new Text();
+      readObject(txt, dataInput);
 
       // done
 
       WritableUtils.writeVInt(dataout, 54);
 
       dataout.writeFloat(50.5f);
-      
-  
+
+
       dataout.flush();
       dataout.close();
 
     } catch (Exception x) {
       x.printStackTrace();
-    }finally{
-      if( socket!=null )
+    } finally {
+      if (socket != null)
         try {
           socket.close();
         } catch (IOException e) {
           e.printStackTrace();
         }
-    
+
     }
   }
 
@@ -148,7 +144,7 @@ public class PipeApplicatoinClient {
   }
 
   private void writeObject(Writable obj, DataOutputStream stream)
-      throws IOException {
+          throws IOException {
     // For Text and BytesWritable, encode them directly, so that they end up
     // in C++ as the natural translations.
     DataOutputBuffer buffer = new DataOutputBuffer();
@@ -177,7 +173,8 @@ public class PipeApplicatoinClient {
     stream.flush();
 
   }
-  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
+
+  private void readObject(Writable obj, DataInputStream inStream) throws IOException {
     int numBytes = WritableUtils.readVInt(inStream);
     byte[] buffer;
     // For BytesWritable and Text, use the specified length to set the length

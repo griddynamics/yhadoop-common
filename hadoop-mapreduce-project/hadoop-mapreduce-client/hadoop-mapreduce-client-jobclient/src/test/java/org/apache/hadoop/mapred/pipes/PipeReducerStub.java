@@ -17,24 +17,27 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 
-public class PipeReducerClient {
+/*
+      Stub for answer
+ */
+public class PipeReducerStub{
 
   public static void main(String[] args) {
-    PipeReducerClient client = new PipeReducerClient();
+    PipeReducerStub client = new PipeReducerStub();
     client.binaryProtocolStub();
   }
 
   public void binaryProtocolStub() {
-    Socket socket =null;
+    Socket socket = null;
     try {
 
-      int port = Integer 
-          .parseInt(System.getenv("mapreduce.pipes.command.port"));
-      
-      java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
-      
-      
-      socket = new Socket(addr.getHostName(), port);
+      int port = Integer
+              .parseInt(System.getenv("mapreduce.pipes.command.port"));
+
+      java.net.InetAddress address = java.net.InetAddress.getLocalHost();
+
+
+      socket = new Socket(address.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
 
@@ -47,66 +50,66 @@ public class PipeReducerClient {
 
       Text.readString(dataInput);
 
-      DataOutputStream dataout = new DataOutputStream(output);
-      WritableUtils.writeVInt(dataout, 57);
+      DataOutputStream dataOut = new DataOutputStream(output);
+      WritableUtils.writeVInt(dataOut, 57);
       String s = createDigest("password".getBytes(), str);
 
-      Text.writeString(dataout, s);
+      Text.writeString(dataOut, s);
 
 
       // start
 
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
-  // get conf
+      // get configuration
       // should be MessageType.SET_JOB_CONF.code
-      i = WritableUtils.readVInt(dataInput);
-          // array length
+      WritableUtils.readVInt(dataInput);
+      // array length
 
       int j = WritableUtils.readVInt(dataInput);
       for (i = 0; i < j; i++) {
         Text.readString(dataInput);
         i++;
-         Text.readString(dataInput);
+        Text.readString(dataInput);
       }
 
 
       //should be 5
-  //RUN_REDUCE
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-// reduce key
-      i = WritableUtils.readVInt(dataInput);
+      //RUN_REDUCE
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      // reduce key
+      WritableUtils.readVInt(dataInput);
       // value of reduce key
-      BooleanWritable value= new BooleanWritable();
+      BooleanWritable value = new BooleanWritable();
       readObject(value, dataInput);
-      System.out.println("reducer key :"+value);  
+      System.out.println("reducer key :" + value);
       // reduce value code:
-      i = WritableUtils.readVInt(dataInput);
-      Text txt= new Text();
+      WritableUtils.readVInt(dataInput);
+      Text txt = new Text();
       // vakue
       readObject(txt, dataInput);
-      System.out.println("reduce value  :"+txt);      
+      System.out.println("reduce value  :" + txt);
 
-      
+
       // done
-      WritableUtils.writeVInt(dataout, 54);
-  
-      dataout.flush();
-      dataout.close();
+      WritableUtils.writeVInt(dataOut, 54);
+
+      dataOut.flush();
+      dataOut.close();
 
     } catch (Exception x) {
       x.printStackTrace();
-    }finally{
-      if( socket!=null )
+    } finally {
+      if (socket != null)
         try {
           socket.close();
         } catch (IOException e) {
           e.printStackTrace();
         }
-    
+
     }
   }
 
@@ -117,7 +120,7 @@ public class PipeReducerClient {
 
   }
 
-  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
+  private void readObject(Writable obj, DataInputStream inStream) throws IOException {
     int numBytes = WritableUtils.readVInt(inStream);
     byte[] buffer;
     // For BytesWritable and Text, use the specified length to set the length

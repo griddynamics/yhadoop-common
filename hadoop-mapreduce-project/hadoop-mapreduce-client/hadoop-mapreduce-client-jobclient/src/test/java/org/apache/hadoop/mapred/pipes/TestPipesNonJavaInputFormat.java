@@ -50,16 +50,16 @@ public class TestPipesNonJavaInputFormat {
     InputSplit[] splits = inputFormat.getSplits(conf, 2);
     assertEquals(2, splits.length);
 
-    PipesNonJavaInputFormat.PipesDummyRecordReader dummirr = new PipesNonJavaInputFormat.PipesDummyRecordReader(
+    PipesNonJavaInputFormat.PipesDummyRecordReader dummyRecordReader = new PipesNonJavaInputFormat.PipesDummyRecordReader(
         conf, splits[0]);
-    assertNull(dummirr.createKey());
-    assertNull(dummirr.createValue());
-    assertEquals(0, dummirr.getPos());
+    assertNull(dummyRecordReader.createKey());
+    assertNull(dummyRecordReader.createValue());
+    assertEquals(0, dummyRecordReader.getPos());
 
-    assertEquals(0.0, dummirr.getProgress(), 0.001);
-    assertTrue(dummirr.next(new FloatWritable(2.0f), NullWritable.get()));
-    assertEquals(2.0, dummirr.getProgress(), 0.001);
-    dummirr.close();
+    assertEquals(0.0, dummyRecordReader.getProgress(), 0.001);
+    assertTrue(dummyRecordReader.next(new FloatWritable(2.0f), NullWritable.get()));
+    assertEquals(2.0, dummyRecordReader.getProgress(), 0.001);
+    dummyRecordReader.close();
   }
 
   private class TestTaskReporter implements Reporter {

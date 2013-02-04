@@ -16,99 +16,96 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 
-public class PipeApplicatoinRunabeClient {
+/*
+Stub for  TestPipeApplication   test. This stub produced test data for main test. Main test  checks data
+ */
+
+public class PipeApplicationRunnableStub {
 
   public static void main(String[] args) {
-    PipeApplicatoinRunabeClient client = new PipeApplicatoinRunabeClient();
+    PipeApplicationRunnableStub client = new PipeApplicationRunnableStub();
     client.binaryProtocolStub();
   }
 
   public void binaryProtocolStub() {
-    Socket socket =null;
+    Socket socket = null;
     try {
 
-      int port = Integer 
-          .parseInt(System.getenv("mapreduce.pipes.command.port"));
-      
-      java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
-      
-      
-      socket = new Socket(addr.getHostName(), port);
+      int port = Integer
+              .parseInt(System.getenv("mapreduce.pipes.command.port"));
+
+      java.net.InetAddress address = java.net.InetAddress.getLocalHost();
+
+
+      socket = new Socket(address.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
 
       // try to read
       DataInputStream dataInput = new DataInputStream(input);
 
-      int i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
       String str = Text.readString(dataInput);
 
       Text.readString(dataInput);
 
-      DataOutputStream dataout = new DataOutputStream(output);
-      WritableUtils.writeVInt(dataout, 57);
+      DataOutputStream dataOut = new DataOutputStream(output);
+      WritableUtils.writeVInt(dataOut, 57);
       String s = createDigest("password".getBytes(), str);
 
-      Text.writeString(dataout, s);
-
+      Text.writeString(dataOut, s);
 
       // start
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-
-  // get conf
+      // get conf
       // should be MessageType.SET_JOB_CONF.code
-      i = WritableUtils.readVInt(dataInput);
-          // array length
+      WritableUtils.readVInt(dataInput);
+      // array length
 
       int j = WritableUtils.readVInt(dataInput);
-      for (i = 0; i < j; i++) {
+      for (int i = 0; i < j; i++) {
         Text.readString(dataInput);
         i++;
         Text.readString(dataInput);
       }
 
 
-// RUN_MAP.code
+      // RUN_MAP.code
       //should be 3
 
-      i = WritableUtils.readVInt(dataInput);
-System.out.println("runmap:"+i);      
-      TestPipeApplication.FakeSplit split= new TestPipeApplication.FakeSplit() ; 
+      WritableUtils.readVInt(dataInput);
+      TestPipeApplication.FakeSplit split = new TestPipeApplication.FakeSplit();
       readObject(split, dataInput);
-      System.out.println("split:"+split);      
 
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-      
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+
       //should be 2
-      
-      i = WritableUtils.readVInt(dataInput);
-      s= Text.readString(dataInput);
-      System.out.println("s2: "+s);
-      s= Text.readString(dataInput);
-      System.out.println("s2: "+s);
-      
 
-      
+      WritableUtils.readVInt(dataInput);
+      Text.readString(dataInput);
+      Text.readString(dataInput);
+
+
       // done
-      WritableUtils.writeVInt(dataout, 54);
-  
-      dataout.flush();
-      dataout.close();
+      WritableUtils.writeVInt(dataOut, 54);
+
+      dataOut.flush();
+      dataOut.close();
 
     } catch (Exception x) {
       x.printStackTrace();
-    }finally{
-      if( socket!=null )
+    } finally {
+      if (socket != null)
         try {
           socket.close();
         } catch (IOException e) {
           e.printStackTrace();
         }
-    
+
     }
   }
 
@@ -119,7 +116,7 @@ System.out.println("runmap:"+i);
 
   }
 
-  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
+  private void readObject(Writable obj, DataInputStream inStream) throws IOException {
     int numBytes = WritableUtils.readVInt(inStream);
     byte[] buffer;
     // For BytesWritable and Text, use the specified length to set the length
@@ -137,7 +134,6 @@ System.out.println("runmap:"+i);
       obj.readFields(inStream);
     }
   }
-
 
 
 }
