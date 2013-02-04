@@ -317,6 +317,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4451. hdfs balancer command returns exit code 1 on success instead
     of 0. (Joshua Blatt via suresh)
 
+    HDFS-4350. Make enabling of stale marking on read and write paths
+    independent. (Andrew Wang via suresh)
+
 
   NEW FEATURES
 
@@ -504,6 +507,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4259. Improve pipeline DN replacement failure message (harsh)
 
     HDFS-3598. WebHDFS support for file concat. (Plamen Jeliazkov via shv)
+
+    HDFS-4456. Add concat to HttpFS and WebHDFS REST API docs. (plamenj2003 via tucu)
 
   OPTIMIZATIONS
 
@@ -741,6 +746,12 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4428. FsDatasetImpl should disclose what the error is when a rename
     fails. (Colin Patrick McCabe via atm)
+
+    HDFS-4452. getAdditionalBlock() can create multiple blocks if the client
+    times out and retries. (shv)
+
+    HDFS-4445. All BKJM ledgers are not checked while tailing, So failover will fail.
+    (Vinay via umamahesh)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
