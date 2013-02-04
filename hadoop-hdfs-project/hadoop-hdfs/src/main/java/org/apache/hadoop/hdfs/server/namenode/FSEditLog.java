@@ -440,7 +440,8 @@ public class FSEditLog  {
       synchronized (this) {
         if (sync) {
           try {
-            if (badJournals.size() >= journals.size()) {
+            if (badJournals.size() >= journals.size() ||
+                candidateJournals.isEmpty()) {
               final String msg =
                 "Could not sync enough journals to persistent storage. "
                 + "Unsynced transactions: " + (txid - synctxid);
@@ -475,7 +476,7 @@ public class FSEditLog  {
     buf.append(numTransactions);
     buf.append(" Total time for transactions(ms): ");
     buf.append(totalTimeTransactions);
-    buf.append("Number of transactions batched in Syncs: ");
+    buf.append(" Number of transactions batched in Syncs: ");
     buf.append(numTransactionsBatchedInSync);
     buf.append(" Number of syncs: ");
     for (JournalAndStream jas : journals) {

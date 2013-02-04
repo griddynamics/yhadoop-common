@@ -1,5 +1,39 @@
 Hadoop HDFS Change Log
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+    HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+               via hairong)
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+    HDFS-2477. Optimize computing the diff between a block report and the
+               namenode state. (Tomasz Nykiel via hairong)
+
+    HDFS-2495. Increase granularity of write operations in ReplicationMonitor
+    thus reducing contention for write lock. (Tomasz Nykiel via hairong)
+
+    HDFS-2476. More CPU efficient data structure for under-replicated,
+               over-replicated, and invalidated blocks.
+               (Tomasz Nykiel via todd)
+
+  BUG FIXES
+    HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
+
+    HDFS-1765. Block Replication should respect under-replication
+    block priority. (Uma Maheswara Rao G via eli)
+
+    HDFS-4444. Add space between total transaction time and number of
+    transactions in FSEditLog#printStatistics. (Stephen Chu via tgraves)
+
+    HDFS-3119. Overreplicated block is not deleted even after the replication
+    factor is reduced after sync follwed by closing that file. (Ashish Singhi
+    via umamahesh)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -11,8 +45,39 @@ Release 0.23.6 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    HDFS-4233. NN keeps serving even after no journals started while rolling
+    edit. (Kihwal Lee via suresh)
 
-Release 0.23.5 - UNRELEASED
+    HDFS-4242. Map.Entry is incorrectly used in LeaseManager since the behavior
+    of it is undefined after the iteration or modifications of the map.
+    (szetszwo via daryn)
+
+    HDFS-4254. testAllEditsDirsFailOnFlush makes subsequent test cases fail
+    (0.23.6 only) (Kihwal Lee via daryn)
+
+    HDFS-4247. saveNamespace should be tolerant of dangling lease (daryn)
+
+    HDFS-4248. Renaming directories may incorrectly remove the paths in leases
+    under the tree.  (daryn via szetszwo)
+
+    HDFS-4315. DNs with multiple BPs can have BPOfferServices fail to start
+    due to unsynchronized map access. (atm via tgraves)
+
+    HDFS-4270. Replications of the highest priority should be allowed to 
+    choose a source datanode that has reached its max replication limit 
+    (Derek Dagit via tgraves)
+
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
+
+    HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
+
+    HDFS-4399. precommit release audit warnings (tgraves)
+
+    HDFS-4426. Secondary namenode shuts down immediately after startup.
+    (Arpit Agarwal via suresh)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 

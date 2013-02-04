@@ -19,6 +19,7 @@ package org.apache.hadoop.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -58,13 +59,10 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
-
-import com.sun.security.auth.NTUserPrincipal;
-import com.sun.security.auth.UnixPrincipal;
-import com.sun.security.auth.module.Krb5LoginModule;
 
 /**
  * User and group information for Hadoop.
@@ -81,6 +79,7 @@ public class UserGroupInformation {
    */
   private static final float TICKET_RENEW_WINDOW = 0.80f;
   static final String HADOOP_USER_NAME = "HADOOP_USER_NAME";
+  static final String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
   
   /** 
    * UgiMetrics maintains UGI activity statistics
@@ -289,20 +288,51 @@ public class UserGroupInformation {
   private final boolean isKeytab;
   private final boolean isKrbTkt;
   
-  private static final String OS_LOGIN_MODULE_NAME;
-  private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
+  private static String OS_LOGIN_MODULE_NAME;
+  private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
   private static final boolean windows = 
                            System.getProperty("os.name").startsWith("Windows");
-  static {
-    if (windows) {
-      OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.NTLoginModule";
-      OS_PRINCIPAL_CLASS = NTUserPrincipal.class;
+  /* Return the OS login module class name */
+  private static String getOSLoginModuleName() {
+    if (System.getProperty("java.vendor").contains("IBM")) {
+      return windows ? "com.ibm.security.auth.module.NTLoginModule"
+       : "com.ibm.security.auth.module.LinuxLoginModule";
     } else {
-      OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.UnixLoginModule";
-      OS_PRINCIPAL_CLASS = UnixPrincipal.class;
+      return windows ? "com.sun.security.auth.module.NTLoginModule"
+        : "com.sun.security.auth.module.UnixLoginModule";
     }
   }
-  
+
+  /* Return the OS principal class */
+  @SuppressWarnings("unchecked")
+  private static Class<? extends Principal> getOsPrincipalClass() {
+    ClassLoader cl = ClassLoader.getSystemClassLoader();
+    try {
+      if (System.getProperty("java.vendor").contains("IBM")) {
+        if (windows) {
+          return (Class<? extends Principal>)
+            cl.loadClass("com.ibm.security.auth.UsernamePrincipal");
+        } else {
+          return (Class<? extends Principal>)
+            (System.getProperty("os.arch").contains("64")
+             ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
+             : cl.loadClass("com.ibm.security.auth.LinuxPrincipal"));
+        }
+      } else {
+        return (Class<? extends Principal>) (windows
+           ? cl.loadClass("com.sun.security.auth.NTUserPrincipal")
+           : cl.loadClass("com.sun.security.auth.UnixPrincipal"));
+      }
+    } catch (ClassNotFoundException e) {
+      LOG.error("Unable to find JAAS classes:" + e.getMessage());
+    }
+    return null;
+  }
+  static {
+    OS_LOGIN_MODULE_NAME = getOSLoginModuleName();
+    OS_PRINCIPAL_CLASS = getOsPrincipalClass();
+  }
+
   private static class RealUser implements Principal {
     private final UserGroupInformation realUser;
     
@@ -382,7 +412,7 @@ public class UserGroupInformation {
       USER_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);
     }
     private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
-      new AppConfigurationEntry(Krb5LoginModule.class.getName(),
+      new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
                                 LoginModuleControlFlag.OPTIONAL,
                                 USER_KERBEROS_OPTIONS);
     private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = 
@@ -395,7 +425,7 @@ public class UserGroupInformation {
       KEYTAB_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);      
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
-      new AppConfigurationEntry(Krb5LoginModule.class.getName(),
+      new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
                                 LoginModuleControlFlag.REQUIRED,
                                 KEYTAB_KERBEROS_OPTIONS);
     
@@ -502,18 +532,27 @@ public class UserGroupInformation {
               subject);
         }
         login.login();
-        loginUser = new UserGroupInformation(subject);
-        loginUser.setLogin(login);
-        loginUser.setAuthenticationMethod(isSecurityEnabled() ?
-                                          AuthenticationMethod.KERBEROS :
-                                          AuthenticationMethod.SIMPLE);
-        loginUser = new UserGroupInformation(login.getSubject());
+        UserGroupInformation realUser = new UserGroupInformation(subject);
+        realUser.setLogin(login);
+        realUser.setAuthenticationMethod(isSecurityEnabled() ?
+                                         AuthenticationMethod.KERBEROS :
+                                         AuthenticationMethod.SIMPLE);
+        realUser = new UserGroupInformation(login.getSubject());
+        // If the HADOOP_PROXY_USER environment variable or property
+        // is specified, create a proxy user as the logged in user.
+        String proxyUser = System.getenv(HADOOP_PROXY_USER);
+        if (proxyUser == null) {
+          proxyUser = System.getProperty(HADOOP_PROXY_USER);
+        }
+        loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
+
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null) {
-          // load the token storage file and put all of the tokens into the
-          // user.
+          // Load the token storage file and put all of the tokens into the
+          // user. Don't use the FileSystem API for reading since it has a lock
+          // cycle (HADOOP-9212).
           Credentials cred = Credentials.readTokenStorageFile(
-              new Path("file:///" + fileLocation), conf);
+              new File(fileLocation), conf);
           loginUser.addCredentials(cred);
         }
         loginUser.spawnAutoRenewalThreadForUserCreds();
