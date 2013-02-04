@@ -621,7 +621,7 @@ public class FSEditLog implements LogsPurgeable {
     buf.append(numTransactions);
     buf.append(" Total time for transactions(ms): ");
     buf.append(totalTimeTransactions);
-    buf.append("Number of transactions batched in Syncs: ");
+    buf.append(" Number of transactions batched in Syncs: ");
     buf.append(numTransactionsBatchedInSync);
     buf.append(" Number of syncs: ");
     buf.append(editLogStream.getNumSync());
@@ -858,6 +858,11 @@ public class FSEditLog implements LogsPurgeable {
     return journalSet;
   }
   
+  @VisibleForTesting
+  synchronized void setJournalSetForTesting(JournalSet js) {
+    this.journalSet = js;
+  }
+  
   /**
    * Used only by tests.
    */
@@ -978,9 +983,18 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Archive any log files that are older than the given txid.
+   * 
+   * If the edit log is not open for write, then this call returns with no
+   * effect.
    */
   @Override
   public synchronized void purgeLogsOlderThan(final long minTxIdToKeep) {
+    // Should not purge logs unless they are open for write.
+    // This prevents the SBN from purging logs on shared storage, for example.
+    if (!isOpenForWrite()) {
+      return;
+    }
+    
     assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
       minTxIdToKeep <= curSegmentTxId :
       "cannot purge logs older than txid " + minTxIdToKeep +
@@ -1107,6 +1121,7 @@ public class FSEditLog implements LogsPurgeable {
       journalSet.recoverUnfinalizedSegments();
     } catch (IOException ex) {
       // All journals have failed, it is handled in logSync.
+      // TODO: are we sure this is OK?
     }
   }
   
@@ -1144,18 +1159,6 @@ public class FSEditLog implements LogsPurgeable {
         closeAllStreams(streams);
         throw e;
       }
-    }
-    // This code will go away as soon as RedundantEditLogInputStream is
-    // introduced. (HDFS-3049)
-    try {
-      if (!streams.isEmpty()) {
-        streams.get(0).skipUntil(fromTxId);
-      }
-    } catch (IOException e) {
-      // We don't want to throw an exception from here, because that would make
-      // recovery impossible even if the user requested it.  An exception will
-      // be thrown later, when we don't read the starting txid we expect.
-      LOG.error("error skipping until transaction " + fromTxId, e);
     }
     return streams;
   }

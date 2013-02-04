@@ -62,12 +62,12 @@ public class TestIPC {
   final private static Configuration conf = new Configuration();
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
-
   /**
    * Flag used to turn off the fault injection behavior
    * of the various writables.
    **/
   static boolean WRITABLE_FAULTS_ENABLED = true;
+  static int WRITABLE_FAULTS_SLEEP = 0;
   
   static {
     Client.setPingInterval(conf, PING_INTERVAL);
@@ -206,13 +206,24 @@ public class TestIPC {
   
   static void maybeThrowIOE() throws IOException {
     if (WRITABLE_FAULTS_ENABLED) {
+      maybeSleep();
       throw new IOException("Injected fault");
     }
   }
 
   static void maybeThrowRTE() {
     if (WRITABLE_FAULTS_ENABLED) {
+      maybeSleep();
       throw new RuntimeException("Injected fault");
+    }
+  }
+
+  private static void maybeSleep() {
+    if (WRITABLE_FAULTS_SLEEP > 0) {
+      try {
+        Thread.sleep(WRITABLE_FAULTS_SLEEP);
+      } catch (InterruptedException ie) {
+      }
     }
   }
 
@@ -370,6 +381,27 @@ public class TestIPC {
         RTEOnReadWritable.class);
   }
   
+  /**
+   * Test case that fails a write, but only after taking enough time
+   * that a ping should have been sent. This is a reproducer for a
+   * deadlock seen in one iteration of HADOOP-6762.
+   */
+  @Test
+  public void testIOEOnWriteAfterPingClient() throws Exception {
+    // start server
+    Client.setPingInterval(conf, 100);
+
+    try {
+      WRITABLE_FAULTS_SLEEP = 1000;
+      doErrorTest(IOEOnWriteWritable.class,
+          LongWritable.class,
+          LongWritable.class,
+          LongWritable.class);
+    } finally {
+      WRITABLE_FAULTS_SLEEP = 0;
+    }
+  }
+  
   private static void assertExceptionContains(
       Throwable t, String substring) {
     String msg = StringUtils.stringifyException(t);
@@ -465,6 +497,26 @@ public class TestIPC {
     // set timeout to be bigger than 3*ping interval
     client.call(new LongWritable(RANDOM.nextLong()),
         addr, null, null, 3*PING_INTERVAL+MIN_SLEEP_TIME, conf);
+  }
+
+  @Test
+  public void testIpcConnectTimeout() throws Exception {
+    // start server
+    Server server = new TestServer(1, true);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    //Intentionally do not start server to get a connection timeout
+
+    // start client
+    Client.setConnectTimeout(conf, 100);
+    Client client = new Client(LongWritable.class, conf);
+    // set the rpc timeout to twice the MIN_SLEEP_TIME
+    try {
+      client.call(new LongWritable(RANDOM.nextLong()),
+              addr, null, null, MIN_SLEEP_TIME*2, conf);
+      fail("Expected an exception to have been thrown");
+    } catch (SocketTimeoutException e) {
+      LOG.info("Get a SocketTimeoutException ", e);
+    }
   }
   
   /**

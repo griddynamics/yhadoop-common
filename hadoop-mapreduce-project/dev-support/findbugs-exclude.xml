@@ -138,11 +138,6 @@
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
      </Match>
-     <Match>
-       <Class name="org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal$DelegationTokenCancelThread" />
-       <Method name="run" />
-       <Bug pattern="DM_EXIT" />
-    </Match>
      <!--
        We need to cast objects between old and new api objects
      -->
@@ -273,7 +268,7 @@
      This class is unlikely to get subclassed, so ignore
     -->
      <Match>
-       <Class name="org.apache.hadoop.mapreduce.task.reduce.MergeManager" />
+       <Class name="org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl" />
        <Bug pattern="SC_START_IN_CTOR" />
      </Match>
 

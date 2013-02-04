@@ -600,11 +600,7 @@ public class NameNode {
     String nsId = getNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
-    if (!haEnabled) {
-      state = ACTIVE_STATE;
-    } else {
-      state = STANDBY_STATE;
-    }
+    state = createHAState();
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
     try {
@@ -619,6 +615,10 @@ public class NameNode {
       this.stop();
       throw e;
     }
+  }
+
+  protected HAState createHAState() {
+    return !haEnabled ? ACTIVE_STATE : STANDBY_STATE;
   }
 
   protected HAContext createHAContext() {
@@ -725,6 +725,12 @@ public class NameNode {
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
     checkAllowFormat(conf);
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      InetSocketAddress socAddr = getAddress(conf);
+      SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
+          DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
+    }
     
     Collection<URI> nameDirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     List<URI> sharedDirs = FSNamesystem.getSharedEditsDirs(conf);
@@ -766,13 +772,13 @@ public class NameNode {
   }
   
   @VisibleForTesting
-  public static boolean initializeSharedEdits(Configuration conf) {
+  public static boolean initializeSharedEdits(Configuration conf) throws IOException {
     return initializeSharedEdits(conf, true);
   }
   
   @VisibleForTesting
   public static boolean initializeSharedEdits(Configuration conf,
-      boolean force) {
+      boolean force) throws IOException {
     return initializeSharedEdits(conf, force, false);
   }
 
@@ -786,7 +792,7 @@ public class NameNode {
    * @return true if the command aborts, false otherwise
    */
   private static boolean initializeSharedEdits(Configuration conf,
-      boolean force, boolean interactive) {
+      boolean force, boolean interactive) throws IOException {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
@@ -795,6 +801,12 @@ public class NameNode {
       LOG.fatal("No shared edits directory configured for namespace " +
           nsId + " namenode " + namenodeId);
       return false;
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      InetSocketAddress socAddr = getAddress(conf);
+      SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
+          DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
     }
 
     NNStorage existingStorage = null;
@@ -1040,6 +1052,9 @@ public class NameNode {
 
   private static void doRecovery(StartupOption startOpt, Configuration conf)
       throws IOException {
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    initializeGenericKeys(conf, nsId, namenodeId);
     if (startOpt.getForce() < MetaRecoveryContext.FORCE_ALL) {
       if (!confirmPrompt("You have selected Metadata Recovery mode.  " +
           "This mode is intended to recover lost metadata on a corrupt " +
@@ -1284,7 +1299,7 @@ public class NameNode {
    *          before exit.
    * @throws ExitException thrown only for testing.
    */
-  private synchronized void doImmediateShutdown(Throwable t)
+  protected synchronized void doImmediateShutdown(Throwable t)
       throws ExitException {
     String message = "Error encountered requiring NN shutdown. " +
         "Shutting down immediately.";

@@ -27,7 +27,6 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -40,8 +39,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -76,8 +73,7 @@ public class TestCapacityScheduler {
   
   @Before
   public void setUp() throws Exception {
-    Store store = StoreFactory.getStore(new Configuration());
-    resourceManager = new ResourceManager(store);
+    resourceManager = new ResourceManager();
     CapacitySchedulerConfiguration csConf 
        = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
@@ -95,10 +91,10 @@ public class TestCapacityScheduler {
   
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int httpPort,
-          String rackName, int memory)
+          String rackName, Resource capability)
           throws IOException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
-        hostName, containerManagerPort, httpPort, rackName, memory,
+        hostName, containerManagerPort, httpPort, rackName, capability,
         resourceManager.getResourceTrackerService(), resourceManager
             .getRMContext());
   }  
@@ -111,13 +107,15 @@ public class TestCapacityScheduler {
     // Register node1
     String host_0 = "host_0";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 = 
-      registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 4 * GB);
+      registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(4 * GB, 1));
     nm_0.heartbeat();
     
     // Register node2
     String host_1 = "host_1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_1 = 
-      registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 2 * GB);
+      registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(2 * GB, 1));
     nm_1.heartbeat();
 
     // ResourceRequest priorities
@@ -133,10 +131,10 @@ public class TestCapacityScheduler {
     application_0.addNodeManager(host_0, 1234, nm_0);
     application_0.addNodeManager(host_1, 1234, nm_1);
 
-    Resource capability_0_0 = Resources.createResource(1 * GB);
+    Resource capability_0_0 = Resources.createResource(1 * GB, 1);
     application_0.addResourceRequestSpec(priority_1, capability_0_0);
     
-    Resource capability_0_1 = Resources.createResource(2 * GB);
+    Resource capability_0_1 = Resources.createResource(2 * GB, 1);
     application_0.addResourceRequestSpec(priority_0, capability_0_1);
 
     Task task_0_0 = new Task(application_0, priority_1, 
@@ -150,10 +148,10 @@ public class TestCapacityScheduler {
     application_1.addNodeManager(host_0, 1234, nm_0);
     application_1.addNodeManager(host_1, 1234, nm_1);
     
-    Resource capability_1_0 = Resources.createResource(3 * GB);
+    Resource capability_1_0 = Resources.createResource(3 * GB, 1);
     application_1.addResourceRequestSpec(priority_1, capability_1_0);
     
-    Resource capability_1_1 = Resources.createResource(2 * GB);
+    Resource capability_1_1 = Resources.createResource(2 * GB, 1);
     application_1.addResourceRequestSpec(priority_0, capability_1_1);
 
     Task task_1_0 = new Task(application_1, priority_1, 
@@ -246,12 +244,24 @@ public class TestCapacityScheduler {
   }
   
   @Test
+  public void testMaximumCapacitySetup() {
+    float delta = 0.0000001f;
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getMaximumCapacity(A),delta);
+    conf.setMaximumCapacity(A, 50.0f);
+    assertEquals(50.0f, conf.getMaximumCapacity(A),delta);
+    conf.setMaximumCapacity(A, -1);
+    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getMaximumCapacity(A),delta);
+  }
+  
+  
+  @Test
   public void testRefreshQueues() throws Exception {
     CapacityScheduler cs = new CapacityScheduler();
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
-    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
+    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
@@ -349,7 +359,7 @@ public class TestCapacityScheduler {
     conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
     conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
 
-    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
+    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new ClientToAMTokenSecretManagerInRM()));
   }
@@ -361,7 +371,7 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(csConf);
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
-    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null,
+    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null,
       null, null, new RMContainerTokenSecretManager(csConf),
       new ClientToAMTokenSecretManagerInRM()));
 
@@ -387,7 +397,7 @@ public class TestCapacityScheduler {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
-    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
+    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);

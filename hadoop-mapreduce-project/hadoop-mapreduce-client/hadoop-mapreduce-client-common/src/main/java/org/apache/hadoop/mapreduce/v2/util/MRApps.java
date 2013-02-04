@@ -19,12 +19,18 @@
 package org.apache.hadoop.mapreduce.v2.util;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -50,11 +56,10 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
-import com.google.common.base.Charsets;
 
 /**
  * Helper class for MR applications
@@ -62,6 +67,8 @@ import com.google.common.base.Charsets;
 @Private
 @Unstable
 public class MRApps extends Apps {
+  public static final Log LOG = LogFactory.getLog(MRApps.class);
+
   public static String toString(JobId jid) {
     return jid.toString();
   }
@@ -157,38 +164,42 @@ public class MRApps extends Apps {
     boolean userClassesTakesPrecedence = 
       conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
 
+    String classpathEnvVar = 
+      conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)
+        ? Environment.APP_CLASSPATH.name() : Environment.CLASSPATH.name();
+
     Apps.addToEnvironment(environment,
-      Environment.CLASSPATH.name(),
+      classpathEnvVar,
       Environment.PWD.$());
     if (!userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         MRJobConfig.JOB_JAR + Path.SEPARATOR + MRJobConfig.JOB_JAR);
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         MRJobConfig.JOB_JAR + Path.SEPARATOR + "classes" + Path.SEPARATOR);
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         MRJobConfig.JOB_JAR + Path.SEPARATOR + "lib" + Path.SEPARATOR + "*");
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         Environment.PWD.$() + Path.SEPARATOR + "*");
     // a * in the classpath will only find a .jar, so we need to filter out
     // all .jars and add everything else
     addToClasspathIfNotJar(DistributedCache.getFileClassPaths(conf),
         DistributedCache.getCacheFiles(conf),
         conf,
-        environment);
+        environment, classpathEnvVar);
     addToClasspathIfNotJar(DistributedCache.getArchiveClassPaths(conf),
         DistributedCache.getCacheArchives(conf),
         conf,
-        environment);
+        environment, classpathEnvVar);
     if (userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
@@ -204,7 +215,8 @@ public class MRApps extends Apps {
    */
   private static void addToClasspathIfNotJar(Path[] paths,
       URI[] withLinks, Configuration conf,
-      Map<String, String> environment) throws IOException {
+      Map<String, String> environment,
+      String classpathEnvVar) throws IOException {
     if (paths != null) {
       HashMap<Path, String> linkLookup = new HashMap<Path, String>();
       if (withLinks != null) {
@@ -232,10 +244,61 @@ public class MRApps extends Apps {
         if(!name.toLowerCase().endsWith(".jar")) {
           Apps.addToEnvironment(
               environment,
-              Environment.CLASSPATH.name(),
+              classpathEnvVar,
               Environment.PWD.$() + Path.SEPARATOR + name);
         }
       }
+    }
+  }
+
+  /**
+   * Sets a {@link ApplicationClassLoader} on the given configuration and as
+   * the context classloader, if
+   * {@link MRJobConfig#MAPREDUCE_JOB_CLASSLOADER} is set to true, and
+   * the APP_CLASSPATH environment variable is set.
+   * @param conf
+   * @throws IOException
+   */
+  public static void setJobClassLoader(Configuration conf)
+      throws IOException {
+    if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)) {
+      String appClasspath = System.getenv(Environment.APP_CLASSPATH.key());
+      if (appClasspath == null) {
+        LOG.warn("Not using job classloader since APP_CLASSPATH is not set.");
+      } else {
+        LOG.info("Using job classloader");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("APP_CLASSPATH=" + appClasspath);
+        }
+        String[] systemClasses = conf.getStrings(
+            MRJobConfig.MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES);
+        ClassLoader jobClassLoader = createJobClassLoader(appClasspath,
+            systemClasses);
+        if (jobClassLoader != null) {
+          conf.setClassLoader(jobClassLoader);
+          Thread.currentThread().setContextClassLoader(jobClassLoader);
+        }
+      }
+    }
+  }
+
+  private static ClassLoader createJobClassLoader(final String appClasspath,
+      final String[] systemClasses) throws IOException {
+    try {
+      return AccessController.doPrivileged(
+        new PrivilegedExceptionAction<ClassLoader>() {
+          @Override
+          public ClassLoader run() throws MalformedURLException {
+            return new ApplicationClassLoader(appClasspath,
+                MRApps.class.getClassLoader(), Arrays.asList(systemClasses));
+          }
+      });
+    } catch (PrivilegedActionException e) {
+      Throwable t = e.getCause();
+      if (t instanceof MalformedURLException) {
+        throw (MalformedURLException) t;
+      }
+      throw new IOException(e);
     }
   }
 
@@ -253,7 +316,26 @@ public class MRApps extends Apps {
     return jobFile.toString();
   }
   
-
+  public static Path getEndJobCommitSuccessFile(Configuration conf, String user,
+      JobId jobId) {
+    Path endCommitFile = new Path(MRApps.getStagingAreaDir(conf, user),
+        jobId.toString() + Path.SEPARATOR + "COMMIT_SUCCESS");
+    return endCommitFile;
+  }
+  
+  public static Path getEndJobCommitFailureFile(Configuration conf, String user,
+      JobId jobId) {
+    Path endCommitFile = new Path(MRApps.getStagingAreaDir(conf, user),
+        jobId.toString() + Path.SEPARATOR + "COMMIT_FAIL");
+    return endCommitFile;
+  }
+  
+  public static Path getStartJobCommitFile(Configuration conf, String user,
+      JobId jobId) {
+    Path startCommitFile = new Path(MRApps.getStagingAreaDir(conf, user),
+        jobId.toString() + Path.SEPARATOR + "COMMIT_STARTED");
+    return startCommitFile;
+  }
 
   private static long[] parseTimeStamps(String[] strs) {
     if (null == strs) {
@@ -296,6 +378,16 @@ public class MRApps extends Apps {
     return "cache file (" + MRJobConfig.CACHE_FILES + ") ";
   }
   
+  private static String toString(org.apache.hadoop.yarn.api.records.URL url) {
+    StringBuffer b = new StringBuffer();
+    b.append(url.getScheme()).append("://").append(url.getHost());
+    if(url.getPort() >= 0) {
+      b.append(":").append(url.getPort());
+    }
+    b.append(url.getFile());
+    return b.toString();
+  }
+  
   // TODO - Move this to MR!
   // Use TaskDistributedCacheManager.CacheFiles.makeCacheFiles(URI[], 
   // long[], boolean[], Path[], FileType)
@@ -333,11 +425,15 @@ public class MRApps extends Apps {
         }
         String linkName = name.toUri().getPath();
         LocalResource orig = localResources.get(linkName);
-        if(orig != null && !orig.getResource().equals(
-            ConverterUtils.getYarnUrlFromURI(p.toUri()))) {
-          throw new InvalidJobConfException(
-              getResourceDescription(orig.getType()) + orig.getResource() + 
-              " conflicts with " + getResourceDescription(type) + u);
+        org.apache.hadoop.yarn.api.records.URL url = 
+          ConverterUtils.getYarnUrlFromURI(p.toUri());
+        if(orig != null && !orig.getResource().equals(url)) {
+          LOG.warn(
+              getResourceDescription(orig.getType()) + 
+              toString(orig.getResource()) + " conflicts with " + 
+              getResourceDescription(type) + toString(url) + 
+              " This will be an error in Hadoop 2.0");
+          continue;
         }
         localResources.put(
             linkName,

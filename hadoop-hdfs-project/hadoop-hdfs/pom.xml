@@ -235,6 +235,25 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </configuration>
           </execution>
           <execution>
+            <id>journal</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <compile>false</compile>
+              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <webFragmentFile>${project.build.directory}/journal-jsp-servlet-definitions.xml</webFragmentFile>
+              <packageName>org.apache.hadoop.hdfs.server.journalservice</packageName>
+              <sources>
+                <directory>${basedir}/src/main/webapps/journal</directory>
+                <includes>
+                  <include>*.jsp</include>
+                </includes>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
             <id>datanode</id>
             <phase>generate-sources</phase>
             <goals>
@@ -321,6 +340,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <loadfile property="hdfs.servlet.definitions" srcFile="${project.build.directory}/hdfs-jsp-servlet-definitions.xml"/>
                 <loadfile property="secondary.servlet.definitions" srcFile="${project.build.directory}/secondary-jsp-servlet-definitions.xml"/>
                 <loadfile property="datanode.servlet.definitions" srcFile="${project.build.directory}/datanode-jsp-servlet-definitions.xml"/>
+                <loadfile property="journal.servlet.definitions" srcFile="${project.build.directory}/journal-jsp-servlet-definitions.xml"/>               
                 <echoproperties destfile="${project.build.directory}/webxml.properties">
                   <propertyset>
                     <propertyref regex=".*.servlet.definitions"/>
@@ -335,6 +355,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                       filtering="true"/>
                 <copy file="${basedir}/src/main/webapps/proto-datanode-web.xml"
                       tofile="${project.build.directory}/webapps/datanode/WEB-INF/web.xml"
+                      filtering="true"/>
+                <copy file="${basedir}/src/main/webapps/proto-journal-web.xml"
+                      tofile="${project.build.directory}/webapps/journal/WEB-INF/web.xml"
                       filtering="true"/>
                 <copy toDir="${project.build.directory}/webapps">
                   <fileset dir="${basedir}/src/main/webapps">
@@ -392,8 +415,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/hdfs.proto</argument>
                 <argument>src/main/proto/GetUserMappingsProtocol.proto</argument>
                 <argument>src/main/proto/HAZKInfo.proto</argument>
                 <argument>src/main/proto/InterDatanodeProtocol.proto</argument>
@@ -401,7 +426,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <argument>src/main/proto/RefreshAuthorizationPolicyProtocol.proto</argument>
                 <argument>src/main/proto/RefreshUserMappingsProtocol.proto</argument>
                 <argument>src/main/proto/datatransfer.proto</argument>
-                <argument>src/main/proto/hdfs.proto</argument>
               </arguments>
             </configuration>
           </execution>
@@ -414,6 +438,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/java</argument>
                 <argument>src/main/proto/ClientDatanodeProtocol.proto</argument>
@@ -430,10 +455,27 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/java</argument>
                 <argument>src/main/proto/ClientNamenodeProtocol.proto</argument>
                 <argument>src/main/proto/NamenodeProtocol.proto</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-proto-qjournal</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/QJournalProtocol.proto</argument>
               </arguments>
             </configuration>
           </execution>
@@ -469,9 +511,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/test/resources/data*</exclude>
             <exclude>src/test/resources/editsStored*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
+            <exclude>src/main/native/util/tree.h</exclude>
+            <exclude>src/test/aop/org/apache/hadoop/hdfs/server/datanode/DataXceiverAspects.aj</exclude>
             <exclude>src/main/webapps/datanode/robots.txt</exclude>
             <exclude>src/main/docs/releasenotes.html</exclude>
             <exclude>src/contrib/**</exclude>
+            <exclude>src/site/resources/images/*</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -516,6 +561,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
                       <arg line="VERBOSE=1"/>
                     </exec>
+                    <!-- The second make is a workaround for HADOOP-9215.  It can
+                         be removed when version 2.6 of cmake is no longer supported . -->
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true"></exec>
                   </target>
                 </configuration>
               </execution>

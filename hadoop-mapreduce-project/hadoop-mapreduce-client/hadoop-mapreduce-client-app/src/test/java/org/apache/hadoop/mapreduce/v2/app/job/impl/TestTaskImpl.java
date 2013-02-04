@@ -35,10 +35,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -47,10 +47,12 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -58,7 +60,7 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.InlineDispatcher;
+import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Before;
@@ -71,7 +73,6 @@ public class TestTaskImpl {
   
   private JobConf conf;
   private TaskAttemptListener taskAttemptListener;
-  private OutputCommitter committer;
   private Token<JobTokenIdentifier> jobToken;
   private JobId jobId;
   private Path remoteJobConfFile;
@@ -99,13 +100,13 @@ public class TestTaskImpl {
 
     public MockTaskImpl(JobId jobId, int partition,
         EventHandler eventHandler, Path remoteJobConfFile, JobConf conf,
-        TaskAttemptListener taskAttemptListener, OutputCommitter committer,
+        TaskAttemptListener taskAttemptListener,
         Token<JobTokenIdentifier> jobToken,
         Credentials credentials, Clock clock,
         Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
         MRAppMetrics metrics, AppContext appContext, TaskType taskType) {
       super(jobId, taskType , partition, eventHandler,
-          remoteJobConfFile, conf, taskAttemptListener, committer, 
+          remoteJobConfFile, conf, taskAttemptListener,
           jobToken, credentials, clock,
           completedTasksFromPreviousRun, startCount, metrics, appContext);
       this.taskType = taskType;
@@ -120,7 +121,7 @@ public class TestTaskImpl {
     protected TaskAttemptImpl createAttempt() {
       MockTaskAttemptImpl attempt = new MockTaskAttemptImpl(getID(), ++taskAttemptCounter, 
           eventHandler, taskAttemptListener, remoteJobConfFile, partition,
-          conf, committer, jobToken, credentials, clock, appContext, taskType);
+          conf, jobToken, credentials, clock, appContext, taskType);
       taskAttempts.add(attempt);
       return attempt;
     }
@@ -145,12 +146,11 @@ public class TestTaskImpl {
 
     public MockTaskAttemptImpl(TaskId taskId, int id, EventHandler eventHandler,
         TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
-        JobConf conf, OutputCommitter committer,
-        Token<JobTokenIdentifier> jobToken,
+        JobConf conf, Token<JobTokenIdentifier> jobToken,
         Credentials credentials, Clock clock,
         AppContext appContext, TaskType taskType) {
       super(taskId, id, eventHandler, taskAttemptListener, jobFile, partition, conf,
-          dataLocations, committer, jobToken, credentials, clock, appContext);
+          dataLocations, jobToken, credentials, clock, appContext);
       this.taskType = taskType;
     }
 
@@ -210,7 +210,6 @@ public class TestTaskImpl {
     
     conf = new JobConf();
     taskAttemptListener = mock(TaskAttemptListener.class);
-    committer = mock(OutputCommitter.class);
     jobToken = (Token<JobTokenIdentifier>) mock(Token.class);
     remoteJobConfFile = mock(Path.class);
     credentials = null;
@@ -235,7 +234,7 @@ public class TestTaskImpl {
   
   private MockTaskImpl createMockTask(TaskType taskType) {
     return new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
-        remoteJobConfFile, conf, taskAttemptListener, committer, jobToken,
+        remoteJobConfFile, conf, taskAttemptListener, jobToken,
         credentials, clock,
         completedTasksFromPreviousRun, startCount,
         metrics, appContext, taskType);
@@ -258,6 +257,7 @@ public class TestTaskImpl {
     mockTask.handle(new TaskEvent(taskId, 
         TaskEventType.T_SCHEDULE));
     assertTaskScheduledState();
+    assertTaskAttemptAvataar(Avataar.VIRGIN);
   }
   
   private void killTask(TaskId taskId) {
@@ -341,6 +341,19 @@ public class TestTaskImpl {
    */
   private void assertTaskSucceededState() {
     assertEquals(TaskState.SUCCEEDED, mockTask.getState());
+  }
+
+  /**
+   * {@link Avataar}
+   */
+  private void assertTaskAttemptAvataar(Avataar avataar) {
+    for (TaskAttempt taskAttempt : mockTask.getAttempts().values()) {
+      if (((TaskAttemptImpl) taskAttempt).getAvataar() == avataar) {
+        return;
+      }
+    }
+    fail("There is no " + (avataar == Avataar.VIRGIN ? "virgin" : "speculative")
+        + "task attempt");
   }
   
   @Test
@@ -520,6 +533,9 @@ public class TestTaskImpl {
     
     // The task should still be in the succeeded state
     assertTaskSucceededState();
+    
+    // The task should contain speculative a task attempt
+    assertTaskAttemptAvataar(Avataar.SPECULATIVE);
   }
   
   @Test
@@ -601,5 +617,74 @@ public class TestTaskImpl {
 
     assertTaskScheduledState();
     assertEquals(3, taskAttempts.size());
+  }
+
+  @Test
+  public void testFailedTransitions() {
+    mockTask = new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
+        remoteJobConfFile, conf, taskAttemptListener, jobToken,
+        credentials, clock,
+        completedTasksFromPreviousRun, startCount,
+        metrics, appContext, TaskType.MAP) {
+          @Override
+          protected int getMaxAttempts() {
+            return 1;
+          }
+    };
+    TaskId taskId = getNewTaskID();
+    scheduleTaskAttempt(taskId);
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+
+    // add three more speculative attempts
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    assertEquals(4, taskAttempts.size());
+
+    // have the first attempt fail, verify task failed due to no retries
+    MockTaskAttemptImpl taskAttempt = taskAttempts.get(0);
+    taskAttempt.setState(TaskAttemptState.FAILED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_FAILED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+
+    // verify task can no longer be killed
+    mockTask.handle(new TaskEvent(taskId, TaskEventType.T_KILL));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+
+    // verify speculative doesn't launch new tasks
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ATTEMPT_LAUNCHED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    assertEquals(4, taskAttempts.size());
+
+    // verify attempt events from active tasks don't knock task out of FAILED
+    taskAttempt = taskAttempts.get(1);
+    taskAttempt.setState(TaskAttemptState.COMMIT_PENDING);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_COMMIT_PENDING));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    taskAttempt.setState(TaskAttemptState.FAILED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_FAILED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    taskAttempt = taskAttempts.get(2);
+    taskAttempt.setState(TaskAttemptState.SUCCEEDED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_SUCCEEDED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    taskAttempt = taskAttempts.get(3);
+    taskAttempt.setState(TaskAttemptState.KILLED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_KILLED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
   }
 }

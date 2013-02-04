@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -50,10 +53,10 @@ public class AppSchedulable extends Schedulable {
   private long startTime;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static final Log LOG = LogFactory.getLog(AppSchedulable.class);
-  private FSQueue queue;
+  private FSLeafQueue queue;
   private RMContainerTokenSecretManager containerTokenSecretManager;
 
-  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSQueue queue) {
+  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSLeafQueue queue) {
     this.scheduler = scheduler;
     this.app = app;
     this.startTime = System.currentTimeMillis();
@@ -97,9 +100,6 @@ public class AppSchedulable extends Schedulable {
   }
 
   @Override
-  public void redistributeShare() {}
-
-  @Override
   public Resource getResourceUsage() {
     return app.getCurrentConsumption();
   }
@@ -114,7 +114,7 @@ public class AppSchedulable extends Schedulable {
    * Get metrics reference from containing queue.
    */
   public QueueMetrics getMetrics() {
-    return queue.getQueueSchedulable().getMetrics();
+    return queue.getMetrics();
   }
 
   @Override
@@ -275,7 +275,7 @@ public class AppSchedulable extends Schedulable {
       // The desired container won't fit here, so reserve
       reserve(application, priority, node, container, reserved);
 
-      return Resources.none();
+      return FairScheduler.CONTAINER_RESERVED;
     }
   }
 
@@ -296,39 +296,52 @@ public class AppSchedulable extends Schedulable {
     } else {
       // If this app is over quota, don't schedule anything
       if (!(getRunnable())) { return Resources.none(); }
-
     }
+
+    Collection<Priority> prioritiesToTry = (reserved) ? 
+        Arrays.asList(node.getReservedContainer().getReservedPriority()) : 
+        app.getPriorities();
+    
     // For each priority, see if we can schedule a node local, rack local
     // or off-switch request. Rack of off-switch requests may be delayed
     // (not scheduled) in order to promote better locality.
-    for (Priority priority : app.getPriorities()) {
-      app.addSchedulingOpportunity(priority);
-      NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
-          scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
-          scheduler.getRackLocalityThreshold());
+    synchronized (app) {
+      for (Priority priority : prioritiesToTry) {
+        if (app.getTotalRequiredResources(priority) <= 0) {
+          continue;
+        }
+        
+        app.addSchedulingOpportunity(priority);
 
-      ResourceRequest localRequest = app.getResourceRequest(priority,
-          node.getHostName());
-      if (localRequest != null && localRequest.getNumContainers() != 0) {
-        return assignContainer(node, app, priority,
-            localRequest, NodeType.NODE_LOCAL, reserved);
-      }
+        ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
+            node.getRackName());
+        ResourceRequest localRequest = app.getResourceRequest(priority,
+            node.getHostName());
+        
+        NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
+            scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
+            scheduler.getRackLocalityThreshold());
+        
+        if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
+            && localRequest != null && localRequest.getNumContainers() != 0) {
+          return assignContainer(node, app, priority,
+              localRequest, NodeType.NODE_LOCAL, reserved);
+        }
 
-      ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
-          node.getRackName());
-      if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
-          && (allowedLocality.equals(NodeType.RACK_LOCAL) ||
-              allowedLocality.equals(NodeType.OFF_SWITCH))) {
-        return assignContainer(node, app, priority, rackLocalRequest,
-            NodeType.RACK_LOCAL, reserved);
-      }
+        if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
+            && (allowedLocality.equals(NodeType.RACK_LOCAL) ||
+                allowedLocality.equals(NodeType.OFF_SWITCH))) {
+          return assignContainer(node, app, priority, rackLocalRequest,
+              NodeType.RACK_LOCAL, reserved);
+        }
 
-      ResourceRequest offSwitchRequest = app.getResourceRequest(priority,
-          RMNode.ANY);
-      if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
-          && allowedLocality.equals(NodeType.OFF_SWITCH)) {
-        return assignContainer(node, app, priority, offSwitchRequest,
-            NodeType.OFF_SWITCH, reserved);
+        ResourceRequest offSwitchRequest = app.getResourceRequest(priority,
+            RMNode.ANY);
+        if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
+            && allowedLocality.equals(NodeType.OFF_SWITCH)) {
+          return assignContainer(node, app, priority, offSwitchRequest,
+              NodeType.OFF_SWITCH, reserved);
+        }
       }
     }
     return Resources.none();

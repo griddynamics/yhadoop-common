@@ -40,8 +40,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -140,7 +138,7 @@ public class TestRMAppTransitions {
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
     this.rmContext =
-        new RMContextImpl(new MemStore(), rmDispatcher,
+        new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new ApplicationTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
@@ -170,8 +168,6 @@ public class TestRMAppTransitions {
     Configuration conf = new YarnConfiguration();
     // ensure max retries set to known value
     conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, maxRetries);
-    String clientTokenStr = "bogusstring";
-    ApplicationStore appStore = mock(ApplicationStore.class);
     YarnScheduler scheduler = mock(YarnScheduler.class);
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
@@ -180,11 +176,10 @@ public class TestRMAppTransitions {
       submissionContext = new ApplicationSubmissionContextPBImpl();
     }
 
-    RMApp application = new RMAppImpl(applicationId, rmContext,
-        conf, name, user,
-        queue, submissionContext, clientTokenStr,
-        appStore, scheduler,
-        masterService, System.currentTimeMillis());
+    RMApp application =
+        new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
+          submissionContext, scheduler, masterService,
+          System.currentTimeMillis());
 
     testAppStartState(applicationId, user, name, queue, application);
     return application;
