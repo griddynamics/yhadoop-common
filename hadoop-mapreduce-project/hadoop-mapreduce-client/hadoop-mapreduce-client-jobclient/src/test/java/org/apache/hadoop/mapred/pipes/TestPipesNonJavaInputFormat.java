@@ -13,21 +13,22 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapred.pipes.TestPipeApplication.FakeSplit;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 public class TestPipesNonJavaInputFormat {
   private static File workSpace = new File("target",
-      TestPipesNonJavaInputFormat.class.getName() + "-workSpace");
+          TestPipesNonJavaInputFormat.class.getName() + "-workSpace");
 
   // test PipesNonJavaInputFormat
   @Test
   public void testFormat() throws IOException {
-    
+
     PipesNonJavaInputFormat inputFormat = new PipesNonJavaInputFormat();
     JobConf conf = new JobConf();
-    
+
     RecordReader<FloatWritable, NullWritable> reader = inputFormat
-        .getRecordReader(new FakeSplit(), conf, new TestTaskReporter());
+            .getRecordReader(new FakeSplit(), conf, new TestTaskReporter());
     assertEquals(0.0f, reader.getProgress(), 0.001);
 
     // input and output files
@@ -46,20 +47,20 @@ public class TestPipesNonJavaInputFormat {
     }
 // set data for splits
     conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
-        input1.getAbsolutePath() + "," + input2.getAbsolutePath());
+            input1.getAbsolutePath() + "," + input2.getAbsolutePath());
     InputSplit[] splits = inputFormat.getSplits(conf, 2);
     assertEquals(2, splits.length);
 
-    PipesNonJavaInputFormat.PipesDummyRecordReader dummirr = new PipesNonJavaInputFormat.PipesDummyRecordReader(
-        conf, splits[0]);
-    assertNull(dummirr.createKey());
-    assertNull(dummirr.createValue());
-    assertEquals(0, dummirr.getPos());
+    PipesNonJavaInputFormat.PipesDummyRecordReader dummyRecordReader = new PipesNonJavaInputFormat.PipesDummyRecordReader(
+            conf, splits[0]);
+    assertNull(dummyRecordReader.createKey());
+    assertNull(dummyRecordReader.createValue());
+    assertEquals(0, dummyRecordReader.getPos());
 
-    assertEquals(0.0, dummirr.getProgress(), 0.001);
-    assertTrue(dummirr.next(new FloatWritable(2.0f), NullWritable.get()));
-    assertEquals(2.0, dummirr.getProgress(), 0.001);
-    dummirr.close();
+    assertEquals(0.0, dummyRecordReader.getProgress(), 0.001);
+    assertTrue(dummyRecordReader.next(new FloatWritable(2.0f), NullWritable.get()));
+    assertEquals(2.0, dummyRecordReader.getProgress(), 0.001);
+    dummyRecordReader.close();
   }
 
   private class TestTaskReporter implements Reporter {

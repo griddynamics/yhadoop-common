@@ -9,6 +9,7 @@ import java.net.Socket;
 
 import javax.crypto.SecretKey;
 
+import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -16,23 +17,23 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 
-public class PipeApplicatoinRunabeClient {
+public class PipeReducerStub {
 
   public static void main(String[] args) {
-    PipeApplicatoinRunabeClient client = new PipeApplicatoinRunabeClient();
+    PipeReducerStub client = new PipeReducerStub();
     client.binaryProtocolStub();
   }
 
   public void binaryProtocolStub() {
-    Socket socket =null;
+    Socket socket = null;
     try {
 
-      int port = Integer 
-          .parseInt(System.getenv("mapreduce.pipes.command.port"));
-      
+      int port = Integer
+              .parseInt(System.getenv("mapreduce.pipes.command.port"));
+
       java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
-      
-      
+
+
       socket = new Socket(addr.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
@@ -40,75 +41,70 @@ public class PipeApplicatoinRunabeClient {
       // try to read
       DataInputStream dataInput = new DataInputStream(input);
 
-      int i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
       String str = Text.readString(dataInput);
 
       Text.readString(dataInput);
 
-      DataOutputStream dataout = new DataOutputStream(output);
-      WritableUtils.writeVInt(dataout, 57);
+      DataOutputStream dataOut = new DataOutputStream(output);
+      WritableUtils.writeVInt(dataOut, 57);
       String s = createDigest("password".getBytes(), str);
 
-      Text.writeString(dataout, s);
-
-
+      Text.writeString(dataOut, s);
       // start
 
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
-  // get conf
+      // get configuration
       // should be MessageType.SET_JOB_CONF.code
-      i = WritableUtils.readVInt(dataInput);
-          // array length
+      WritableUtils.readVInt(dataInput);
+      // array length
 
       int j = WritableUtils.readVInt(dataInput);
-      for (i = 0; i < j; i++) {
+      for (int i = 0; i < j; i++) {
         Text.readString(dataInput);
         i++;
         Text.readString(dataInput);
       }
 
 
-// RUN_MAP.code
-      //should be 3
+      //should be 5
+      //RUN_REDUCE
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      // reduce key
+      WritableUtils.readVInt(dataInput);
+      // value of reduce key
+      BooleanWritable value = new BooleanWritable();
+      readObject(value, dataInput);
+      System.out.println("reducer key :" + value);
+      // reduce value code:
+      WritableUtils.readVInt(dataInput);
+      Text txt = new Text();
+      // value
+      readObject(txt, dataInput);
+      System.out.println("reduce value  :" + txt);
 
-      i = WritableUtils.readVInt(dataInput);
-System.out.println("runmap:"+i);      
-      TestPipeApplication.FakeSplit split= new TestPipeApplication.FakeSplit() ; 
-      readObject(split, dataInput);
-      System.out.println("split:"+split);      
 
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-      
-      //should be 2
-      
-      i = WritableUtils.readVInt(dataInput);
-      s= Text.readString(dataInput);
-      System.out.println("s2: "+s);
-      s= Text.readString(dataInput);
-      System.out.println("s2: "+s);
-      
-
-      
       // done
-      WritableUtils.writeVInt(dataout, 54);
-  
-      dataout.flush();
-      dataout.close();
+      WritableUtils.writeVInt(dataOut, 54);
+
+      dataOut.flush();
+      dataOut.close();
 
     } catch (Exception x) {
       x.printStackTrace();
-    }finally{
-      if( socket!=null )
+    } finally {
+      if (socket != null)
         try {
           socket.close();
         } catch (IOException e) {
           e.printStackTrace();
         }
-    
+
     }
   }
 
@@ -119,7 +115,7 @@ System.out.println("runmap:"+i);
 
   }
 
-  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
+  private void readObject(Writable obj, DataInputStream inStream) throws IOException {
     int numBytes = WritableUtils.readVInt(inStream);
     byte[] buffer;
     // For BytesWritable and Text, use the specified length to set the length
@@ -137,7 +133,4 @@ System.out.println("runmap:"+i);
       obj.readFields(inStream);
     }
   }
-
-
-
 }

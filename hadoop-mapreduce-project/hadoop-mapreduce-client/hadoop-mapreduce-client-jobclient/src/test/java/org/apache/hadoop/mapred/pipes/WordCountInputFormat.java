@@ -31,53 +31,71 @@ import org.apache.hadoop.mapred.*;
  * RecordReaders are not implemented in Java, naturally...
  */
 public class WordCountInputFormat
-  extends FileInputFormat<IntWritable, Text> {
-  
-  static class WordCountInputSplit implements InputSplit  {
+        extends FileInputFormat<IntWritable, Text> {
+
+  static class WordCountInputSplit implements InputSplit {
     private String filename;
-    WordCountInputSplit() { }
+
+    WordCountInputSplit() {
+    }
+
     WordCountInputSplit(Path filename) {
       this.filename = filename.toUri().getPath();
     }
-    public void write(DataOutput out) throws IOException { 
-      Text.writeString(out, filename); 
+
+    public void write(DataOutput out) throws IOException {
+      Text.writeString(out, filename);
     }
-    public void readFields(DataInput in) throws IOException { 
-      filename = Text.readString(in); 
+
+    public void readFields(DataInput in) throws IOException {
+      filename = Text.readString(in);
     }
-    public long getLength() { return 0L; }
-    public String[] getLocations() { return new String[0]; }
+
+    public long getLength() {
+      return 0L;
+    }
+
+    public String[] getLocations() {
+      return new String[0];
+    }
   }
 
-  public InputSplit[] getSplits(JobConf conf, 
+  public InputSplit[] getSplits(JobConf conf,
                                 int numSplits) throws IOException {
     ArrayList<InputSplit> result = new ArrayList<InputSplit>();
     FileSystem local = FileSystem.getLocal(conf);
-    for(Path dir: getInputPaths(conf)) {
-      for(FileStatus file: local.listStatus(dir)) {
+    for (Path dir : getInputPaths(conf)) {
+      for (FileStatus file : local.listStatus(dir)) {
         result.add(new WordCountInputSplit(file.getPath()));
       }
     }
     return result.toArray(new InputSplit[result.size()]);
   }
+
   public RecordReader<IntWritable, Text> getRecordReader(InputSplit split,
-                                                         JobConf conf, 
+                                                         JobConf conf,
                                                          Reporter reporter) {
-    return new RecordReader<IntWritable, Text>(){
+    return new RecordReader<IntWritable, Text>() {
       public boolean next(IntWritable key, Text value) throws IOException {
         return false;
       }
+
       public IntWritable createKey() {
         return new IntWritable();
       }
+
       public Text createValue() {
         return new Text();
       }
+
       public long getPos() {
         return 0;
       }
-      public void close() { }
-      public float getProgress() { 
+
+      public void close() {
+      }
+
+      public float getProgress() {
         return 0.0f;
       }
     };
