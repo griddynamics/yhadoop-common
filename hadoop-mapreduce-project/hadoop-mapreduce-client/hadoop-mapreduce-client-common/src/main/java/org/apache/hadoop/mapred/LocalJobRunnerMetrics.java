@@ -30,17 +30,24 @@ class LocalJobRunnerMetrics implements MetricsSource {
   private static final String CONTEXT = "mapred";
   private static final String RECORD_NAME = "jobtracker";
 
-  private static final MetricsInfo mapsLaunchedCountMI = Interns.info("maps_launched", "Maps launched count.");
-  private static final MetricsInfo mapsCompletedCountMI = Interns.info("maps_completed", "Maps completed count.");
+  private static final MetricsInfo mapsLaunchedCountMI 
+    = Interns.info("maps_launched", "Maps launched count.");
+  private static final MetricsInfo mapsCompletedCountMI 
+    = Interns.info("maps_completed", "Maps completed count.");
   
-  private static final MetricsInfo reducesLaunchedCountMI = Interns.info("reduces_launched", "Reduces launched count.");
-  private static final MetricsInfo reducesCompletedCountMI = Interns.info("reduces_completed", "Reduces completed count.");
+  private static final MetricsInfo reducesLaunchedCountMI 
+    = Interns.info("reduces_launched", "Reduces launched count.");
+  private static final MetricsInfo reducesCompletedCountMI 
+    = Interns.info("reduces_completed", "Reduces completed count.");
 
-  private static final MetricsInfo waitingMapsGaugeMI = Interns.info( "waiting_maps", "Waiting maps gauge.");
-  private static final MetricsInfo waitingReducesGaugeMI = Interns.info( "waiting_reduces", "Waiting reduces gauge.");
+  private static final MetricsInfo waitingMapsGaugeMI 
+    = Interns.info( "waiting_maps", "Waiting maps gauge.");
+  private static final MetricsInfo waitingReducesGaugeMI 
+    = Interns.info( "waiting_reduces", "Waiting reduces gauge.");
+
+  private static int instanceCount = 0;
   
   private final String sessionId;
-  private final MetricsSystem metricsSystem;
 
   private int numMapTasksLaunched = 0;
   private int numMapTasksCompleted = 0;
@@ -51,13 +58,14 @@ class LocalJobRunnerMetrics implements MetricsSource {
   
   @SuppressWarnings("deprecation")
   public LocalJobRunnerMetrics(JobConf conf) {
+    instanceCount++;
     sessionId = conf.getSessionId();
-    
-    metricsSystem = DefaultMetricsSystem.instance();
-    DefaultMetricsSystem.setMiniClusterMode(true);
-    metricsSystem.init("JobTracker");
-    metricsSystem.register(getClass().getName(), 
-        "Metrics source for LocalJobRunner.", this);
+    MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
+    // NB: instance count added to class name to avoid collision if
+    // the defaultMetricsSystem is not in mini-cluster mode, and several 
+    // instances of this class are created: 
+    metricsSystem.register(getClass().getName() + "-" + instanceCount,
+        "Metrics source for LocalJobRunner", this);
   }
   
   @Override

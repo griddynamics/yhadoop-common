@@ -53,6 +53,8 @@ public class ShuffleClientMetrics implements MetricsSource {
   private static final MetricsInfo shuffleFetchersBusyPercentMI 
     = Interns.info("shuffle_fetchers_busy_percent", "Shuffle fetches busy percent.");
   
+  private static int instanceCount = 0;
+  
   // metrics:
   private int numFailedFetches = 0;
   private int numSuccessFetches = 0;
@@ -65,14 +67,18 @@ public class ShuffleClientMetrics implements MetricsSource {
   private final JobConf jobConf;
   
   ShuffleClientMetrics(TaskAttemptID reduceId0, JobConf jobConf0) {
+    instanceCount++;
+    
     reduceId = reduceId0;
     jobConf = jobConf0;
     
     numCopiers = jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
     
     final MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
-    metricsSystem.init(CONTEXT);
-    metricsSystem.register(getClass().getName(), 
+    // NB: instance count added to class name to avoid collision if
+    // the defaultMetricsSystem is not in mini-cluster mode, and several 
+    // instances of this class are created:  
+    metricsSystem.register(getClass().getName() + "-" + instanceCount, 
         "Metrics source ShuffleClient.", this);
   }
   
