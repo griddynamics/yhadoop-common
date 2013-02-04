@@ -15,20 +15,21 @@ import org.apache.hadoop.conf.Configuration;
 import java.io.IOException;
 
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  * <p/>
  * http://www.apache.org/licenses/LICENSE-2.0
  * <p/>
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 public class GridmixTestUtils {
   private static final Log LOG = LogFactory.getLog(GridmixTestUtils.class);
@@ -36,29 +37,24 @@ public class GridmixTestUtils {
   static FileSystem dfs = null;
   static MiniDFSCluster dfsCluster = null;
   static MiniMRClientCluster mrvl = null;
-  protected static final String GRIDMIX_USE_QUEUE_IN_TRACE = 
-      "gridmix.job-submission.use-queue-in-trace";
-  protected static final String GRIDMIX_DEFAULT_QUEUE = 
-      "gridmix.job-submission.default-queue";
+  protected static final String GRIDMIX_USE_QUEUE_IN_TRACE = "gridmix.job-submission.use-queue-in-trace";
+  protected static final String GRIDMIX_DEFAULT_QUEUE = "gridmix.job-submission.default-queue";
 
   public static void initCluster(Class<?> caller) throws IOException {
     Configuration conf = new Configuration();
-//    conf.set("mapred.queue.names", "default,q1,q2");
-  conf.set("mapred.queue.names", "default");
+    conf.set("mapred.queue.names", "default");
     conf.set("yarn.scheduler.capacity.root.queues", "default");
     conf.set("yarn.scheduler.capacity.root.default.capacity", "100.0");
-    
-    
+
     conf.setBoolean(GRIDMIX_USE_QUEUE_IN_TRACE, false);
     conf.set(GRIDMIX_DEFAULT_QUEUE, "default");
-    
 
     dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true)
         .build();// MiniDFSCluster(conf, 3, true, null);
     dfs = dfsCluster.getFileSystem();
     conf.set(JTConfig.JT_RETIREJOBS, "false");
     mrvl = MiniMRClientClusterFactory.create(caller, 2, conf);
-    
+
     conf = mrvl.getConfig();
     String[] files = conf.getStrings(MRJobConfig.CACHE_FILES);
     if (files != null) {
@@ -68,7 +64,7 @@ public class GridmixTestUtils {
       }
       conf.setStrings(MRJobConfig.CACHE_FILE_TIMESTAMPS, timestamps);
     }
-    
+
   }
 
   public static void shutdownCluster() throws IOException {
@@ -82,7 +78,7 @@ public class GridmixTestUtils {
 
   /**
    * Methods to generate the home directory for dummy users.
-   * 
+   *
    * @param conf
    */
   public static void createHomeAndStagingDirectory(String user,
@@ -96,7 +92,7 @@ public class GridmixTestUtils {
         fs.mkdirs(homeDirectory);
         changePermission(user, homeDirectory, fs);
 
-      }    
+      }
       changePermission(user, homeDirectory, fs);
       Path stagingArea = new Path(
           conf.get("mapreduce.jobtracker.staging.root.dir",
@@ -110,7 +106,7 @@ public class GridmixTestUtils {
   }
 
   static void changePermission(String user, Path homeDirectory, FileSystem fs)
-      throws IOException {
+    throws IOException {
     fs.setOwner(homeDirectory, user, "");
   }
 }
