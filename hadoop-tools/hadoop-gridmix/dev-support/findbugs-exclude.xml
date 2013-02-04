@@ -28,10 +28,6 @@
   </Match>
 
   <Match>
-    <Bug pattern="MS_SHOULD_BE_FINAL" />
-  </Match>
-
-  <Match>
     <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER" />
     <Class name="org.apache.hadoop.mapred.gridmix.JobMonitor" />
   </Match>
