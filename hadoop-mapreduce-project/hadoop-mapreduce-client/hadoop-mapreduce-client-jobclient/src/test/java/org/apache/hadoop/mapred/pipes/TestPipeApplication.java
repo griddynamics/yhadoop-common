@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.mapred.pipes;
 
 import java.io.ByteArrayOutputStream;
@@ -10,7 +27,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.security.Permission;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,6 +54,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.junit.Test;
@@ -46,13 +63,13 @@ import static org.junit.Assert.*;
 
 public class TestPipeApplication {
   private static File workSpace = new File("target",
-      TestPipeApplication.class.getName() + "-workSpace");
+          TestPipeApplication.class.getName() + "-workSpace");
 
   private static String taskName = "attempt_001_02_r03_04_05";
 
   /**
    * test PipesMapRunner
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -69,20 +86,20 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
 
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-          new Counters.Counter(), new Progress(), conf);
+              new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
-          new Path(workSpace + File.separator + "outfile"), IntWritable.class,
-          Text.class, null, null);
+              new Path(workSpace + File.separator + "outfile"), IntWritable.class,
+              Text.class, null, null);
       output.setWriter(wr);
       // stub for client
-      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinRunabeClient");
+      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicationRunnableStub");
 
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
       // token for authorization
       Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
-          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
 
@@ -101,7 +118,7 @@ public class TestPipeApplication {
       assertTrue(stdout.contains("s2: org.apache.hadoop.io.FloatWritable"));
       assertTrue(stdout.contains("s2: org.apache.hadoop.io.NullWritable"));
       assertTrue(stdout
-          .contains("split:org.apache.hadoop.mapred.pipes.TestPipeApplication$FakeSplit"));
+              .contains("split:org.apache.hadoop.mapred.pipes.TestPipeApplication$FakeSplit"));
 
     } finally {
       if (psw != null) {
@@ -116,7 +133,7 @@ public class TestPipeApplication {
 
   /**
    * test org.apache.hadoop.mapred.pipes.Application
-   * 
+   *
    * @throws Throwable
    */
   @Test
@@ -126,7 +143,7 @@ public class TestPipeApplication {
     RecordReader<FloatWritable, NullWritable> rReader = new Reader();
 
     // client for test
-    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicatoinClient");
+    File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicationStub");
 
     TestTaskReporter reporter = new TestTaskReporter();
 
@@ -138,22 +155,22 @@ public class TestPipeApplication {
 
       // token for authorization
       Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
-          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
 
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-          new Counters.Counter(), new Progress(), conf);
+              new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.setConf(conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs,
-          new Path(workSpace + File.separator + "outfile"), IntWritable.class,
-          Text.class, null, null);
+              new Path(workSpace + File.separator + "outfile"), IntWritable.class,
+              Text.class, null, null);
       output.setWriter(wr);
       conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
 
       Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<WritableComparable<IntWritable>, Writable, IntWritable, Text>(
-          conf, rReader, output, reporter, IntWritable.class, Text.class);
+              conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();
 
       application.getDownlink().mapItem(new IntWritable(3), new Text("txt"));
@@ -165,9 +182,9 @@ public class TestPipeApplication {
       wr.close();
 
       // check getDownlink().mapItem();
-      String stdout = readstdout(conf);
-      assertTrue(stdout.contains("map object1:txt"));
-      assertTrue(stdout.contains("map object:3"));
+      String stdOut = readstdout(conf);
+      assertTrue(stdOut.contains("map object1:txt"));
+      assertTrue(stdOut.contains("map object:3"));
 
       // reporter test counter, and status should be sended
       assertEquals(1.0, reporter.getProgress(), 0.01);
@@ -195,7 +212,7 @@ public class TestPipeApplication {
 
   /**
    * test org.apache.hadoop.mapred.pipes.Submitter
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -206,7 +223,7 @@ public class TestPipeApplication {
     File[] psw = cleanTokenPasswordFile();
 
     System.setProperty("test.build.data",
-        "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
+            "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
     conf.set("hadoop.log.dir", "target/tmp");
 
     // prepare configuration
@@ -228,57 +245,56 @@ public class TestPipeApplication {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // test without parameters
     try {
-      System.setSecurityManager(new NoExitSecurityManager());
 
       System.setOut(new PrintStream(out));
       Submitter.main(new String[0]);
       fail();
-    } catch (ExitException e) {
+    } catch (ExitUtil.ExitException e) {
       // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
       assertTrue(out.toString().contains("bin/hadoop pipes"));
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
       assertTrue(out.toString()
-          .contains("[-output <path>] // Output directory"));
+              .contains("[-output <path>] // Output directory"));
       assertTrue(out.toString().contains("[-jar <jar file> // jar filename"));
       assertTrue(out.toString().contains(
-          "[-inputformat <class>] // InputFormat class"));
+              "[-inputformat <class>] // InputFormat class"));
       assertTrue(out.toString().contains("[-map <class>] // Java Map class"));
       assertTrue(out.toString().contains(
-          "[-partitioner <class>] // Java Partitioner"));
+              "[-partitioner <class>] // Java Partitioner"));
       assertTrue(out.toString().contains(
-          "[-reduce <class>] // Java Reduce class"));
+              "[-reduce <class>] // Java Reduce class"));
       assertTrue(out.toString().contains(
-          "[-writer <class>] // Java RecordWriter"));
+              "[-writer <class>] // Java RecordWriter"));
       assertTrue(out.toString().contains(
-          "[-program <executable>] // executable URI"));
+              "[-program <executable>] // executable URI"));
       assertTrue(out.toString().contains(
-          "[-reduces <num>] // number of reduces"));
+              "[-reduces <num>] // number of reduces"));
       assertTrue(out.toString().contains(
-          "[-lazyOutput <true/false>] // createOutputLazily"));
+              "[-lazyOutput <true/false>] // createOutputLazily"));
 
       assertTrue(out
-          .toString()
-          .contains(
-              "-conf <configuration file>     specify an application configuration file"));
+              .toString()
+              .contains(
+                      "-conf <configuration file>     specify an application configuration file"));
       assertTrue(out.toString().contains(
-          "-D <property=value>            use value for given property"));
+              "-D <property=value>            use value for given property"));
       assertTrue(out.toString().contains(
-          "-fs <local|namenode:port>      specify a namenode"));
+              "-fs <local|namenode:port>      specify a namenode"));
       assertTrue(out.toString().contains(
-          "-jt <local|jobtracker:port>    specify a job tracker"));
+              "-jt <local|jobtracker:port>    specify a job tracker"));
       assertTrue(out
-          .toString()
-          .contains(
-              "-files <comma separated list of files>    specify comma separated files to be copied to the map reduce cluster"));
+              .toString()
+              .contains(
+                      "-files <comma separated list of files>    specify comma separated files to be copied to the map reduce cluster"));
       assertTrue(out
-          .toString()
-          .contains(
-              "-libjars <comma separated list of jars>    specify comma separated jar files to include in the classpath."));
+              .toString()
+              .contains(
+                      "-libjars <comma separated list of jars>    specify comma separated jar files to include in the classpath."));
       assertTrue(out
-          .toString()
-          .contains(
-              "-archives <comma separated list of archives>    specify comma separated archives to be unarchived on the compute machines."));
+              .toString()
+              .contains(
+                      "-archives <comma separated list of archives>    specify comma separated archives to be unarchived on the compute machines."));
     } finally {
       System.setOut(oldps);
       // restore
@@ -292,20 +308,20 @@ public class TestPipeApplication {
     }
     // test call Submitter form command line
     try {
-      System.setSecurityManager(new NoExitSecurityManager());
+      ExitUtil.disableSystemExit();
       File fCommand = getFileCommand(null);
       String[] args = new String[22];
       File input = new File(workSpace + File.separator + "input");
       if (!input.exists()) {
         input.createNewFile();
       }
-      File outpot = new File(workSpace + File.separator + "output");
-      FileUtil.fullyDelete(outpot);
+      File output = new File(workSpace + File.separator + "output");
+      FileUtil.fullyDelete(output);
 
       args[0] = "-input";
       args[1] = input.getAbsolutePath();// "input";
       args[2] = "-output";
-      args[3] = outpot.getAbsolutePath();// "output";
+      args[3] = output.getAbsolutePath();// "output";
       args[4] = "-inputformat";
       args[5] = "org.apache.hadoop.mapred.TextInputFormat";
       args[6] = "-map";
@@ -327,7 +343,7 @@ public class TestPipeApplication {
 
       Submitter.main(args);
       fail();
-    } catch (ExitException e) {
+    } catch (ExitUtil.ExitException e) {
       // status should be 0
       assertEquals(e.status, 0);
 
@@ -340,7 +356,7 @@ public class TestPipeApplication {
 
   /**
    * test org.apache.hadoop.mapred.pipes.PipesReducer
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -350,11 +366,11 @@ public class TestPipeApplication {
     JobConf conf = new JobConf();
     try {
       Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
-          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
 
-      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerClient");
+      File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerStub");
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
       PipesReducer<BooleanWritable, Text, IntWritable, Text> reduser = new PipesReducer<BooleanWritable, Text, IntWritable, Text>();
@@ -365,17 +381,17 @@ public class TestPipeApplication {
       initstdout(conf);
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-          new Counters.Counter(), new Progress(), conf);
+              new Counters.Counter(), new Progress());
       Reporter reporter = new TestTaskReporter();
-      List<Text> ltext = new ArrayList<Text>();
-      ltext.add(new Text("1 boolean"));
+      List<Text> texts = new ArrayList<Text>();
+      texts.add(new Text("1 boolean"));
 
-      reduser.reduce(bw, ltext.iterator(), output, reporter);
+      reduser.reduce(bw, texts.iterator(), output, reporter);
       reduser.close();
-      String stdout= readstdout(conf);
-     // test data
-      assertTrue(stdout.contains("reducer key :true"));
-      assertTrue(stdout.contains("reduce value  :1 boolean"));
+      String stdOut = readstdout(conf);
+      // test data
+      assertTrue(stdOut.contains("reducer key :true"));
+      assertTrue(stdOut.contains("reduce value  :1 boolean"));
 
       System.out.println("ok!");
     } finally {
@@ -409,27 +425,27 @@ public class TestPipeApplication {
 
   /**
    * clean previous std  error and outs
-   * 
+   *
    * @param conf
    */
 
   private void initstdout(JobConf conf) {
     TaskAttemptID taskid = TaskAttemptID.forName(conf
-        .get(MRJobConfig.TASK_ATTEMPT_ID));
-    File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
-    File stderr = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDERR);
+            .get(MRJobConfig.TASK_ATTEMPT_ID));
+    File stdOut = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
+    File stdErr = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDERR);
     // prepare folder
-    if (!stdout.getParentFile().exists()) {
-      stdout.getParentFile().mkdirs();
+    if (!stdOut.getParentFile().exists()) {
+      stdOut.getParentFile().mkdirs();
     } else { // clean logs
-      stdout.deleteOnExit();
-      stderr.deleteOnExit();
+      stdOut.deleteOnExit();
+      stdErr.deleteOnExit();
     }
   }
 
   private String readstdout(JobConf conf) throws Exception {
     TaskAttemptID taskid = TaskAttemptID.forName(conf
-        .get(MRJobConfig.TASK_ATTEMPT_ID));
+            .get(MRJobConfig.TASK_ATTEMPT_ID));
     File stdout = TaskLog.getTaskLogFile(taskid, false, TaskLog.LogName.STDOUT);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     InputStream is = new FileInputStream(stdout);
@@ -491,13 +507,13 @@ public class TestPipeApplication {
   }
 
   private class CombineOutputCollector<K extends Object, V extends Object>
-      implements OutputCollector<K, V> {
+          implements OutputCollector<K, V> {
     private Writer<K, V> writer;
     private Counters.Counter outCounter;
     private Progressable progressable;
 
     public CombineOutputCollector(Counters.Counter outCounter,
-        Progressable progressable, Configuration conf) {
+                                  Progressable progressable) {
       this.outCounter = outCounter;
       this.progressable = progressable;
     }
@@ -599,7 +615,7 @@ public class TestPipeApplication {
 
     @Override
     public boolean next(FloatWritable key, NullWritable value)
-        throws IOException {
+            throws IOException {
       key.set(index++);
       return false;
     }
@@ -633,32 +649,5 @@ public class TestPipeApplication {
     }
   }
 
-  private static class NoExitSecurityManager extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkPermission(Permission perm, Object context) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkExit(int status) {
-      super.checkExit(status);
-      throw new ExitException(status);
-    }
-  }
-
-  protected static class ExitException extends SecurityException {
-    private static final long serialVersionUID = -1982617086752946683L;
-    public final int status;
-
-    public ExitException(int status) {
-      super("There is no escape!");
-      this.status = status;
-    }
-  }
 
 }

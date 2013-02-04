@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.mapred.pipes;
 
 import java.io.DataInputStream;
@@ -9,31 +26,32 @@ import java.net.Socket;
 
 import javax.crypto.SecretKey;
 
-import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-
-public class PipeReducerClient {
+       /*
+       Stub class for TestPipeApplication
+        */
+public class PipeApplicationRunnableStub {
 
   public static void main(String[] args) {
-    PipeReducerClient client = new PipeReducerClient();
+    PipeApplicationRunnableStub client = new PipeApplicationRunnableStub();
     client.binaryProtocolStub();
   }
 
   public void binaryProtocolStub() {
-    Socket socket =null;
+    Socket socket = null;
     try {
 
-      int port = Integer 
-          .parseInt(System.getenv("mapreduce.pipes.command.port"));
-      
+      int port = Integer
+              .parseInt(System.getenv("mapreduce.pipes.command.port"));
+
       java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
-      
-      
+
+
       socket = new Socket(addr.getHostName(), port);
       InputStream input = socket.getInputStream();
       OutputStream output = socket.getOutputStream();
@@ -41,72 +59,68 @@ public class PipeReducerClient {
       // try to read
       DataInputStream dataInput = new DataInputStream(input);
 
-      int i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
       String str = Text.readString(dataInput);
 
       Text.readString(dataInput);
 
-      DataOutputStream dataout = new DataOutputStream(output);
-      WritableUtils.writeVInt(dataout, 57);
+      DataOutputStream dataOut = new DataOutputStream(output);
+      WritableUtils.writeVInt(dataOut, 57);
       String s = createDigest("password".getBytes(), str);
 
-      Text.writeString(dataout, s);
+      Text.writeString(dataOut, s);
 
 
       // start
 
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
 
-  // get conf
+      // get conf
       // should be MessageType.SET_JOB_CONF.code
-      i = WritableUtils.readVInt(dataInput);
-          // array length
+      WritableUtils.readVInt(dataInput);
+      // array length
 
       int j = WritableUtils.readVInt(dataInput);
-      for (i = 0; i < j; i++) {
+      for (int i = 0; i < j; i++) {
         Text.readString(dataInput);
         i++;
-         Text.readString(dataInput);
+        Text.readString(dataInput);
       }
 
 
-      //should be 5
-  //RUN_REDUCE
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-      i = WritableUtils.readVInt(dataInput);
-// reduce key
-      i = WritableUtils.readVInt(dataInput);
-      // value of reduce key
-      BooleanWritable value= new BooleanWritable();
-      readObject(value, dataInput);
-      System.out.println("reducer key :"+value);  
-      // reduce value code:
-      i = WritableUtils.readVInt(dataInput);
-      Text txt= new Text();
-      // vakue
-      readObject(txt, dataInput);
-      System.out.println("reduce value  :"+txt);      
+// RUN_MAP.code
+      //should be 3
 
-      
+      WritableUtils.readVInt(dataInput);
+      TestPipeApplication.FakeSplit split = new TestPipeApplication.FakeSplit();
+      readObject(split, dataInput);
+
+      WritableUtils.readVInt(dataInput);
+      WritableUtils.readVInt(dataInput);
+
+      //should be 2
+      WritableUtils.readVInt(dataInput);
+      Text.readString(dataInput);
+      Text.readString(dataInput);
+
       // done
-      WritableUtils.writeVInt(dataout, 54);
-  
-      dataout.flush();
-      dataout.close();
+      WritableUtils.writeVInt(dataOut, 54);
+
+      dataOut.flush();
+      dataOut.close();
 
     } catch (Exception x) {
       x.printStackTrace();
-    }finally{
-      if( socket!=null )
+    } finally {
+      if (socket != null)
         try {
           socket.close();
         } catch (IOException e) {
           e.printStackTrace();
         }
-    
+
     }
   }
 
@@ -117,7 +131,7 @@ public class PipeReducerClient {
 
   }
 
-  private void readObject(Writable obj , DataInputStream inStream)  throws IOException {
+  private void readObject(Writable obj, DataInputStream inStream) throws IOException {
     int numBytes = WritableUtils.readVInt(inStream);
     byte[] buffer;
     // For BytesWritable and Text, use the specified length to set the length
@@ -135,4 +149,6 @@ public class PipeReducerClient {
       obj.readFields(inStream);
     }
   }
+
+
 }

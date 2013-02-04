@@ -46,22 +46,23 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Ignore;
 
 import junit.framework.TestCase;
+
 @Ignore
 public class TestPipes extends TestCase {
   private static final Log LOG =
-    LogFactory.getLog(TestPipes.class.getName());
-  
-  private static Path cppExamples = 
-    new Path(System.getProperty("install.c++.examples"));
-  static Path wordCountSimple = 
-    new Path(cppExamples, "bin/wordcount-simple");
-  static Path wordCountPart = 
-    new Path(cppExamples, "bin/wordcount-part");
-  static Path wordCountNoPipes = 
-    new Path(cppExamples,"bin/wordcount-nopipe");
-  
+          LogFactory.getLog(TestPipes.class.getName());
+
+  private static Path cppExamples =
+          new Path(System.getProperty("install.c++.examples"));
+  static Path wordCountSimple =
+          new Path(cppExamples, "bin/wordcount-simple");
+  static Path wordCountPart =
+          new Path(cppExamples, "bin/wordcount-part");
+  static Path wordCountNoPipes =
+          new Path(cppExamples, "bin/wordcount-nopipe");
+
   static Path nonPipedOutDir;
-  
+
   static void cleanup(FileSystem fs, Path p) throws IOException {
     fs.delete(p, true);
     assertFalse("output not cleaned up", fs.exists(p));
@@ -82,14 +83,14 @@ public class TestPipes extends TestCase {
       dfs = new MiniDFSCluster(conf, numSlaves, true, null);
       mr = new MiniMRCluster(numSlaves, dfs.getFileSystem().getUri().toString(), 1);
       writeInputFile(dfs.getFileSystem(), inputPath);
-      runProgram(mr, dfs, wordCountSimple, 
-                 inputPath, outputPath, 3, 2, twoSplitOutput, null);
+      runProgram(mr, dfs, wordCountSimple,
+              inputPath, outputPath, 3, 2, twoSplitOutput, null);
       cleanup(dfs.getFileSystem(), outputPath);
-      runProgram(mr, dfs, wordCountSimple, 
-                 inputPath, outputPath, 3, 0, noSortOutput, null);
+      runProgram(mr, dfs, wordCountSimple,
+              inputPath, outputPath, 3, 0, noSortOutput, null);
       cleanup(dfs.getFileSystem(), outputPath);
       runProgram(mr, dfs, wordCountPart,
-                 inputPath, outputPath, 3, 2, fixedPartitionOutput, null);
+              inputPath, outputPath, 3, 2, fixedPartitionOutput, null);
       runNonPipedProgram(mr, dfs, wordCountNoPipes, null);
       mr.waitUntilIdle();
     } finally {
@@ -99,43 +100,43 @@ public class TestPipes extends TestCase {
   }
 
 
-  final static String[] twoSplitOutput = new String[] {
-    "`and\t1\na\t1\nand\t1\nbeginning\t1\nbook\t1\nbut\t1\nby\t1\n" +
-    "conversation?'\t1\ndo:\t1\nhad\t2\nhaving\t1\nher\t2\nin\t1\nit\t1\n"+
-    "it,\t1\nno\t1\nnothing\t1\nof\t3\non\t1\nonce\t1\nor\t3\npeeped\t1\n"+
-    "pictures\t2\nthe\t3\nthought\t1\nto\t2\nuse\t1\nwas\t2\n",
+  final static String[] twoSplitOutput = new String[]{
+          "`and\t1\na\t1\nand\t1\nbeginning\t1\nbook\t1\nbut\t1\nby\t1\n" +
+                  "conversation?'\t1\ndo:\t1\nhad\t2\nhaving\t1\nher\t2\nin\t1\nit\t1\n" +
+                  "it,\t1\nno\t1\nnothing\t1\nof\t3\non\t1\nonce\t1\nor\t3\npeeped\t1\n" +
+                  "pictures\t2\nthe\t3\nthought\t1\nto\t2\nuse\t1\nwas\t2\n",
 
-    "Alice\t2\n`without\t1\nbank,\t1\nbook,'\t1\nconversations\t1\nget\t1\n" +
-    "into\t1\nis\t1\nreading,\t1\nshe\t1\nsister\t2\nsitting\t1\ntired\t1\n" +
-    "twice\t1\nvery\t1\nwhat\t1\n"
+          "Alice\t2\n`without\t1\nbank,\t1\nbook,'\t1\nconversations\t1\nget\t1\n" +
+                  "into\t1\nis\t1\nreading,\t1\nshe\t1\nsister\t2\nsitting\t1\ntired\t1\n" +
+                  "twice\t1\nvery\t1\nwhat\t1\n"
   };
 
-  final static String[] noSortOutput = new String[] {
-    "it,\t1\n`and\t1\nwhat\t1\nis\t1\nthe\t1\nuse\t1\nof\t1\na\t1\n" +
-    "book,'\t1\nthought\t1\nAlice\t1\n`without\t1\npictures\t1\nor\t1\n"+
-    "conversation?'\t1\n",
+  final static String[] noSortOutput = new String[]{
+          "it,\t1\n`and\t1\nwhat\t1\nis\t1\nthe\t1\nuse\t1\nof\t1\na\t1\n" +
+                  "book,'\t1\nthought\t1\nAlice\t1\n`without\t1\npictures\t1\nor\t1\n" +
+                  "conversation?'\t1\n",
 
-    "Alice\t1\nwas\t1\nbeginning\t1\nto\t1\nget\t1\nvery\t1\ntired\t1\n"+
-    "of\t1\nsitting\t1\nby\t1\nher\t1\nsister\t1\non\t1\nthe\t1\nbank,\t1\n"+
-    "and\t1\nof\t1\nhaving\t1\nnothing\t1\nto\t1\ndo:\t1\nonce\t1\n", 
+          "Alice\t1\nwas\t1\nbeginning\t1\nto\t1\nget\t1\nvery\t1\ntired\t1\n" +
+                  "of\t1\nsitting\t1\nby\t1\nher\t1\nsister\t1\non\t1\nthe\t1\nbank,\t1\n" +
+                  "and\t1\nof\t1\nhaving\t1\nnothing\t1\nto\t1\ndo:\t1\nonce\t1\n",
 
-    "or\t1\ntwice\t1\nshe\t1\nhad\t1\npeeped\t1\ninto\t1\nthe\t1\nbook\t1\n"+
-    "her\t1\nsister\t1\nwas\t1\nreading,\t1\nbut\t1\nit\t1\nhad\t1\nno\t1\n"+
-    "pictures\t1\nor\t1\nconversations\t1\nin\t1\n"
+          "or\t1\ntwice\t1\nshe\t1\nhad\t1\npeeped\t1\ninto\t1\nthe\t1\nbook\t1\n" +
+                  "her\t1\nsister\t1\nwas\t1\nreading,\t1\nbut\t1\nit\t1\nhad\t1\nno\t1\n" +
+                  "pictures\t1\nor\t1\nconversations\t1\nin\t1\n"
   };
-  
-  final static String[] fixedPartitionOutput = new String[] {
-    "Alice\t2\n`and\t1\n`without\t1\na\t1\nand\t1\nbank,\t1\nbeginning\t1\n" +
-    "book\t1\nbook,'\t1\nbut\t1\nby\t1\nconversation?'\t1\nconversations\t1\n"+
-    "do:\t1\nget\t1\nhad\t2\nhaving\t1\nher\t2\nin\t1\ninto\t1\nis\t1\n" +
-    "it\t1\nit,\t1\nno\t1\nnothing\t1\nof\t3\non\t1\nonce\t1\nor\t3\n" +
-    "peeped\t1\npictures\t2\nreading,\t1\nshe\t1\nsister\t2\nsitting\t1\n" +
-    "the\t3\nthought\t1\ntired\t1\nto\t2\ntwice\t1\nuse\t1\n" +
-    "very\t1\nwas\t2\nwhat\t1\n",
-    
-    ""                                                   
+
+  final static String[] fixedPartitionOutput = new String[]{
+          "Alice\t2\n`and\t1\n`without\t1\na\t1\nand\t1\nbank,\t1\nbeginning\t1\n" +
+                  "book\t1\nbook,'\t1\nbut\t1\nby\t1\nconversation?'\t1\nconversations\t1\n" +
+                  "do:\t1\nget\t1\nhad\t2\nhaving\t1\nher\t2\nin\t1\ninto\t1\nis\t1\n" +
+                  "it\t1\nit,\t1\nno\t1\nnothing\t1\nof\t3\non\t1\nonce\t1\nor\t3\n" +
+                  "peeped\t1\npictures\t2\nreading,\t1\nshe\t1\nsister\t2\nsitting\t1\n" +
+                  "the\t3\nthought\t1\ntired\t1\nto\t2\ntwice\t1\nuse\t1\n" +
+                  "very\t1\nwas\t2\nwhat\t1\n",
+
+          ""
   };
-  
+
   static void writeInputFile(FileSystem fs, Path dir) throws IOException {
     DataOutputStream out = fs.create(new Path(dir, "part0"));
     out.writeBytes("Alice was beginning to get very tired of sitting by her\n");
@@ -147,24 +148,24 @@ public class TestPipes extends TestCase {
     out.close();
   }
 
-  static void runProgram(MiniMRCluster mr, MiniDFSCluster dfs, 
-                          Path program, Path inputPath, Path outputPath,
-                          int numMaps, int numReduces, String[] expectedResults,
-                          JobConf conf
-                         ) throws IOException {
+  static void runProgram(MiniMRCluster mr, MiniDFSCluster dfs,
+                         Path program, Path inputPath, Path outputPath,
+                         int numMaps, int numReduces, String[] expectedResults,
+                         JobConf conf
+  ) throws IOException {
     Path wordExec = new Path("testing/bin/application");
     JobConf job = null;
-    if(conf == null) {
+    if (conf == null) {
       job = mr.createJobConf();
-    }else {
+    } else {
       job = new JobConf(conf);
-    } 
+    }
     job.setNumMapTasks(numMaps);
     job.setNumReduceTasks(numReduces);
     {
       FileSystem fs = dfs.getFileSystem();
       fs.delete(wordExec.getParent(), true);
-      fs.copyFromLocalFile(program, wordExec);                                         
+      fs.copyFromLocalFile(program, wordExec);
       Submitter.setExecutable(job, fs.makeQualified(wordExec).toString());
       Submitter.setIsJavaRecordReader(job, true);
       Submitter.setIsJavaRecordWriter(job, true);
@@ -173,7 +174,7 @@ public class TestPipes extends TestCase {
       RunningJob rJob = null;
       if (numReduces == 0) {
         rJob = Submitter.jobSubmit(job);
-        
+
         while (!rJob.isComplete()) {
           try {
             Thread.sleep(1000);
@@ -185,7 +186,7 @@ public class TestPipes extends TestCase {
         rJob = Submitter.runJob(job);
       }
       assertTrue("pipes job failed", rJob.isSuccessful());
-      
+
       Counters counters = rJob.getCounters();
       Counters.Group wordCountCounters = counters.getGroup("WORDCOUNT");
       int numCounters = 0;
@@ -197,40 +198,41 @@ public class TestPipes extends TestCase {
     }
 
     List<String> results = new ArrayList<String>();
-    for (Path p:FileUtil.stat2Paths(dfs.getFileSystem().listStatus(outputPath,
-    		                        new Utils.OutputFileUtils
-    		                                 .OutputFilesFilter()))) {
+    for (Path p : FileUtil.stat2Paths(dfs.getFileSystem().listStatus(outputPath,
+            new Utils.OutputFileUtils
+                    .OutputFilesFilter()))) {
       results.add(MapReduceTestUtil.readOutput(p, job));
     }
-    assertEquals("number of reduces is wrong", 
-                 expectedResults.length, results.size());
-    for(int i=0; i < results.size(); i++) {
+    assertEquals("number of reduces is wrong",
+            expectedResults.length, results.size());
+    for (int i = 0; i < results.size(); i++) {
       assertEquals("pipes program " + program + " output " + i + " wrong",
-                   expectedResults[i], results.get(i));
+              expectedResults[i], results.get(i));
     }
   }
-  
+
   /**
    * Run a map/reduce word count that does all of the map input and reduce
    * output directly rather than sending it back up to Java.
-   * @param mr The mini mr cluster
-   * @param dfs the dfs cluster
+   *
+   * @param mr      The mini mr cluster
+   * @param dfs     the dfs cluster
    * @param program the program to run
    * @throws IOException
    */
   static void runNonPipedProgram(MiniMRCluster mr, MiniDFSCluster dfs,
-                                  Path program, JobConf conf) throws IOException {
+                                 Path program, JobConf conf) throws IOException {
     JobConf job;
-    if(conf == null) {
+    if (conf == null) {
       job = mr.createJobConf();
-    }else {
+    } else {
       job = new JobConf(conf);
     }
-    
+
     job.setInputFormat(WordCountInputFormat.class);
     FileSystem local = FileSystem.getLocal(job);
-    Path testDir = new Path("file:" + System.getProperty("test.build.data"), 
-                            "pipes");
+    Path testDir = new Path("file:" + System.getProperty("test.build.data"),
+            "pipes");
     Path inDir = new Path(testDir, "input");
     nonPipedOutDir = new Path(testDir, "output");
     Path wordExec = new Path("testing/bin/application");
@@ -256,22 +258,22 @@ public class TestPipes extends TestCase {
     out.close();
     local.delete(nonPipedOutDir, true);
     local.mkdirs(nonPipedOutDir, new FsPermission(FsAction.ALL, FsAction.ALL,
-        FsAction.ALL));
+            FsAction.ALL));
     out = local.create(jobXml);
     job.writeXml(out);
     out.close();
-    System.err.println("About to run: Submitter -conf " + jobXml + 
-                       " -input " + inDir + " -output " + nonPipedOutDir + 
-                       " -program " + 
-                       dfs.getFileSystem().makeQualified(wordExec));
+    System.err.println("About to run: Submitter -conf " + jobXml +
+            " -input " + inDir + " -output " + nonPipedOutDir +
+            " -program " +
+            dfs.getFileSystem().makeQualified(wordExec));
     try {
       int ret = ToolRunner.run(new Submitter(),
-                               new String[]{"-conf", jobXml.toString(),
-                                  "-input", inDir.toString(),
-                                  "-output", nonPipedOutDir.toString(),
-                                  "-program", 
-                        dfs.getFileSystem().makeQualified(wordExec).toString(),
-                                  "-reduces", "2"});
+              new String[]{"-conf", jobXml.toString(),
+                      "-input", inDir.toString(),
+                      "-output", nonPipedOutDir.toString(),
+                      "-program",
+                      dfs.getFileSystem().makeQualified(wordExec).toString(),
+                      "-reduces", "2"});
       assertEquals(0, ret);
     } catch (Exception e) {
       assertTrue("got exception: " + StringUtils.stringifyException(e), false);
