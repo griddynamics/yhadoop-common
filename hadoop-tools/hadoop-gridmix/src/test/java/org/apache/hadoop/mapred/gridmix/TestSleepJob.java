@@ -22,14 +22,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapred.TaskReport;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -107,7 +103,6 @@ public class TestSleepJob {
       for (JobStory spec : submitted) {
         sub.put(spec.getJobID().toString(), spec);
       }
-      final JobClient client = new JobClient(GridmixTestUtils.mrvl.getConfig()); // mrCluster.createJobConf());
       for (Job job : succeeded) {
         final String jobName = job.getJobName();
         Configuration conf = job.getConfiguration();
