@@ -331,6 +331,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     long millis = period * 1000;
     timer = new Timer("Timer for '"+ prefix +"' metrics system", true);
     timer.scheduleAtFixedRate(new TimerTask() {
+          @Override
           public void run() {
             try {
               onTimerEvent();

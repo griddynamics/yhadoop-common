@@ -28,6 +28,9 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.annotation.Metric.Type;
+import org.apache.hadoop.metrics2.impl.ConfigBuilder;
+import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
+import org.apache.hadoop.metrics2.impl.TestMetricsSystemImpl.TestSink;
 import org.apache.hadoop.metrics2.lib.MetricsServlet2.TagsMetricsPair;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -37,6 +40,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TestMetricsServlet2 {
+  
+  private static final int SNAPSHOT_PERIOD_SEC = 1; // seconds
   
   // The 2 sample metric classes:
   @Metrics(name="testRecord", context="test1")
@@ -75,7 +80,7 @@ public class TestMetricsServlet2 {
     extends MetricsServlet2 {
     @Override
     protected ServletSink createServletSink() {
-      return new ServletSink() {
+      return new ServletSink(true) {
         @Override
         public void putMetrics(MetricsRecord record) {
           // NB: ignore the default metricssystem context metrics for the test: 
@@ -98,8 +103,9 @@ public class TestMetricsServlet2 {
    */
   @BeforeClass
   public static void beforeClass() throws IOException {
-    System.out.println("registering the metrics...");
-    final MetricsSystem ms = DefaultMetricsSystem.initialize("test");
+    new ConfigBuilder().add("*.period", Integer.valueOf(SNAPSHOT_PERIOD_SEC))
+        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-servlettest"));
+    final MetricsSystem ms = DefaultMetricsSystem.initialize("servlettest");
     
     myMetrics1 = new MyMetrics1().registerWith(ms);
     myMetrics1.testMetric1.set(1);
@@ -108,9 +114,7 @@ public class TestMetricsServlet2 {
     myMetrics2 = new MyMetrics2().registerWith(ms);
   }
   
-  @Before
-  public void before() {
-    // NB: need to change the metrics, see HADOOP-9269:  
+  private void changeMetricsImpl() {
     myMetrics1.testMetric1.incr();
     myMetrics1.testMetric1.decr();
     
@@ -118,16 +122,26 @@ public class TestMetricsServlet2 {
     myMetrics1.testMetric2.decr();
   }
   
+  @Before
+  public void before() {
+    // NB: need to change the metrics, see HADOOP-9269:
+    changeMetricsImpl();
+    
+    // wait 2 times longer than the snapshot period:  
+    try {
+      Thread.sleep(SNAPSHOT_PERIOD_SEC * 1000 * 2); 
+    } catch (InterruptedException ie) {
+      throw new RuntimeException(ie);
+    }
+  }
+  
   @AfterClass
-  public static void after() {
-    // NB: we need complete cleanup in order to 
-    // register all the same metric sources again:
+  public static void afterClass() {
     DefaultMetricsSystem.shutdown();
   }
   
   @Test
   public void testGetMap() throws Exception {
-    //Thread.sleep(11 * 1000);
     Map<String, Map<String, List<TagsMetricsPair>>> m = metricsServlet2.makeMap();
     assertEquals("Map missing contexts", 2, m.size());
     assertTrue(m.containsKey("test1"));
@@ -180,18 +194,25 @@ public class TestMetricsServlet2 {
         "\"test2\":{\"testRecord\":" +
         "[[{\"testTag22\":\"testTagValue22\"},{}]]}}", actualJson);
   }
-  
+
+  /*
+   * See if we can create another instance of the servlet,
+   * and both the instances will work correctly.
+   */
   @Test
   public void testSeveralMetricsServlet2Instances() {
-    // see if we can create another instance of the servlet,
-    // and both the instances will work equally:
-    MetricsServlet2 metricsServlet22 = new MetricsServlet2NoMetricsSystemContext();
-    
-    testPrintMapImpl(metricsServlet2);
-    
-    // NB: need to change the metrics, see HADOOP-9269:  
+    MetricsServlet2 metricsServlet22 
+      = new MetricsServlet2NoMetricsSystemContext();
+    // NB: need to change the metrics (see HADOOP-9269)
+    // and wait before they get snapshotted:
     before();
-    
+    testPrintMapImpl(metricsServlet2);
     testPrintMapImpl(metricsServlet22);
+    
+    // wait and check again:
+    before();
+    // (this time sinks are queried in reversed order):
+    testPrintMapImpl(metricsServlet22);
+    testPrintMapImpl(metricsServlet2);
   }
 }
