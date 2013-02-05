@@ -25,8 +25,6 @@ import static org.mockito.Mockito.*;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.Assert;
-import org.apache.avro.generic.IndexedRecord;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -328,22 +326,6 @@ public class TestJobHistoryEventHandler {
     jheh.setForcejobCompletion(true);
     for(int i=0; i < numEvents; ++i) {
       events[i] = getEventToEnqueue(jobId);
-      // test JobStatusChanged class
-      JobStatusChanged status= (JobStatusChanged)events[i].getHistoryEvent().getDatum();
-        // test getMethod
-      CharSequence o1= (CharSequence)status.get(0);
-      CharSequence o2=(CharSequence)status.get(1);
-      // test jobId
-      Assert.assertEquals(o1.toString(), ((JobStatusChangedEvent)events[i].getHistoryEvent()).getJobId().toString());
-      // test jobStatus
-      Assert.assertEquals(o2.toString(), ((JobStatusChangedEvent)events[i].getHistoryEvent()).getStatus().toString());
-      Assert.assertNotNull(o2);
-      checkStatus(o1.toString());
-      // test put method
-      
-      testCharSequence(status,0,o1);
-      testCharSequence(status,1,o2);
-      
       jheh.handle(events[i]);
     }
     jheh.stop();
@@ -353,54 +335,9 @@ public class TestJobHistoryEventHandler {
     assertTrue("Last event handled wasn't JobUnsuccessfulCompletionEvent",
         jheh.lastEventHandled.getHistoryEvent()
         instanceof JobUnsuccessfulCompletionEvent);
-    
-    // test JobUnsuccessfulCompletion
-
-    JobUnsuccessfulCompletion juc = (JobUnsuccessfulCompletion) jheh.lastEventHandled
-        .getHistoryEvent().getDatum();
-    CharSequence jobid = (CharSequence) juc.get(0);
-    Assert.assertEquals(jobid.toString(), "job_1000_0000");
-    long finishTime = (Long) juc.get(1); 
-    Assert.assertTrue(finishTime>0);
-
-    int finishedMaps = (Integer) juc.get(2);
-    Assert.assertTrue(finishedMaps==0);
-
-    int finishedReduces = (Integer) juc.get(3);
-    Assert.assertTrue(finishedReduces==0);
-
-    
-    CharSequence jobStatus = (CharSequence) juc.get(4);
-    Assert.assertEquals(jobStatus.toString(), "KILLED");
-        // test of put and get methods  
-    juc.put(0, jobid.subSequence(0, jobid.length()-1));
-    Assert.assertEquals(juc.get(0).toString(), jobid.subSequence(0, jobid.length()-1));
-    juc.put(1, 1L);
-    Assert.assertEquals(juc.get(1), 1L);
-    juc.put(2, 2);
-    Assert.assertEquals(juc.get(2), 2);
-    juc.put(3, 3);
-    Assert.assertEquals(juc.get(3), 3);
-    juc.put(4, jobStatus.subSequence(0, jobStatus.length()-1));
-    Assert.assertEquals(juc.get(4).toString(), jobStatus.subSequence(0, jobStatus.length()-1));
-
+ 
   }
  
-  //  format of job id test. Should be 'job_nnn_nnn'
-  private void checkStatus(String s){
-    s.startsWith("job");
-    String[] parts=s.split("_");
-    Assert.assertEquals(parts.length, 3);
-    Assert.assertEquals(parts.length, 3);
-    Integer.parseInt(parts[1]);
-    Integer.parseInt(parts[2]);
-      
-    
-  }
-  private void testCharSequence(IndexedRecord tsf ,int index, CharSequence template){
-    tsf.put(index, template.subSequence(0, template.length()-1));
-    Assert.assertEquals(tsf.get(index),template.subSequence(0, template.length()-1));
-  }
 }
 
 class JHEvenHandlerForTest extends JobHistoryEventHandler {
