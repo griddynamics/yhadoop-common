@@ -45,7 +45,7 @@ import org.mortbay.util.ajax.JSON.Output;
  * textual representation (no promises are made for parseability), and
  * users can use "?format=json" for parseable output.
  * 
- * @deprecated Please use {@link MetricsServlet2} instead.
+ * @deprecated Consider to use {@link MetricsServlet2} instead.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

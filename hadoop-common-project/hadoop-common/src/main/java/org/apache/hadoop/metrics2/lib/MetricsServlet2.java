@@ -19,6 +19,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +78,7 @@ public class MetricsServlet2 extends HttpServlet {
     return new ServletSink();
   }
   
-  protected static class ServletSink implements MetricsSink {
+  protected static class ServletSink implements MetricsSink, Serializable {
     private static int numInstances = 0;
     private final String sinkName;
     // metrics data:
@@ -192,8 +193,9 @@ public class MetricsServlet2 extends HttpServlet {
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
 
-    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
-                                                   request, response)) {
+    // Do the authorization
+    if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
+        response)) {
       return;
     }
     
@@ -222,10 +224,10 @@ public class MetricsServlet2 extends HttpServlet {
 
   @VisibleForTesting
   Map<String, Map<String, List<TagsMetricsPair>>> makeMap() {
-    // clear the data stored in the sink:
-    servletSink.clear();
-    // drop the metrics to sinks:   
-    metricsSystem.publishMetricsNow();
+    // NB: in branch-0.23 we cannot force the metrics to be dropped to sinks 
+    // (method MetricsSystem#publishMetricsNow()), so 
+    // only rely upon the updates by the timer events.
+    
     // take the collected metrics data:
     final Map<String, Map<String, List<TagsMetricsPair>>> metricsMap 
       = servletSink.getMetricsMap();

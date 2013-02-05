@@ -126,7 +126,8 @@ public class TestMetricsServlet2 {
   }
   
   @Test
-  public void testGetMap() throws IOException {
+  public void testGetMap() throws Exception {
+    //Thread.sleep(11 * 1000);
     Map<String, Map<String, List<TagsMetricsPair>>> m = metricsServlet2.makeMap();
     assertEquals("Map missing contexts", 2, m.size());
     assertTrue(m.containsKey("test1"));

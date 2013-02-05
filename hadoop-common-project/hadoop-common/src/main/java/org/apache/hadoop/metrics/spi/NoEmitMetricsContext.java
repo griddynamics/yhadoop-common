@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.metrics.spi;
 
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsServlet;
 
 /** 
  * A MetricsContext that does not emit data, but, unlike NullContextWithUpdate,
  * does save it for retrieval with getAllRecords().
  * 
- * This is useful if you want to support {@link MetricsServlet}, but
+ * This is useful if you want to support 
+ *  {@link org.apache.hadoop.metrics.MetricsServlet}, but
  * not emit metrics in any other way.
  */
 @InterfaceAudience.Public
