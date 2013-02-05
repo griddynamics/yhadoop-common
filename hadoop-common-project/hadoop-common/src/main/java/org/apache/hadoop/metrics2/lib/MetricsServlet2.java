@@ -18,6 +18,7 @@
 package org.apache.hadoop.metrics2.lib;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +61,7 @@ public class MetricsServlet2 extends HttpServlet {
   private static final MetricsSystem metricsSystem 
     = DefaultMetricsSystem.initialize("MetricsServlet2");
   
-  private final transient ServletSink servletSink;
+  private final ServletSink servletSink;
   
   public MetricsServlet2() {
     servletSink = createServletSink();
@@ -77,7 +78,7 @@ public class MetricsServlet2 extends HttpServlet {
     return new ServletSink();
   }
   
-  protected static class ServletSink implements MetricsSink {
+  protected static class ServletSink implements MetricsSink, Serializable {
     private static int numInstances = 0;
     private final String sinkName;
     // metrics data:

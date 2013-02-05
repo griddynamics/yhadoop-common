@@ -20,6 +20,7 @@ package org.apache.hadoop.metrics.spi;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.ContextFactory;
+import org.apache.hadoop.metrics.MetricsServlet;
 
 /** 
  * A MetricsContext that does not emit data, but, unlike NullContextWithUpdate,
@@ -30,6 +31,7 @@ import org.apache.hadoop.metrics.ContextFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@SuppressWarnings("deprecation")
 public class NoEmitMetricsContext extends AbstractMetricsContext {
     
     private static final String PERIOD_PROPERTY = "period";
