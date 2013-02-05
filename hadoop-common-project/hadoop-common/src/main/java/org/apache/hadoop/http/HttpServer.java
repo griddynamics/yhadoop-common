@@ -93,6 +93,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase"})
 @InterfaceStability.Evolving
+@SuppressWarnings("deprecation")
 public class HttpServer implements FilterContainer {
   public static final Log LOG = LogFactory.getLog(HttpServer.class);
 
