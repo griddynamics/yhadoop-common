@@ -27,7 +27,6 @@ import java.util.Map;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.metrics.MetricsServlet.TagsMetricsPair;
 import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.mortbay.util.ajax.JSON;
@@ -69,11 +68,12 @@ public class TestMetricsServlet extends TestCase {
     assertEquals(1, outputRecords.size());
     outputRecord = outputRecords.iterator().next();
   }
-  
  
-  
+  @SuppressWarnings("deprecation")
   public void testTagsMetricsPair() throws IOException {
-    TagsMetricsPair pair = new TagsMetricsPair(outputRecord.getTagsCopy(), 
+    org.apache.hadoop.metrics.MetricsServlet.TagsMetricsPair pair 
+      = new org.apache.hadoop.metrics.MetricsServlet
+          .TagsMetricsPair(outputRecord.getTagsCopy(), 
         outputRecord.getMetricsCopy());
     String s = JSON.toString(pair);
     assertEquals(
@@ -81,23 +81,31 @@ public class TestMetricsServlet extends TestCase {
         "{\"testMetric1\":1,\"testMetric2\":33}]", s);
   }
   
+  @SuppressWarnings("deprecation")
   public void testGetMap() throws IOException {
-    MetricsServlet servlet = new MetricsServlet();
-    Map<String, Map<String, List<TagsMetricsPair>>> m = servlet.makeMap(contexts);
+    org.apache.hadoop.metrics.MetricsServlet servlet 
+      = new org.apache.hadoop.metrics.MetricsServlet();
+    Map<String, Map<String, List<
+    org.apache.hadoop.metrics.MetricsServlet.TagsMetricsPair>>> m 
+      = servlet.makeMap(contexts);
     assertEquals("Map missing contexts", 2, m.size());
     assertTrue(m.containsKey("test1"));
    
-    Map<String, List<TagsMetricsPair>> m2 = m.get("test1");
+    Map<String, List<
+    org.apache.hadoop.metrics.MetricsServlet.TagsMetricsPair>> m2 
+      = m.get("test1");
     
     assertEquals("Missing records", 1, m2.size());
     assertTrue(m2.containsKey("testRecord"));
     assertEquals("Wrong number of tags-values pairs.", 1, m2.get("testRecord").size());
   }
   
+  @SuppressWarnings("deprecation")
   public void testPrintMap() throws IOException {
     StringWriter sw = new StringWriter();
     PrintWriter out = new PrintWriter(sw);
-    MetricsServlet servlet = new MetricsServlet();
+    org.apache.hadoop.metrics.MetricsServlet servlet 
+      = new org.apache.hadoop.metrics.MetricsServlet();
     servlet.printMap(out, servlet.makeMap(contexts));
     
     String EXPECTED = "" +

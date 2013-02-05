@@ -20,6 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -193,6 +194,7 @@ public class MetricsServlet2 extends HttpServlet {
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
 
+    // Do the authorization
     if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
                                                    request, response)) {
       return;
