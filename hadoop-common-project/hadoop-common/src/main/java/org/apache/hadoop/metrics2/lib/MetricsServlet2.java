@@ -58,7 +58,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class MetricsServlet2 extends HttpServlet {
 
   private static final MetricsSystem metricsSystem 
-    = DefaultMetricsSystem.initialize("");
+    = DefaultMetricsSystem.initialize("MetricsServlet2");
   
   private final ServletSink servletSink;
   

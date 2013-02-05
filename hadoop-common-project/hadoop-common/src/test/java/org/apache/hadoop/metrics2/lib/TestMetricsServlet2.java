@@ -99,7 +99,7 @@ public class TestMetricsServlet2 {
   @BeforeClass
   public static void beforeClass() throws IOException {
     System.out.println("registering the metrics...");
-    final MetricsSystem ms = DefaultMetricsSystem.initialize("");
+    final MetricsSystem ms = DefaultMetricsSystem.initialize("test");
     
     myMetrics1 = new MyMetrics1().registerWith(ms);
     myMetrics1.testMetric1.set(1);

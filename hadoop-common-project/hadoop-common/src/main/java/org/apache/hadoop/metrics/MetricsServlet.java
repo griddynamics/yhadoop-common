@@ -36,6 +36,7 @@ import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext.MetricMap;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext.TagMap;
+import org.apache.hadoop.metrics2.lib.MetricsServlet2;
 import org.mortbay.util.ajax.JSON;
 import org.mortbay.util.ajax.JSON.Output;
 
@@ -43,9 +44,12 @@ import org.mortbay.util.ajax.JSON.Output;
  * A servlet to print out metrics data.  By default, the servlet returns a 
  * textual representation (no promises are made for parseability), and
  * users can use "?format=json" for parseable output.
+ * 
+ * @deprecated Please use {@link MetricsServlet2} instead.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@Deprecated
 public class MetricsServlet extends HttpServlet {
   
   /**
