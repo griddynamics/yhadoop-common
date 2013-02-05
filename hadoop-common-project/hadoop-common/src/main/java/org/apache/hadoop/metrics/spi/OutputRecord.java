@@ -38,8 +38,8 @@ import org.apache.hadoop.metrics.spi.AbstractMetricsContext.TagMap;
 @InterfaceStability.Evolving
 public class OutputRecord {
     
-  private TagMap tagMap;
-  private MetricMap metricMap;
+  private final TagMap tagMap;
+  private final MetricMap metricMap;
     
   /** Creates a new instance of OutputRecord */
   OutputRecord(TagMap tagMap, MetricMap metricMap) {

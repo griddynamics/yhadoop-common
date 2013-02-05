@@ -40,13 +40,14 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import static org.junit.Assert.*;
+
 import org.junit.Test;
-import junit.framework.TestCase;
 
 /**
  * Stress tests for the LocalJobRunner
  */
-public class TestLocalRunner extends TestCase {
+public class TestLocalRunner {
 
   private static final Log LOG = LogFactory.getLog(TestLocalRunner.class);
 
@@ -68,6 +69,7 @@ public class TestLocalRunner extends TestCase {
     // some code.
     public long exposedState;
 
+    @Override
     protected void setup(Context context) {
       // Get the thread num from the file number.
       FileSplit split = (FileSplit) context.getInputSplit();
@@ -80,6 +82,7 @@ public class TestLocalRunner extends TestCase {
     }
 
     /** Map method with different behavior based on the thread id */
+    @Override
     public void map(LongWritable key, Text val, Context c)
         throws IOException, InterruptedException {
 
@@ -92,6 +95,7 @@ public class TestLocalRunner extends TestCase {
       }
     }
 
+    @Override
     protected void cleanup(Context context) {
       // Output this here, to ensure that the incrementing done in map()
       // cannot be optimized away.
@@ -102,6 +106,7 @@ public class TestLocalRunner extends TestCase {
   private static class CountingReducer
       extends Reducer<LongWritable, Text, LongWritable, LongWritable> {
 
+    @Override
     public void reduce(LongWritable key, Iterable<Text> vals, Context context)
         throws IOException, InterruptedException {
       long out = 0;
@@ -115,6 +120,7 @@ public class TestLocalRunner extends TestCase {
 
   private static class GCMapper
       extends Mapper<LongWritable, Text, LongWritable, Text> {
+    @Override
     public void map(LongWritable key, Text val, Context c)
         throws IOException, InterruptedException {
 
@@ -233,7 +239,6 @@ public class TestLocalRunner extends TestCase {
     assertEquals("Incorrect count generated!", TOTAL_RECORDS, count);
 
     r.close();
-
   }
 
   /**
@@ -309,6 +314,7 @@ public class TestLocalRunner extends TestCase {
 
     final Thread toInterrupt = Thread.currentThread();
     Thread interrupter = new Thread() {
+      @Override
       public void run() {
         try {
           Thread.sleep(120*1000); // 2m
@@ -375,10 +381,12 @@ public class TestLocalRunner extends TestCase {
 
   /** An IF that creates no splits */
   private static class EmptyInputFormat extends InputFormat<Object, Object> {
+    @Override
     public List<InputSplit> getSplits(JobContext context) {
       return new ArrayList<InputSplit>();
     }
 
+    @Override
     public RecordReader<Object, Object> createRecordReader(InputSplit split,
         TaskAttemptContext context) {
       return new EmptyRecordReader();
@@ -386,30 +394,37 @@ public class TestLocalRunner extends TestCase {
   }
 
   private static class EmptyRecordReader extends RecordReader<Object, Object> {
+    @Override
     public void initialize(InputSplit split, TaskAttemptContext context) {
     }
 
+    @Override
     public Object getCurrentKey() {
       return new Object();
     }
 
+    @Override
     public Object getCurrentValue() {
       return new Object();
     }
 
+    @Override
     public float getProgress() {
       return 0.0f;
     }
 
+    @Override
     public void close() {
     }
 
+    @Override
     public boolean nextKeyValue() {
       return false;
     }
   }
 
   /** Test case for zero mappers */
+  @Test
   public void testEmptyMaps() throws Exception {
     Job job = Job.getInstance();
     Path outputPath = getOutputPath();

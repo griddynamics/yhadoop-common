@@ -204,6 +204,7 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
+  @Override
   public void getMetrics(MetricsCollector collector, boolean all) {
     updateRunningTime();
     registry.snapshot(collector.addRecord(registry.info()), all);

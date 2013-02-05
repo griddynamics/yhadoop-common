@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics.MetricsServlet;
+import org.apache.hadoop.metrics2.lib.MetricsServlet2;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector.MODE;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -334,7 +335,10 @@ public class HttpServer implements FilterContainer {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
+    // legacy metrics servlet to show old "o.a.h.metrics" metrics data:
     addServlet("metrics", "/metrics", MetricsServlet.class);
+    // new metrics servlet to show new "o.a.h.metrics2" metrics data:
+    addServlet("metrics2", "/metrics2", MetricsServlet2.class);
     addServlet("jmx", "/jmx", JMXJsonServlet.class);
     addServlet("conf", "/conf", ConfServlet.class);
   }

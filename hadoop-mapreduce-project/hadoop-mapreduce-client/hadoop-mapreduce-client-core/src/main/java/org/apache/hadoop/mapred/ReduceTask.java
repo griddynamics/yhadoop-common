@@ -64,6 +64,7 @@ public class ReduceTask extends Task {
     WritableFactories.setFactory
       (ReduceTask.class,
        new WritableFactory() {
+         @Override
          public Writable newInstance() { return new ReduceTask(); }
        });
   }
@@ -105,6 +106,7 @@ public class ReduceTask extends Task {
   // In case of files with same size and path are considered equal.
   private Comparator<FileStatus> mapOutputFileComparator = 
     new Comparator<FileStatus>() {
+      @Override
       public int compare(FileStatus a, FileStatus b) {
         if (a.getLen() < b.getLen())
           return -1;
@@ -251,11 +253,13 @@ public class ReduceTask extends Task {
        mayBeSkip();
      }
      
+     @Override
      public void nextKey() throws IOException {
        super.nextKey();
        mayBeSkip();
      }
      
+     @Override
      public boolean more() { 
        return super.more() && hasNext; 
      }
@@ -292,7 +296,6 @@ public class ReduceTask extends Task {
        reportNextRecordRange(umbilical, grpIndex);
      }
      
-     @SuppressWarnings("unchecked")
      private void writeSkippedRec(KEY key, VALUE value) throws IOException{
        if(skipWriter==null) {
          Path skipDir = SkipBadRecords.getSkipOutputPath(conf);
