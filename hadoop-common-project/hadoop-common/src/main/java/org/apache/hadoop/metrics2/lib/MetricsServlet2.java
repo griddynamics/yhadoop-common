@@ -20,8 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.PrintWriter;
-import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -76,22 +75,24 @@ public class MetricsServlet2 extends HttpServlet {
    */
   @VisibleForTesting
   protected ServletSink createServletSink() {
-    return new ServletSink();
+    return new ServletSink(true);
   }
   
   protected static class ServletSink implements MetricsSink, Serializable {
+    protected final boolean filterOutMetricsSystemTags;
     private static int numInstances = 0;
     private final String sinkName;
-    // metrics data:
-    private final Map<String, Map<String, List<TagsMetricsPair>>> metricsMap = 
-        new TreeMap<String, Map<String, List<TagsMetricsPair>>>();
+    // map to accumulate the metrics data:
+    private Map<String, Map<String, List<TagsMetricsPair>>> metricsMap;
     
-    public ServletSink() {
+    public ServletSink(boolean filterOutMsTags) {
       numInstances++;
+      filterOutMetricsSystemTags = filterOutMsTags;
       // NB: register sinks with unique names to avoid collisions,
       // because several instances of this servlet *may* in principle
       // be created:
-      sinkName = "MetricsServlet2-Sink-"+numInstances; 
+      sinkName = "MetricsServlet2-Sink-"+numInstances;
+      clear();
     }
     
     protected final String getSinkName() {
@@ -110,7 +111,7 @@ public class MetricsServlet2 extends HttpServlet {
      * as a list of TagsMetricsPair.
      */
     @Override
-    public void putMetrics(final MetricsRecord record) {
+    public synchronized void putMetrics(final MetricsRecord record) {
       final String recordContext = record.context();
       final String recordName = record.name();
 
@@ -120,36 +121,40 @@ public class MetricsServlet2 extends HttpServlet {
         metricsMap.put(recordContext, records);
       }
      
-      List<TagsMetricsPair> metricsAndTagsList = records.get(recordName);
-      if (metricsAndTagsList == null) {
-        metricsAndTagsList = new ArrayList<TagsMetricsPair>();
-        records.put(recordName, metricsAndTagsList);
+      List<TagsMetricsPair> tagsMetricsPairList = records.get(recordName);
+      if (tagsMetricsPairList == null) {
+        final TreeMap<String,String> tagMap = new TreeMap<String,String>();
+        final TreeMap<String,Number> metricMap = new TreeMap<String,Number>();
+        // NB: ordinary List would grow infinitely, so we use singleton list there.
+        // However, List interface is still needed to provide the 
+        // expected JSON serialization:
+        tagsMetricsPairList = Collections.singletonList(new TagsMetricsPair(tagMap, metricMap));
+        records.put(recordName, tagsMetricsPairList);
       }
       
-      final TreeMap<String,String> tagMap = new TreeMap<String,String>();
       for (final MetricsTag metricsTag: record.tags()) {
-        // NB: ignore pre-defined tags (like "Context" or "Hostname")  
+        // NB: may ignore pre-defined tags (like "Context" or "Hostname")  
         // to provide backwards compatibility with the
         // legacy servlet:
-        if (metricsTag.info().getClass() != MsInfo.class) {
+        if (!filterOutMetricsSystemTags  
+            || metricsTag.info().getClass() != MsInfo.class) {
           String tagValue = metricsTag.value();
           if (tagValue == null) {
             tagValue = "";
           }
-          tagMap.put(metricsTag.name(), tagValue);
+          tagsMetricsPairList.get(0).tagMap.put(metricsTag.name(), tagValue);
         }
       }
       
-      final TreeMap<String,Number> metricMap = new TreeMap<String,Number>();
       for (AbstractMetric metric: record.metrics()) {
-        metricMap.put(metric.name(), metric.value());
+        tagsMetricsPairList.get(0).metricMap.put(metric.name(), metric.value());
       }
-      
-      metricsAndTagsList.add(new TagsMetricsPair(tagMap, metricMap));
     }
     
-    protected final Map<String, Map<String, List<TagsMetricsPair>>> getMetricsMap() {
-      return metricsMap;
+    protected synchronized final Map<String, Map<String, List<TagsMetricsPair>>> getMetricsMap() {
+      final Map<String, Map<String, List<TagsMetricsPair>>> result = metricsMap;
+      clear();
+      return result;
     } 
      
     @Override
@@ -160,8 +165,9 @@ public class MetricsServlet2 extends HttpServlet {
     /*
      * clears the data stored in the sink
      */
-    protected void clear() {
-      metricsMap.clear();
+    protected synchronized void clear() {
+      // re-create the metrics accumulator:
+      metricsMap = new TreeMap<String, Map<String, List<TagsMetricsPair>>>();
     }
   }
   
@@ -219,14 +225,10 @@ public class MetricsServlet2 extends HttpServlet {
         out.close();
       }
     }
-    
-    servletSink.clear();
   }
 
   @VisibleForTesting
   Map<String, Map<String, List<TagsMetricsPair>>> makeMap() {
-    // clear the data stored in the sink:
-    servletSink.clear();
     // drop the metrics to sinks:   
     metricsSystem.publishMetricsNow();
     // take the collected metrics data:

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.metrics2.lib;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
@@ -75,7 +74,7 @@ public class TestMetricsServlet2 {
     extends MetricsServlet2 {
     @Override
     protected ServletSink createServletSink() {
-      return new ServletSink() {
+      return new ServletSink(true) {
         @Override
         public void putMetrics(MetricsRecord record) {
           // NB: ignore the default metricssystem context metrics for the test: 
@@ -97,9 +96,8 @@ public class TestMetricsServlet2 {
    * to the first of them.
    */
   @BeforeClass
-  public static void beforeClass() throws IOException {
-    System.out.println("registering the metrics...");
-    final MetricsSystem ms = DefaultMetricsSystem.initialize("test");
+  public static void beforeClass() {
+    final MetricsSystem ms = DefaultMetricsSystem.initialize("servlettest");
     
     myMetrics1 = new MyMetrics1().registerWith(ms);
     myMetrics1.testMetric1.set(1);
@@ -108,9 +106,7 @@ public class TestMetricsServlet2 {
     myMetrics2 = new MyMetrics2().registerWith(ms);
   }
   
-  @Before
-  public void before() {
-    // NB: need to change the metrics, see HADOOP-9269:  
+  private void changeMetricsImpl() {
     myMetrics1.testMetric1.incr();
     myMetrics1.testMetric1.decr();
     
@@ -118,15 +114,19 @@ public class TestMetricsServlet2 {
     myMetrics1.testMetric2.decr();
   }
   
+  @Before
+  public void before() {
+    // NB: need to change the metrics, see HADOOP-9269:
+    changeMetricsImpl();
+  }
+  
   @AfterClass
-  public static void after() {
-    // NB: we need complete cleanup in order to 
-    // register all the same metric sources again:
+  public static void afterClass() {
     DefaultMetricsSystem.shutdown();
   }
   
   @Test
-  public void testGetMap() throws IOException {
+  public void testGetMap() {
     Map<String, Map<String, List<TagsMetricsPair>>> m = metricsServlet2.makeMap();
     assertEquals("Map missing contexts", 2, m.size());
     assertTrue(m.containsKey("test1"));
@@ -142,7 +142,7 @@ public class TestMetricsServlet2 {
   }
   
   @Test
-  public void testPrintMap() throws IOException {
+  public void testPrintMap() {
     testPrintMapImpl(metricsServlet2);
   }
   
@@ -165,7 +165,7 @@ public class TestMetricsServlet2 {
   }
   
   @Test
-  public void testPrintJson() throws IOException {
+  public void testPrintJson() {
     Map<String, Map<String, List<TagsMetricsPair>>> m = metricsServlet2.makeMap();
     StringWriter sw = new StringWriter();
     PrintWriter out = new PrintWriter(sw);
@@ -179,18 +179,24 @@ public class TestMetricsServlet2 {
         "\"test2\":{\"testRecord\":" +
         "[[{\"testTag22\":\"testTagValue22\"},{}]]}}", actualJson);
   }
-  
+
+  /*
+   * See if we can create another instance of the servlet,
+   * and both the instances will work correctly.
+   */
   @Test
   public void testSeveralMetricsServlet2Instances() {
-    // see if we can create another instance of the servlet,
-    // and both the instances will work equally:
-    MetricsServlet2 metricsServlet22 = new MetricsServlet2NoMetricsSystemContext();
-    
-    testPrintMapImpl(metricsServlet2);
-    
-    // NB: need to change the metrics, see HADOOP-9269:  
+    MetricsServlet2 metricsServlet22 
+      = new MetricsServlet2NoMetricsSystemContext();
+    // NB: need to change the metrics (see HADOOP-9269)
     before();
-    
+    testPrintMapImpl(metricsServlet2);
     testPrintMapImpl(metricsServlet22);
+    
+    // change again:
+    before();
+    // (this time sinks are queried in reversed order):
+    testPrintMapImpl(metricsServlet22);
+    testPrintMapImpl(metricsServlet2);
   }
 }
