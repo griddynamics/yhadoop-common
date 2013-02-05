@@ -51,13 +51,12 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.*;
 import static org.apache.hadoop.metrics2.lib.Interns.*;
-
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**
  * Test the MetricsSystemImpl class
@@ -393,5 +392,4 @@ public class TestMetricsSystemImpl {
   private static String getPluginUrlsAsString() {
     return "file:metrics2-test-plugin.jar";
   }
-  
 }
