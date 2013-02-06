@@ -11,11 +11,6 @@ Trunk (Unreleased)
     MAPREDUCE-2669. Add new examples for Mean, Median, and Standard Deviation.
     (Plamen Jeliazkov via shv)
 
-    MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
-    (Avner BenHanoch via acmurthy) 
-
-    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
-
     MAPREDUCE-4887. Add RehashPartitioner, to smooth distributions
     with poor implementations of Object#hashCode().  (Radim Kolar via cutting)
 
@@ -75,9 +70,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
-
-    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
-    (masokan via tucu)
 
   BUG FIXES
 
@@ -160,7 +152,19 @@ Trunk (Unreleased)
     MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
     queue configuration. (Chris Nauroth via suresh)
 
-Release 2.0.3-alpha - Unreleased 
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
 
@@ -177,6 +181,14 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
     vinodkv)
+
+    MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
+    (Avner BenHanoch via acmurthy) 
+
+    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
+
+    MAPREDUCE-4808. Refactor MapOutput and MergeManager to facilitate reuse 
+    by Shuffle implementations. (masokan via tucu)
 
   IMPROVEMENTS
 
@@ -207,7 +219,21 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4907. TrackerDistributedCacheManager issues too many getFileStatus
     calls. (sandyr via tucu)
 
+    MAPREDUCE-4949. Enable multiple pi jobs to run in parallel. (sandyr via tucu)
+
+    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
+    (masokan via tucu)
+
+    MAPREDUCE-4838. Add additional fields like Locality, Avataar to the
+    JobHistory logs. (Zhijie Shen via sseth)
+
+    MAPREDUCE-4971. Minor extensibility enhancements to Counters & 
+    FileOutputFormat. (Arun C Murthy via sseth)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-4893. Fixed MR ApplicationMaster to do optimal assignment of
+    containers to get maximum locality. (Bikas Saha via vinodkv)
 
   BUG FIXES
 
@@ -260,6 +286,20 @@ Release 2.0.3-alpha - Unreleased
     (rkanter via tucu)
 
     MAPREDUCE-4923. Add toString method to TaggedInputSplit. (sandyr via tucu)
+
+    MAPREDUCE-4948. Fix a failing unit test TestYARNRunner.testHistoryServerToken.
+    (Junping Du via sseth)
+
+    MAPREDUCE-4803. Remove duplicate copy of TestIndexCache. (Mariappan Asokan
+    via sseth)
+
+    MAPREDUCE-2264. Job status exceeds 100% in some cases. 
+    (devaraj.k and sandyr via tucu)
+
+    MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
+    (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4953. HadoopPipes misuses fprintf. (Andy Isaacson via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -647,7 +687,13 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
+    number of map completion event type conversions. (Jason Lowe via sseth)
+
   BUG FIXES
+
+    MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
+    (Robert Parker via jeagles)
 
 Release 0.23.6 - UNRELEASED
 

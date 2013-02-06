@@ -146,6 +146,9 @@ Trunk (Unreleased)
     HADOOP-9162. Add utility to check native library availability.
     (Binglin Chang via suresh)
 
+    HADOOP-8924. Add maven plugin alternative to shell script to save
+    package-info.java. (Chris Nauroth via suresh)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
@@ -316,13 +319,39 @@ Trunk (Unreleased)
     HADOOP-9202. test-patch.sh fails during mvn eclipse:eclipse if patch adds
     a new module to the build (Chris Nauroth via bobby)
 
+    HADOOP-9245. mvn clean without running mvn install before fails.
+    (Karthik Kambatla via suresh)
+
+    HADOOP-9249. hadoop-maven-plugins version-info goal causes build failure
+    when running with Clover. (Chris Nauroth via suresh)
+
+    HADOOP-9264. Port change to use Java untar API on Windows from 
+    branch-1-win to trunk. (Chris Nauroth via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
     HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
-Release 2.0.3-alpha - Unreleased 
+    HADOOP-9246 Execution phase for hadoop-maven-plugin should be
+    process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
+
+    HADOOP-9190. packaging docs is broken. (Andy Isaacson via atm)
+
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
 
@@ -447,6 +476,12 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9216. CompressionCodecFactory#getCodecClasses should trim the
     result of parsing by Configuration. (Tsuyoshi Ozawa via todd)
 
+    HADOOP-9231. Parametrize staging URL for the uniformity of
+    distributionManagement. (Konstantin Boudnik via suresh)
+
+    HADOOP-9276. Allow BoundedByteArrayOutputStream to be resettable.
+    (Arun Murthy via hitesh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -565,6 +600,25 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
     (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
+
+    HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
+    should not state that secret is randomly generated. (tucu)
+
+    HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
+
+    HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong via suresh)
+    
+    HADOOP-9124. SortedMapWritable violates contract of Map interface for
+    equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
+
+    HADOOP-9252. In StringUtils, humanReadableInt(..) has a race condition and
+    the synchronization of limitDecimalTo2(double) can be avoided.  (szetszwo)
+
+    HADOOP-9260. Hadoop version may be not correct when starting name node or
+    data node. (Chris Nauroth via jlowe)
+
+    HADOOP-9278. Fix the file handle leak in HarMetaData.parseMetaData() in
+    HarFileSystem. (Chris Nauroth via szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1267,6 +1321,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
     permissions (Ivan A. Veselovsky via bobby)
 
+    HADOOP-9067. provide test for LocalFileSystem.reportChecksumFailure
+    (Ivan A. Veselovsky via bobby) 
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1280,6 +1337,13 @@ Release 0.23.6 - UNRELEASED
   IMPROVEMENTS
     HADOOP-9217. Print thread dumps when hadoop-common tests fail.
     (Andrey Klochkov via suresh)
+
+    HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
+    (Andrey Klochkov via suresh)
+
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
 
   OPTIMIZATIONS
 
@@ -1297,6 +1361,8 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
     HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
+    HADOOP-9255. relnotes.py missing last jira (tgraves)
 
 Release 0.23.5 - 2012-11-28
 

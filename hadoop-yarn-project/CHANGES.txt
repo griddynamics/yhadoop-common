@@ -17,7 +17,19 @@ Trunk - Unreleased
 
   BUG FIXES
 
-Release 2.0.3-alpha - Unreleased 
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
 
@@ -36,6 +48,9 @@ Release 2.0.3-alpha - Unreleased
     multi-dimensional resource scheduling. (acmurthy)
 
     YARN-328. Use token request messages defined in hadoop common. (suresh)
+
+    YARN-231. RM Restart - Add FS-based persistent store implementation for
+    RMStateStore (Bikas Saha via hitesh)
 
   IMPROVEMENTS
 
@@ -100,6 +115,12 @@ Release 2.0.3-alpha - Unreleased
     YARN-170. Change NodeManager stop to be reentrant. (Sandy Ryza via vinodkv)
 
     YARN-331. Fill in missing fair scheduler documentation. (sandyr via tucu)
+
+    YARN-277. Use AMRMClient in DistributedShell to exemplify the approach.
+    (Bikas Saha via hitesh)
+
+    YARN-360. Allow apps to concurrently register tokens for renewal.
+    (Daryn Sharp via sseth)
 
   OPTIMIZATIONS
 
@@ -202,6 +223,16 @@ Release 2.0.3-alpha - Unreleased
     unregistered on App-finish. (vinodkv via sseth)
 
     YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
+    
+    YARN-319. Submitting a job to a fair scheduler queue for which the user
+    does not have permission causes the client to wait forever.
+    (shenhong via tomwhite)
+
+    YARN-372. Move InlineDispatcher from hadoop-yarn-server-resourcemanager to
+    hadoop-yarn-common (sseth via hitesh)
+
+    YARN-370. Fix SchedulerUtils to correctly round up the resource for
+    containers. (Zhijie Shen via acmurthy) 
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -264,9 +295,18 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-133 Update web services docs for RM clusterMetrics (Ravi Prakash via
+    kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-343. Capacity Scheduler maximum-capacity value -1 is invalid (Xuan 
+    Gong via tgraves)
+
+    YARN-364. AggregatedLogDeletionService can take too long to delete logs
+    (jlowe)
 
 Release 0.23.6 - UNRELEASED
 
@@ -324,6 +364,9 @@ Release 0.23.6 - UNRELEASED
     called and a container is completing (Arun C Murthy via tgraves)
 
     YARN-334. Maven RAT plugin is not checking all source files (tgraves)
+
+    YARN-354. WebAppProxyServer exits immediately after startup (Liang Xie via
+    jlowe)
 
 Release 0.23.5 - 2012-11-28
 
