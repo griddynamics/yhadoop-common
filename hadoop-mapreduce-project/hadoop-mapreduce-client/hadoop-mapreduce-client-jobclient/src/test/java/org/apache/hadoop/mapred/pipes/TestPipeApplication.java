@@ -208,7 +208,7 @@ public class TestPipeApplication {
       stdOut = readFile(new File(workSpace.getAbsolutePath() + File.separator
               + "outfile"));
       // check MessageType.PROGRESS
-      assertEquals(5.5, rReader.getProgress(), 0.001);
+      assertEquals(0.55f, rReader.getProgress(), 0.001);
       application.getDownlink().close();
       // test MessageType.OUTPUT
       Entry<IntWritable, Text> entry = output.getCollect().entrySet()
