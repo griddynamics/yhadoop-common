@@ -37,7 +37,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteProcessor;
 
-public class CompressorDecompressorTest {
+public class TestCompressorDecompressor {
 
   @Test
   public void testCompressorDecompressor() {
