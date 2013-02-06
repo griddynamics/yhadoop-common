@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -36,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.verification.VerificationMode;
 
 public class TestJobHistoryEventHandler {
 
@@ -137,16 +136,16 @@ public class TestJobHistoryEventHandler {
 
       handleNextNEvents(jheh, 1);
       verify(mockWriter).flush();
-      
+
       handleNextNEvents(jheh, 50);
       verify(mockWriter, times(6)).flush();
-      
+
     } finally {
       jheh.stop();
       verify(mockWriter).close();
     }
   }
-  
+
   @Test
   public void testUnflushedTimer() throws Exception {
     TestParams t = new TestParams();
@@ -187,7 +186,7 @@ public class TestJobHistoryEventHandler {
       verify(mockWriter).close();
     }
   }
-  
+
   @Test
   public void testBatchedFlushJobEndMultiplier() throws Exception {
     TestParams t = new TestParams();
@@ -269,7 +268,7 @@ public class TestJobHistoryEventHandler {
     when(mockContext.getJob(jobId)).thenReturn(mockJob);
     return mockContext;
   }
-  
+
 
   private class TestParams {
     String workDir = setupTestWorkDir();
@@ -283,12 +282,8 @@ public class TestJobHistoryEventHandler {
   }
 
   private JobHistoryEvent getEventToEnqueue(JobId jobId) {
-    JobHistoryEvent toReturn = Mockito.mock(JobHistoryEvent.class);
-    HistoryEvent he = Mockito.mock(HistoryEvent.class);
-    Mockito.when(he.getEventType()).thenReturn(EventType.JOB_STATUS_CHANGED);
-    Mockito.when(toReturn.getHistoryEvent()).thenReturn(he);
-    Mockito.when(toReturn.getJobID()).thenReturn(jobId);
-    return toReturn;
+    HistoryEvent toReturn = new JobStatusChangedEvent(new JobID(Integer.toString(jobId.getId()), jobId.getId()), "change status");
+    return new JobHistoryEvent(jobId, toReturn);
   }
 
   @Test
@@ -348,8 +343,6 @@ public class TestJobHistoryEventHandler {
 class JHEvenHandlerForTest extends JobHistoryEventHandler {
 
   private EventWriter eventWriter;
-  volatile int handleEventCompleteCalls = 0;
-  volatile int handleEventStartedCalls = 0;
 
   public JHEvenHandlerForTest(AppContext context, int startCount) {
     super(context, startCount);
@@ -358,7 +351,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   @Override
   public void start() {
   }
-  
+
   @Override
   protected EventWriter createEventWriter(Path historyFilePath)
       throws IOException {
@@ -369,7 +362,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   @Override
   protected void closeEventWriter(JobId jobId) {
   }
-  
+
   public EventWriter getEventWriter() {
     return this.eventWriter;
   }
@@ -379,13 +372,12 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
  * Class to help with testSigTermedFunctionality
  */
 class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
-  private MetaInfo metaInfo;
   public JHEventHandlerForSigtermTest(AppContext context, int startCount) {
     super(context, startCount);
   }
 
   public void addToFileMap(JobId jobId) {
-    metaInfo = Mockito.mock(MetaInfo.class);
+    MetaInfo metaInfo = Mockito.mock(MetaInfo.class);
     Mockito.when(metaInfo.isWriterActive()).thenReturn(true);
     fileMap.put(jobId, metaInfo);
   }
