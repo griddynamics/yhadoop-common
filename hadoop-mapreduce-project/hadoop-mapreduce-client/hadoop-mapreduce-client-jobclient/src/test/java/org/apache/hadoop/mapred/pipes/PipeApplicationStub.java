@@ -59,7 +59,7 @@ public class PipeApplicationStub extends CommonStub {
 
       // progress
       WritableUtils.writeVInt(dataOut, 53);
-      dataOut.writeFloat(5.5f);
+      dataOut.writeFloat(0.55f);
       // register counter
       WritableUtils.writeVInt(dataOut, 55);
       // id
@@ -85,8 +85,6 @@ public class PipeApplicationStub extends CommonStub {
       // done
       // end of session
       WritableUtils.writeVInt(dataOut, 54);
-
-      ///   dataOut.writeFloat(50.5f);
 
       System.out.println("finish");
       dataOut.flush();
