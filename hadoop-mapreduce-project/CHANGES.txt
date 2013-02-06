@@ -27,6 +27,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
     number of map completion event type conversions. (Jason Lowe via sseth)
 
+    MAPREDUCE-4822. Unnecessary conversions in History Events. (Chu Tong via
+    jlowe)
+
   BUG FIXES
 
     MAPREDUCE-4278. cannot run two local jobs in parallel from the same 
@@ -46,6 +49,9 @@ Release 0.23.7 - UNRELEASED
     (Arpit Agarwal via tgraves)
 
     MAPREDUCE-4953. HadoopPipes misuses fprintf. (Andy Isaacson via tgraves)
+
+    MAPREDUCE-4637. Handle TaskAttempt diagnostic updates while in the NEW and 
+    UNASSIGNED states. (Mayank Bansal via tgraves)
 
 Release 0.23.6 - UNRELEASED
 
