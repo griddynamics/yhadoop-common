@@ -97,6 +97,9 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public static final float MAXIMUM_CAPACITY_VALUE = 100;
   
   @Private
+  public static final float DEFAULT_MAXIMUM_CAPACITY_VALUE = -1.0f;
+  
+  @Private
   public static final int DEFAULT_USER_LIMIT = 100;
   
   @Private
@@ -114,6 +117,13 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   @Private
   public static final String ROOT = "root";
+
+  @Private 
+  public static final String NODE_LOCALITY_DELAY = 
+     PREFIX + "node-locality-delay";
+
+  @Private 
+  public static final int DEFAULT_NODE_LOCALITY_DELAY = -1;
 
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
@@ -184,6 +194,8 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public float getMaximumCapacity(String queue) {
     float maxCapacity = getFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY,
         MAXIMUM_CAPACITY_VALUE);
+    maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE) ? 
+        MAXIMUM_CAPACITY_VALUE : maxCapacity;
     return maxCapacity;
   }
   
@@ -289,5 +301,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   public boolean getEnableUserMetrics() {
     return getBoolean(ENABLE_USER_METRICS, DEFAULT_ENABLE_USER_METRICS);
+  }
+
+  public int getNodeLocalityDelay() {
+    int delay = getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
+    return (delay == DEFAULT_NODE_LOCALITY_DELAY) ? 0 : delay;
   }
 }

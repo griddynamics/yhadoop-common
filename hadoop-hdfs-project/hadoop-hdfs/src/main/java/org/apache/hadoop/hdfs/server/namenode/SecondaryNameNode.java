@@ -314,6 +314,17 @@ public class SecondaryNameNode implements Runnable {
   }
 
   /**
+   * Wait for the service to finish.
+   * (Normally, it runs forever.)
+   */
+  private void join() {
+    try {
+      infoServer.join();
+    } catch (InterruptedException ie) {
+    }
+  }
+
+  /**
    * Shut down this instance of the datanode.
    * Returns only after shutdown is complete.
    */
@@ -507,14 +518,20 @@ public class SecondaryNameNode implements Runnable {
     // Returns a token that would be used to upload the merged image.
     CheckpointSignature sig = namenode.rollEditLog();
     
-    if ((checkpointImage.getNamespaceID() == 0) ||
-        (sig.isSameCluster(checkpointImage) &&
+    boolean loadImage = false;
+    boolean isFreshCheckpointer = (checkpointImage.getNamespaceID() == 0);
+    boolean isSameCluster =
+        (dstStorage.versionSupportsFederation() && sig.isSameCluster(checkpointImage)) ||
+        (!dstStorage.versionSupportsFederation() && sig.namespaceIdMatches(checkpointImage));
+    if (isFreshCheckpointer ||
+        (isSameCluster &&
          !sig.storageVersionMatches(checkpointImage.getStorage()))) {
       // if we're a fresh 2NN, or if we're on the same cluster and our storage
       // needs an upgrade, just take the storage info from the server.
       dstStorage.setStorageInfo(sig);
       dstStorage.setClusterID(sig.getClusterID());
       dstStorage.setBlockPoolID(sig.getBlockpoolID());
+      loadImage = true;
     }
     sig.validateStorageInfo(checkpointImage);
 
@@ -527,7 +544,7 @@ public class SecondaryNameNode implements Runnable {
     RemoteEditLogManifest manifest =
       namenode.getEditLogManifest(sig.mostRecentCheckpointTxId + 1);
 
-    boolean loadImage = downloadCheckpointFiles(
+    loadImage |= downloadCheckpointFiles(
         fsName, checkpointImage, sig, manifest);   // Fetch fsimage and edits
     doMerge(sig, manifest, loadImage, checkpointImage);
     
@@ -649,9 +666,12 @@ public class SecondaryNameNode implements Runnable {
       terminate(ret);
     }
 
-    // Create a never ending deamon
     Daemon checkpointThread = new Daemon(secondary);
     checkpointThread.start();
+
+    if (secondary != null) {
+      secondary.join();
+    }
   }
   
   
