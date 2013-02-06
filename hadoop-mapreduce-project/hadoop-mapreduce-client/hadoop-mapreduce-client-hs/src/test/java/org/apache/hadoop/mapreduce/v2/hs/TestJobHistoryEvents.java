@@ -185,9 +185,8 @@ public class TestJobHistoryEvents {
     @Override
     protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
         AppContext context) {
-      JobHistoryEventHandler eventHandler = new JobHistoryEventHandler(
-          context, getStartCount());
-      return eventHandler;
+      return new JobHistoryEventHandler(
+              context, getStartCount());
     }
   }
 

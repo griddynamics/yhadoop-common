@@ -132,16 +132,16 @@ public class TestJobHistoryEventHandler {
 
       handleNextNEvents(jheh, 1);
       verify(mockWriter).flush();
-      
+
       handleNextNEvents(jheh, 50);
       verify(mockWriter, times(6)).flush();
-      
+
     } finally {
       jheh.stop();
       verify(mockWriter).close();
     }
   }
-  
+
   @Test
   public void testUnflushedTimer() throws Exception {
     TestParams t = new TestParams();
@@ -182,7 +182,7 @@ public class TestJobHistoryEventHandler {
       verify(mockWriter).close();
     }
   }
-  
+
   @Test
   public void testBatchedFlushJobEndMultiplier() throws Exception {
     TestParams t = new TestParams();
@@ -266,7 +266,7 @@ public class TestJobHistoryEventHandler {
     when(mockContext.getApplicationID()).thenReturn(appId);
     return mockContext;
   }
-  
+
 
   private class TestParams {
     String workDir = setupTestWorkDir();
@@ -280,15 +280,16 @@ public class TestJobHistoryEventHandler {
   }
 
   private JobHistoryEvent getEventToEnqueue(JobId jobId) {
-    HistoryEvent toReturn= new JobStatusChangedEvent(new JobID(Integer.toString(jobId.getId()), jobId.getId()), "change status");
+    HistoryEvent toReturn = new JobStatusChangedEvent(new JobID(Integer.toString(jobId.getId()), jobId.getId()), "change status");
     return new JobHistoryEvent(jobId, toReturn);
   }
+
   @Test
   /**
    * Tests that in case of SIGTERM, the JHEH stops without processing its event
    * queue (because we must stop quickly lest we get SIGKILLed) and processes
    * a JobUnsuccessfulEvent for jobs which were still running (so that they may
-   * show up in the JobHistoryServer) and test JobStatusChangedEvent
+   * show up in the JobHistoryServer)
    */
   public void testSigTermedFunctionality() throws IOException {
     AppContext mockedContext = Mockito.mock(AppContext.class);
@@ -300,7 +301,6 @@ public class TestJobHistoryEventHandler {
 
     //Submit 4 events and check that they're handled in the absence of a signal
     final int numEvents = 4;
-    
     JobHistoryEvent events[] = new JobHistoryEvent[numEvents];
     for(int i=0; i < numEvents; ++i) {
       events[i] = getEventToEnqueue(jobId);
@@ -335,16 +335,12 @@ public class TestJobHistoryEventHandler {
     assertTrue("Last event handled wasn't JobUnsuccessfulCompletionEvent",
         jheh.lastEventHandled.getHistoryEvent()
         instanceof JobUnsuccessfulCompletionEvent);
- 
   }
- 
 }
 
 class JHEvenHandlerForTest extends JobHistoryEventHandler {
 
   private EventWriter eventWriter;
-  volatile int handleEventCompleteCalls = 0;
-  volatile int handleEventStartedCalls = 0;
 
   public JHEvenHandlerForTest(AppContext context, int startCount) {
     super(context, startCount);
@@ -353,7 +349,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   @Override
   public void start() {
   }
-  
+
   @Override
   protected EventWriter createEventWriter(Path historyFilePath)
       throws IOException {
@@ -364,7 +360,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   @Override
   protected void closeEventWriter(JobId jobId) {
   }
-  
+
   public EventWriter getEventWriter() {
     return this.eventWriter;
   }
@@ -374,13 +370,12 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
  * Class to help with testSigTermedFunctionality
  */
 class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
-  private MetaInfo metaInfo;
   public JHEventHandlerForSigtermTest(AppContext context, int startCount) {
     super(context, startCount);
   }
 
   public void addToFileMap(JobId jobId) {
-    metaInfo = Mockito.mock(MetaInfo.class);
+    MetaInfo metaInfo = Mockito.mock(MetaInfo.class);
     Mockito.when(metaInfo.isWriterActive()).thenReturn(true);
     fileMap.put(jobId, metaInfo);
   }
@@ -392,5 +387,4 @@ class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
     this.lastEventHandled = event;
     this.eventsHandled++;
   }
-  
 }
