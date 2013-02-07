@@ -21,27 +21,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapred.Counters;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapred.TaskReport;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TaskCounter;
-import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
-import org.apache.hadoop.tools.rumen.TaskInfo;
-import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -54,34 +38,25 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.security.Permission;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.Assert.*;
 
-public class TestGridmixSubmission {
+public class TestGridmixSubmission extends CommonJobTest {
   static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
   private static File inSpace = new File("src" + File.separator + "test"
       + File.separator + "resources" + File.separator + "data");
-  private static File workspace = new File("target" + File.separator
-      + TestGridmixSubmission.class.getName() + "-test");
+ 
 
   public static final Log LOG = LogFactory.getLog(Gridmix.class);
 
-  {
+  static {
     ((Log4JLogger) LogFactory.getLog("org.apache.hadoop.mapred.gridmix"))
         .getLogger().setLevel(Level.DEBUG);
   }
 
-  private static final int NJOBS = 1;
-  private static final long GENDATA = 3; // in megabytes
+//  private static final int NJOBS = 1;
+//  private static final long GENDATA = 3; // in megabytes
 
   @BeforeClass
   public static void init() throws IOException {
@@ -94,7 +69,7 @@ public class TestGridmixSubmission {
   public static void shutDown() throws IOException {
     GridmixTestUtils.shutdownCluster();
   }
-  
+  /*
 // test monitor
   static class TestMonitor extends JobMonitor {
 
@@ -167,21 +142,21 @@ public class TestGridmixSubmission {
         final TaskReport[] mReports = client.getMapTaskReports(JobID
             .downgrade(job.getJobID()));
         assertEquals("Mismatched map count", nMaps, mReports.length);
-        check(TaskType.MAP, job, spec, mReports, 0, 0, SLOPBYTES, nReds);
+        check(TaskType.MAP,  spec, mReports, 0, 0, SLOPBYTES, nReds);
 
         final TaskReport[] rReports = client.getReduceTaskReports(JobID
             .downgrade(job.getJobID()));
         assertEquals("Mismatched reduce count", nReds, rReports.length);
-        check(TaskType.REDUCE, job, spec, rReports, nMaps * SLOPBYTES,
+        check(TaskType.REDUCE,  spec, rReports, nMaps * SLOPBYTES,
             2 * nMaps, 0, 0);
       }
     }
 
-  
-/*
+
+*
  * test count input / output bytes, records...
- */
-    public void check(final TaskType type, Job job, JobStory spec,
+ *
+    private void check(final TaskType type,  JobStory spec,
         final TaskReport[] runTasks, long extraInputBytes,
         int extraInputRecords, long extraOutputBytes, int extraOutputRecords)
         throws Exception {
@@ -250,7 +225,6 @@ public class TestGridmixSubmission {
                   runOutputBytes[i], runInputRecords[i], runOutputRecords[i]));
           break;
         default:
-          specInfo = null;
           fail("Unexpected type: " + type);
         }
       }
@@ -339,7 +313,7 @@ public class TestGridmixSubmission {
       return factory;
     }
   }
-
+     */
   /**
    * Verifies that the given {@code JobStory} corresponds to the checked-in
    * WordCount {@code JobStory}. The verification is effected via JUnit
@@ -441,7 +415,7 @@ public class TestGridmixSubmission {
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
-    doSubmission(false);
+    doSubmission(null,false);
     LOG.info(" Replay ended at " + System.currentTimeMillis());
 
   }
@@ -450,7 +424,7 @@ public class TestGridmixSubmission {
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     LOG.info(" Stress started at " + System.currentTimeMillis());
-    doSubmission(false);
+    doSubmission(null,false);
     LOG.info(" Stress ended at " + System.currentTimeMillis());
   }
 
@@ -479,8 +453,8 @@ public class TestGridmixSubmission {
     String print = bytes.toString();
     // should be printed tip in std error stream
     assertTrue(print
-        .indexOf("Usage: gridmix [-generate <MiB>] [-users URI] [-Dname=value ...] <iopath> <trace>") >= 0);
-    assertTrue(print.indexOf("e.g. gridmix -generate 100m foo -") >= 0);
+        .contains("Usage: gridmix [-generate <MiB>] [-users URI] [-Dname=value ...] <iopath> <trace>") );
+    assertTrue(print.contains("e.g. gridmix -generate 100m foo -"));
   }
 
   protected static class ExitException extends SecurityException {
@@ -508,67 +482,6 @@ public class TestGridmixSubmission {
     public void checkExit(int status) {
       super.checkExit(status);
       throw new ExitException(status);
-    }
-  }
-  
-  private void doSubmission(boolean defaultOutputPath) throws Exception {
-    final Path in = new Path("foo").makeQualified(
-        GridmixTestUtils.dfs.getUri(),
-        GridmixTestUtils.dfs.getWorkingDirectory());
-    // final Path in = new Path("foo");
-    final Path out = GridmixTestUtils.DEST.makeQualified(
-        GridmixTestUtils.dfs.getUri(),
-        GridmixTestUtils.dfs.getWorkingDirectory());
-    final Path root = new Path(workspace.getAbsolutePath());
-    if (!workspace.exists()) {
-      workspace.mkdirs();
-    }
-    Configuration conf = null;
-
-    try {
-      ArrayList<String> argsList = new ArrayList<String>();
-
-      argsList.add("-D" + FilePool.GRIDMIX_MIN_FILE + "=0");
-      argsList.add("-D" + Gridmix.GRIDMIX_USR_RSV + "="
-          + EchoUserResolver.class.getName());
-
-      // Set the config property gridmix.output.directory only if
-      // defaultOutputPath is false. If defaultOutputPath is true, then
-      // let us allow gridmix to use the path foo/gridmix/ as output dir.
-      if (!defaultOutputPath) {
-        argsList.add("-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out);
-      }
-      argsList.add("-generate");
-      argsList.add(String.valueOf(GENDATA) + "m");
-      argsList.add(in.toString());
-      argsList.add("-"); // ignored by DebugGridmix
-      // argsList.add(in.toString());
-
-      String[] argv = argsList.toArray(new String[argsList.size()]);
-
-      DebugGridmix client = new DebugGridmix();
-      conf = GridmixTestUtils.mrvl.getConfig(); // mrCluster.createJobConf(new
-                                                // JobConf(conf));
-      CompressionEmulationUtil.setCompressionEmulationEnabled(conf, false);
-      conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
-
-      conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true);
-      UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-      conf.set(MRJobConfig.USER_NAME, ugi.getUserName());
-
-      // allow synthetic users to create home directories
-      GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));
-      GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 0777));
-      
-      int res = ToolRunner.run(conf, client, argv);
-      assertEquals("Client exited with nonzero status", 0, res);
-      client.checkMonitor();
-    } catch (Exception e) {
-      e.printStackTrace();
-    } finally {
-      in.getFileSystem(conf).delete(in, true);
-      out.getFileSystem(conf).delete(out, true);
-      root.getFileSystem(conf).delete(root, true);
     }
   }
 
