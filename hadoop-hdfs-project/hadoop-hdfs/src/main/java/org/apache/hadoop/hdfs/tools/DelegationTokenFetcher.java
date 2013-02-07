@@ -58,6 +58,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
@@ -92,7 +93,7 @@ public class DelegationTokenFetcher {
     err.println("  --print             Print the delegation token");
     err.println();
     GenericOptionsParser.printGenericCommandUsage(err);
-    System.exit(1);
+    ExitUtil.terminate(1);    
   }
 
   private static Collection<Token<?>> readTokens(Path file, Configuration conf)
