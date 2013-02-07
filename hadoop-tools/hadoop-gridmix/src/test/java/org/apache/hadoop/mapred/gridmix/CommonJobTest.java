@@ -325,7 +325,7 @@ public class CommonJobTest {
       argsList.add("-D" + Gridmix.GRIDMIX_USR_RSV + "="
           + EchoUserResolver.class.getName());
       if(jobCreatorName!=null){
-      argsList.add("-D" + JobCreator.GRIDMIX_JOB_TYPE + "=" + jobCreatorName);
+        argsList.add("-D" + JobCreator.GRIDMIX_JOB_TYPE + "=" + jobCreatorName);
       }
 
       // Set the config property gridmix.output.directory only if

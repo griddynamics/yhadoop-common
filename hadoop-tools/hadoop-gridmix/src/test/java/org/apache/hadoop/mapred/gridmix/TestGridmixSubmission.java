@@ -43,7 +43,6 @@ import java.util.zip.GZIPInputStream;
 import static org.junit.Assert.*;
 
 public class TestGridmixSubmission extends CommonJobTest {
-  static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
   private static File inSpace = new File("src" + File.separator + "test"
       + File.separator + "resources" + File.separator + "data");
  

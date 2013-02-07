@@ -110,6 +110,14 @@ public class TestSleepJob extends CommonJobTest {
     LOG.info(" Replay ended at " + System.currentTimeMillis());
   }
 
+  @Test
+  public void testStressSubmit() throws Exception {
+    policy = GridmixJobSubmissionPolicy.STRESS;
+    LOG.info(" Replay started at " + System.currentTimeMillis());
+    doSubmission(JobCreator.SLEEPJOB.name(),false);
+    LOG.info(" Replay ended at " + System.currentTimeMillis());
+  }
+
   private void testRandomLocation(int locations, int njobs,
       UserGroupInformation ugi) throws Exception {
     Configuration conf = new Configuration();
