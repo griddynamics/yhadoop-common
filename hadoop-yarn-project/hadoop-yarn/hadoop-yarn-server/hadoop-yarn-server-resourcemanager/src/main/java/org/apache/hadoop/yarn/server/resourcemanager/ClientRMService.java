@@ -157,6 +157,10 @@ public class ClientRMService extends AbstractService implements
     this.server.start();
     clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_ADDRESS,
                                                server.getListenerAddress());
+    // enable RM to short-circuit token operations directly to itself
+    RMDelegationTokenIdentifier.Renewer.setSecretManager(
+        rmDTSecretManager, clientBindAddress);
+    
     super.start();
   }
 
@@ -430,6 +434,7 @@ public class ClientRMService extends AbstractService implements
     report.setRackName(rmNode.getRackName());
     report.setCapability(rmNode.getTotalCapability());
     report.setNodeHealthStatus(rmNode.getNodeHealthStatus());
+    report.setHttpAddress(rmNode.getHttpAddress());
     
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());
