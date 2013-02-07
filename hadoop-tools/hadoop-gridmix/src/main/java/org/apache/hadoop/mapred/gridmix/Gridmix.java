@@ -35,11 +35,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.gridmix.GenerateData.DataStatistics;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.*;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
 import org.apache.commons.logging.Log;
@@ -605,7 +603,7 @@ public class Gridmix extends Configured implements Tool {
     try {
       res = ToolRunner.run(new Configuration(), new Gridmix(argv), argv);
     } finally {
-      System.exit(res);
+      ExitUtil.terminate(res);
     }
   }
 
