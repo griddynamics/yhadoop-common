@@ -189,7 +189,7 @@ public class TestGridmixSubmission extends CommonJobTest {
 
     } catch (ExitUtil.ExitException e) {
       assertEquals("ExitException", e.getMessage());
-
+      ExitUtil.resetFirstExitException();
     } finally {
       System.setErr(oldOut);
       System.setSecurityManager(securityManager);
