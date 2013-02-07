@@ -46,7 +46,8 @@ public class CommonJobTest {
   protected static final long GENDATA = 1; // in megabytes
   protected static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
   private static File workspace = new File("target" + File.separator
-      + TestGridmixSubmission.class.getName() + "-test");
+          + TestGridmixSubmission.class.getName() + "-test");
+
   static class DebugGridmix extends Gridmix {
 
     private JobFactory<?> factory;
@@ -78,7 +79,6 @@ public class CommonJobTest {
     private final int expected;
     static final long SLOPBYTES = 1024;
 
-
     public TestMonitor(int expected, Statistics stats) {
       super(3, TimeUnit.SECONDS, stats, 1);
       this.expected = expected;
@@ -87,7 +87,7 @@ public class CommonJobTest {
 
     @Override
     protected void onSuccess(Job job) {
-      LOG.info(" Job Sucess " + job);
+      LOG.info(" Job Success " + job);
       retiredJobs.add(job);
     }
 
@@ -107,7 +107,7 @@ public class CommonJobTest {
       }
       for (Job job : succeeded) {
         final String jobName = job.getJobName();
-        Configuration conf = job.getConfiguration();
+        Configuration configuration = job.getConfiguration();
         if (GenerateData.JOB_NAME.equals(jobName)) {
           RemoteIterator<LocatedFileStatus> rit = GridmixTestUtils.dfs
                   .listFiles(new Path("/"), true);
@@ -117,16 +117,15 @@ public class CommonJobTest {
           final Path in = new Path("foo").makeQualified(
                   GridmixTestUtils.dfs.getUri(),
                   GridmixTestUtils.dfs.getWorkingDirectory());
-          // all files = compressed test size+ logs= 1000000/2 + logs
+          // adat was compressed. All files = compressed test size+ logs= 1000000/2 + logs
           final ContentSummary generated = GridmixTestUtils.dfs
                   .getContentSummary(in);
           assertEquals(550000, generated.getLength(), 10000);
 
-          // we've written to space! and we wrote compressed data
           Counter counter = job.getCounters()
                   .getGroup("org.apache.hadoop.mapreduce.FileSystemCounter")
                   .findCounter("HDFS_BYTES_WRITTEN");
-          assertEquals("Mismatched data gen", 550000, counter.getValue(), 20000);
+
           assertEquals(generated.getLength(), counter.getValue());
 
           continue;
@@ -134,7 +133,7 @@ public class CommonJobTest {
           continue;
         }
 
-        final String originalJobId = conf.get(Gridmix.ORIGINAL_JOB_ID);
+        final String originalJobId = configuration.get(Gridmix.ORIGINAL_JOB_ID);
         final JobStory spec = sub.get(originalJobId);
         assertNotNull("No spec for " + jobName, spec);
         assertNotNull("No counters for " + jobName, job.getCounters());
@@ -142,11 +141,11 @@ public class CommonJobTest {
         System.out.println("originalJobName=" + originalJobName
                 + ";GridmixJobName=" + jobName + ";originalJobID=" + originalJobId);
         assertTrue("Original job name is wrong.",
-                originalJobName.equals(conf.get(Gridmix.ORIGINAL_JOB_NAME)));
+                originalJobName.equals(configuration.get(Gridmix.ORIGINAL_JOB_NAME)));
 
         // Gridmix job seqNum contains 6 digits
         int seqNumLength = 6;
-        String jobSeqNum = new DecimalFormat("000000").format(conf.getInt(
+        String jobSeqNum = new DecimalFormat("000000").format(configuration.getInt(
                 GridmixJob.GRIDMIX_JOB_SEQ, -1));
         // Original job name is of the format MOCKJOB<6 digit sequence number>
         // because MockJob jobNames are of this format.
@@ -162,28 +161,27 @@ public class CommonJobTest {
         final int nMaps = spec.getNumberMaps();
         final int nReds = spec.getNumberReduces();
 
-        final JobClient client = new JobClient(GridmixTestUtils.mrvl.getConfig());
+        final JobClient client = new JobClient(
+                GridmixTestUtils.mrvl.getConfig());
         final TaskReport[] mReports = client.getMapTaskReports(JobID
                 .downgrade(job.getJobID()));
         assertEquals("Mismatched map count", nMaps, mReports.length);
-        check(TaskType.MAP,  spec, mReports, 0, 0, SLOPBYTES, nReds);
-        
+        check(TaskType.MAP, spec, mReports, 0, 0, SLOPBYTES, nReds);
 
         final TaskReport[] rReports = client.getReduceTaskReports(JobID
-            .downgrade(job.getJobID()));
+                .downgrade(job.getJobID()));
         assertEquals("Mismatched reduce count", nReds, rReports.length);
-        check(TaskType.REDUCE, spec, rReports, nMaps * SLOPBYTES,
-            2 * nMaps, 0, 0);
+        check(TaskType.REDUCE, spec, rReports, nMaps * SLOPBYTES, 2 * nMaps, 0,
+                0);
 
-        
       }
 
     }
-    
-    private void check(final TaskType type,  JobStory spec,
-        final TaskReport[] runTasks, long extraInputBytes,
-        int extraInputRecords, long extraOutputBytes, int extraOutputRecords)
-        throws Exception {
+    // Verify if correct job queue is used
+    private void check(final TaskType type, JobStory spec,
+                       final TaskReport[] runTasks, long extraInputBytes,
+                       int extraInputRecords, long extraOutputBytes, int extraOutputRecords)
+            throws Exception {
 
       long[] runInputRecords = new long[runTasks.length];
       long[] runInputBytes = new long[runTasks.length];
@@ -198,58 +196,59 @@ public class CommonJobTest {
         final TaskInfo specInfo;
         final Counters counters = runTasks[i].getCounters();
         switch (type) {
-        case MAP:
-          runInputBytes[i] = counters.findCounter("FileSystemCounters",
-              "HDFS_BYTES_READ").getValue()
-              - counters.findCounter(TaskCounter.SPLIT_RAW_BYTES).getValue();
-          runInputRecords[i] = (int) counters.findCounter(
-              TaskCounter.MAP_INPUT_RECORDS).getValue();
-          runOutputBytes[i] = counters
-              .findCounter(TaskCounter.MAP_OUTPUT_BYTES).getValue();
-          runOutputRecords[i] = (int) counters.findCounter(
-              TaskCounter.MAP_OUTPUT_RECORDS).getValue();
+          case MAP:
+            runInputBytes[i] = counters.findCounter("FileSystemCounters",
+                    "HDFS_BYTES_READ").getValue()
+                    - counters.findCounter(TaskCounter.SPLIT_RAW_BYTES).getValue();
+            runInputRecords[i] = (int) counters.findCounter(
+                    TaskCounter.MAP_INPUT_RECORDS).getValue();
+            runOutputBytes[i] = counters
+                    .findCounter(TaskCounter.MAP_OUTPUT_BYTES).getValue();
+            runOutputRecords[i] = (int) counters.findCounter(
+                    TaskCounter.MAP_OUTPUT_RECORDS).getValue();
 
-          specInfo = spec.getTaskInfo(TaskType.MAP, i);
-          specInputRecords[i] = specInfo.getInputRecords();
-          specInputBytes[i] = specInfo.getInputBytes();
-          specOutputRecords[i] = specInfo.getOutputRecords();
-          specOutputBytes[i] = specInfo.getOutputBytes();
-         
-          LOG.info(String.format(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
-              specInputBytes[i], specOutputBytes[i], specInputRecords[i],
-              specOutputRecords[i]));
-          LOG.info(String.format(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
-              runInputBytes[i], runOutputBytes[i], runInputRecords[i],
-              runOutputRecords[i]));
-          break;
-        case REDUCE:
-          runInputBytes[i] = 0;
-          runInputRecords[i] = (int) counters.findCounter(
-              TaskCounter.REDUCE_INPUT_RECORDS).getValue();
-          runOutputBytes[i] = counters.findCounter("FileSystemCounters",
-              "HDFS_BYTES_WRITTEN").getValue();
-          runOutputRecords[i] = (int) counters.findCounter(
-              TaskCounter.REDUCE_OUTPUT_RECORDS).getValue();
+            specInfo = spec.getTaskInfo(TaskType.MAP, i);
+            specInputRecords[i] = specInfo.getInputRecords();
+            specInputBytes[i] = specInfo.getInputBytes();
+            specOutputRecords[i] = specInfo.getOutputRecords();
+            specOutputBytes[i] = specInfo.getOutputBytes();
 
-          specInfo = spec.getTaskInfo(TaskType.REDUCE, i);
-          // There is no reliable counter for reduce input bytes. The
-          // variable-length encoding of intermediate records and other noise
-          // make this quantity difficult to estimate. The shuffle and spec
-          // input bytes are included in debug output for reference, but are
-          // not checked
-          specInputBytes[i] = 0;
-          specInputRecords[i] = specInfo.getInputRecords();
-          specOutputRecords[i] = specInfo.getOutputRecords();
-          specOutputBytes[i] = specInfo.getOutputBytes();
-          LOG.info(String.format(type + " SPEC: (%9d) -> %9d :: %5d -> %5d\n",
-              specInfo.getInputBytes(), specOutputBytes[i],
-              specInputRecords[i], specOutputRecords[i]));
-          LOG.info(String.format(type + " RUN:  (%9d) -> %9d :: %5d -> %5d\n", counters
-                  .findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES).getValue(),
-                  runOutputBytes[i], runInputRecords[i], runOutputRecords[i]));
-          break;
-        default:
-          fail("Unexpected type: " + type);
+            LOG.info(String.format(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
+                    specInputBytes[i], specOutputBytes[i], specInputRecords[i],
+                    specOutputRecords[i]));
+            LOG.info(String.format(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
+                    runInputBytes[i], runOutputBytes[i], runInputRecords[i],
+                    runOutputRecords[i]));
+            break;
+          case REDUCE:
+            runInputBytes[i] = 0;
+            runInputRecords[i] = (int) counters.findCounter(
+                    TaskCounter.REDUCE_INPUT_RECORDS).getValue();
+            runOutputBytes[i] = counters.findCounter("FileSystemCounters",
+                    "HDFS_BYTES_WRITTEN").getValue();
+            runOutputRecords[i] = (int) counters.findCounter(
+                    TaskCounter.REDUCE_OUTPUT_RECORDS).getValue();
+
+            specInfo = spec.getTaskInfo(TaskType.REDUCE, i);
+            // There is no reliable counter for reduce input bytes. The
+            // variable-length encoding of intermediate records and other noise
+            // make this quantity difficult to estimate. The shuffle and spec
+            // input bytes are included in debug output for reference, but are
+            // not checked
+            specInputBytes[i] = 0;
+            specInputRecords[i] = specInfo.getInputRecords();
+            specOutputRecords[i] = specInfo.getOutputRecords();
+            specOutputBytes[i] = specInfo.getOutputBytes();
+            LOG.info(String.format(type + " SPEC: (%9d) -> %9d :: %5d -> %5d\n",
+                    specInfo.getInputBytes(), specOutputBytes[i],
+                    specInputRecords[i], specOutputRecords[i]));
+            LOG.info(String
+                    .format(type + " RUN:  (%9d) -> %9d :: %5d -> %5d\n", counters
+                            .findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES).getValue(),
+                            runOutputBytes[i], runInputRecords[i], runOutputRecords[i]));
+            break;
+          default:
+            fail("Unexpected type: " + type);
         }
       }
 
@@ -258,8 +257,8 @@ public class CommonJobTest {
       Arrays.sort(runInputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
         assertTrue("Mismatched " + type + " input bytes " + specInputBytes[i]
-            + "/" + runInputBytes[i],
-            eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes));
+                + "/" + runInputBytes[i],
+                eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes));
       }
 
       // Check input records
@@ -267,10 +266,10 @@ public class CommonJobTest {
       Arrays.sort(runInputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
         assertTrue(
-            "Mismatched " + type + " input records " + specInputRecords[i]
-                + "/" + runInputRecords[i],
-            eqPlusMinus(runInputRecords[i], specInputRecords[i],
-                extraInputRecords));
+                "Mismatched " + type + " input records " + specInputRecords[i]
+                        + "/" + runInputRecords[i],
+                eqPlusMinus(runInputRecords[i], specInputRecords[i],
+                        extraInputRecords));
       }
 
       // Check output bytes
@@ -278,9 +277,9 @@ public class CommonJobTest {
       Arrays.sort(runOutputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
         assertTrue(
-            "Mismatched " + type + " output bytes " + specOutputBytes[i] + "/"
-                + runOutputBytes[i],
-            eqPlusMinus(runOutputBytes[i], specOutputBytes[i], extraOutputBytes));
+                "Mismatched " + type + " output bytes " + specOutputBytes[i] + "/"
+                        + runOutputBytes[i],
+                eqPlusMinus(runOutputBytes[i], specOutputBytes[i], extraOutputBytes));
       }
 
       // Check output records
@@ -288,10 +287,10 @@ public class CommonJobTest {
       Arrays.sort(runOutputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
         assertTrue(
-            "Mismatched " + type + " output records " + specOutputRecords[i]
-                + "/" + runOutputRecords[i],
-            eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
-                extraOutputRecords));
+                "Mismatched " + type + " output records " + specOutputRecords[i]
+                        + "/" + runOutputRecords[i],
+                eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
+                        extraOutputRecords));
       }
 
     }
@@ -301,17 +300,17 @@ public class CommonJobTest {
       return diff <= x;
     }
 
-  
   }
 
-  protected void doSubmission(String jobCreatorName,boolean defaultOutputPath) throws Exception {
+  protected void doSubmission(String jobCreatorName, boolean defaultOutputPath)
+          throws Exception {
     final Path in = new Path("foo").makeQualified(
-        GridmixTestUtils.dfs.getUri(),
-        GridmixTestUtils.dfs.getWorkingDirectory());
+            GridmixTestUtils.dfs.getUri(),
+            GridmixTestUtils.dfs.getWorkingDirectory());
     // final Path in = new Path("foo");
     final Path out = GridmixTestUtils.DEST.makeQualified(
-        GridmixTestUtils.dfs.getUri(),
-        GridmixTestUtils.dfs.getWorkingDirectory());
+            GridmixTestUtils.dfs.getUri(),
+            GridmixTestUtils.dfs.getWorkingDirectory());
     final Path root = new Path(workspace.getAbsolutePath());
     if (!workspace.exists()) {
       assertTrue(workspace.mkdirs());
@@ -323,8 +322,8 @@ public class CommonJobTest {
 
       argsList.add("-D" + FilePool.GRIDMIX_MIN_FILE + "=0");
       argsList.add("-D" + Gridmix.GRIDMIX_USR_RSV + "="
-          + EchoUserResolver.class.getName());
-      if(jobCreatorName!=null){
+              + EchoUserResolver.class.getName());
+      if (jobCreatorName != null) {
         argsList.add("-D" + JobCreator.GRIDMIX_JOB_TYPE + "=" + jobCreatorName);
       }
 
@@ -343,8 +342,8 @@ public class CommonJobTest {
       String[] argv = argsList.toArray(new String[argsList.size()]);
 
       DebugGridmix client = new DebugGridmix();
-      conf = GridmixTestUtils.mrvl.getConfig(); 
-      
+      conf = GridmixTestUtils.mrvl.getConfig();
+
       CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
 
@@ -355,7 +354,7 @@ public class CommonJobTest {
       // allow synthetic users to create home directories
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 777));
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short) 777));
-      
+
       int res = ToolRunner.run(conf, client, argv);
       assertEquals("Client exited with nonzero status", 0, res);
       client.checkMonitor();

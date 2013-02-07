@@ -36,9 +36,9 @@ public class TestLoadJob extends CommonJobTest {
 
   static {
     ((Log4JLogger) LogFactory.getLog("org.apache.hadoop.mapred.gridmix"))
-        .getLogger().setLevel(Level.DEBUG);
+            .getLogger().setLevel(Level.DEBUG);
     ((Log4JLogger) LogFactory.getLog(StressJobFactory.class)).getLogger()
-        .setLevel(Level.DEBUG);
+            .setLevel(Level.DEBUG);
   }
 
 
@@ -52,31 +52,30 @@ public class TestLoadJob extends CommonJobTest {
     GridmixTestUtils.shutdownCluster();
   }
 
- 
+
   /*
-   * test serial Policy task should executed without exceptops
-   */
+  * test serial policy  with LoadJob. Task should execute without exceptions
+  */
   @Test
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
     LOG.info("Serial started at " + System.currentTimeMillis());
-    doSubmission(JobCreator.LOADJOB.name(),false);
+    doSubmission(JobCreator.LOADJOB.name(), false);
 
     LOG.info("Serial ended at " + System.currentTimeMillis());
   }
 
   /*
-   * test reply Policy
+   * test reply policy with LoadJob
    */
   @Test
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
-    doSubmission(JobCreator.LOADJOB.name(),false);
+    doSubmission(JobCreator.LOADJOB.name(), false);
 
     LOG.info(" Replay ended at " + System.currentTimeMillis());
   }
 
- 
 
 }

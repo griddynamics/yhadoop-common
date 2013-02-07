@@ -40,9 +40,9 @@ public class TestSleepJob extends CommonJobTest {
 
   public static final Log LOG = LogFactory.getLog(Gridmix.class);
 
-  {
+  static {
     ((Log4JLogger) LogFactory.getLog("org.apache.hadoop.mapred.gridmix"))
-        .getLogger().setLevel(Level.DEBUG);
+            .getLogger().setLevel(Level.DEBUG);
   }
 
   static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
@@ -57,11 +57,10 @@ public class TestSleepJob extends CommonJobTest {
     GridmixTestUtils.shutdownCluster();
   }
 
-  
 
   /*
-   * test RandomLocation
-   */
+  * test RandomLocation
+  */
   @Test
   public void testRandomLocation() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
@@ -72,18 +71,17 @@ public class TestSleepJob extends CommonJobTest {
 
   @Test
   public void testMapTasksOnlySleepJobs() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setBoolean(SleepJob.SLEEPJOB_MAPTASK_ONLY, true);
-    DebugJobProducer jobProducer = new DebugJobProducer(5, conf);
-    Configuration jconf = GridmixTestUtils.mrvl.getConfig();
-    jconf.setBoolean(SleepJob.SLEEPJOB_MAPTASK_ONLY, true);
+    Configuration configuration = GridmixTestUtils.mrvl.getConfig();
+
+    DebugJobProducer jobProducer = new DebugJobProducer(5, configuration);
+    configuration.setBoolean(SleepJob.SLEEPJOB_MAPTASK_ONLY, true);
 
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     JobStory story;
     int seq = 1;
     while ((story = jobProducer.getNextJob()) != null) {
-      GridmixJob gridmixJob = JobCreator.SLEEPJOB.createGridmixJob(jconf, 0,
-          story, new Path("ignored"), ugi, seq++);
+      GridmixJob gridmixJob = JobCreator.SLEEPJOB.createGridmixJob(configuration, 0,
+              story, new Path("ignored"), ugi, seq++);
       gridmixJob.buildSplits(null);
       Job job = gridmixJob.call();
       assertEquals(0, job.getNumReduceTasks());
@@ -98,7 +96,7 @@ public class TestSleepJob extends CommonJobTest {
     // set policy
     policy = GridmixJobSubmissionPolicy.SERIAL;
     LOG.info("Serial started at " + System.currentTimeMillis());
-    doSubmission(JobCreator.SLEEPJOB.name(),false);
+    doSubmission(JobCreator.SLEEPJOB.name(), false);
     LOG.info("Serial ended at " + System.currentTimeMillis());
   }
 
@@ -106,7 +104,7 @@ public class TestSleepJob extends CommonJobTest {
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
-    doSubmission(JobCreator.SLEEPJOB.name(),false);
+    doSubmission(JobCreator.SLEEPJOB.name(), false);
     LOG.info(" Replay ended at " + System.currentTimeMillis());
   }
 
@@ -114,15 +112,15 @@ public class TestSleepJob extends CommonJobTest {
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     LOG.info(" Replay started at " + System.currentTimeMillis());
-    doSubmission(JobCreator.SLEEPJOB.name(),false);
+    doSubmission(JobCreator.SLEEPJOB.name(), false);
     LOG.info(" Replay ended at " + System.currentTimeMillis());
   }
 
   private void testRandomLocation(int locations, int njobs,
-      UserGroupInformation ugi) throws Exception {
-    Configuration conf = new Configuration();
+                                  UserGroupInformation ugi) throws Exception {
+    Configuration configuration = new Configuration();
 
-    DebugJobProducer jobProducer = new DebugJobProducer(njobs, conf);
+    DebugJobProducer jobProducer = new DebugJobProducer(njobs, configuration);
     Configuration jconf = GridmixTestUtils.mrvl.getConfig();
     jconf.setInt(JobCreator.SLEEPJOB_RANDOM_LOCATIONS, locations);
 
@@ -130,10 +128,10 @@ public class TestSleepJob extends CommonJobTest {
     int seq = 1;
     while ((story = jobProducer.getNextJob()) != null) {
       GridmixJob gridmixJob = JobCreator.SLEEPJOB.createGridmixJob(jconf, 0,
-          story, new Path("ignored"), ugi, seq++);
+              story, new Path("ignored"), ugi, seq++);
       gridmixJob.buildSplits(null);
       List<InputSplit> splits = new SleepJob.SleepInputFormat()
-          .getSplits(gridmixJob.getJob());
+              .getSplits(gridmixJob.getJob());
       for (InputSplit split : splits) {
         assertEquals(locations, split.getLocations().length);
       }
