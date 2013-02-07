@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -176,18 +177,18 @@ public class TestGridmixSubmission extends CommonJobTest {
   public void testMain() throws Exception {
 
     SecurityManager securityManager = System.getSecurityManager();
-    System.setSecurityManager(new NoExitSecurityManager());
 
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     final PrintStream out = new PrintStream(bytes);
     final PrintStream oldOut = System.out;
     System.setErr(out);
+    ExitUtil.disableSystemExit();
     try {
       String[] argv = new String[0];
       DebugGridmix.main(argv);
 
-    } catch (ExitException e) {
-      assertEquals("There is no escape!", e.getMessage());
+    } catch (ExitUtil.ExitException e) {
+      assertEquals("ExitException", e.getMessage());
 
     } finally {
       System.setErr(oldOut);
@@ -200,32 +201,5 @@ public class TestGridmixSubmission extends CommonJobTest {
     assertTrue(print.contains("e.g. gridmix -generate 100m foo -"));
   }
 
-  protected static class ExitException extends SecurityException {
-    private static final long serialVersionUID = -1982617086752946683L;
-    public final int status;
-
-    public ExitException(int status) {
-      super("There is no escape!");
-      this.status = status;
-    }
-  }
-
-  private static class NoExitSecurityManager extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkPermission(Permission perm, Object context) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkExit(int status) {
-      super.checkExit(status);
-      throw new ExitException(status);
-    }
-  }
-
+ 
 }
