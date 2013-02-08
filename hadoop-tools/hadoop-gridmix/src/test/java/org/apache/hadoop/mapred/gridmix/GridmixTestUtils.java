@@ -4,13 +4,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.Groups;
 
 import java.io.IOException;
 
@@ -41,11 +43,7 @@ public class GridmixTestUtils {
   public static void initCluster() throws IOException {
     Configuration conf = new Configuration();
     conf.set("mapred.queue.names", "default,q1,q2");
-    conf.set("yarn.scheduler.capacity.root.queues", "default");
-    conf.set("yarn.scheduler.capacity.root.default.capacity", "100.0");
-
-
-    dfsCluster = new  MiniDFSCluster.Builder(conf).numDataNodes(3).format(true).build();//  MiniDFSCluster(conf, 3, true, null);
+    dfsCluster = new MiniDFSCluster(conf, 3, true, null);
     dfs = dfsCluster.getFileSystem();
     conf.set(JTConfig.JT_RETIREJOBS, "false");
     mrCluster = new MiniMRCluster(3, dfs.getUri().toString(), 1, null, null, 
