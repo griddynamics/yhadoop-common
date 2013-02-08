@@ -157,6 +157,10 @@ public class ClientRMService extends AbstractService implements
     this.server.start();
     clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_ADDRESS,
                                                server.getListenerAddress());
+    // enable RM to short-circuit token operations directly to itself
+    RMDelegationTokenIdentifier.Renewer.setSecretManager(
+        rmDTSecretManager, clientBindAddress);
+    
     super.start();
   }
 
@@ -519,7 +523,7 @@ public class ClientRMService extends AbstractService implements
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
 
-      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      String user = getRenewerForToken(token);
       long nextExpTime = rmDTSecretManager.renewToken(token, user);
       RenewDelegationTokenResponse renewResponse = Records
           .newRecord(RenewDelegationTokenResponse.class);
@@ -543,12 +547,22 @@ public class ClientRMService extends AbstractService implements
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
 
-      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      String user = getRenewerForToken(token);
       rmDTSecretManager.cancelToken(token, user);
       return Records.newRecord(CancelDelegationTokenResponse.class);
     } catch (IOException e) {
       throw RPCUtil.getRemoteException(e);
     }
+  }
+
+  private String getRenewerForToken(Token<RMDelegationTokenIdentifier> token)
+      throws IOException {
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+    // we can always renew our own tokens
+    return loginUser.getUserName().equals(user.getUserName())
+        ? token.decodeIdentifier().getRenewer().toString()
+        : user.getShortUserName();
   }
 
   void refreshServiceAcls(Configuration configuration, 
