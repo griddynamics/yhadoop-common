@@ -262,7 +262,7 @@ public class TestGridmixSummary {
     es.finalize(factory, testTraceFile.toString(), 1024*1024*1024*10L, resolver,
                 dataStats, conf);
     assertEquals("Mismatch in expected data size", 
-                 "1 G", es.getExpectedDataSize());
+                 "10 G", es.getExpectedDataSize());
     
     // test trace signature uniqueness
     //  touch the trace file
