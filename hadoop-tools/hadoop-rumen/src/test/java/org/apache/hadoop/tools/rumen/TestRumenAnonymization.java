@@ -19,6 +19,7 @@ package org.apache.hadoop.tools.rumen;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
@@ -335,7 +336,6 @@ public class TestRumenAnonymization {
     module.addSerializer(AnonymizableDataType.class,
         new DefaultAnonymizingRumenSerializer(new StatePool(), conf));
 
-    // TODO Support deprecated and un-supported keys
     testSerializer(jp, "{mapreduce.job.user.name:user0,"
         + "mapred.map.child.java.opts:-Xmx2G -Xms500m}", module);
   }
@@ -592,7 +592,7 @@ public class TestRumenAnonymization {
 
     @Override
     public void write(byte[] b) throws IOException {
-      data.append(b);
+      data.append(Arrays.toString(b));
     }
 
     @Override
@@ -983,7 +983,7 @@ public class TestRumenAnonymization {
 
     boolean failed = false;
     try {
-      split = WordListAnonymizerUtility.extractSuffix("a.b", knownSuffixes);
+       WordListAnonymizerUtility.extractSuffix("a.b", knownSuffixes);
     } catch (Exception e) {
       failed = true;
     }
@@ -1114,7 +1114,7 @@ public class TestRumenAnonymization {
   }
 
   /**
-   * Test {@link FileName#FileNameState} persistence with directories only.
+   * Test persistence with directories only.
    */
   @Test
   public void testFileNameStateWithDir() throws Exception {
@@ -1190,7 +1190,7 @@ public class TestRumenAnonymization {
   }
 
   /**
-   * Test {@link FileName#FileNameState} persistence with files only.
+   * Test  persistence with files only.
    */
   @Test
   public void testFileNameStateWithFiles() throws Exception {
@@ -1264,7 +1264,7 @@ public class TestRumenAnonymization {
   }
 
   /**
-   * Test {@link FileName#FileNameState} persistence with files and directories.
+   * Test  persistence with files and directories.
    */
   @Test
   public void testFileNameState() throws Exception {
@@ -1449,7 +1449,7 @@ public class TestRumenAnonymization {
   }
 
   /**
-   * Test {@link NodeName#NodeNameState} persistence with racknames only.
+   * Test  persistence with racknames only.
    */
   @Test
   public void testNodeNameWithRackNamesOnly() throws Exception {
@@ -1523,7 +1523,7 @@ public class TestRumenAnonymization {
   }
 
   /**
-   * Test {@link NodeName#NodeNameState} persistence with hosts and racks.
+   * Test  persistence with hosts and racks.
    */
   @Test
   public void testNodeNameState() throws Exception {

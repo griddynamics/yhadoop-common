@@ -44,6 +44,7 @@ public class TestNetworkedJob {
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testGetNullCounters() throws Exception {
     //mock creation

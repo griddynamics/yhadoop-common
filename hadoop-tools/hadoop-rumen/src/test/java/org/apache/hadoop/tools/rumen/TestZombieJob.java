@@ -25,6 +25,7 @@ package org.apache.hadoop.tools.rumen;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.mapreduce.TaskType;
@@ -133,11 +134,11 @@ public class TestZombieJob {
     assertEquals(26425, tai.getTaskInfo().getOutputRecords());
 
     LoggedJob lg = zj.getLoggedJob();
-    zj = zjp.getNextJob();
+    zjp.getNextJob();
     lg.deepCompare(lg, null);
 
     int counter = 2;
-    while ((zj = zjp.getNextJob()) != null) {
+    while ((zjp.getNextJob()) != null) {
       counter++;
     }
     // only 12 jobs
@@ -148,9 +149,7 @@ public class TestZombieJob {
 
   private List<Integer> getList(Integer... params) {
     List<Integer> result = new ArrayList<Integer>(params.length);
-    for (Integer param : params) {
-      result.add(param);
-    }
+    Collections.addAll(result, params);
     return result;
   }
 }

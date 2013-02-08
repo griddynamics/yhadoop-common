@@ -24,7 +24,7 @@ import java.io.FileInputStream;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class TestCommandLineUtilites {
+public class TestCommandLineUtilities {
 
   private static File workSpace = new File("target" + File.separator
       + "test-classes" + File.separator + "log");

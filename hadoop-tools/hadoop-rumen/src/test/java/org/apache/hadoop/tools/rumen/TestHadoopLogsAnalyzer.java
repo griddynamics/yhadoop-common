@@ -23,15 +23,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.PrintStream;
 
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+/*
+  Test Hadoop Logs Analyzer.  The HadoopLogsAnalyzer should print data from logs to std output
+ */
 public class TestHadoopLogsAnalyzer {
   // source path
   private static File workSpace = new File("src" + File.separator + "test"
       + File.separator + "resources" + File.separator + "log");
   // target path
-  private static File outspace = new File("target" + File.separator + "out");
+  private static File outSpace = new File("target" + File.separator + "out");
 
   @SuppressWarnings("deprecation")
   @Test
@@ -42,18 +46,17 @@ public class TestHadoopLogsAnalyzer {
     final PrintStream oldOut = System.out;
     System.setOut(out);
     try {
-  
 
-      if (!outspace.exists()) {
-        outspace.mkdirs();
+      if (!outSpace.exists()) {
+        Assert.assertTrue(outSpace.mkdirs());
       }
       String[] args = new String[14];
       // for jobs trace output
       args[0] = "-write-job-trace";
-      args[1] = outspace.getAbsolutePath() + File.separator + "job-trace";
+      args[1] = outSpace.getAbsolutePath() + File.separator + "job-trace";
       // for topology
       args[2] = "-write-topology";
-      args[3] = outspace.getAbsolutePath() + File.separator + "topology";
+      args[3] = outSpace.getAbsolutePath() + File.separator + "topology";
       args[4] = "-single-line-job-traces";
 
       args[5] = "-v1";
@@ -68,18 +71,18 @@ public class TestHadoopLogsAnalyzer {
       args[13] = workSpace.getAbsolutePath();
 
       HadoopLogsAnalyzer.main(args);
-      assertTrue(bytes.toString().indexOf("utcome = SUCCESS, and type = JAVA.") >= 0);
+      assertTrue(bytes.toString().contains("utcome = SUCCESS, and type = JAVA."));
       // we see the percents
-      assertTrue(bytes.toString().indexOf("40%") >= 0);
+      assertTrue(bytes.toString().contains("40%"));
 
       // trace file exists and not empty
-      File trace = new File(outspace.getAbsolutePath() + File.separator
+      File trace = new File(outSpace.getAbsolutePath() + File.separator
           + "job-trace");
       assertTrue(trace.exists());
       assertTrue(trace.length() > 0);
 
       // topology file exists and not empty
-      File topology = new File(outspace.getAbsolutePath() + File.separator
+      File topology = new File(outSpace.getAbsolutePath() + File.separator
           + "topology");
       assertTrue(topology.exists());
       assertTrue(topology.length() > 0);

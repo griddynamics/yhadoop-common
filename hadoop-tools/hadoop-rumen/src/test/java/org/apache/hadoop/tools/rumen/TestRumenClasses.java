@@ -31,9 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -219,9 +217,6 @@ public class TestRumenClasses {
 
     job.putJobConfPath("JobConfPath");
     assertEquals("JobConfPath", job.obtainJobConfpath());
-
-    Map<JobACL, AccessControlList> acls = new HashMap<JobACL, AccessControlList>();
-    acls.put(JobACL.VIEW_JOB, new AccessControlList());
 
     List<LoggedTask> tasks = new ArrayList<LoggedTask>();
     tasks.add(getParsedTask("dianostic info for first task"));
