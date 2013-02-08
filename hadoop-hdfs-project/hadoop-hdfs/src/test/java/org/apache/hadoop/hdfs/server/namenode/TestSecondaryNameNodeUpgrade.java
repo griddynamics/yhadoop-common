@@ -43,15 +43,6 @@ import org.apache.hadoop.test.GenericTestUtils;
  */
 public class TestSecondaryNameNodeUpgrade {
 
-  @Before
-  public void cleanupCluster() throws IOException {
-    File hdfsDir = new File(MiniDFSCluster.getBaseDirectory()).getCanonicalFile();
-    System.out.println("cleanupCluster deleting " + hdfsDir);
-    if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
-      throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
-    }
-  }
-
   private void doIt(Map<String, String> paramsToCorrupt) throws IOException {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
