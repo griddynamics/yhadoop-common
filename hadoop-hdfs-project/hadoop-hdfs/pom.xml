@@ -691,6 +691,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <forkMode>perthread</forkMode>
               <threadCount>${testsThreadCount}</threadCount>
               <parallel>classes</parallel>
+              <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -DminiClusterDedicatedDirs=true</argLine>
             </configuration>
           </plugin>
         </plugins>
