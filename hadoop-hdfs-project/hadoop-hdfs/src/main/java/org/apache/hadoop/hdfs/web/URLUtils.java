@@ -34,7 +34,7 @@ public class URLUtils {
   /**
    * Timeout for socket connects and reads
    */
-  public static int SOCKET_TIMEOUT = 1*60*1000; // 1 minute
+  private final static int DEFAULT_SOCKET_TIMEOUT = 1*60*1000; // 1 minute
 
   /**
    * Opens a url with read and connect timeouts
@@ -43,9 +43,20 @@ public class URLUtils {
    * @throws IOException
    */
   public static URLConnection openConnection(URL url) throws IOException {
+      return openConnection(url, DEFAULT_SOCKET_TIMEOUT);
+  }
+  
+  /**
+   * Opens a url with read and connect timeouts
+   * @param url to open
+   * @param socketTimeout connection timeout
+   * @return URLConnection
+   * @throws IOException
+   */
+  public static URLConnection openConnection(URL url, int socketTimeout) throws IOException {
     URLConnection connection = url.openConnection();
-    connection.setConnectTimeout(SOCKET_TIMEOUT);
-    connection.setReadTimeout(SOCKET_TIMEOUT);
+    connection.setConnectTimeout(socketTimeout);
+    connection.setReadTimeout(socketTimeout);
     return connection;    
   }
 }
