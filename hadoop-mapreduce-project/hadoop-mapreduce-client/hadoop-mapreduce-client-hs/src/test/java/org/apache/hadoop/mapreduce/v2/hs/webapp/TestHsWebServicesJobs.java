@@ -90,9 +90,9 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  */
 public class TestHsWebServicesJobs extends JerseyTest {
 
-  private static Configuration conf = new Configuration();
-  private static TestAppContext appContext;
-  private static HsWebApp webApp;
+  private Configuration conf = new Configuration();
+  private TestAppContext appContext;
+  private HsWebApp webApp;
 
   static class TestAppContext implements HistoryContext {
     final ApplicationAttemptId appAttemptID;
