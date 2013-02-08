@@ -49,6 +49,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.base.Optional;
+
 /** JSON Utilities */
 public class JsonUtil {
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
@@ -236,20 +238,32 @@ public class JsonUtil {
     final byte[] symlink = type != PathType.SYMLINK? null
         : DFSUtil.string2Bytes((String)m.get("symlink"));
 
-    final long len = (Long) m.get("length");
-    final String owner = (String) m.get("owner");
-    final String group = (String) m.get("group");
+    final long len = longFromMap(m, "length");
+    final String owner = stringFromMap(m, "owner");
+    final String group = stringFromMap(m, "group");
     final FsPermission permission = toFsPermission((String) m.get("permission"));
-    final long aTime = (Long) m.get("accessTime");
-    final long mTime = (Long) m.get("modificationTime");
+    final long aTime = longFromMap(m, "accessTime");
+    final long mTime = longFromMap(m, "modificationTime");
     final long blockSize = (Long) m.get("blockSize");
-    final short replication = (short) (long) (Long) m.get("replication");
-    final long fileId = (Long) m.get("fileId");
+    final short replication = shortFromMap(m, "replication");
+    final long fileId = longFromMap(m, "fileId");
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group,
         symlink, DFSUtil.string2Bytes(localName), fileId);
   }
-
+  
+  private static Long longFromMap(Map<?, ?> m, String key) {    
+    return m.get(key) != null ? (Long)m.get(key) : 0;
+  }
+  
+  private static short shortFromMap(Map<?, ?> m, String key) {
+    return m.get(key) != null ? (short)(long)(Long)m.get(key) : 0;
+  }
+  
+  private static String stringFromMap(Map<?, ?> m, String key) {
+    return m.get(key) != null ? (String)m.get(key) : "";
+  }
+  
   /** Convert an ExtendedBlock to a Json map. */
   private static Map<String, Object> toJsonMap(final ExtendedBlock extendedblock) {
     if (extendedblock == null) {

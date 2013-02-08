@@ -44,6 +44,8 @@ import org.junit.Test;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -258,7 +260,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
-  public void testDelegationTokenWithHttpFSFileSystem() throws Exception {
+  public void testDelegationTokenWithHttpFSFileSystem() throws Exception {    
     testDelegationTokenWithinDoAs(HttpFSFileSystem.class, false);
   }
 
