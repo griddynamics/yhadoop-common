@@ -19,15 +19,21 @@
 package org.apache.hadoop.metrics2.filter;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.configuration.SubsetConfiguration;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.metrics2.AbstractMetric;
+import org.apache.hadoop.metrics2.MetricsFilter;
+import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import static org.apache.hadoop.metrics2.lib.Interns.*;
+import static org.mockito.Mockito.*;
 
 public class TestPatternFilter {
 
@@ -99,25 +105,61 @@ public class TestPatternFilter {
     shouldAccept(c, "foo");
     shouldAccept(c, Arrays.asList(tag("foo", "", "f")));
   }
-
+  
   static void shouldAccept(SubsetConfiguration conf, String s) {
     assertTrue("accepts "+ s, newGlobFilter(conf).accepts(s));
     assertTrue("accepts "+ s, newRegexFilter(conf).accepts(s));
   }
 
   static void shouldAccept(SubsetConfiguration conf, List<MetricsTag> tags) {
-    assertTrue("accepts "+ tags, newGlobFilter(conf).accepts(tags));
-    assertTrue("accepts "+ tags, newRegexFilter(conf).accepts(tags));
+    shouldAcceptImpl(true, conf, tags);
+  }
+
+  static void shouldReject(SubsetConfiguration conf, List<MetricsTag> tags) {
+    shouldAcceptImpl(false, conf, tags);
+  }
+  
+  private static void shouldAcceptImpl(final boolean expectAccept, 
+      SubsetConfiguration conf, List<MetricsTag> tags) {
+    final MetricsFilter globFilter = newGlobFilter(conf);
+    final MetricsFilter regexFilter = newRegexFilter(conf);
+    
+    assertTrue("accepts "+ tags, expectAccept == globFilter.accepts(tags));
+    assertTrue("accepts "+ tags, expectAccept == regexFilter.accepts(tags));
+    
+    // Test that MetricsRecord composed of the tags is also accepted:
+    final MetricsRecord mr = createMetricsRecord("", tags, null);
+    assertTrue("accepts "+ tags, expectAccept == globFilter.accepts(mr));
+    assertTrue("accepts "+ tags, expectAccept == regexFilter.accepts(mr));
+    
+    // Test results on each of the individual tag:
+    int acceptedCount = 0, rejectedCount = 0;
+    for (MetricsTag tag: tags) {
+      if (globFilter.accepts(tag)) {
+        acceptedCount++;
+      } else {
+        rejectedCount++;
+      }
+    }
+    if (expectAccept) {
+      assertTrue("No tag of the following accepted: " + tags, acceptedCount > 0);
+    } else {
+      assertTrue("No tag of the following rejected: " + tags, rejectedCount > 0);
+    }
+  }
+  
+  private static MetricsRecord createMetricsRecord(String name, 
+      Collection<MetricsTag> tags, Collection<AbstractMetric> metrics) {
+    MetricsRecord mr = mock(MetricsRecord.class);
+    when(mr.name()).thenReturn(name);
+    when(mr.tags()).thenReturn(tags);
+    when(mr.metrics()).thenReturn(metrics);
+    return mr;
   }
 
   static void shouldReject(SubsetConfiguration conf, String s) {
     assertTrue("rejects "+ s, !newGlobFilter(conf).accepts(s));
     assertTrue("rejects "+ s, !newRegexFilter(conf).accepts(s));
-  }
-
-  static void shouldReject(SubsetConfiguration conf, List<MetricsTag> tags) {
-    assertTrue("rejects "+ tags, !newGlobFilter(conf).accepts(tags));
-    assertTrue("rejects "+ tags, !newRegexFilter(conf).accepts(tags));
   }
 
   /**
