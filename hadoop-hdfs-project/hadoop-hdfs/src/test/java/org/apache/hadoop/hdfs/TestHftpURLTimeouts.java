@@ -119,7 +119,7 @@ public class TestHftpURLTimeouts {
           // https will get a read timeout due to SSL negotiation, but
           // a normal http will not, so need to ignore SSL read timeouts
           // until a connect timeout occurs
-          if (!(ignoreReadTimeout && message.equals("Read timed out"))) {
+          if (!(ignoreReadTimeout && "Read timed out".equals(message))) {
             timedout = true;
             assertEquals("connect timed out", message);
           }
