@@ -83,6 +83,9 @@ public class TestTools {
         "-printTopology", "-refreshNamenodes", "-deleteBlockPool",
         "-setBalancerBandwidth", "-fetchImage");
     try {
+      assertTrue(ToolRunner.run(new DFSAdmin(), 
+          new String[] { "-report" }) == 0);
+      
       for (String arg : args)
         assertTrue(ToolRunner.run(new DFSAdmin(), fillArgs(arg)) == -1);
       
