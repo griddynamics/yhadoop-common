@@ -581,9 +581,8 @@ public class TestJobHistoryParsing {
       app.waitForState(Service.STATE.STOPPED);
       HistoryFileManager hfm = new HistoryFileManager();
       hfm.init(conf);
+      HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
       hfm.initExisting();
-//      HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
-      HistoryFileInfo fileInfo =  hfm.getAllFileInfo().iterator().next();
       hfm.clean();
       Assert.assertFalse(fileInfo.isDeleted());
       // small hack set field to -1 (or wait 1 week)  maxHistoryAge  {
