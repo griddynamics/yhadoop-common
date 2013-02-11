@@ -59,8 +59,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -581,20 +581,70 @@ public class TestJobHistoryParsing {
       app.waitForState(Service.STATE.STOPPED);
       HistoryFileManager hfm = new HistoryFileManager();
       hfm.init(conf);
-      HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
+      hfm.initExisting();
+//      HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
+      HistoryFileInfo fileInfo =  hfm.getAllFileInfo().iterator().next();
       hfm.clean();
       Assert.assertFalse(fileInfo.isDeleted());
+      // small hack set field to -1 (or wait 1 week)  maxHistoryAge  {
       java.lang.reflect.Field f = hfm.getClass().getDeclaredField("maxHistoryAge");
       f.setAccessible(true);
       f.setLong(hfm, -1);
+      // }
       hfm.clean();
       Assert.assertTrue(fileInfo.isDeleted());
-      // set new JHAdminConfig.MR_HISTORY_MAX_AGE_MS
-      // try to clean
+      
+      
 
     } finally {
       LOG.info("FINISHED testScanningOldDirs");
     }
   }
+  @Test
+  public void test2() throws Exception {
+    LOG.info("STARTING testScanningOldDirs");
+    try {
+      Configuration conf = new Configuration();
+      conf.setClass(
+          CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+          MyResolver.class, DNSToSwitchMapping.class);
+      // conf.setLong(JHAdminConfig.MR_HISTORY_MAX_AGE_MS, 1400000);
 
+      RackResolver.init(conf);
+      MRApp app = new MRAppWithHistory(1, 1, true, this.getClass().getName(),
+          true);
+      app.submit(conf);
+      Job job = app.getContext().getAllJobs().values().iterator().next();
+      JobId jobId = job.getID();
+      LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
+      app.waitForState(job, JobState.SUCCEEDED);
+
+      JobHistory jobHistory = new JobHistory();
+      jobHistory.init(conf); 
+      Map<JobId, Job> jobs=  jobHistory.getAllJobs();
+      Assert.assertEquals(1, jobs.size());
+
+      JobsInfo jobsinfo  =jobHistory.getPartialJobs(0L, 10L, null, "default", 0L, System.currentTimeMillis()+1, 0L, System.currentTimeMillis()+1, JobState.SUCCEEDED);
+      Assert.assertEquals(1, jobsinfo.getJobs().size());
+
+      jobs.entrySet().iterator().next();
+      System.out.println("OK");
+/*
+ * 
+    String jobhistoryDir = JobHistoryUtils
+        .getHistoryIntermediateDoneDirForUser(conf);
+    JobHistory jobHistory = new JobHistory();
+    jobHistory.init(conf);
+
+    JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
+        .getJobIndexInfo();
+    String jobhistoryFileName = FileNameIndexUtils
+        .getDoneFileName(jobIndexInfo);
+
+    Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
+ */
+    } finally {
+      LOG.info("FINISHED testScanningOldDirs");
+    }
+  }
 }
