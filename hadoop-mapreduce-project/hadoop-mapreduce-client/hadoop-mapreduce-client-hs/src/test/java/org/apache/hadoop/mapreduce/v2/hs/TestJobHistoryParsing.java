@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -585,7 +584,7 @@ public class TestJobHistoryParsing {
       HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
       hfm.clean();
       Assert.assertFalse(fileInfo.isDeleted());
-      Field f = hfm.getClass().getDeclaredField("maxHistoryAge");
+      java.lang.reflect.Field f = hfm.getClass().getDeclaredField("maxHistoryAge");
       f.setAccessible(true);
       f.setLong(hfm, -1);
       hfm.clean();
