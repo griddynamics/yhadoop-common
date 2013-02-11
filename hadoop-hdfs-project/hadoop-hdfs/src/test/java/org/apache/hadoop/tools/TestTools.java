@@ -19,11 +19,15 @@ package org.apache.hadoop.tools;
  */
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.hdfs.tools.JMXGet;
@@ -31,10 +35,9 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
-
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.ByteStreams;
 
 public class TestTools {
 
@@ -74,7 +77,36 @@ public class TestTools {
     checkOutput(new String[] { "-service=NameNode", "-server=localhost",
         "-addition" }, pattern, System.err, JMXGet.class);
   }
-
+    
+  @Test 
+  public void testDFSAdminPrintReport() {
+    String pattern = "Datanodes available: 2 (2 total, 0 dead)";
+    Configuration conf = new HdfsConfiguration();
+    ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      FileSystem fs = cluster.getFileSystem();
+      assertTrue("Not a HDFS: "+ fs.getUri(), fs instanceof DistributedFileSystem);    
+      DFSAdmin dfsdmin = new DFSAdmin(conf);                          
+      PipedOutputStream pipeOut = new PipedOutputStream();
+      PipedInputStream pipeIn = new PipedInputStream(pipeOut, PIPE_BUFFER_SIZE);
+      System.setOut(new PrintStream(pipeOut));                 
+      dfsdmin.run(new String[] { "-safemode" });
+      dfsdmin.run(new String[] { "-report" });           
+      pipeOut.close();
+      ByteStreams.copy(pipeIn, outBytes);      
+      pipeIn.close();      
+      assertTrue("testDFSAdminPrintReport error", 
+          new String(outBytes.toByteArray()).contains(pattern));      
+    } catch(Exception ex) {
+      fail("testDFSAdminPrintReport ex error" + ex);
+    } finally {
+      if (cluster != null)
+        cluster.shutdown();
+    }
+  }  
+  
   @Test  
   public void testDFSAdminInvalidUsageHelp() {
     ImmutableSet<String> args = ImmutableSet.of("-report", "-saveNamespace",
@@ -82,10 +114,7 @@ public class TestTools {
         "-finalizeUpgrade", "-metasave", "-refreshUserToGroupsMappings",
         "-printTopology", "-refreshNamenodes", "-deleteBlockPool",
         "-setBalancerBandwidth", "-fetchImage");
-    try {
-      assertTrue(ToolRunner.run(new DFSAdmin(), 
-          new String[] { "-report" }) == 0);
-      
+    try {            
       for (String arg : args)
         assertTrue(ToolRunner.run(new DFSAdmin(), fillArgs(arg)) == -1);
       
@@ -107,8 +136,7 @@ public class TestTools {
 
   private void checkOutput(String[] args, String pattern, PrintStream out,
       Class<?> clazz) {
-    int size = 0;
-    byte[] bytes = null;
+    ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
     try {
       PipedOutputStream pipeOut = new PipedOutputStream();
       PipedInputStream pipeIn = new PipedInputStream(pipeOut, PIPE_BUFFER_SIZE);
@@ -125,15 +153,10 @@ public class TestTools {
       } else if (clazz == DFSAdmin.class) {
         expectDfsAdminPrint(args);
       }
-
-      if ((size = pipeIn.available()) != 0) {
-        bytes = new byte[size];
-        pipeIn.read(bytes, 0, bytes.length);
-      }
       pipeOut.close();
+      ByteStreams.copy(pipeIn, outBytes);      
       pipeIn.close();
-      String line = new String(bytes);
-      assertTrue(bytes != null ? line.contains(pattern) : false);
+      assertTrue(new String(outBytes.toByteArray()).contains(pattern));
     } catch (Exception ex) {
       fail("checkOutput error " + ex);
     }
