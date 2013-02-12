@@ -620,28 +620,23 @@ public class TestJobHistoryParsing {
 
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(conf); 
-      Map<JobId, Job> jobs=  jobHistory.getAllJobs();
-      Assert.assertEquals(1, jobs.size());
+      Assert.assertEquals(1, jobHistory.getAllJobs().size());
 
+      Assert.assertEquals(1,jobHistory.getAllJobs(app.getAppID() ).size());
+      
       JobsInfo jobsinfo  =jobHistory.getPartialJobs(0L, 10L, null, "default", 0L, System.currentTimeMillis()+1, 0L, System.currentTimeMillis()+1, JobState.SUCCEEDED);
       Assert.assertEquals(1, jobsinfo.getJobs().size());
 
-      jobs.entrySet().iterator().next();
+      jobHistory.getApplicationAttemptId();
+      jobHistory.getApplicationID();
+      jobHistory.getUser();
+      
+      Assert.assertNull(jobHistory.getEventHandler());
+      Assert.assertNull(jobHistory.getClock());
+      Assert.assertNull(jobHistory.getClusterInfo());
+      
       System.out.println("OK");
-/*
- * 
-    String jobhistoryDir = JobHistoryUtils
-        .getHistoryIntermediateDoneDirForUser(conf);
-    JobHistory jobHistory = new JobHistory();
-    jobHistory.init(conf);
 
-    JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
-        .getJobIndexInfo();
-    String jobhistoryFileName = FileNameIndexUtils
-        .getDoneFileName(jobIndexInfo);
-
-    Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
- */
     } finally {
       LOG.info("FINISHED testScanningOldDirs");
     }
