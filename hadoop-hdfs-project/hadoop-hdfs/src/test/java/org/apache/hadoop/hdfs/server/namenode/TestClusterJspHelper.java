@@ -17,54 +17,31 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-
+import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemTestHelper;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Before;
-import org.junit.Ignore;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.namenode.ClusterJspHelper.ClusterStatus;
 import org.junit.Test;
 
-public class TestClusterJspHelper {
-
-  private DistributedFileSystem dfs;
-  private Configuration conf;
-  private URI uri;
-  private static final String SERVICE_VALUE = "localhost:2005";  
+public class TestClusterJspHelper {    
   
-  @Before 
-  public void init() throws URISyntaxException, IOException {
-    dfs = new DistributedFileSystem();
-    //mock(DistributedFileSystem.class);
-    conf = new HdfsConfiguration();    
-    uri = new URI("hdfs://" + SERVICE_VALUE);
-    FileSystemTestHelper.addFileSystemForTesting(uri, conf, dfs);
-  }
-  
-  @Ignore
-  public void testDefaultNamenode() throws IOException {                                
+  @Test
+  public void testDefaultNamenode() {                                        
+    Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      FileSystem fs = cluster.getFileSystem();
-      assertTrue("Not a HDFS: "+ fs.getUri(), fs instanceof DistributedFileSystem);        
-      ClusterJspHelper clusterJspHelper = new ClusterJspHelper();           
-      //assertEquals(clusterJspHelper.generateClusterHealthReport(fs).clusterid, "testClusterID");      
-      //clusterJspHelper.generateDecommissioningReport();
+    try {            
+      cluster = new MiniDFSCluster.Builder(conf)
+          .nnTopology(MiniDFSNNTopology.simpleSingleNN(45541, 50070))
+          .numDataNodes(2).build();     
+      cluster.waitActive();                                                                    
+      ClusterJspHelper clusterJspHelper = new ClusterJspHelper();      
+      ClusterStatus clusterStatus = clusterJspHelper.generateClusterHealthReport();
+      Assert.assertNotNull(clusterStatus);      
+      clusterJspHelper.generateDecommissioningReport();
     } catch(Exception ex) {
-      fail("" + ex);
+      fail("testDefaultNamenode error !!!" + ex);
     } finally {
       cluster.shutdown();
     }
