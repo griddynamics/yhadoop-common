@@ -599,6 +599,7 @@ public class TestJobHistoryParsing {
       LOG.info("FINISHED testScanningOldDirs");
     }
   }
+
   @Test
   public void test2() throws Exception {
     LOG.info("STARTING testScanningOldDirs");
@@ -619,22 +620,25 @@ public class TestJobHistoryParsing {
       app.waitForState(job, JobState.SUCCEEDED);
 
       JobHistory jobHistory = new JobHistory();
-      jobHistory.init(conf); 
+      jobHistory.init(conf);
       Assert.assertEquals(1, jobHistory.getAllJobs().size());
 
-      Assert.assertEquals(1,jobHistory.getAllJobs(app.getAppID() ).size());
-      
-      JobsInfo jobsinfo  =jobHistory.getPartialJobs(0L, 10L, null, "default", 0L, System.currentTimeMillis()+1, 0L, System.currentTimeMillis()+1, JobState.SUCCEEDED);
+      Assert.assertEquals(1, jobHistory.getAllJobs(app.getAppID()).size());
+
+      JobsInfo jobsinfo = jobHistory.getPartialJobs(0L, 10L, null, "default",
+          0L, System.currentTimeMillis() + 1, 0L,
+          System.currentTimeMillis() + 1, JobState.SUCCEEDED);
       Assert.assertEquals(1, jobsinfo.getJobs().size());
 
-      jobHistory.getApplicationAttemptId();
-      jobHistory.getApplicationID();
-      jobHistory.getUser();
-      
+      Assert.assertNotNull(jobHistory.getApplicationAttemptId());
+      Assert.assertEquals("application_0_0000", jobHistory.getApplicationID()
+          .toString());
+      Assert.assertNotNull(jobHistory.getUser());
+
       Assert.assertNull(jobHistory.getEventHandler());
       Assert.assertNull(jobHistory.getClock());
       Assert.assertNull(jobHistory.getClusterInfo());
-      
+
       System.out.println("OK");
 
     } finally {
