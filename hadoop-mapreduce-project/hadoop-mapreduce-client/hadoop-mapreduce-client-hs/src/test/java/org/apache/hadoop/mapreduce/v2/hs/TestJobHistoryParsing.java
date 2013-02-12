@@ -585,11 +585,7 @@ public class TestJobHistoryParsing {
       hfm.initExisting();
       hfm.clean();
       Assert.assertFalse(fileInfo.isDeleted());
-      // small hack set field to -1 (or wait 1 week)  maxHistoryAge  {
-      java.lang.reflect.Field f = hfm.getClass().getDeclaredField("maxHistoryAge");
-      f.setAccessible(true);
-      f.setLong(hfm, -1);
-      // }
+      hfm.setMaxHistoryAge(-1);
       hfm.clean();
       Assert.assertTrue(fileInfo.isDeleted());
       
