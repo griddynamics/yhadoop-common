@@ -593,7 +593,7 @@ public class TestJobHistoryParsing {
       hfm.clean();
       Assert.assertTrue(fileInfo.isDeleted());
       
-      
+     Assert.assertNotNull(hfm.jobListCache.values());
 
     } finally {
       LOG.info("FINISHED testScanningOldDirs");
@@ -601,7 +601,7 @@ public class TestJobHistoryParsing {
   }
 
   @Test
-  public void test2() throws Exception {
+  public void testJobsHistoryMethods() throws Exception {
     LOG.info("STARTING testScanningOldDirs");
     try {
       Configuration conf = new Configuration();
@@ -628,21 +628,21 @@ public class TestJobHistoryParsing {
       JobsInfo jobsinfo = jobHistory.getPartialJobs(0L, 10L, null, "default",
           0L, System.currentTimeMillis() + 1, 0L,
           System.currentTimeMillis() + 1, JobState.SUCCEEDED);
+      
       Assert.assertEquals(1, jobsinfo.getJobs().size());
-
       Assert.assertNotNull(jobHistory.getApplicationAttemptId());
       Assert.assertEquals("application_0_0000", jobHistory.getApplicationID()
           .toString());
-      Assert.assertNotNull(jobHistory.getUser());
-
+      Assert.assertEquals("Job History Server", jobHistory.getApplicationName());
       Assert.assertNull(jobHistory.getEventHandler());
       Assert.assertNull(jobHistory.getClock());
       Assert.assertNull(jobHistory.getClusterInfo());
 
-      System.out.println("OK");
 
     } finally {
       LOG.info("FINISHED testScanningOldDirs");
     }
   }
+  
+  
 }
