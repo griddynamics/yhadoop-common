@@ -19,7 +19,6 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import static junit.framework.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +46,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
-import com.sun.source.tree.AssertTree;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -190,6 +189,16 @@ public class TestJobHistoryEntities {
     assertNull(completedJob.loadConfFile() );
     assertEquals("Sleep job",completedJob.getName());
     assertEquals("default",completedJob.getQueueName());
+    assertEquals(1.0, completedJob.getProgress(),0.001);
     
+    assertEquals(11,completedJob.getTaskAttemptCompletionEvents(0,1000).length);
+    assertEquals(10,completedJob.getTaskAttemptCompletionEvents(0,10).length);
+    assertEquals(6,completedJob.getTaskAttemptCompletionEvents(5,10).length);
+    // without errors
+    assertEquals(1,completedJob.getDiagnostics().size());
+    assertEquals("",completedJob.getDiagnostics().get(0));
+
+    assertEquals(0, completedJob.getJobACLs().size());
+
   }
 }
