@@ -110,7 +110,7 @@ public class TestSafeMode {
     cluster.shutdown();
     
     // now bring up just the NameNode.
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).dfsBaseDir(cluster.getDfsBaseDir()).format(false).build();
     cluster.waitActive();
     dfs = (DistributedFileSystem)cluster.getFileSystem();
     

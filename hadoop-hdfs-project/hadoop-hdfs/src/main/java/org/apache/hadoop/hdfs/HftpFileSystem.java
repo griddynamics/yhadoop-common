@@ -322,12 +322,27 @@ public class HftpFileSystem extends FileSystem
    * @param path The path component of the URL
    * @param query The query component of the URL
    */
-  protected HttpURLConnection openConnection(String path, String query)
+  protected HttpURLConnection openConnection(String path, String query) 
+      throws IOException {
+    return openConnection(path, query, null); 
+  }
+  
+  /**
+   * Open an HTTP connection to the namenode to read file data and metadata.
+   * @param path The path component of the URL
+   * @param query The query component of the URL
+   * @param socketTimeout connection timeout or null if default timeout should be used 
+   */
+  protected HttpURLConnection openConnection(String path, String query, Integer socketTimeout)
       throws IOException {
     query = addDelegationTokenParam(query);
     final URL url = getNamenodeURL(path, query);
-    final HttpURLConnection connection =
-        (HttpURLConnection)URLUtils.openConnection(url);
+    final HttpURLConnection connection;
+    if (socketTimeout != null) {
+      connection = (HttpURLConnection)URLUtils.openConnection(url, socketTimeout);
+    } else {
+      connection = (HttpURLConnection)URLUtils.openConnection(url);
+    }
     connection.setRequestMethod("GET");
     connection.connect();
     return connection;

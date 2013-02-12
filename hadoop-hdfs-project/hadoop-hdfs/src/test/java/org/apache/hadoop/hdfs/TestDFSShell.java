@@ -38,6 +38,7 @@ import java.util.Scanner;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -70,8 +71,13 @@ public class TestDFSShell {
   private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
   
   static final String TEST_ROOT_DIR =
-    new Path(System.getProperty("test.build.data","/tmp"))
-    .toString().replace(' ', '+');
+    System.getProperty("test.build.data","/tmp") + "/" + 
+        RandomStringUtils.randomAlphanumeric(10)
+        .toString().replace(' ', '+');
+  
+  static {
+      new File(TEST_ROOT_DIR).mkdirs();
+  }
 
   static Path writeFile(FileSystem fs, Path f) throws IOException {
     DataOutputStream out = fs.create(f);
@@ -477,12 +483,8 @@ public class TestDFSShell {
     Configuration dstConf = new HdfsConfiguration();
     MiniDFSCluster srcCluster =  null;
     MiniDFSCluster dstCluster = null;
-    String bak = System.getProperty("test.build.data");
     try{
       srcCluster = new MiniDFSCluster.Builder(srcConf).numDataNodes(2).build();
-      File nameDir = new File(new File(bak), "dfs_tmp_uri/");
-      nameDir.mkdirs();
-      System.setProperty("test.build.data", nameDir.toString());
       dstCluster = new MiniDFSCluster.Builder(dstConf).numDataNodes(2).build();
       FileSystem srcFs = srcCluster.getFileSystem();
       FileSystem dstFs = dstCluster.getFileSystem();
@@ -554,7 +556,6 @@ public class TestDFSShell {
       ret = ToolRunner.run(shell, argv);
       assertEquals("default works for rm/rmr", 0, ret);
     } finally {
-      System.setProperty("test.build.data", bak);
       if (null != srcCluster) {
         srcCluster.shutdown();
       }

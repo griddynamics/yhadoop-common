@@ -68,7 +68,7 @@ public class TestRestartDFS {
                  "localhost:0");
       }
       // Here we restart the MiniDFScluster without formatting namenode
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).format(false).build(); 
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).dfsBaseDir(cluster.getDfsBaseDir()).format(false).build(); 
       FileSystem fs = cluster.getFileSystem();
       assertTrue("Filesystem corrupted after restart.",
                  files.checkFiles(fs, dir));
@@ -92,7 +92,7 @@ public class TestRestartDFS {
       }
       // This is a second restart to check that after the first restart
       // the image written in parallel to both places did not get corrupted
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).dfsBaseDir(cluster.getDfsBaseDir()).format(false).build();
       FileSystem fs = cluster.getFileSystem();
       assertTrue("Filesystem corrupted after restart.",
                  files.checkFiles(fs, dir));

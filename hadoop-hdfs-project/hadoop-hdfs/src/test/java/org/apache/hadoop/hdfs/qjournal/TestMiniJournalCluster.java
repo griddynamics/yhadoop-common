@@ -34,7 +34,9 @@ public class TestMiniJournalCluster {
   @Test
   public void testStartStop() throws IOException {
     Configuration conf = new Configuration();
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     MiniJournalCluster c = new MiniJournalCluster.Builder(conf)
+      .baseDir(baseDir)
       .build();
     try {
       URI uri = c.getQuorumJournalURI("myjournal");
@@ -44,7 +46,7 @@ public class TestMiniJournalCluster {
       JournalNode node = c.getJournalNode(0);
       String dir = node.getConf().get(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY);
       assertEquals(
-          new File(MiniDFSCluster.getBaseDirectory() + "journalnode-0")
+          new File(baseDir + "journalnode-0")
             .getAbsolutePath(),
           dir);
     } finally {

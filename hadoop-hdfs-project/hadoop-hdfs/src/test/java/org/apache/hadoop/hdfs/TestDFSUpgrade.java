@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -51,7 +50,7 @@ import com.google.common.base.Joiner;
 * the system when the system is upgraded under various storage state and
 * version conditions.
 */
-public class TestDFSUpgrade {
+public class TestDFSUpgrade extends UpgradeUtilities {
  
   private static final int EXPECTED_TXID = 49;
   private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
@@ -59,6 +58,10 @@ public class TestDFSUpgrade {
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
     
+  public TestDFSUpgrade() throws Exception {
+      super(MiniDFSCluster.newDfsBaseDir());
+  }
+  
   /**
    * Writes an INFO log message containing the parameters.
    */
@@ -92,8 +95,8 @@ public class TestDFSUpgrade {
       
       File previous = new File(baseDir, "previous");
       assertExists(previous);
-      assertEquals(UpgradeUtilities.checksumContents(NAME_NODE, previous),
-          UpgradeUtilities.checksumMasterNameNodeContents());
+      assertEquals(checksumContents(NAME_NODE, previous),
+          checksumMasterNameNodeContents());
     }
   }
  
@@ -106,24 +109,24 @@ public class TestDFSUpgrade {
   void checkDataNode(String[] baseDirs, String bpid) throws IOException {
     for (int i = 0; i < baseDirs.length; i++) {
       File current = new File(baseDirs[i], "current/" + bpid + "/current");
-      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, current),
-        UpgradeUtilities.checksumMasterDataNodeContents());
+      assertEquals(checksumContents(DATA_NODE, current),
+          checksumMasterDataNodeContents());
       
       // block files are placed under <sd>/current/<bpid>/current/finalized
       File currentFinalized = 
         MiniDFSCluster.getFinalizedDir(new File(baseDirs[i]), bpid);
-      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, currentFinalized),
-          UpgradeUtilities.checksumMasterBlockPoolFinalizedContents());
+      assertEquals(checksumContents(DATA_NODE, currentFinalized),
+          checksumMasterBlockPoolFinalizedContents());
       
       File previous = new File(baseDirs[i], "current/" + bpid + "/previous");
       assertTrue(previous.isDirectory());
-      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, previous),
-          UpgradeUtilities.checksumMasterDataNodeContents());
+      assertEquals(checksumContents(DATA_NODE, previous),
+          checksumMasterDataNodeContents());
       
       File previousFinalized = 
         new File(baseDirs[i], "current/" + bpid + "/previous"+"/finalized");
-      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, previousFinalized),
-          UpgradeUtilities.checksumMasterBlockPoolFinalizedContents());
+      assertEquals(checksumContents(DATA_NODE, previousFinalized),
+          checksumMasterBlockPoolFinalizedContents());
       
     }
   }
@@ -150,6 +153,7 @@ public class TestDFSUpgrade {
       Class<? extends Exception> exceptionClass, Pattern messagePattern) {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                                .dfsBaseDir(dfsBaseDir)
                                                 .startupOption(operation)
                                                 .format(false)
                                                 .manageDataDfsDirs(false)
@@ -193,17 +197,13 @@ public class TestDFSUpgrade {
    * not manage its own directories or files
    */
   private MiniDFSCluster createCluster() throws IOException {
-    return new MiniDFSCluster.Builder(conf).numDataNodes(0)
+    return new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir)
+                                           .numDataNodes(0)
                                            .format(false)
                                            .manageDataDfsDirs(false)
                                            .manageNameDfsDirs(false)
                                            .startupOption(StartupOption.UPGRADE)
                                            .build();
-  }
-  
-  @BeforeClass
-  public static void initialize() throws Exception {
-    UpgradeUtilities.initialize();
   }
   
   /**
@@ -216,129 +216,127 @@ public class TestDFSUpgrade {
     StorageInfo storageInfo = null;
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
-      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
+      conf = initializeStorageStateConf(numDirs, conf);
       String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
       
       log("Normal NameNode upgrade", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
       checkNameNode(nameNodeDirs, EXPECTED_TXID);
       if (numDirs > 1)
         TestParallelImageWrite.checkImages(cluster.getNamesystem(), numDirs);
       cluster.shutdown();
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
       
       log("Normal DataNode upgrade", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
+      createDataNodeStorageDirs(dataNodeDirs, "current");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-      checkDataNode(dataNodeDirs, UpgradeUtilities.getCurrentBlockPoolID(null));
+      checkDataNode(dataNodeDirs, getCurrentBlockPoolID(null));
       cluster.shutdown();
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
-      UpgradeUtilities.createEmptyDirs(dataNodeDirs);
+      createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(dataNodeDirs);
       
       log("NameNode upgrade with existing previous dir", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "previous");
       startNameNodeShouldFail(StartupOption.UPGRADE);
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
       
       log("DataNode upgrade with existing previous dir", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
-      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "previous");
+      createDataNodeStorageDirs(dataNodeDirs, "current");
+      createDataNodeStorageDirs(dataNodeDirs, "previous");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-      checkDataNode(dataNodeDirs, UpgradeUtilities.getCurrentBlockPoolID(null));
+      checkDataNode(dataNodeDirs, getCurrentBlockPoolID(null));
       cluster.shutdown();
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
-      UpgradeUtilities.createEmptyDirs(dataNodeDirs);
+      createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(dataNodeDirs);
 
       log("DataNode upgrade with future stored layout version in current", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
+      baseDirs = createDataNodeStorageDirs(dataNodeDirs, "current");
       storageInfo = new StorageInfo(Integer.MIN_VALUE, 
-          UpgradeUtilities.getCurrentNamespaceID(cluster),
-          UpgradeUtilities.getCurrentClusterID(cluster),
-          UpgradeUtilities.getCurrentFsscTime(cluster));
+          getCurrentNamespaceID(cluster),
+          getCurrentClusterID(cluster),
+          getCurrentFsscTime(cluster));
       
-      UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      createDataNodeVersionFile(baseDirs, storageInfo,
+          getCurrentBlockPoolID(cluster));
       
-      startBlockPoolShouldFail(StartupOption.REGULAR, UpgradeUtilities
-          .getCurrentBlockPoolID(null));
+      startBlockPoolShouldFail(StartupOption.REGULAR, getCurrentBlockPoolID(null));
       cluster.shutdown();
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
-      UpgradeUtilities.createEmptyDirs(dataNodeDirs);
+      createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(dataNodeDirs);
       
       log("DataNode upgrade with newer fsscTime in current", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
-      storageInfo = new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(), 
-          UpgradeUtilities.getCurrentNamespaceID(cluster),
-          UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE);
+      baseDirs = createDataNodeStorageDirs(dataNodeDirs, "current");
+      storageInfo = new StorageInfo(getCurrentLayoutVersion(), 
+          getCurrentNamespaceID(cluster),
+          getCurrentClusterID(cluster), Long.MAX_VALUE);
           
-      UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo, 
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      createDataNodeVersionFile(baseDirs, storageInfo, 
+          getCurrentBlockPoolID(cluster));
       // Ensure corresponding block pool failed to initialized
-      startBlockPoolShouldFail(StartupOption.REGULAR, UpgradeUtilities
-          .getCurrentBlockPoolID(null));
+      startBlockPoolShouldFail(StartupOption.REGULAR, getCurrentBlockPoolID(null));
       cluster.shutdown();
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
-      UpgradeUtilities.createEmptyDirs(dataNodeDirs);
+      createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(dataNodeDirs);
 
       log("NameNode upgrade with no edits file", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       deleteStorageFilesWithPrefix(nameNodeDirs, "edits_");
       startNameNodeShouldFail(StartupOption.UPGRADE);
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with no image file", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       deleteStorageFilesWithPrefix(nameNodeDirs, "fsimage_");
       startNameNodeShouldFail(StartupOption.UPGRADE);
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with corrupt version file", numDirs);
-      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      baseDirs = createNameNodeStorageDirs(nameNodeDirs, "current");
       for (File f : baseDirs) { 
-        UpgradeUtilities.corruptFile(
+        corruptFile(
             new File(f,"VERSION"),
             "layoutVersion".getBytes(Charsets.UTF_8),
             "xxxxxxxxxxxxx".getBytes(Charsets.UTF_8));
       }
       startNameNodeShouldFail(StartupOption.UPGRADE);
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with old layout version in current", numDirs);
-      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      baseDirs = createNameNodeStorageDirs(nameNodeDirs, "current");
       storageInfo = new StorageInfo(Storage.LAST_UPGRADABLE_LAYOUT_VERSION + 1, 
-          UpgradeUtilities.getCurrentNamespaceID(null),
-          UpgradeUtilities.getCurrentClusterID(null),
-          UpgradeUtilities.getCurrentFsscTime(null));
+          getCurrentNamespaceID(null),
+          getCurrentClusterID(null),
+          getCurrentFsscTime(null));
       
-      UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      createNameNodeVersionFile(conf, baseDirs, storageInfo,
+          getCurrentBlockPoolID(cluster));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with future layout version in current", numDirs);
-      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      baseDirs = createNameNodeStorageDirs(nameNodeDirs, "current");
       storageInfo = new StorageInfo(Integer.MIN_VALUE, 
-          UpgradeUtilities.getCurrentNamespaceID(null),
-          UpgradeUtilities.getCurrentClusterID(null),
-          UpgradeUtilities.getCurrentFsscTime(null));
+          getCurrentNamespaceID(null),
+          getCurrentClusterID(null),
+          getCurrentFsscTime(null));
       
-      UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      createNameNodeVersionFile(conf, baseDirs, storageInfo,
+          getCurrentBlockPoolID(cluster));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
     } // end numDir loop
     
     // One more check: normal NN upgrade with 4 directories, concurrent write
@@ -346,16 +344,16 @@ public class TestDFSUpgrade {
     {
       conf = new HdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
-      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
+      conf = initializeStorageStateConf(numDirs, conf);
       String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
       
       log("Normal NameNode upgrade", numDirs);
-      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
       checkNameNode(nameNodeDirs, EXPECTED_TXID);
       TestParallelImageWrite.checkImages(cluster.getNamesystem(), numDirs);
       cluster.shutdown();
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
     }
   }
   
@@ -368,18 +366,18 @@ public class TestDFSUpgrade {
     int numDirs = 4;
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
-    conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
+    conf = initializeStorageStateConf(numDirs, conf);
     String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
 
     log("NameNode upgrade with one bad storage dir", numDirs);
-    UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+    createNameNodeStorageDirs(nameNodeDirs, "current");
     try {
       // assert("storage dir has been prepared for failure before reaching this point");
       startNameNodeShouldFail(StartupOption.UPGRADE, IOException.class,
           Pattern.compile("failed in 1 storage"));
     } finally {
       // assert("storage dir shall be returned to normal state before exiting");
-      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      createEmptyDirs(nameNodeDirs);
     }
   }
  
@@ -413,7 +411,6 @@ public class TestDFSUpgrade {
   
   public static void main(String[] args) throws Exception {
     TestDFSUpgrade t = new TestDFSUpgrade();
-    TestDFSUpgrade.initialize();
     t.testUpgrade();
   }
 }

@@ -73,7 +73,7 @@ public class TestJournalNode {
   
   @Before
   public void setup() throws Exception {
-    File editsDir = new File(MiniDFSCluster.getBaseDirectory() +
+    File editsDir = new File(MiniDFSCluster.newDfsBaseDir() +
         File.separator + "TestJournalNode");
     FileUtil.fullyDelete(editsDir);
     

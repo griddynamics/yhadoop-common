@@ -25,11 +25,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
-import org.junit.Before;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileUtil;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -44,15 +42,6 @@ import org.apache.hadoop.test.GenericTestUtils;
  * should delete the snapshot and download a new one from the NN.
  */
 public class TestSecondaryNameNodeUpgrade {
-
-  @Before
-  public void cleanupCluster() throws IOException {
-    File hdfsDir = new File(MiniDFSCluster.getBaseDirectory()).getCanonicalFile();
-    System.out.println("cleanupCluster deleting " + hdfsDir);
-    if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
-      throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
-    }
-  }
 
   private void doIt(Map<String, String> paramsToCorrupt) throws IOException {
     MiniDFSCluster cluster = null;

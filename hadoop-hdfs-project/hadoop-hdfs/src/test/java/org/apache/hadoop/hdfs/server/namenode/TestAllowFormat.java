@@ -54,37 +54,30 @@ public class TestAllowFormat {
   public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
     LogFactory.getLog(TestAllowFormat.class.getName());
+  private static final String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir();
   private static Configuration config;
   private static MiniDFSCluster cluster = null;
-  private static File hdfsDir=null;
 
   @BeforeClass
   public static void setUp() throws Exception {
     config = new Configuration();
     String baseDir = System.getProperty("test.build.data", "build/test/data");
 
-    hdfsDir = new File(baseDir, "dfs");
-    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
-      throw new IOException("Could not delete hdfs directory '" + hdfsDir +
-                            "'");
-    }
-
     // Test has multiple name directories.
     // Format should not really prompt us if one of the directories exist,
     // but is empty. So in case the test hangs on an input, it means something
     // could be wrong in the format prompting code. (HDFS-1636)
-    LOG.info("hdfsdir is " + hdfsDir.getAbsolutePath());
-    File nameDir1 = new File(hdfsDir, "name1");
-    File nameDir2 = new File(hdfsDir, "name2");
+    File nameDir1 = new File(DFS_BASE_DIR, "name1");
+    File nameDir2 = new File(DFS_BASE_DIR, "name2");
 
     // To test multiple directory handling, we pre-create one of the name directories.
     nameDir1.mkdirs();
 
     // Set multiple name directories.
     config.set(DFS_NAMENODE_NAME_DIR_KEY, nameDir1.getPath() + "," + nameDir2.getPath());
-    config.set(DFS_DATANODE_DATA_DIR_KEY, new File(hdfsDir, "data").getPath());
+    config.set(DFS_DATANODE_DATA_DIR_KEY, new File(DFS_BASE_DIR, "data").getPath());
 
-    config.set(DFS_NAMENODE_CHECKPOINT_DIR_KEY,new File(hdfsDir, "secondary").getPath());
+    config.set(DFS_NAMENODE_CHECKPOINT_DIR_KEY,new File(DFS_BASE_DIR, "secondary").getPath());
 
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
   }
@@ -98,11 +91,6 @@ public class TestAllowFormat {
       cluster.shutdown();
       LOG.info("Stopping mini cluster");
     }
-    
-    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
-      throw new IOException("Could not delete hdfs directory in tearDown '"
-                            + hdfsDir + "'");
-    }	
   }
 
    /**
@@ -118,7 +106,8 @@ public class TestAllowFormat {
     NameNode nn;
     // 1. Create a new cluster and format DFS
     config.setBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, true);
-    cluster = new MiniDFSCluster.Builder(config).manageDataDfsDirs(false)
+    cluster = new MiniDFSCluster.Builder(config).dfsBaseDir(DFS_BASE_DIR)
+                                                .manageDataDfsDirs(false)
                                                 .manageNameDfsDirs(false)
                                                 .build();
     cluster.waitActive();

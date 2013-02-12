@@ -63,6 +63,8 @@ public class TestBalancerWithMultipleNameNodes {
   }
 
   
+  private static final String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir();
+  
   private static final long CAPACITY = 500L;
   private static final String RACK0 = "/rack0";
   private static final String RACK1 = "/rack1";
@@ -254,6 +256,7 @@ public class TestBalancerWithMultipleNameNodes {
       LOG.info("UNEVEN 1");
       final MiniDFSCluster cluster = new MiniDFSCluster
           .Builder(new Configuration(conf))
+          .dfsBaseDir(DFS_BASE_DIR)
           .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
           .numDataNodes(nDataNodes)
           .racks(racks)
@@ -276,6 +279,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 10");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(DFS_BASE_DIR)
           .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
           .numDataNodes(nDataNodes)
           .racks(racks)
@@ -331,6 +335,7 @@ public class TestBalancerWithMultipleNameNodes {
     LOG.info("RUN_TEST -1");
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(new Configuration(conf))
+        .dfsBaseDir(DFS_BASE_DIR)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
         .numDataNodes(nDataNodes)
         .racks(racks)

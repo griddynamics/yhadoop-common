@@ -79,7 +79,7 @@ public class MiniJournalCluster {
     if (b.baseDir != null) {
       this.baseDir = new File(b.baseDir);
     } else {
-      this.baseDir = new File(MiniDFSCluster.getBaseDirectory());
+      this.baseDir = new File(MiniDFSCluster.newDfsBaseDir());
     }
     
     nodes = new JournalNode[b.numJournalNodes];

@@ -27,7 +27,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.junit.AfterClass;
@@ -38,14 +37,10 @@ import org.junit.Test;
  * Tests if a data-node can startup depending on configuration parameters.
  */
 public class TestDatanodeConfig {
-  private static final File BASE_DIR =
-                                new File(MiniDFSCluster.getBaseDirectory());
-
   private static MiniDFSCluster cluster;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    clearBaseDir();
     Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     cluster.waitActive();
@@ -55,12 +50,6 @@ public class TestDatanodeConfig {
   public static void tearDown() throws Exception {
     if(cluster != null)
       cluster.shutdown();
-    clearBaseDir();
-  }
-
-  private static void clearBaseDir() throws IOException {
-    if(BASE_DIR.exists() && ! FileUtil.fullyDelete(BASE_DIR))
-      throw new IOException("Cannot clear BASE_DIR " + BASE_DIR);
   }
 
   /**
@@ -71,7 +60,7 @@ public class TestDatanodeConfig {
    */
   @Test
   public void testDataDirectories() throws IOException {
-    File dataDir = new File(BASE_DIR, "data").getCanonicalFile();
+    File dataDir = new File(cluster.getDfsBaseDir(), "data").getCanonicalFile();
     Configuration conf = cluster.getConfiguration(0);
     // 1. Test unsupported schema. Only "file:" is supported.
     String dnDir = makeURI("shv", null, fileAsURI(dataDir).getPath());

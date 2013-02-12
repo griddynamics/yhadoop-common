@@ -85,7 +85,7 @@ public class TestHDFSServerPorts {
    * Get base directory these tests should run in.
    */
   private String getTestingDir() {
-    return System.getProperty("test.build.data", "build/test/data");
+    return System.getProperty("test.build.data", "build/test/data") + "/" + getClass().getName();
   }
   
   public NameNode startNameNode() throws IOException {

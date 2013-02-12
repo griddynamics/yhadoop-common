@@ -72,7 +72,7 @@ public class TestClusterId {
   public void setUp() throws IOException {
     ExitUtil.disableSystemExit();
 
-    String baseDir = System.getProperty("test.build.data", "build/test/data");
+    String baseDir = System.getProperty("test.build.data", "build/test/data") + "/" + getClass().getName();
 
     hdfsDir = new File(baseDir, "dfs/name");
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {

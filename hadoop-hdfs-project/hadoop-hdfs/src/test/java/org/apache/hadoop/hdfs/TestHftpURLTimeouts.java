@@ -32,15 +32,9 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.web.URLUtils;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestHftpURLTimeouts {
-  @BeforeClass
-  public static void setup() {
-    URLUtils.SOCKET_TIMEOUT = 1;
-  }
   
   @Test
   public void testHftpSocketTimeout() throws Exception {
@@ -54,7 +48,7 @@ public class TestHftpURLTimeouts {
 
     HftpFileSystem fs = (HftpFileSystem)FileSystem.get(uri, conf);
     try {
-      HttpURLConnection conn = fs.openConnection("/", "");
+      HttpURLConnection conn = fs.openConnection("/", "", 1);
       timedout = false;
       try {
         // this will consume the only slot in the backlog
@@ -88,7 +82,7 @@ public class TestHftpURLTimeouts {
       timedout = false;
       try {
         // this will consume the only slot in the backlog
-        conn = fs.openConnection("/", "");
+        conn = fs.openConnection("/", "", 1);
       } catch (SocketTimeoutException ste) {
         // SSL expects a negotiation, so it will timeout on read, unlike hftp
         timedout = true;
@@ -113,13 +107,13 @@ public class TestHftpURLTimeouts {
       // socket's listen backlog so we have to try a bunch of times
       for (int n=32; !timedout && n > 0; n--) {
         try {
-          conns.add(fs.openConnection("/", ""));
+          conns.add(fs.openConnection("/", "", 1));
         } catch (SocketTimeoutException ste) {
           String message = ste.getMessage();
           // https will get a read timeout due to SSL negotiation, but
           // a normal http will not, so need to ignore SSL read timeouts
           // until a connect timeout occurs
-          if (!(ignoreReadTimeout && message.equals("Read timed out"))) {
+          if (!(ignoreReadTimeout && "Read timed out".equals(message))) {
             timedout = true;
             assertEquals("connect timed out", message);
           }

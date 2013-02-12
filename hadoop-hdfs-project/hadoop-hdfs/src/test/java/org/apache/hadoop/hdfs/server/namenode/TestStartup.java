@@ -31,12 +31,10 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -70,6 +68,7 @@ public class TestStartup {
   public static final String WILDCARD_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
     LogFactory.getLog(TestStartup.class.getName());
+  private final static String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir();
   private Configuration config;
   private File hdfsDir=null;
   static final long seed = 0xAAAAEEFL;
@@ -80,11 +79,8 @@ public class TestStartup {
   @Before
   public void setUp() throws Exception {
     config = new HdfsConfiguration();
-    hdfsDir = new File(MiniDFSCluster.getBaseDirectory());
+    hdfsDir = new File(DFS_BASE_DIR);
 
-    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
-      throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
-    }
     LOG.info("--hdfsdir is " + hdfsDir.getAbsolutePath());
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         fileAsURI(new File(hdfsDir, "name")).toString());
@@ -123,6 +119,7 @@ public class TestStartup {
     
     try {
       cluster = new MiniDFSCluster.Builder(config)
+                                  .dfsBaseDir(DFS_BASE_DIR)
                                   .manageDataDfsDirs(false)
                                   .manageNameDfsDirs(false).build();
       cluster.waitActive();
@@ -202,6 +199,7 @@ public class TestStartup {
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(config)
+                                  .dfsBaseDir(DFS_BASE_DIR)
                                   .format(false)
                                   .manageDataDfsDirs(false)
                                   .manageNameDfsDirs(false)
@@ -319,7 +317,8 @@ public class TestStartup {
     SecondaryNameNode sn = null;
     NameNode nn = null;
     try {
-      cluster = new MiniDFSCluster.Builder(config).manageDataDfsDirs(false)
+      cluster = new MiniDFSCluster.Builder(config).dfsBaseDir(DFS_BASE_DIR)
+                                                  .manageDataDfsDirs(false)
                                                   .manageNameDfsDirs(false)
                                                   .build();
       cluster.waitActive();
@@ -439,6 +438,7 @@ public class TestStartup {
                  "Starting empty cluster");
         
         cluster = new MiniDFSCluster.Builder(config)
+          .dfsBaseDir(DFS_BASE_DIR)
           .numDataNodes(0)
           .format(true)
           .build();
@@ -466,6 +466,7 @@ public class TestStartup {
         "Starting same cluster after simulated crash");
         try {
           cluster = new MiniDFSCluster.Builder(config)
+            .dfsBaseDir(DFS_BASE_DIR)
             .numDataNodes(0)
             .format(false)
             .build();
@@ -515,7 +516,8 @@ public class TestStartup {
     
     try {
       cluster = new MiniDFSCluster.Builder(config)
-      .numDataNodes(numDatanodes).setupHostsFile(true).build();
+        .dfsBaseDir(DFS_BASE_DIR)
+        .numDataNodes(numDatanodes).setupHostsFile(true).build();
       cluster.waitActive();
   
       cluster.restartNameNode();

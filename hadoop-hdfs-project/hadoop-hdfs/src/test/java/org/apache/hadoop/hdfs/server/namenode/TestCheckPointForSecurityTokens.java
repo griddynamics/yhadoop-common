@@ -113,9 +113,11 @@ public class TestCheckPointForSecurityTokens {
 
       // restart cluster
       cluster.shutdown();
-      cluster = null;
 
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
+          .numDataNodes(numDatanodes)
+          .format(false).build();
       cluster.waitActive();
       //Should be able to renew & cancel the delegation token after cluster restart
       try {
@@ -133,9 +135,11 @@ public class TestCheckPointForSecurityTokens {
 
       // restart cluster again
       cluster.shutdown();
-      cluster = null;
 
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
+          .numDataNodes(numDatanodes)
+          .format(false).build();
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();
@@ -155,9 +159,11 @@ public class TestCheckPointForSecurityTokens {
 
       // restart cluster again
       cluster.shutdown();
-      cluster = null;
 
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
+          .numDataNodes(numDatanodes)
+          .format(false).build();
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();

@@ -66,7 +66,7 @@ public class TestBackupNode {
     ((Log4JLogger)BackupImage.LOG).getLogger().setLevel(Level.ALL);
   }
   
-  static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
+  static final String BASE_DIR = MiniDFSCluster.newDfsBaseDir();
   
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 4096;
@@ -146,7 +146,7 @@ public class TestBackupNode {
     BackupNode backup = null;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(BASE_DIR)
                                   .numDataNodes(0).build();
       fileSys = cluster.getFileSystem();
       backup = startBackupNode(conf, StartupOption.BACKUP, 1);
@@ -288,7 +288,7 @@ public class TestBackupNode {
     BackupNode backup = null;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(BASE_DIR)
                                   .numDataNodes(0).build();
       fileSys = cluster.getFileSystem();
       //
@@ -327,7 +327,8 @@ public class TestBackupNode {
       //
       // Restart cluster and verify that file1 still exist.
       //
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(BASE_DIR)
+                                                .numDataNodes(numDatanodes)
                                                 .format(false).build();
       fileSys = cluster.getFileSystem();
       // check that file1 still exists
@@ -409,7 +410,7 @@ public class TestBackupNode {
       // Restart cluster and verify that file2 exists and
       // file1 does not exist.
       //
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(BASE_DIR).numDataNodes(0).format(false).build();
       fileSys = cluster.getFileSystem();
 
       assertTrue(!fileSys.exists(file1));
@@ -438,7 +439,7 @@ public class TestBackupNode {
     BackupNode backup = null;
     try {
       // Start NameNode and BackupNode
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(BASE_DIR)
                                   .numDataNodes(0).format(true).build();
       fileSys = cluster.getFileSystem();
       long txid = cluster.getNameNodeRpc().getTransactionID();

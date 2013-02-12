@@ -63,8 +63,8 @@ public class TestEditLogRace {
 
   private static final Log LOG = LogFactory.getLog(TestEditLogRace.class);
 
-  private static final String NAME_DIR =
-    MiniDFSCluster.getBaseDirectory() + "name1";
+  private static final String BASE_DIR = MiniDFSCluster.newDfsBaseDir();
+  private static final String NAME_DIR = BASE_DIR + "name1";
 
   // This test creates NUM_THREADS threads and each thread continuously writes
   // transactions
@@ -180,7 +180,7 @@ public class TestEditLogRace {
 
     AtomicReference<Throwable> caughtErr = new AtomicReference<Throwable>();
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(BASE_DIR).numDataNodes(NUM_DATA_NODES).build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
@@ -260,7 +260,7 @@ public class TestEditLogRace {
 
     AtomicReference<Throwable> caughtErr = new AtomicReference<Throwable>();
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(BASE_DIR).numDataNodes(NUM_DATA_NODES).build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();

@@ -139,7 +139,6 @@ public class TestInjectionForSimulatedStorage {
       Iterable<Block>[] blocksList = cluster.getAllBlockReports(bpid);
       
       cluster.shutdown();
-      cluster = null;
       
       /* Start the MiniDFSCluster with more datanodes since once a writeBlock
        * to a datanode node fails, same block can not be written to it
@@ -153,6 +152,7 @@ public class TestInjectionForSimulatedStorage {
       
       cluster = new MiniDFSCluster.Builder(conf)
                                   .numDataNodes(numDataNodes * 2)
+                                  .dfsBaseDir(cluster.getDfsBaseDir())
                                   .format(false)
                                   .build();
       cluster.waitActive();

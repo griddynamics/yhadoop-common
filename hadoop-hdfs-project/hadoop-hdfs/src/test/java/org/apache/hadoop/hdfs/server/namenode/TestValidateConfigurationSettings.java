@@ -25,7 +25,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -97,11 +96,8 @@ public class TestValidateConfigurationSettings {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
     
     // Set a nameservice-specific configuration for name dir
-    File dir = new File(MiniDFSCluster.getBaseDirectory(),
+    File dir = new File(MiniDFSCluster.newDfsBaseDir(),
         "testGenericKeysForNameNodeFormat");
-    if (dir.exists()) {
-      FileUtil.fullyDelete(dir);
-    }
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + ".ns1",
         dir.getAbsolutePath());
     

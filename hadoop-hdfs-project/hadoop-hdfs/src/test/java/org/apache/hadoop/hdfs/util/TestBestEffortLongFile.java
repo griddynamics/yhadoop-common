@@ -30,7 +30,7 @@ import static org.junit.Assert.*;
 
 public class TestBestEffortLongFile {
 
-  private static final File FILE = new File(MiniDFSCluster.getBaseDirectory() +
+  private static final File FILE = new File(MiniDFSCluster.newDfsBaseDir() +
       File.separatorChar + "TestBestEffortLongFile");
 
   @Before

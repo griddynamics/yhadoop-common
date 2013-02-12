@@ -80,6 +80,7 @@ public class TestEncryptedTransfer {
       setEncryptionConfigKeys(conf);
       
       cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .manageDataDfsDirs(false)
           .manageNameDfsDirs(false)
           .format(false)
@@ -116,6 +117,7 @@ public class TestEncryptedTransfer {
       conf.set(DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY, "rc4");
       
       cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .manageDataDfsDirs(false)
           .manageNameDfsDirs(false)
           .format(false)
@@ -150,6 +152,7 @@ public class TestEncryptedTransfer {
       setEncryptionConfigKeys(conf);
       
       cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .manageDataDfsDirs(false)
           .manageNameDfsDirs(false)
           .format(false)
@@ -189,6 +192,7 @@ public class TestEncryptedTransfer {
       setEncryptionConfigKeys(conf);
       
       cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .manageDataDfsDirs(false)
           .manageNameDfsDirs(false)
           .format(false)
@@ -241,6 +245,7 @@ public class TestEncryptedTransfer {
       setEncryptionConfigKeys(conf);
       
       cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .manageDataDfsDirs(false)
           .manageNameDfsDirs(false)
           .format(false)
@@ -314,6 +319,7 @@ public class TestEncryptedTransfer {
       setEncryptionConfigKeys(conf);
       
       cluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(cluster.getDfsBaseDir())
           .manageDataDfsDirs(false)
           .manageNameDfsDirs(false)
           .format(false)

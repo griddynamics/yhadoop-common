@@ -81,8 +81,8 @@ public class TestStandbyCheckpoints {
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
+        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10061))
+        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10062)));
     
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)
@@ -202,7 +202,7 @@ public class TestStandbyCheckpoints {
     // (only ~15MB)
     URI sharedUri = cluster.getSharedEditsDir(0, 1);
     File sharedDir = new File(sharedUri.getPath(), "current");
-    File tmpDir = new File(MiniDFSCluster.getBaseDirectory(),
+    File tmpDir = new File(cluster.getDfsBaseDir(),
         "testCheckpointCancellation-tmp");
     FSNamesystem fsn = cluster.getNamesystem(0);
     FSImageTestUtil.createAbortedLogWithMkdirs(tmpDir, NUM_DIRS_IN_LOG, 3,
