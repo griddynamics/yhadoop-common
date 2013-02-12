@@ -43,12 +43,12 @@ public class TestFcHdfsPermission extends FileContextPermissionBase {
   
   @Override
   protected FileContextTestHelper getFileContextHelper() {
-      return fileContextTestHelper;
+    return fileContextTestHelper;
   }
   
   @Override
   protected FileContext getFileContext() {
-      return fc;
+    return fc;
   }
   
   @BeforeClass

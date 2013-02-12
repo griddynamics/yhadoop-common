@@ -105,7 +105,7 @@ public class TestHDFSFileContextMainOperations extends
   }
   
   private Path getTestRootPath(FileContext fc, String path) {
-      return fileContextTestHelper.getTestRootPath(fc, path);
+    return fileContextTestHelper.getTestRootPath(fc, path);
   }
   
   @Test

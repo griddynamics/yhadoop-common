@@ -54,14 +54,8 @@ public class TestConfiguration extends TestCase {
   final static String CONFIG2 = new File("./test-config2-" + RandomStringUtils.randomAlphanumeric(10) + ".xml").getAbsolutePath();
   final static Random RAN = new Random();
 
-  private static boolean running;
-  
   @Override
   protected void setUp() throws Exception {
-    if (running) {
-        throw new RuntimeException("Another instance of TestConfiguration is in use!");
-    }
-    running = true;
     super.setUp();
     conf = new Configuration();
   }
@@ -71,7 +65,6 @@ public class TestConfiguration extends TestCase {
     super.tearDown();
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
-    running = false;
   }
   
   private void startConfig() throws IOException{

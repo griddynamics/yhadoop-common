@@ -386,13 +386,13 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     @Before
     public void setUp() throws Exception {
         BASETEST.mkdirs();
-        
+
         setupTestEnv();
 
         setUpAll();
 
         tmpDir = createTmpDir(BASETEST);
-        
+
         startServer();
 
         LOG.info("Client test setup finished");
@@ -430,7 +430,6 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
     protected void startServer() throws Exception {
         LOG.info("STARTING server");
         serverFactory = createNewServerInstance(tmpDir, serverFactory, hostPort, maxCnxns);
-        //port = serverFactory.getLocalPort();
     }
 
     protected void stopServer() throws Exception {
