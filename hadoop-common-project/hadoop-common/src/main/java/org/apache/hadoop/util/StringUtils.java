@@ -23,6 +23,8 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,12 +34,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
+import com.google.common.net.InetAddresses;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
-
-import com.google.common.net.InetAddresses;
 
 /**
  * General string utils
@@ -50,6 +51,13 @@ public class StringUtils {
    * Priority of the StringUtils shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 0;
+
+  private static final DecimalFormat decimalFormat;
+  static {
+          NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+          decimalFormat = (DecimalFormat) numberFormat;
+          decimalFormat.applyPattern("#.##");
+  }
 
   /**
    * Make a string representation of the exception.
@@ -79,33 +87,50 @@ public class StringUtils {
     }
     return fullHostname;
   }
+
+  private static DecimalFormat oneDecimal = new DecimalFormat("0.0");
   
   /**
    * Given an integer, return a string that is in an approximate, but human 
    * readable format. 
+   * It uses the bases 'k', 'm', and 'g' for 1024, 1024**2, and 1024**3.
    * @param number the number to format
    * @return a human readable form of the integer
-   *
-   * @deprecated use {@link TraditionalBinaryPrefix#long2String(long, String, int)}.
    */
-  @Deprecated
   public static String humanReadableInt(long number) {
-    return TraditionalBinaryPrefix.long2String(number, "", 1);
+    long absNumber = Math.abs(number);
+    double result = number;
+    String suffix = "";
+    if (absNumber < 1024) {
+      // since no division has occurred, don't format with a decimal point
+      return String.valueOf(number);
+    } else if (absNumber < 1024 * 1024) {
+      result = number / 1024.0;
+      suffix = "k";
+    } else if (absNumber < 1024 * 1024 * 1024) {
+      result = number / (1024.0 * 1024);
+      suffix = "m";
+    } else {
+      result = number / (1024.0 * 1024 * 1024);
+      suffix = "g";
+    }
+    return oneDecimal.format(result) + suffix;
   }
-
-  /** The same as String.format(Locale.ENGLISH, format, objects). */
-  public static String format(final String format, final Object... objects) {
-    return String.format(Locale.ENGLISH, format, objects);
-  }
-
+  
   /**
    * Format a percentage for presentation to the user.
-   * @param fraction the percentage as a fraction, e.g. 0.1 = 10%
-   * @param decimalPlaces the number of decimal places
+   * @param done the percentage to format (0.0 to 1.0)
+   * @param digits the number of digits past the decimal point
    * @return a string representation of the percentage
    */
-  public static String formatPercent(double fraction, int decimalPlaces) {
-    return format("%." + decimalPlaces + "f%%", fraction*100);
+  public static String formatPercent(double done, int digits) {
+    DecimalFormat percentFormat = new DecimalFormat("0.00%");
+    double scale = Math.pow(10.0, digits+2);
+    double rounded = Math.floor(done * scale);
+    percentFormat.setDecimalSeparatorAlwaysShown(false);
+    percentFormat.setMinimumFractionDigits(digits);
+    percentFormat.setMaximumFractionDigits(digits);
+    return percentFormat.format(rounded / scale);
   }
   
   /**
@@ -140,7 +165,7 @@ public class StringUtils {
     }
     StringBuilder s = new StringBuilder(); 
     for(int i = start; i < end; i++) {
-      s.append(format("%02x", bytes[i]));
+      s.append(String.format("%02x", bytes[i]));
     }
     return s.toString();
   }
@@ -605,22 +630,18 @@ public class StringUtils {
    * TraditionalBinaryPrefix symbol are case insensitive. 
    */
   public static enum TraditionalBinaryPrefix {
-    KILO(10),
-    MEGA(KILO.bitShift + 10),
-    GIGA(MEGA.bitShift + 10),
-    TERA(GIGA.bitShift + 10),
-    PETA(TERA.bitShift + 10),
-    EXA (PETA.bitShift + 10);
+    KILO(1024),
+    MEGA(KILO.value << 10),
+    GIGA(MEGA.value << 10),
+    TERA(GIGA.value << 10),
+    PETA(TERA.value << 10),
+    EXA(PETA.value << 10);
 
     public final long value;
     public final char symbol;
-    public final int bitShift;
-    public final long bitMask;
 
-    private TraditionalBinaryPrefix(int bitShift) {
-      this.bitShift = bitShift;
-      this.value = 1L << bitShift;
-      this.bitMask = this.value - 1L;
+    TraditionalBinaryPrefix(long value) {
+      this.value = value;
       this.symbol = toString().charAt(0);
     }
 
@@ -671,58 +692,8 @@ public class StringUtils {
         return num * prefix;
       }
     }
-
-    /**
-     * Convert a long integer to a string with traditional binary prefix.
-     * 
-     * @param n the value to be converted
-     * @param unit The unit, e.g. "B" for bytes.
-     * @param decimalPlaces The number of decimal places.
-     * @return a string with traditional binary prefix.
-     */
-    public static String long2String(long n, String unit, int decimalPlaces) {
-      if (unit == null) {
-        unit = "";
-      }
-      //take care a special case
-      if (n == Long.MIN_VALUE) {
-        return "-8 " + EXA.symbol + unit;
-      }
-
-      final StringBuilder b = new StringBuilder();
-      //take care negative numbers
-      if (n < 0) {
-        b.append('-');
-        n = -n;
-      }
-      if (n < KILO.value) {
-        //no prefix
-        b.append(n);
-        return (unit.isEmpty()? b: b.append(" ").append(unit)).toString();
-      } else {
-        //find traditional binary prefix
-        int i = 0;
-        for(; i < values().length && n >= values()[i].value; i++);
-        TraditionalBinaryPrefix prefix = values()[i - 1];
-
-        if ((n & prefix.bitMask) == 0) {
-          //exact division
-          b.append(n >> prefix.bitShift);
-        } else {
-          final String  format = "%." + decimalPlaces + "f";
-          String s = format(format, n/(double)prefix.value);
-          //check a special rounding up case
-          if (s.startsWith("1024")) {
-            prefix = values()[i];
-            s = format(format, n/(double)prefix.value);
-          }
-          b.append(s);
-        }
-        return b.append(' ').append(prefix.symbol).append(unit).toString();
-      }
-    }
   }
-
+  
     /**
      * Escapes HTML Special characters present in the string.
      * @param string
@@ -760,16 +731,32 @@ public class StringUtils {
     }
 
   /**
-   * @return a byte description of the given long interger value.
+   * Return an abbreviated English-language desc of the byte length
    */
   public static String byteDesc(long len) {
-    return TraditionalBinaryPrefix.long2String(len, "B", 2);
+    double val = 0.0;
+    String ending = "";
+    if (len < 1024 * 1024) {
+      val = (1.0 * len) / 1024;
+      ending = " KB";
+    } else if (len < 1024 * 1024 * 1024) {
+      val = (1.0 * len) / (1024 * 1024);
+      ending = " MB";
+    } else if (len < 1024L * 1024 * 1024 * 1024) {
+      val = (1.0 * len) / (1024 * 1024 * 1024);
+      ending = " GB";
+    } else if (len < 1024L * 1024 * 1024 * 1024 * 1024) {
+      val = (1.0 * len) / (1024L * 1024 * 1024 * 1024);
+      ending = " TB";
+    } else {
+      val = (1.0 * len) / (1024L * 1024 * 1024 * 1024 * 1024);
+      ending = " PB";
+    }
+    return limitDecimalTo2(val) + ending;
   }
 
-  /** @deprecated use StringUtils.format("%.2f", d). */
-  @Deprecated
-  public static String limitDecimalTo2(double d) {
-    return format("%.2f", d);
+  public static synchronized String limitDecimalTo2(double d) {
+    return decimalFormat.format(d);
   }
   
   /**
