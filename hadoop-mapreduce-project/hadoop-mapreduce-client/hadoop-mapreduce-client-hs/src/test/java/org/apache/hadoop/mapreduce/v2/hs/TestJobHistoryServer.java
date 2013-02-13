@@ -141,6 +141,7 @@ public class TestJobHistoryServer {
 
     GetTaskAttemptReportRequest gtarRequest = recordFactory
             .newRecordInstance(GetTaskAttemptReportRequest.class);
+    // test getTaskAttemptReport
     TaskAttemptId taId = attempt.getID();
     taId.setTaskId(task.getID());
     taId.getTaskId().setJobId(job.getID());
@@ -150,11 +151,12 @@ public class TestJobHistoryServer {
     assertEquals("container_0_0000_01_000000", responce.getTaskAttemptReport()
             .getContainerId().toString());
     assertTrue(responce.getTaskAttemptReport().getDiagnosticInfo().isEmpty());
+    // counters
     assertNotNull(responce.getTaskAttemptReport().getCounters()
             .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES));
     assertEquals(taId.toString(), responce.getTaskAttemptReport()
             .getTaskAttemptId().toString());
-
+    // test getTaskReport
     GetTaskReportRequest request = recordFactory
             .newRecordInstance(GetTaskReportRequest.class);
     TaskId taskId = task.getID();
@@ -163,29 +165,31 @@ public class TestJobHistoryServer {
     GetTaskReportResponse reportResponce = protocol.getTaskReport(request);
     assertEquals("", reportResponce.getTaskReport().getDiagnosticsList()
             .iterator().next());
+    // progress
     assertEquals(1.0f, reportResponce.getTaskReport().getProgress(), 0.01);
     assertEquals(taskId.toString(), reportResponce.getTaskReport().getTaskId()
             .toString());
     assertEquals(TaskState.SUCCEEDED, reportResponce.getTaskReport()
             .getTaskState());
-
+    // test getTaskAttemptCompletionEvents
     GetTaskAttemptCompletionEventsRequest taskAttemptRequest = recordFactory
             .newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
     taskAttemptRequest.setJobId(job.getID());
     GetTaskAttemptCompletionEventsResponse taskCompliteResponce = protocol
             .getTaskAttemptCompletionEvents(taskAttemptRequest);
     assertEquals(0, taskCompliteResponce.getCompletionEventCount());
-
+    
+    // test getDiagnostics
     GetDiagnosticsRequest diagnosticRequest = recordFactory
             .newRecordInstance(GetDiagnosticsRequest.class);
     diagnosticRequest.setTaskAttemptId(taId);
     GetDiagnosticsResponse diagnosticResponce = protocol
             .getDiagnostics(diagnosticRequest);
+    // it is strange : why one empty string ?
     assertEquals(1, diagnosticResponce.getDiagnosticsCount());
     assertEquals("", diagnosticResponce.getDiagnostics(0));
 
     historyServer.stop();
-    System.out.println("OK");
   }
 
   @Test
