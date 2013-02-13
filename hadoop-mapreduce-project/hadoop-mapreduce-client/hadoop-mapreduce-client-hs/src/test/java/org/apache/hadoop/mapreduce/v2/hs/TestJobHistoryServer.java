@@ -86,7 +86,7 @@ public void testPartialJob () throws Exception{
 }
 
   @Test
-  public void test3() throws Exception {
+  public void testReports() throws Exception {
     Configuration config = new Configuration();
     config.setClass(
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
