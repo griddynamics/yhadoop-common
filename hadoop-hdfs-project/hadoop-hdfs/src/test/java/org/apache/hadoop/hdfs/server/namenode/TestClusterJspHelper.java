@@ -1,5 +1,5 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
+* Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -17,33 +17,68 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.fail;
-import junit.framework.Assert;
+import static org.junit.Assert.*;
+import java.io.IOException;
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.jsp.JspWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.ClusterJspHelper.ClusterStatus;
+import org.apache.hadoop.hdfs.server.namenode.ClusterJspHelper.DecommissionStatus;
+import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import static org.mockito.Mockito.*;
 
-public class TestClusterJspHelper {    
-  
-  @Test
-  public void testDefaultNamenode() {                                        
-    Configuration conf = new Configuration();
-    MiniDFSCluster cluster = null;
-    try {            
-      cluster = new MiniDFSCluster.Builder(conf)
-          .nnTopology(MiniDFSNNTopology.simpleSingleNN(45541, 50070))
-          .numDataNodes(2).build();     
-      cluster.waitActive();                                                                    
-      ClusterJspHelper clusterJspHelper = new ClusterJspHelper();      
-      ClusterStatus clusterStatus = clusterJspHelper.generateClusterHealthReport();
-      Assert.assertNotNull(clusterStatus);      
-      clusterJspHelper.generateDecommissioningReport();
-    } catch(Exception ex) {
-      fail("testDefaultNamenode error !!!" + ex);
-    } finally {
-      cluster.shutdown();
-    }
+public class TestClusterJspHelper {
+
+  private static MiniDFSCluster cluster;
+  private static Configuration conf = new Configuration();
+  private static final int dataNodeNumber = 2;
+  private static final int nameNodePort = 45541;
+  private static final int nameNodeHttpPort = 50070;
+
+  @BeforeClass
+  public static void before() throws IOException {
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(
+            MiniDFSNNTopology.simpleSingleNN(nameNodePort, nameNodeHttpPort))
+        .numDataNodes(dataNodeNumber).build();
+    cluster.waitClusterUp();
   }
+
+  @AfterClass
+  public static void after() {
+    cluster.shutdown();
+  }
+
+  @Test
+  public void testClusterJspHelperReports() {
+    try {
+      ClusterJspHelper clusterJspHelper = new ClusterJspHelper();
+      ClusterStatus clusterStatus = clusterJspHelper
+          .generateClusterHealthReport();
+      assertNotNull("testClusterJspHelperReports ClusterStatus is null",
+          clusterStatus);
+      assertTrue("testClusterJspHelperReports wrong ClusterStatus clusterid",
+          clusterStatus.clusterid.equals("testClusterID"));
+      DecommissionStatus decommissionStatus = clusterJspHelper
+          .generateDecommissioningReport();
+      assertNotNull("testClusterJspHelperReports DecommissionStatus is null",
+          decommissionStatus);
+      assertTrue(
+          "testClusterJspHelperReports wrong DecommissionStatus clusterid",
+          decommissionStatus.clusterid.equals("testClusterID"));
+    } catch (Exception ex) {
+      fail("testDefaultNamenode ex error !!!" + ex);
+    }
+  }    
 }
