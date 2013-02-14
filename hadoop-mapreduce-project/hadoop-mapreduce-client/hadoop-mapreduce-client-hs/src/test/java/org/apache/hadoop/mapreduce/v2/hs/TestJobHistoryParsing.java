@@ -63,6 +63,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.service.Service;
@@ -557,4 +558,96 @@ public class TestJobHistoryParsing {
     t.testHistoryParsing();
     t.testHistoryParsingForFailedAttempts();
   }
+    /*
+    test clean old history files.  Files should be deleted after 1 week by default.
+     */
+  @Test
+  public void testDeleteFileInfo() throws Exception {
+    LOG.info("STARTING testDeleteFileInfo");
+    try {
+      Configuration conf = new Configuration();
+      conf.setClass(
+          CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+          MyResolver.class, DNSToSwitchMapping.class);
+
+      RackResolver.init(conf);
+      MRApp app = new MRAppWithHistory(1, 1, true, this.getClass().getName(),
+          true);
+      app.submit(conf);
+      Job job = app.getContext().getAllJobs().values().iterator().next();
+      JobId jobId = job.getID();
+
+      app.waitForState(job, JobState.SUCCEEDED);
+
+      // make sure all events are flushed
+      app.waitForState(Service.STATE.STOPPED);
+      HistoryFileManager hfm = new HistoryFileManager();
+      hfm.init(conf);
+      HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
+      hfm.initExisting();
+
+      Assert.assertNotNull(hfm.jobListCache.values());
+
+      // try to remove fileInfo
+      hfm.clean();
+      // check that  fileInfo does not deleted
+      Assert.assertFalse(fileInfo.isDeleted());
+      // correct live time
+      hfm.setMaxHistoryAge(-1);
+      hfm.clean();
+      // should be deleted !
+      Assert.assertTrue(fileInfo.isDeleted());
+      
+
+    } finally {
+      LOG.info("FINISHED testDeleteFileInfo");
+    }
+  }
+  /*
+  simple test some methods of JobHistory
+   */
+  @Test
+  public void testJobHistoryMethods() throws Exception {
+    LOG.info("STARTING testJobHistoryMethods");
+    try {
+      Configuration configuration = new Configuration();
+      configuration.setClass(
+              CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+              MyResolver.class, DNSToSwitchMapping.class);
+
+      RackResolver.init(configuration);
+      MRApp app = new MRAppWithHistory(1, 1, true, this.getClass().getName(),
+          true);
+      app.submit(configuration);
+      Job job = app.getContext().getAllJobs().values().iterator().next();
+      JobId jobId = job.getID();
+      LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
+      app.waitForState(job, JobState.SUCCEEDED);
+
+      JobHistory jobHistory = new JobHistory();
+      jobHistory.init(configuration);
+      Assert.assertEquals(1, jobHistory.getAllJobs().size());
+
+      Assert.assertEquals(1, jobHistory.getAllJobs(app.getAppID()).size());
+
+      JobsInfo jobsinfo = jobHistory.getPartialJobs(0L, 10L, null, "default",
+          0L, System.currentTimeMillis() + 1, 0L,
+          System.currentTimeMillis() + 1, JobState.SUCCEEDED);
+      
+      Assert.assertEquals(1, jobsinfo.getJobs().size());
+      Assert.assertNotNull(jobHistory.getApplicationAttemptId());
+      Assert.assertEquals("application_0_0000", jobHistory.getApplicationID()
+          .toString());
+      Assert.assertEquals("Job History Server", jobHistory.getApplicationName());
+      Assert.assertNull(jobHistory.getEventHandler());
+      Assert.assertNull(jobHistory.getClock());
+      Assert.assertNull(jobHistory.getClusterInfo());
+
+
+    } finally {
+      LOG.info("FINISHED testJobHistoryMethods");
+    }
+  }
+  
+  
 }
