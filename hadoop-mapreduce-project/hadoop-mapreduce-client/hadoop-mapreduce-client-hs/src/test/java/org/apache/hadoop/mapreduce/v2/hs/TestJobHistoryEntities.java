@@ -28,7 +28,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(value = Parameterized.class)
@@ -150,5 +152,36 @@ public class TestJobHistoryEntities {
     assertEquals("localhost", rta1Report.getNodeManagerHost());
     assertEquals(45454, rta1Report.getNodeManagerPort());
     assertEquals(9999, rta1Report.getNodeManagerHttpPort());
+  }
+  
+  @Test
+  public void testGetTaskAttemptCompletionEvent() throws Exception{
+    HistoryFileInfo info = mock(HistoryFileInfo.class);
+    when(info.getConfFile()).thenReturn(fullConfPath);
+    completedJob =
+      new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
+          info, jobAclsManager);
+    TaskCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
+    assertEquals(10, completedJob.getMapAttemptCompletionEvents(0,10).length);
+    int currentEventId=0;
+    for (TaskCompletionEvent taskAttemptCompletionEvent : events) {
+      int eventId= taskAttemptCompletionEvent.getEventId();
+      assertTrue(eventId>=currentEventId);
+      currentEventId=eventId;
+    }
+    assertNull(completedJob.loadConfFile() );
+    assertEquals("Sleep job",completedJob.getName());
+    assertEquals("default",completedJob.getQueueName());
+    assertEquals(1.0, completedJob.getProgress(),0.001);
+    
+    assertEquals(11,completedJob.getTaskAttemptCompletionEvents(0,1000).length);
+    assertEquals(10,completedJob.getTaskAttemptCompletionEvents(0,10).length);
+    assertEquals(6,completedJob.getTaskAttemptCompletionEvents(5,10).length);
+    // without errors
+    assertEquals(1,completedJob.getDiagnostics().size());
+    assertEquals("",completedJob.getDiagnostics().get(0));
+
+    assertEquals(0, completedJob.getJobACLs().size());
+
   }
 }
