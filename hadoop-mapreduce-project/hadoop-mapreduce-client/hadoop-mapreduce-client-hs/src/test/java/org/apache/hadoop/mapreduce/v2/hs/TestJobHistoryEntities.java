@@ -13,6 +13,7 @@ import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -28,7 +29,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.apache.hadoop.mapred.TaskCompletionEvent;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -153,7 +153,10 @@ public class TestJobHistoryEntities {
     assertEquals(45454, rta1Report.getNodeManagerPort());
     assertEquals(9999, rta1Report.getNodeManagerHttpPort());
   }
-  
+  /**
+   * test 
+   * @throws Exception
+   */
   @Test
   public void testGetTaskAttemptCompletionEvent() throws Exception{
     HistoryFileInfo info = mock(HistoryFileInfo.class);
@@ -161,10 +164,10 @@ public class TestJobHistoryEntities {
     completedJob =
       new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
           info, jobAclsManager);
-    TaskCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
+    TaskAttemptCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
     assertEquals(10, completedJob.getMapAttemptCompletionEvents(0,10).length);
     int currentEventId=0;
-    for (TaskCompletionEvent taskAttemptCompletionEvent : events) {
+    for (TaskAttemptCompletionEvent taskAttemptCompletionEvent : events) {
       int eventId= taskAttemptCompletionEvent.getEventId();
       assertTrue(eventId>=currentEventId);
       currentEventId=eventId;
