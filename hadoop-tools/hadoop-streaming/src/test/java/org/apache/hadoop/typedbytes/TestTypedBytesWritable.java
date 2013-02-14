@@ -33,6 +33,7 @@ public class TestTypedBytesWritable extends TestCase {
   public void testToString() {
     TypedBytesWritable tbw = new TypedBytesWritable();
     tbw.setValue(true);
+
     assertEquals("true", tbw.toString());
     tbw.setValue(12345);
     assertEquals("12345", tbw.toString());
