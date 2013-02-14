@@ -649,5 +649,41 @@ public class TestJobHistoryParsing {
     }
   }
   
-  
+  /*
+  test clean old history files. 
+   */
+@Test
+public void testCleanFileInfo() throws Exception {
+  LOG.info("STARTING testDeleteFileInfo");
+  try {
+    Configuration conf = new Configuration();
+    conf.setInt( JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,0);
+    conf.setLong(JHAdminConfig.MR_HISTORY_MAX_AGE_MS,0);
+    
+    conf.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        MyResolver.class, DNSToSwitchMapping.class);
+
+    RackResolver.init(conf);
+    MRApp app = new MRAppWithHistory(2, 3, true, this.getClass().getName(),
+        true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+
+    app.waitForState(job, JobState.SUCCEEDED);
+
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
+    HistoryFileManager hfm = new HistoryFileManager();
+    hfm.init(conf);
+    hfm.initExisting();
+    hfm.setMaxHistoryAge(0);
+    Assert.assertEquals(1,hfm.getAllFileInfo().size());
+    Assert.assertTrue(hfm.getAllFileInfo().iterator().next().isDeleted());
+    
+
+  } finally {
+    LOG.info("FINISHED testDeleteFileInfo");
+  }
+}
 }
