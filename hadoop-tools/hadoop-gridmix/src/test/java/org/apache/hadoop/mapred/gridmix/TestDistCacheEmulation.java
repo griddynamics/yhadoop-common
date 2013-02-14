@@ -186,7 +186,7 @@ public class TestDistCacheEmulation {
    * @throws InterruptedException
    */
   private Configuration runSetupGenerateDistCacheData(boolean generate,
-      long[] sortedFileSizes) throws IOException, InterruptedException {
+      long[] sortedFileSizes, int expectedExitCode) throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     long[] fileSizes = configureDummyDistCacheFiles(conf);
     System.arraycopy(fileSizes, 0, sortedFileSizes, 0, fileSizes.length);
@@ -199,16 +199,16 @@ public class TestDistCacheEmulation {
     Configuration jobConf = GridmixTestUtils.mrvl.getConfig();
     Path ioPath = new Path("testSetupGenerateDistCacheData")
         .makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
+    
     FileSystem fs = FileSystem.get(jobConf);
     if (fs.exists(ioPath)) {
       fs.delete(ioPath, true);
     }
-    FileSystem.mkdirs(fs, ioPath, new FsPermission((short) 0777));
+    FileSystem.mkdirs(fs, ioPath, new FsPermission((short) 777));
 
     dce = createDistributedCacheEmulator(jobConf, ioPath, generate);
     int exitCode = dce.setupGenerateDistCacheData(jobProducer);
-   
-    assertEquals("setupGenerateDistCacheData failed.", 0,
+    assertEquals("setupGenerateDistCacheData failed.", expectedExitCode,
         exitCode);
 
     // reset back
@@ -244,7 +244,7 @@ public class TestDistCacheEmulation {
   @Test
   public void testGenerateDistCacheData() throws Exception {
     long[] sortedFileSizes = new long[5];
-    Configuration jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes);
+    Configuration jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes,0);
     GridmixJob gridmixJob = new GenerateDistCacheData(jobConf);
     Job job = gridmixJob.call();
     assertEquals("Number of reduce tasks in GenerateDistCacheData is not 0.",
@@ -350,12 +350,12 @@ public class TestDistCacheEmulation {
   public void testSetupGenerateDistCacheData() throws IOException,
       InterruptedException {
     long[] sortedFileSizes = new long[5];
-    Configuration jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes);
+    Configuration jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes,0);
     validateSetupGenDC(jobConf, sortedFileSizes);
 
     // Verify if correct exit code is seen when -generate option is missing and
     // distributed cache files are missing in the expected path.
-    runSetupGenerateDistCacheData(false, sortedFileSizes);
+    runSetupGenerateDistCacheData(false, sortedFileSizes,1);
   }
 
   /**

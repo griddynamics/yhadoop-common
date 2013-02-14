@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.gridmix.GenerateData.DataStatistics;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -606,7 +607,7 @@ public class Gridmix extends Configured implements Tool {
     try {
       res = ToolRunner.run(new Configuration(), new Gridmix(argv), argv);
     } finally {
-      System.exit(res);
+      ExitUtil.terminate(res);
     }
   }
 
