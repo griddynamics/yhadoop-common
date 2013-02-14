@@ -25,9 +25,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
+import org.junit.Before;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileUtil;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -43,6 +45,17 @@ import org.apache.hadoop.test.GenericTestUtils;
  */
 public class TestSecondaryNameNodeUpgrade {
 
+  private final String dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
+  private final File hdfsDir = new File(dfsBaseDir);
+    
+  @Before
+  public void cleanupCluster() throws IOException {
+    System.out.println("cleanupCluster deleting " + hdfsDir);
+    if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
+      throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
+    }
+  }
+
   private void doIt(Map<String, String> paramsToCorrupt) throws IOException {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
@@ -51,7 +64,7 @@ public class TestSecondaryNameNodeUpgrade {
     try {
       Configuration conf = new HdfsConfiguration();
 
-      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir).build();
       cluster.waitActive();
 
       conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
