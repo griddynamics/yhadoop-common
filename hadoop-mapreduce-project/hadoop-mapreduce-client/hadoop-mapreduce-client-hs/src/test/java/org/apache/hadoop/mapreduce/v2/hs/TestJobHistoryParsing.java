@@ -656,9 +656,12 @@ public class TestJobHistoryParsing {
 public void testCleanFileInfo() throws Exception {
   LOG.info("STARTING testDeleteFileInfo");
   try {
-    Configuration conf = new Configuration();
-    conf.setInt( JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,0);
-    conf.setLong(JHAdminConfig.MR_HISTORY_MAX_AGE_MS,0);
+    Configuration conf = new Configuration(); 
+    // JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE;
+    conf.setInt("mapreduce.jobhistory.joblist.cache.size",0 );
+    
+    //JHAdminConfig.MR_HISTORY_MAX_AGE_MS
+    conf.setLong("mapreduce.jobhistory.max-age-ms",0);
     
     conf.setClass(
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
