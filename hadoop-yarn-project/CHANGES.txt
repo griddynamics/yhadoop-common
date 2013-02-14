@@ -13,7 +13,12 @@ Release 0.23.7 - UNRELEASED
 
     YARN-286. Add a YARN ApplicationClassLoader. (tomwhite)
 
+    YARN-249. Capacity Scheduler web page should show list of active users per 
+    queue like it used to (in 1.x) (Ravi Prakash via tgraves)
+
   OPTIMIZATIONS
+
+    YARN-357. App submission should not be synchronized (daryn)
 
   BUG FIXES
 
@@ -23,7 +28,23 @@ Release 0.23.7 - UNRELEASED
     YARN-364. AggregatedLogDeletionService can take too long to delete logs
     (jlowe)
 
-Release 0.23.6 - UNRELEASED
+    YARN-29. Add a yarn-client module (Vinod Kumar Vavilapalli via tgraves)
+
+    YARN-83. Change package of YarnClient to include apache (Bikas Saha via
+    tgraves)
+
+    YARN-40. Provide support for missing yarn commands (Devaraj K via tgraves)
+
+    YARN-355. Fixes a bug where RM app submission could jam under load.
+    (Daryn Sharp via sseth)
+
+    YARN-150. AppRejectedTransition does not unregister app from master service
+    and scheduler (Bikas Shah via tgraves)
+
+    YARN-362. Unexpected extra results when using webUI table search (Ravi
+    Prakash via jlowe)
+
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
