@@ -322,7 +322,7 @@ public class HftpFileSystem extends FileSystem
    * @param path The path component of the URL
    * @param query The query component of the URL
    */
-  protected HttpURLConnection openConnection(String path, String query) 
+  protected final HttpURLConnection openConnection(String path, String query) 
       throws IOException {
     return openConnection(path, query, null); 
   }

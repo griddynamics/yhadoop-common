@@ -149,12 +149,17 @@ public class HsftpFileSystem extends HftpFileSystem {
   }
   
   @Override
-  protected HttpURLConnection openConnection(String path, String query)
+  protected HttpURLConnection openConnection(String path, String query, Integer socketTimeout)
       throws IOException {
     query = addDelegationTokenParam(query);
     final URL url = new URL("https", nnUri.getHost(), 
         nnUri.getPort(), path + '?' + query);
-    HttpsURLConnection conn = (HttpsURLConnection)URLUtils.openConnection(url);
+    HttpsURLConnection conn;
+    if (socketTimeout == null) {
+      conn = (HttpsURLConnection)URLUtils.openConnection(url);
+    } else {
+      conn = (HttpsURLConnection)URLUtils.openConnection(url, socketTimeout);
+    }
     // bypass hostname verification
     conn.setHostnameVerifier(new DummyHostnameVerifier());
     conn.setRequestMethod("GET");
