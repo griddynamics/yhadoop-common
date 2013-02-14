@@ -21,16 +21,30 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.mapred.Master;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptCompletionEventsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptCompletionEventsResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -189,6 +203,60 @@ public class TestJobHistoryServer {
     assertEquals(1, diagnosticResponce.getDiagnosticsCount());
     assertEquals("", diagnosticResponce.getDiagnostics(0));
 
+    GetCountersRequest counterRequest=recordFactory
+        .newRecordInstance(GetCountersRequest.class);
+    counterRequest.setJobId(job.getID());
+    GetCountersResponse counterResponce=protocol.getCounters(counterRequest);
+    assertNotNull(counterResponce.getCounters().getCounterGroup("org.apache.hadoop.mapreduce.JobCounter"));
+    // test getJobReport
+    GetJobReportRequest  reportRequest=recordFactory
+        .newRecordInstance(GetJobReportRequest.class);
+    reportRequest.setJobId(job.getID());
+    GetJobReportResponse jobReport=protocol.getJobReport(reportRequest);
+    assertEquals(1, jobReport.getJobReport().getAMInfos().size());
+    assertNotNull(jobReport.getJobReport().getJobFile());
+    assertEquals(job.getID().toString(), jobReport.getJobReport().getJobId().toString());
+    assertNotNull(jobReport.getJobReport().getTrackingUrl());
+    
+    
+    //getTaskReports
+    GetTaskReportsRequest taskReportRequest=recordFactory
+        .newRecordInstance(GetTaskReportsRequest.class);
+    taskReportRequest.setJobId(job.getID());
+    taskReportRequest.setTaskType(TaskType.MAP);
+    GetTaskReportsResponse taskReportResponce= protocol.getTaskReports(taskReportRequest);
+    assertEquals(1,taskReportResponce.getTaskReportList().size());
+    assertEquals(1,taskReportResponce.getTaskReportCount());
+    assertEquals(task.getID(),taskReportResponce.getTaskReport(0).getTaskId());
+    assertEquals(TaskState.SUCCEEDED, taskReportResponce.getTaskReport(0).getTaskState());
+    
+    //getDelegationToken
+    GetDelegationTokenRequest  delegationTokenRequest= recordFactory
+        .newRecordInstance(GetDelegationTokenRequest.class);
+    String s=UserGroupInformation.getCurrentUser().getShortUserName();
+    delegationTokenRequest.setRenewer(s);
+    GetDelegationTokenResponse delegationTokenResponce= protocol.getDelegationToken(delegationTokenRequest);
+   assertEquals("MR_DELEGATION_TOKEN", delegationTokenResponce.getDelegationToken().getKind());
+   assertNotNull(delegationTokenResponce.getDelegationToken().getIdentifier());
+   
+   //renewDelegationToken
+     
+   RenewDelegationTokenRequest renewDelegationRequest= recordFactory
+       .newRecordInstance(RenewDelegationTokenRequest.class);
+   renewDelegationRequest.setDelegationToken(delegationTokenResponce.getDelegationToken());
+   RenewDelegationTokenResponse  renewDelegationTokenResponce= protocol.renewDelegationToken(renewDelegationRequest);
+   // should be about 1 day
+  assertTrue( renewDelegationTokenResponce.getNextExpirationTime()>0);
+  
+  
+// cancelDelegationToken   
+
+  CancelDelegationTokenRequest  cancelDelegationTokenRequest=recordFactory
+      .newRecordInstance(CancelDelegationTokenRequest.class);
+  cancelDelegationTokenRequest.setDelegationToken(delegationTokenResponce.getDelegationToken());
+  assertNotNull(protocol.cancelDelegationToken(cancelDelegationTokenRequest));
+  
+  
     historyServer.stop();
   }
 
