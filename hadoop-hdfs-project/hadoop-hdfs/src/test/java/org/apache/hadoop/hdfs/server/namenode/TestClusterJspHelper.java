@@ -19,24 +19,14 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.*;
 import java.io.IOException;
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.ClusterJspHelper.ClusterStatus;
 import org.apache.hadoop.hdfs.server.namenode.ClusterJspHelper.DecommissionStatus;
-import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import static org.mockito.Mockito.*;
 
 public class TestClusterJspHelper {
 
