@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -60,8 +61,15 @@ public class TestNameEditsConfigs {
   short replication = 3;
   
   private final String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir(); 
-  private final File BASE_DIR = new File(DFS_BASE_DIR, "dfs/");
+  private final File BASE_DIR = new File(DFS_BASE_DIR);
 
+  @Before
+  public void setUp() throws IOException {
+    if(BASE_DIR.exists() && !FileUtil.fullyDelete(BASE_DIR)) {
+      throw new IOException("Cannot remove directory " + BASE_DIR);
+    }
+  }
+  
   void checkImageAndEditsFilesExistence(File dir, 
                                         boolean shouldHaveImages,
                                         boolean shouldHaveEdits)
@@ -317,8 +325,8 @@ public class TestNameEditsConfigs {
   @Test
   public void testNameEditsRequiredConfigs() throws IOException {
     MiniDFSCluster cluster = null;
-    File nameAndEditsDir = new File(base_dir, "name_and_edits");
-    File nameAndEditsDir2 = new File(base_dir, "name_and_edits2");
+    File nameAndEditsDir = new File(BASE_DIR, "name_and_edits");
+    File nameAndEditsDir2 = new File(BASE_DIR, "name_and_edits2");
 
     // 1
     // Bad configuration. Add a directory to dfs.namenode.edits.dir.required
