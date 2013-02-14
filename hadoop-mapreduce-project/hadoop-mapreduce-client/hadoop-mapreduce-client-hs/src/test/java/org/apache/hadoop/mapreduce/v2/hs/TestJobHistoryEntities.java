@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
+import static junit.framework.Assert.assertNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,7 +49,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(value = Parameterized.class)
