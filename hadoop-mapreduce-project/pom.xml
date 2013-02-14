@@ -18,12 +18,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>2.0.3-SNAPSHOT</version>
+    <version>2.0.4-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce</artifactId>
-  <version>2.0.3-SNAPSHOT</version>
+  <version>2.0.4-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>hadoop-mapreduce</name>
   <url>http://hadoop.apache.org/mapreduce/</url>
@@ -214,9 +214,11 @@
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
+          <excludes>
+            <exclude>.eclipse.templates/</exclude>
+            <exclude>CHANGES.txt</exclude>
+            <exclude>lib/jdiff/**</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
