@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 import static org.junit.Assert.assertArrayEquals;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
@@ -48,8 +49,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class TestConfiguration extends TestCase {
 
   private Configuration conf;
-  final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
-  final static String CONFIG2 = new File("./test-config2.xml").getAbsolutePath();
+  final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
+  final static String CONFIG2 = new File("./test-config2-TestConfiguration.xml").getAbsolutePath();
   final static Random RAN = new Random();
 
   @Override

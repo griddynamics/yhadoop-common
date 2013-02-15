@@ -64,7 +64,7 @@ public class TestTFileByteArrays {
 
   private String compression = Compression.Algorithm.GZ.getName();
   private String comparator = "memcmp";
-  private String outputFile = "TFileTestByteArrays";
+  private String outputFile = getClass().getName();
 
   /*
    * pre-sampled numbers of records in one block, based on the given the
