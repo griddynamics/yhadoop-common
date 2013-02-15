@@ -60,7 +60,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
@@ -626,8 +625,9 @@ public class TestJobHistoryParsing {
 
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(configuration);
+      // Method getAllJobs
       Assert.assertEquals(1, jobHistory.getAllJobs().size());
-
+      // and with ApplicationId
       Assert.assertEquals(1, jobHistory.getAllJobs(app.getAppID()).size());
 
       JobsInfo jobsinfo = jobHistory.getPartialJobs(0L, 10L, null, "default",
@@ -636,11 +636,15 @@ public class TestJobHistoryParsing {
       
       Assert.assertEquals(1, jobsinfo.getJobs().size());
       Assert.assertNotNull(jobHistory.getApplicationAttemptId());
+      // test Application Id
       Assert.assertEquals("application_0_0000", jobHistory.getApplicationID()
           .toString());
       Assert.assertEquals("Job History Server", jobHistory.getApplicationName());
+      // method does not work
       Assert.assertNull(jobHistory.getEventHandler());
+      // method does not work
       Assert.assertNull(jobHistory.getClock());
+      // method does not work
       Assert.assertNull(jobHistory.getClusterInfo());
 
 
