@@ -171,7 +171,7 @@ public class TestJobHistoryEntities {
     assertEquals(9999, rta1Report.getNodeManagerHttpPort());
   }
   /**
-   * test 
+   * Simple test of some methods of CompletedJob
    * @throws Exception
    */
   @Test
