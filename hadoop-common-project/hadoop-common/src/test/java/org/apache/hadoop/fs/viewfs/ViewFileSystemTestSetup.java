@@ -98,9 +98,15 @@ public class ViewFileSystemTestSetup {
   }
   
   public static Configuration createConfig() {
+    return createConfig(true);
+  }
+  
+  public static Configuration createConfig(boolean disableCache) {
     Configuration conf = new Configuration();
     conf.set("fs.viewfs.impl", ViewFileSystem.class.getName());
-    conf.set("fs.viewfs.impl.disable.cache", Boolean.TRUE.toString());
+    if (disableCache) {
+      conf.set("fs.viewfs.impl.disable.cache", "true");
+    }
     return conf; 
   }
   
