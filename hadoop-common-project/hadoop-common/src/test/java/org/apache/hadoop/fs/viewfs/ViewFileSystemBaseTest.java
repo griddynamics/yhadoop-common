@@ -100,7 +100,6 @@ public class ViewFileSystemBaseTest {
   
   void initializeTargetTestRoot() throws IOException {
     targetTestRoot = fileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
-    new Exception("INIT TEST with TARGET ROOT: " + targetTestRoot).printStackTrace();
     // In case previous test was killed before cleanup
     fsTarget.delete(targetTestRoot, true);
     

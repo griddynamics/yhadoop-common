@@ -28,7 +28,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.Before;
@@ -37,11 +36,9 @@ import org.junit.Test;
  
 public class TestConfigurationDeprecation {
   private Configuration conf;
-  final static String CONFIG = new File("./test-config-" + RandomStringUtils.randomAlphanumeric(10) + ".xml").getAbsolutePath();
-  final static String CONFIG2 = 
-    new File("./test-config2-" + RandomStringUtils.randomAlphanumeric(10) + ".xml").getAbsolutePath();
-  final static String CONFIG3 = 
-    new File("./test-config3-" + RandomStringUtils.randomAlphanumeric(10) + ".xml").getAbsolutePath();
+  final static String CONFIG = new File("./test-config-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG2 = new File("./test-config2-TestConfigurationDeprecation.xml").getAbsolutePath();
+  final static String CONFIG3 = new File("./test-config3-TestConfigurationDeprecation.xml").getAbsolutePath();
   BufferedWriter out;
   
   static {
