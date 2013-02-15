@@ -485,7 +485,8 @@ public class TestDFSShell {
     MiniDFSCluster dstCluster = null;
     try{
       srcCluster = new MiniDFSCluster.Builder(srcConf).numDataNodes(2).build();
-      dstCluster = new MiniDFSCluster.Builder(dstConf).numDataNodes(2).build();
+      String dstBaseDir = new File(new File(srcCluster.getDfsBaseDir()).getParentFile(), "dfs_tmp_uri/").getAbsolutePath();
+      dstCluster = new MiniDFSCluster.Builder(dstConf).dfsBaseDir(dstBaseDir).numDataNodes(2).build();
       FileSystem srcFs = srcCluster.getFileSystem();
       FileSystem dstFs = dstCluster.getFileSystem();
       FsShell shell = new FsShell();
