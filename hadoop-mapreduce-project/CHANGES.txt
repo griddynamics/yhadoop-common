@@ -22,6 +22,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4905. test org.apache.hadoop.mapred.pipes 
     (Aleksey Gorshkov via bobby)
 
+    MAPREDUCE-4989. JSONify DataTables input data for Attempts page (Ravi
+    Prakash via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
@@ -53,7 +56,19 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4637. Handle TaskAttempt diagnostic updates while in the NEW and 
     UNASSIGNED states. (Mayank Bansal via tgraves)
 
-Release 0.23.6 - UNRELEASED
+    MAPREDUCE-4671. AM does not tell the RM about container requests which are
+    no longer needed. (Bikas Saha via tgraves)
+
+    MAPREDUCE-4893. MR AppMaster can do sub-optimal assignment of containers
+    to map tasks leading to poor node locality (Bikas Saha via jlowe)
+
+    MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
+    speculative attempts (Robert Parker via jlowe)
+
+    MAPREDUCE-5000. Fixes getCounters when speculating by fixing the selection
+    of the best attempt for a task. (Jason Lowe via sseth)
+
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
