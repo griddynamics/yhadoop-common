@@ -82,8 +82,8 @@ public class TestJobHistoryServer {
   public void testStartStopServer() throws Exception {
 
     JobHistoryServer server = new JobHistoryServer();
-    Configuration cong = new Configuration();
-    server.init(cong);
+    Configuration configuration = new Configuration();
+    server.init(configuration);
     assertEquals(STATE.INITED, server.getServiceState());
     assertEquals(3, server.getServices().size());
     server.start();
