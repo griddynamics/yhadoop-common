@@ -27,10 +27,10 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -181,10 +181,10 @@ public class TestJobHistoryEntities {
     completedJob =
       new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
           info, jobAclsManager);
-    TaskAttemptCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
+    TaskCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
     assertEquals(10, completedJob.getMapAttemptCompletionEvents(0,10).length);
     int currentEventId=0;
-    for (TaskAttemptCompletionEvent taskAttemptCompletionEvent : events) {
+    for (TaskCompletionEvent taskAttemptCompletionEvent : events) {
       int eventId= taskAttemptCompletionEvent.getEventId();
       assertTrue(eventId>=currentEventId);
       currentEventId=eventId;
