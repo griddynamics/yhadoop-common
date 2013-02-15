@@ -75,14 +75,12 @@ public class TestJobHistoryServer {
   private static RecordFactory recordFactory = RecordFactoryProvider
           .getRecordFactory(null);
 
-  
   /*
   simple test start/ stop    JobHistoryServer
    */
   @Test
   public void testStartStopServer() throws Exception {
 
-    L
     JobHistoryServer server = new JobHistoryServer();
     Configuration cong = new Configuration();
     server.init(cong);
