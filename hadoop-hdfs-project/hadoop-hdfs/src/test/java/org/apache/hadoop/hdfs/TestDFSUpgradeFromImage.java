@@ -86,6 +86,10 @@ public class TestDFSUpgradeFromImage {
       throws IOException {
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
         + "/" + tarFileName;
+    File dfsDir = new File(dataDir, "dfs");
+    if ( dfsDir.exists() && !FileUtil.fullyDelete(dfsDir) ) {
+      throw new IOException("Could not delete dfs directory '" + dfsDir + "'");
+    }    
     LOG.info("Unpacking " + tarFile + " into " + dataDir);
     FileUtil.unTar(new File(tarFile), dataDir);
     //Now read the reference info
