@@ -23,6 +23,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -49,6 +50,9 @@ import org.junit.Test;
 
 public class TestNMExpiry {
   private static final Log LOG = LogFactory.getLog(TestNMExpiry.class);
+  
+  static { DefaultMetricsSystem.setMiniClusterMode(true); }
+  
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
   ResourceTrackerService resourceTrackerService;
