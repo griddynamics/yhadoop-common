@@ -67,6 +67,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
@@ -106,6 +107,8 @@ public class Client {
 
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
+
+  private final int connectionTimeout;
   
   final static int PING_CALL_ID = -1;
   
@@ -159,7 +162,16 @@ public class Client {
     }
     return -1;
   }
-  
+  /**
+   * set the connection timeout value in configuration
+   * 
+   * @param conf Configuration
+   * @param timeout the socket connect timeout value
+   */
+  public static final void setConnectTimeout(Configuration conf, int timeout) {
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY, timeout);
+  }
+
   /**
    * Increment this client's reference count
    *
@@ -494,21 +506,20 @@ public class Client {
             }
           }
           
-          // connection time out is 20s
-          NetUtils.connect(this.socket, server, 20000);
+          NetUtils.connect(this.socket, server, connectionTimeout);
           if (rpcTimeout > 0) {
             pingInterval = rpcTimeout;  // rpcTimeout overwrites pingInterval
           }
           this.socket.setSoTimeout(pingInterval);
           return;
-        } catch (SocketTimeoutException toe) {
+        } catch (ConnectTimeoutException toe) {
           /* Check for an address change and update the local reference.
            * Reset the failure counter if the address was changed
            */
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
           }
-          handleConnectionFailure(timeoutFailures++,
+          handleConnectionTimeout(timeoutFailures++,
               maxRetriesOnSocketTimeouts, toe);
         } catch (IOException ie) {
           if (updateAddress()) {
@@ -670,7 +681,7 @@ public class Client {
       socket = null;
     }
 
-    /* Handle connection failures
+    /* Handle connection failures due to timeout on connect
      *
      * If the current number of retries is equal to the max number of retries,
      * stop retrying and throw the exception; Otherwise backoff 1 second and
@@ -684,7 +695,7 @@ public class Client {
      * @param ioe failure reason
      * @throws IOException if max number of retries is reached
      */
-    private void handleConnectionFailure(
+    private void handleConnectionTimeout(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
 
       closeConnection();
@@ -1034,6 +1045,8 @@ public class Client {
     this.valueClass = valueClass;
     this.conf = conf;
     this.socketFactory = factory;
+    this.connectionTimeout = conf.getInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
   }
 
   /**
