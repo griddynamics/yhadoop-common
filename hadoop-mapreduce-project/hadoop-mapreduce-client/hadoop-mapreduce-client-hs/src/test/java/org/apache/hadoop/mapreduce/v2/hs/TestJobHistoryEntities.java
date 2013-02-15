@@ -171,7 +171,11 @@ public class TestJobHistoryEntities {
     assertEquals(45454, rta1Report.getNodeManagerPort());
     assertEquals(9999, rta1Report.getNodeManagerHttpPort());
   }
-  
+
+  /**
+   * simple test of methods of CompletedJob
+   * @throws Exception
+   */
   @Test
   public void testGetTaskAttemptCompletionEvent() throws Exception{
     HistoryFileInfo info = mock(HistoryFileInfo.class);
@@ -188,13 +192,19 @@ public class TestJobHistoryEntities {
       currentEventId=eventId;
     }
     assertNull(completedJob.loadConfFile() );
+    // job name
     assertEquals("Sleep job",completedJob.getName());
+    // queue name
     assertEquals("default",completedJob.getQueueName());
+    // progress
     assertEquals(1.0, completedJob.getProgress(),0.001);
-    
+    // 11 rows in answer
     assertEquals(11,completedJob.getTaskAttemptCompletionEvents(0,1000).length);
+    // select first 10 rows
     assertEquals(10,completedJob.getTaskAttemptCompletionEvents(0,10).length);
+    // select 5-10 rows include 5th
     assertEquals(6,completedJob.getTaskAttemptCompletionEvents(5,10).length);
+
     // without errors
     assertEquals(1,completedJob.getDiagnostics().size());
     assertEquals("",completedJob.getDiagnostics().get(0));

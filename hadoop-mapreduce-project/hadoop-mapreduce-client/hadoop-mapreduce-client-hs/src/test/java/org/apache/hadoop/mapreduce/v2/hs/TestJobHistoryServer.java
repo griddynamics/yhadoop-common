@@ -76,7 +76,7 @@ public class TestJobHistoryServer {
           .getRecordFactory(null);
 
   /*
-  simple test start/ stop    JobHistoryServer
+  simple test init/start/stop   JobHistoryServer. Status should changes.
    */
   @Test
   public void testStartStopServer() throws Exception {
@@ -111,6 +111,7 @@ public class TestJobHistoryServer {
     assertNull(test.getTasks());
     assertNull(test.getTasks(TaskType.MAP));
     assertNull(test.getTask(new TaskIdPBImpl()));
+
     assertNull(test.getTaskAttemptCompletionEvents(0, 100));
     assertNull(test.getMapAttemptCompletionEvents(0, 100));
     assertTrue(test.checkAccess(UserGroupInformation.getCurrentUser(), null));
@@ -157,15 +158,15 @@ public class TestJobHistoryServer {
     taId.setTaskId(task.getID());
     taId.getTaskId().setJobId(job.getID());
     gtarRequest.setTaskAttemptId(taId);
-    GetTaskAttemptReportResponse responce = protocol
+    GetTaskAttemptReportResponse response = protocol
             .getTaskAttemptReport(gtarRequest);
-    assertEquals("container_0_0000_01_000000", responce.getTaskAttemptReport()
+    assertEquals("container_0_0000_01_000000", response.getTaskAttemptReport()
             .getContainerId().toString());
-    assertTrue(responce.getTaskAttemptReport().getDiagnosticInfo().isEmpty());
+    assertTrue(response.getTaskAttemptReport().getDiagnosticInfo().isEmpty());
     // counters
-    assertNotNull(responce.getTaskAttemptReport().getCounters()
+    assertNotNull(response.getTaskAttemptReport().getCounters()
             .getCounter(TaskCounter.PHYSICAL_MEMORY_BYTES));
-    assertEquals(taId.toString(), responce.getTaskAttemptReport()
+    assertEquals(taId.toString(), response.getTaskAttemptReport()
             .getTaskAttemptId().toString());
     // test getTaskReport
     GetTaskReportRequest request = recordFactory
@@ -173,87 +174,88 @@ public class TestJobHistoryServer {
     TaskId taskId = task.getID();
     taskId.setJobId(job.getID());
     request.setTaskId(taskId);
-    GetTaskReportResponse reportResponce = protocol.getTaskReport(request);
-    assertEquals("", reportResponce.getTaskReport().getDiagnosticsList()
+    GetTaskReportResponse reportResponse = protocol.getTaskReport(request);
+    assertEquals("", reportResponse.getTaskReport().getDiagnosticsList()
             .iterator().next());
     // progress
-    assertEquals(1.0f, reportResponce.getTaskReport().getProgress(), 0.01);
-    assertEquals(taskId.toString(), reportResponce.getTaskReport().getTaskId()
+    assertEquals(1.0f, reportResponse.getTaskReport().getProgress(), 0.01);
+    // report has corrected taskId
+    assertEquals(taskId.toString(), reportResponse.getTaskReport().getTaskId()
             .toString());
-    assertEquals(TaskState.SUCCEEDED, reportResponce.getTaskReport()
+    // Task state should be SUCCEEDED
+    assertEquals(TaskState.SUCCEEDED, reportResponse.getTaskReport()
             .getTaskState());
     // test getTaskAttemptCompletionEvents
     GetTaskAttemptCompletionEventsRequest taskAttemptRequest = recordFactory
             .newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
     taskAttemptRequest.setJobId(job.getID());
-    GetTaskAttemptCompletionEventsResponse taskCompliteResponce = protocol
+    GetTaskAttemptCompletionEventsResponse taskAttemptCompletionEventsResponse = protocol
             .getTaskAttemptCompletionEvents(taskAttemptRequest);
-    assertEquals(0, taskCompliteResponce.getCompletionEventCount());
-    
+    assertEquals(0, taskAttemptCompletionEventsResponse.getCompletionEventCount());
+
     // test getDiagnostics
     GetDiagnosticsRequest diagnosticRequest = recordFactory
             .newRecordInstance(GetDiagnosticsRequest.class);
     diagnosticRequest.setTaskAttemptId(taId);
-    GetDiagnosticsResponse diagnosticResponce = protocol
+    GetDiagnosticsResponse diagnosticResponse = protocol
             .getDiagnostics(diagnosticRequest);
     // it is strange : why one empty string ?
-    assertEquals(1, diagnosticResponce.getDiagnosticsCount());
-    assertEquals("", diagnosticResponce.getDiagnostics(0));
+    assertEquals(1, diagnosticResponse.getDiagnosticsCount());
+    assertEquals("", diagnosticResponse.getDiagnostics(0));
 
-    GetCountersRequest counterRequest=recordFactory
-        .newRecordInstance(GetCountersRequest.class);
+    GetCountersRequest counterRequest = recordFactory
+            .newRecordInstance(GetCountersRequest.class);
     counterRequest.setJobId(job.getID());
-    GetCountersResponse counterResponce=protocol.getCounters(counterRequest);
-    assertNotNull(counterResponce.getCounters().getCounterGroup("org.apache.hadoop.mapreduce.JobCounter"));
+    GetCountersResponse counterResponse = protocol.getCounters(counterRequest);
+    assertNotNull(counterResponse.getCounters().getCounterGroup("org.apache.hadoop.mapreduce.JobCounter"));
     // test getJobReport
-    GetJobReportRequest  reportRequest=recordFactory
-        .newRecordInstance(GetJobReportRequest.class);
+    GetJobReportRequest reportRequest = recordFactory
+            .newRecordInstance(GetJobReportRequest.class);
     reportRequest.setJobId(job.getID());
-    GetJobReportResponse jobReport=protocol.getJobReport(reportRequest);
+    GetJobReportResponse jobReport = protocol.getJobReport(reportRequest);
     assertEquals(1, jobReport.getJobReport().getAMInfos().size());
     assertNotNull(jobReport.getJobReport().getJobFile());
     assertEquals(job.getID().toString(), jobReport.getJobReport().getJobId().toString());
     assertNotNull(jobReport.getJobReport().getTrackingUrl());
-    
-    
+
+
     //getTaskReports
-    GetTaskReportsRequest taskReportRequest=recordFactory
-        .newRecordInstance(GetTaskReportsRequest.class);
+    GetTaskReportsRequest taskReportRequest = recordFactory
+            .newRecordInstance(GetTaskReportsRequest.class);
     taskReportRequest.setJobId(job.getID());
     taskReportRequest.setTaskType(TaskType.MAP);
-    GetTaskReportsResponse taskReportResponce= protocol.getTaskReports(taskReportRequest);
-    assertEquals(1,taskReportResponce.getTaskReportList().size());
-    assertEquals(1,taskReportResponce.getTaskReportCount());
-    assertEquals(task.getID(),taskReportResponce.getTaskReport(0).getTaskId());
-    assertEquals(TaskState.SUCCEEDED, taskReportResponce.getTaskReport(0).getTaskState());
-    
+    GetTaskReportsResponse taskReportsResponse = protocol.getTaskReports(taskReportRequest);
+    assertEquals(1, taskReportsResponse.getTaskReportList().size());
+    assertEquals(1, taskReportsResponse.getTaskReportCount());
+    assertEquals(task.getID(), taskReportsResponse.getTaskReport(0).getTaskId());
+    assertEquals(TaskState.SUCCEEDED, taskReportsResponse.getTaskReport(0).getTaskState());
+
     //getDelegationToken
-    GetDelegationTokenRequest  delegationTokenRequest= recordFactory
-        .newRecordInstance(GetDelegationTokenRequest.class);
-    String s=UserGroupInformation.getCurrentUser().getShortUserName();
+    GetDelegationTokenRequest delegationTokenRequest = recordFactory
+            .newRecordInstance(GetDelegationTokenRequest.class);
+    String s = UserGroupInformation.getCurrentUser().getShortUserName();
     delegationTokenRequest.setRenewer(s);
-    GetDelegationTokenResponse delegationTokenResponce= protocol.getDelegationToken(delegationTokenRequest);
-   assertEquals("MR_DELEGATION_TOKEN", delegationTokenResponce.getDelegationToken().getKind());
-   assertNotNull(delegationTokenResponce.getDelegationToken().getIdentifier());
-   
-   //renewDelegationToken
-     
-   RenewDelegationTokenRequest renewDelegationRequest= recordFactory
-       .newRecordInstance(RenewDelegationTokenRequest.class);
-   renewDelegationRequest.setDelegationToken(delegationTokenResponce.getDelegationToken());
-   RenewDelegationTokenResponse  renewDelegationTokenResponce= protocol.renewDelegationToken(renewDelegationRequest);
-   // should be about 1 day
-  assertTrue( renewDelegationTokenResponce.getNextExpirationTime()>0);
-  
-  
+    GetDelegationTokenResponse delegationTokenResponse = protocol.getDelegationToken(delegationTokenRequest);
+    assertEquals("MR_DELEGATION_TOKEN", delegationTokenResponse.getDelegationToken().getKind());
+    assertNotNull(delegationTokenResponse.getDelegationToken().getIdentifier());
+
+    //renewDelegationToken
+
+    RenewDelegationTokenRequest renewDelegationRequest = recordFactory
+            .newRecordInstance(RenewDelegationTokenRequest.class);
+    renewDelegationRequest.setDelegationToken(delegationTokenResponse.getDelegationToken());
+    RenewDelegationTokenResponse renewDelegationTokenResponse = protocol.renewDelegationToken(renewDelegationRequest);
+    // should be about 1 day
+    assertTrue(renewDelegationTokenResponse.getNextExpirationTime() > 0);
+
+
 // cancelDelegationToken   
 
-  CancelDelegationTokenRequest  cancelDelegationTokenRequest=recordFactory
-      .newRecordInstance(CancelDelegationTokenRequest.class);
-  cancelDelegationTokenRequest.setDelegationToken(delegationTokenResponce.getDelegationToken());
-  assertNotNull(protocol.cancelDelegationToken(cancelDelegationTokenRequest));
-  
-  
+    CancelDelegationTokenRequest cancelDelegationTokenRequest = recordFactory
+            .newRecordInstance(CancelDelegationTokenRequest.class);
+    cancelDelegationTokenRequest.setDelegationToken(delegationTokenResponse.getDelegationToken());
+    assertNotNull(protocol.cancelDelegationToken(cancelDelegationTokenRequest));
+
     historyServer.stop();
   }
 
@@ -265,6 +267,7 @@ public class TestJobHistoryServer {
       JobHistoryServer.main(new String[0]);
 
     } catch (ExitUtil.ExitException e) {
+      assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
       fail();
     }

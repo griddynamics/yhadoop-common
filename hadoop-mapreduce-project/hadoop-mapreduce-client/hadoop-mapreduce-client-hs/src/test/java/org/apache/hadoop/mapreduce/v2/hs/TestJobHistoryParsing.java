@@ -60,7 +60,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
@@ -626,8 +625,9 @@ public class TestJobHistoryParsing {
 
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(configuration);
+      // Method getAllJobs
       Assert.assertEquals(1, jobHistory.getAllJobs().size());
-
+      // and with ApplicationId
       Assert.assertEquals(1, jobHistory.getAllJobs(app.getAppID()).size());
 
       JobsInfo jobsinfo = jobHistory.getPartialJobs(0L, 10L, null, "default",
@@ -636,11 +636,15 @@ public class TestJobHistoryParsing {
       
       Assert.assertEquals(1, jobsinfo.getJobs().size());
       Assert.assertNotNull(jobHistory.getApplicationAttemptId());
+      // test Application Id
       Assert.assertEquals("application_0_0000", jobHistory.getApplicationID()
           .toString());
       Assert.assertEquals("Job History Server", jobHistory.getApplicationName());
+      // method does not work
       Assert.assertNull(jobHistory.getEventHandler());
+      // method does not work
       Assert.assertNull(jobHistory.getClock());
+      // method does not work
       Assert.assertNull(jobHistory.getClusterInfo());
 
 
@@ -656,21 +660,21 @@ public class TestJobHistoryParsing {
 public void testCleanFileInfo() throws Exception {
   LOG.info("STARTING testDeleteFileInfo");
   try {
-    Configuration conf = new Configuration(); 
+    Configuration configuration = new Configuration();
     // JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE;
-    conf.setInt("mapreduce.jobhistory.joblist.cache.size",0 );
+    configuration.setInt("mapreduce.jobhistory.joblist.cache.size", 0);
     
     //JHAdminConfig.MR_HISTORY_MAX_AGE_MS
-    conf.setLong("mapreduce.jobhistory.max-age-ms",0);
+    configuration.setLong("mapreduce.jobhistory.max-age-ms", 0);
     
-    conf.setClass(
-        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-        MyResolver.class, DNSToSwitchMapping.class);
+    configuration.setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            MyResolver.class, DNSToSwitchMapping.class);
 
-    RackResolver.init(conf);
+    RackResolver.init(configuration);
     MRApp app = new MRAppWithHistory(2, 3, true, this.getClass().getName(),
         true);
-    app.submit(conf);
+    app.submit(configuration);
     Job job = app.getContext().getAllJobs().values().iterator().next();
 
     app.waitForState(job, JobState.SUCCEEDED);
@@ -678,7 +682,7 @@ public void testCleanFileInfo() throws Exception {
     // make sure all events are flushed
     app.waitForState(Service.STATE.STOPPED);
     HistoryFileManager hfm = new HistoryFileManager();
-    hfm.init(conf);
+    hfm.init(configuration);
     hfm.initExisting();
     hfm.setMaxHistoryAge(0);
     Assert.assertEquals(1,hfm.getAllFileInfo().size());
