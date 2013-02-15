@@ -19,11 +19,10 @@ package org.apache.hadoop.tools;
  */
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.hdfs.tools.JMXGet;
@@ -31,10 +30,9 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
-
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.ByteStreams;
 
 public class TestTools {
 
@@ -103,9 +101,8 @@ public class TestTools {
   }
 
   private void checkOutput(String[] args, String pattern, PrintStream out,
-      Class<?> clazz) {
-    int size = 0;
-    byte[] bytes = null;
+      Class<?> clazz) {       
+    ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
     try {
       PipedOutputStream pipeOut = new PipedOutputStream();
       PipedInputStream pipeIn = new PipedInputStream(pipeOut, PIPE_BUFFER_SIZE);
@@ -122,15 +119,10 @@ public class TestTools {
       } else if (clazz == DFSAdmin.class) {
         expectDfsAdminPrint(args);
       }
-
-      if ((size = pipeIn.available()) != 0) {
-        bytes = new byte[size];
-        pipeIn.read(bytes, 0, bytes.length);
-      }
       pipeOut.close();
+      ByteStreams.copy(pipeIn, outBytes);      
       pipeIn.close();
-      String line = new String(bytes);
-      assertTrue(bytes != null ? line.contains(pattern) : false);
+      assertTrue(new String(outBytes.toByteArray()).contains(pattern));            
     } catch (Exception ex) {
       fail("checkOutput error " + ex);
     }
