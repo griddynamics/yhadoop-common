@@ -50,7 +50,8 @@ import org.apache.commons.logging.impl.Log4JLogger;
  */
 
 public abstract class FileContextCreateMkdirBaseTest {
-   
+
+  protected final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
   protected static FileContext fc;
       
   {
@@ -149,4 +150,13 @@ public abstract class FileContextCreateMkdirBaseTest {
     createFile(fc, f);
     Assert.assertTrue(isFile(fc, f));
   }
+
+  private Path getTestRootPath(FileContext fc) {
+    return fileContextTestHelper.getTestRootPath(fc);
+  }
+
+  private Path getTestRootPath(FileContext fc, String pathString) {
+    return fileContextTestHelper.getTestRootPath(fc, pathString);
+  }
+
 }
