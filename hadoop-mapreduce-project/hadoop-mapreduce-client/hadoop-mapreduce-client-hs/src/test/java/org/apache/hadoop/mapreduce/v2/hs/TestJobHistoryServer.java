@@ -21,12 +21,9 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.mapred.Master;
-import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
-import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
@@ -78,12 +75,14 @@ public class TestJobHistoryServer {
   private static RecordFactory recordFactory = RecordFactoryProvider
           .getRecordFactory(null);
 
+  
   /*
   simple test start/ stop    JobHistoryServer
    */
   @Test
   public void testStartStopServer() throws Exception {
 
+    L
     JobHistoryServer server = new JobHistoryServer();
     Configuration cong = new Configuration();
     server.init(cong);
