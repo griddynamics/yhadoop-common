@@ -620,27 +620,30 @@ public class TestJobHistoryParsing {
           true);
       app.submit(configuration);
       Job job = app.getContext().getAllJobs().values().iterator().next();
-      JobId jobId = job.getID();
-      LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
       app.waitForState(job, JobState.SUCCEEDED);
 
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(configuration);
+      // Method getAllJobs
       Assert.assertEquals(1, jobHistory.getAllJobs().size());
-
+      // and with ApplicationId
       Assert.assertEquals(1, jobHistory.getAllJobs(app.getAppID()).size());
-
+      // 
       JobsInfo jobsinfo = jobHistory.getPartialJobs(0L, 10L, null, "default",
           0L, System.currentTimeMillis() + 1, 0L,
           System.currentTimeMillis() + 1, JobState.SUCCEEDED);
       
       Assert.assertEquals(1, jobsinfo.getJobs().size());
       Assert.assertNotNull(jobHistory.getApplicationAttemptId());
+      // test Application Id
       Assert.assertEquals("application_0_0000", jobHistory.getApplicationID()
           .toString());
       Assert.assertEquals("Job History Server", jobHistory.getApplicationName());
+      // method does not work
       Assert.assertNull(jobHistory.getEventHandler());
+      // method does not work
       Assert.assertNull(jobHistory.getClock());
+      // method does not work
       Assert.assertNull(jobHistory.getClusterInfo());
 
 
