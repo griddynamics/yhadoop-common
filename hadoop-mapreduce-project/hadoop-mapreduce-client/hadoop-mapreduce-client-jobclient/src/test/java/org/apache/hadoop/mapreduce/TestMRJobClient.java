@@ -114,7 +114,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 //    testChangingJobPriority(jobId, conf);
   }
 
-  @Test
+  
   public void testGetCounter(String jobId,
       Configuration conf) throws Exception {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -126,7 +126,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     assertEquals("Counter", "3", out.toString().trim());
   }
 
-  @Test
+ 
   public void testJobList(String jobId,
       Configuration conf) throws Exception {
     verifyJobPriority(jobId, "NORMAL", conf, createJobClient());
@@ -153,7 +153,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     pis.close();
   }
 
-  @Test
+  
   public void testChangingJobPriority(String jobId, Configuration conf)
       throws Exception {
     int exitCode = runTool(conf, createJobClient(),
