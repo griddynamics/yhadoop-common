@@ -450,9 +450,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <exclude>**/yarn/proto/*.java</exclude>
                 <exclude>**/hadoop/yarn/ipc/*.java</exclude>
                 <exclude>**/yarn/server/resourcemanager/tools/*.java</exclude>
-                <!-- NB: exclude all classes from project "hadoop-maven-plugins" 
-                because they are executed only on project build stage, so no need to gather their coverage: -->  
-                <exclude>**/org/apache/hadoop/maven/plugin/**/*.java</exclude>
               </excludes>
             </configuration>
             <executions>
