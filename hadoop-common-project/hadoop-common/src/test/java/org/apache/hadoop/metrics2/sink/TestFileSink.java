@@ -85,7 +85,8 @@ public class TestFileSink {
     outFile = getTestTempFile("test-file-sink-", ".out");
     final String outPath = outFile.getAbsolutePath();  
     
-    new ConfigBuilder().add("*.period", 1)
+    // NB: specify large period to avoid multiple metrics snapshotting: 
+    new ConfigBuilder().add("*.period", 10000)
         .add("test.sink.mysink0.class", FileSink.class.getName())
         .add("test.sink.mysink0.filename", outPath)
         // NB: we filter by context to exclude "metricssystem" context metrics:
