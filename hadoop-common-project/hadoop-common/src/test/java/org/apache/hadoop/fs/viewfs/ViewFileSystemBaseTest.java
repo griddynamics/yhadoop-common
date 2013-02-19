@@ -68,8 +68,15 @@ public class ViewFileSystemBaseTest {
   FileSystem fsTarget;  // the target file system - the mount will point here
   Path targetTestRoot;
   Configuration conf;
-  final FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
+  final FileSystemTestHelper fileSystemTestHelper;
 
+  public ViewFileSystemBaseTest() {
+      this.fileSystemTestHelper = createFileSystemHelper();
+  }
+
+  protected FileSystemTestHelper createFileSystemHelper() {
+    return new FileSystemTestHelper();
+  }
 
   @Before
   public void setUp() throws Exception {
