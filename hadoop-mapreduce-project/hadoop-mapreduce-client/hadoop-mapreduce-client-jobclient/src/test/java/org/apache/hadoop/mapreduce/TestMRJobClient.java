@@ -43,8 +43,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
-import org.junit.Ignore;
-import org.junit.Test;
 
 public class TestMRJobClient extends ClusterMapReduceTestCase {
 
@@ -81,7 +79,6 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     }
   }
 
-  @Test
   public void testJobSubmissionSpecsAndFiles() throws Exception {
     Configuration conf = createJobConf();
     Job job = MapReduceTestUtil.createJob(conf, getInputDir(), getOutputDir(),
@@ -103,7 +100,6 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
         FileSystem.get(conf).exists(submitJobFile));
   }
 
-  @Test
   public void testJobClient() throws Exception {
     Configuration conf = createJobConf();
     Job job = runJob(conf);
@@ -444,49 +440,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     verifyJobPriority(jobId, "NORMAL", conf, createJobClient());
   }
 
-  @Ignore
-  public void testMissingProfileOutput() throws Exception {
-    Configuration conf = createJobConf();
-    final String input = "hello1\n";
-
-    // Set a job to be profiled with an empty agentlib parameter.
-    // This will fail to create profile.out files for tasks.
-    // This will succeed by skipping the HTTP fetch of the
-    // profiler output.
-    Job job = MapReduceTestUtil.createJob(conf, getInputDir(), getOutputDir(),
-        1, 1, input);
-    job.setJobName("disable-profile-fetch");
-    job.setProfileEnabled(true);
-    job.setProfileParams("-agentlib:,verbose=n,file=%s");
-    job.setMaxMapAttempts(1);
-    job.setMaxReduceAttempts(1);
-    job.setJobSetupCleanupNeeded(false);
-    job.waitForCompletion(true);
-
-    // Run another job with an hprof agentlib param; verify
-    // that the HTTP fetch works here.
-    Job job2 = MapReduceTestUtil.createJob(conf, getInputDir(), getOutputDir(),
-        1, 1, input);
-    job2.setJobName("enable-profile-fetch");
-    job2.setProfileEnabled(true);
-    job2.setProfileParams("-agentlib:hprof=cpu=samples,heap=sites,force=n,"
-        + "thread=y,verbose=n,file=%s");
-    job2.setProfileTaskRange(true, "0-1");
-    job2.setProfileTaskRange(false, "");
-    job2.setMaxMapAttempts(1);
-    job2.setMaxReduceAttempts(1);
-    job2.setJobSetupCleanupNeeded(false);
-    job2.waitForCompletion(true);
-
-    // Find the first map task, verify that we got its profile output file.
-    TaskReport[] reports = job2.getTaskReports(TaskType.MAP);
-    assertTrue("No task reports found!", reports.length > 0);
-    TaskReport report = reports[0];
-    TaskID id = report.getTaskId();
-    assertTrue(TaskType.MAP == id.getTaskType());
-
-  }
-
+ 
   protected CLI createJobClient() throws IOException {
     return new CLI();
   }
