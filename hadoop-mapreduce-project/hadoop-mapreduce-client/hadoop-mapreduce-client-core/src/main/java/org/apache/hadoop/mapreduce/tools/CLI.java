@@ -65,8 +65,6 @@ import com.google.common.base.Charsets;
 public class CLI extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CLI.class);
   protected Cluster cluster;
-  private final Set<String> taskTypes = new HashSet<String>(
-              Arrays.asList("map", "reduce", "setup", "cleanup"));
   private final Set<String> taskStates = new HashSet<String>(
               Arrays.asList("pending", "running", "completed", "failed", "killed"));
 
