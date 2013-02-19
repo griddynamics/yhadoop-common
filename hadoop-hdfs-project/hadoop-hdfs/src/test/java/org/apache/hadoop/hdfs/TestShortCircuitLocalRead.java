@@ -110,6 +110,37 @@ public class TestShortCircuitLocalRead {
     checkData(actual, readOffset, expected, "Read 3");
     stm.close();
   }
+  
+  /**
+   * Test that file data can be read by reading the block 
+   * through RemoteBlockReader 
+   * @throws IOException 
+   */
+  public void doTestShortCircuitReadWithRemoteBlockReader(boolean ignoreChecksum, int size,
+      int readOffset) throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);    
+      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+          .format(true).build();
+      FileSystem fs = cluster.getFileSystem();    
+      // check that / exists
+    try {
+      Path path = new Path("/");
+      assertTrue("/ should be a directory", fs.getFileStatus(path)
+            .isDirectory() == true);
+        
+      byte[] fileData = AppendTestUtil.randomBytes(seed, size);      
+      Path file1 = new Path("filelocal.dat");
+      FSDataOutputStream stm = createFile(fs, file1, 1);   
+        
+      stm.write(fileData);
+      stm.close();         
+      checkFileContent(fs, file1, fileData, readOffset);          
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }    
 
   /**
    * Test that file data can be read by reading the block file
@@ -180,6 +211,11 @@ public class TestShortCircuitLocalRead {
     doTestShortCircuitRead(true, 10*blockSize+100, 777);
   }
    
+  @Test
+  public void testReadWithRemoteBlockReader() throws IOException {
+    doTestShortCircuitReadWithRemoteBlockReader(true, 3*blockSize+100, 0);
+  }
+  
   @Test
   public void testGetBlockLocalPathInfo() throws IOException, InterruptedException {
     final Configuration conf = new Configuration();
