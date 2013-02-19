@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -109,7 +110,9 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   public void testJobClient() throws Exception {
     Configuration conf = createJobConf();
     Job job = runJob(conf);
+    
     String jobId = job.getJobID().toString();
+    
     testJobList(jobId, conf);
     
     testGetCounter(jobId, conf);
@@ -123,12 +126,45 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     testMain();
     
 //    testSubmit(conf);
-    // does not implemented !!!
      testChangingJobPriority(jobId, conf);
      
+ 
+     
+    testKillTask(job,conf);
+    testfailTask(job,conf);
      testKillJob(jobId, conf);
   }
 
+
+  private void testfailTask(Job job, Configuration conf) throws Exception {
+    CLI jc = createJobClient();
+    TaskID tid= new TaskID(job.getJobID(), TaskType.MAP, 0);
+    TaskAttemptID taid= new TaskAttemptID(tid,0);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    
+    try{
+    int exitCode = runTool(conf, jc,
+        new String[] { "-fail-task", taid.toString()}, out);
+      assertEquals("Exit code", 0, exitCode);
+    }catch (YarnRemoteException e){
+      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+    }
+  }
+
+  private void testKillTask(Job job, Configuration conf) throws Exception {
+    CLI jc = createJobClient();
+    TaskID tid= new TaskID(job.getJobID(), TaskType.MAP, 0);
+    TaskAttemptID taid= new TaskAttemptID(tid,0);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    
+    try{
+    int exitCode = runTool(conf, jc,
+        new String[] { "-kill-task", taid.toString()}, out);
+      assertEquals("Exit code", 0, exitCode);
+    }catch (YarnRemoteException e){
+      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+    }
+  }
   private void testKillJob(String jobId, Configuration conf) throws Exception {
     CLI jc = createJobClient();
     
