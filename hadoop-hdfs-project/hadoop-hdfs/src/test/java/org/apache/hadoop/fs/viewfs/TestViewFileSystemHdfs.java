@@ -48,6 +48,11 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   private FileSystem fsTarget2;
   Path targetTestRoot2;
   
+  @Override
+  protected FileSystemTestHelper createFileSystemHelper() {
+    return new FileSystemTestHelper("/tmp/TestViewFileSystemHdfs");
+  }
+
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {

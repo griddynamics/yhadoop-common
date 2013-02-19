@@ -42,11 +42,20 @@ public class FileSystemTestHelper {
   protected final String testRootDir;
   private String absTestRootDir = null;
 
+  /**
+   * Create helper with test root located at <wd>/build/test/data
+   */
   public FileSystemTestHelper() {
-      // The test root is relative to the <wd>/build/test/data by default
-      testRootDir = System.getProperty("test.build.data", "target/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10);
+      this(System.getProperty("test.build.data", "target/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10));
   }
-  
+
+  /**
+   * Create helper with the specified test root dir
+   */
+  public FileSystemTestHelper(String testRootDir) {
+      this.testRootDir = testRootDir;
+  }
+
   public static void addFileSystemForTesting(URI uri, Configuration conf,
       FileSystem fs) throws IOException {
     FileSystem.addFileSystemForTesting(uri, conf, fs);
