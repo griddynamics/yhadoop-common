@@ -100,14 +100,7 @@ public class TestSocketFactory {
 
   }
 
-  /**
-   * A dummy socket factory class that extends the StandardSocketFactory.
-   */
-  static class DummySocketFactory extends StandardSocketFactory {
-
-  }
-
-  /*
+   /*
    * test SocksSocketFactory. test different constructors
    */
   @Test
@@ -131,23 +124,23 @@ public class TestSocketFactory {
    * common test socket should works
    */
   private void testSocketFactory(SocketFactory socketFactory) throws Exception {
-    InetAddress addr = InetAddress.getLocalHost();
-    Socket socket = socketFactory.createSocket(addr, port);
-    checkSoket(socket);
+    InetAddress address = InetAddress.getLocalHost();
+    Socket socket = socketFactory.createSocket(address, port);
+    checkSocket(socket);
     socket.close();
 
-    socket = socketFactory.createSocket(addr, port, InetAddress.getLocalHost(),
+    socket = socketFactory.createSocket(address, port, InetAddress.getLocalHost(),
         0);
-    checkSoket(socket);
+    checkSocket(socket);
     socket.close();
 
     socket = socketFactory.createSocket("localhost", port);
-    checkSoket(socket);
+    checkSocket(socket);
     socket.close();
 
     socket = socketFactory.createSocket("localhost", port,
         InetAddress.getLocalHost(), 0);
-    checkSoket(socket);
+    checkSocket(socket);
     socket.close();
 
   }
@@ -163,15 +156,15 @@ public class TestSocketFactory {
     SocksSocketFactory templateWithProxy = new SocksSocketFactory(proxy);
     assertFalse(templateWithoutProxy.equals(templateWithProxy));
 
-    Configuration conf = new Configuration();
-    conf.set("hadoop.socks.server", "localhost:0");
+    Configuration configuration = new Configuration();
+    configuration.set("hadoop.socks.server", "localhost:0");
 
-    templateWithoutProxy.setConf(conf);
+    templateWithoutProxy.setConf(configuration);
     assertTrue(templateWithoutProxy.equals(templateWithProxy));
 
   }
 
-  private void checkSoket(Socket socket) throws Exception {
+  private void checkSocket(Socket socket) throws Exception {
     BufferedReader input = new BufferedReader(new InputStreamReader(
         socket.getInputStream()));
     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -207,12 +200,12 @@ public class TestSocketFactory {
 
             String outData = inData.toUpperCase() + "\n";
             out.writeBytes(outData);
-          } catch (SocketException e) {
-            ;
+          } catch (SocketException ignored) {
+
           }
         }
-      } catch (IOException e) {
-        ;
+      } catch (IOException ignored) {
+
       }
 
     }
