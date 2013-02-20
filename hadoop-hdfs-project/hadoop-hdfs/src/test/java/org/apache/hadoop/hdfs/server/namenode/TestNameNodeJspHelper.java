@@ -55,16 +55,16 @@ import com.google.common.collect.ImmutableSet;
 
 public class TestNameNodeJspHelper {
 
-  private static MiniDFSCluster cluster;
-  private static Configuration conf = new HdfsConfiguration();
+  private MiniDFSCluster cluster;
+  private Configuration conf;
   private static final int dataNodeNumber = 2;
   private static final int nameNodePort = 45541;
   private static final int nameNodeHttpPort = 50070;
-  private static final String NAMENODE_ATTRIBUTE_KEY = "name.node";
-  private static final String REDIRECT_URL_EPISODE = "/browseDirectory.jsp?namenodeInfoPort=";
-
+  private static final String NAMENODE_ATTRIBUTE_KEY = "name.node";  
+  
   @Before
   public void setUp() throws Exception {
+    conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(
             MiniDFSNNTopology.simpleSingleNN(nameNodePort, nameNodeHttpPort))
@@ -90,7 +90,7 @@ public class TestNameNodeJspHelper {
   }
 
   @Test
-  public void tesSecurityModeText() {
+  public void testSecurityModeText() {
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
     String securityOnOff = NamenodeJspHelper.getSecurityModeText();
@@ -122,13 +122,17 @@ public class TestNameNodeJspHelper {
           set.contains(dnDescriptor.toString()));
     }
   }
-
+      
   @Test
   public void testNamenodeJspHelperRedirectToRandomDataNode() {
+    final String urlExp = "http://localhost.localdomain:\\d+/browseDirectory.jsp\\?namenodeInfoPort="
+        + nameNodeHttpPort + "&dir=/&nnaddr=([[\\d]+[\\.]+]+[\\d]|localhost.localdomain):" + nameNodePort;    
+    final Pattern pattern = Pattern.compile(urlExp);        
+    
     ServletContext context = mock(ServletContext.class);
     HttpServletRequest request = mock(HttpServletRequest.class);
-    HttpServletResponse resp = mock(HttpServletResponse.class);
-
+    HttpServletResponse resp = mock(HttpServletResponse.class);          
+    
     when(request.getParameter(UserParam.NAME)).thenReturn("localuser");
     when(context.getAttribute(NAMENODE_ATTRIBUTE_KEY)).thenReturn(
         cluster.getNameNode());
@@ -142,13 +146,13 @@ public class TestNameNodeJspHelper {
         }
       }).when(resp).sendRedirect(captor.capture());
 
-      NamenodeJspHelper.redirectToRandomDataNode(context, request, resp);
-      assertTrue(captor.getValue().contains(REDIRECT_URL_EPISODE));
+      NamenodeJspHelper.redirectToRandomDataNode(context, request, resp);      
+      assertTrue(pattern.matcher(captor.getValue()).matches());
     } catch (Exception e) {
       fail("testNamenodeJspHelperRedirectToRandomDataNode ex error " + e);
     }
   }
-
+  
   private enum DataNodeStatus {
     LIVE("[Live Datanodes(| +):(| +)]\\d"), 
     DEAD("[Dead Datanodes(| +):(| +)]\\d");
