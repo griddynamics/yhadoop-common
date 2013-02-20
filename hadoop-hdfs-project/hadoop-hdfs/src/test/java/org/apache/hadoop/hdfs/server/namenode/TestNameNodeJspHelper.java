@@ -63,12 +63,12 @@ public class TestNameNodeJspHelper {
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
         .nameNodePort(nameNodePort)
         .nameNodeHttpPort(nameNodeHttpPort)
         .numDataNodes(dataNodeNumber).build();
-    cluster.waitActive();
+    cluster.waitClusterUp();
   }
 
   @After
@@ -123,10 +123,8 @@ public class TestNameNodeJspHelper {
   }
 
   @Test
-  public void testNamenodeJspHelperRedirectToRandomDataNode() {
-    final String urlExp = "http://localhost.localdomain:\\d+/browseDirectory.jsp\\?namenodeInfoPort="
-        + nameNodeHttpPort + "&dir=/&nnaddr=([[\\d]+[\\.]+]+[\\d]|localhost.localdomain):" + nameNodePort;    
-    final Pattern pattern = Pattern.compile(urlExp);        
+  public void testNamenodeJspHelperRedirectToRandomDataNode() throws IOException, InterruptedException {
+    final String urlPart = "browseDirectory.jsp?namenodeInfoPort=";     
     
     ServletContext context = mock(ServletContext.class);
     HttpServletRequest request = mock(HttpServletRequest.class);
@@ -135,21 +133,17 @@ public class TestNameNodeJspHelper {
     when(request.getParameter(UserParam.NAME)).thenReturn("localuser");
     when(context.getAttribute(NAMENODE_ATTRIBUTE_KEY)).thenReturn(
         cluster.getNameNode());
-    when(context.getAttribute(JspHelper.CURRENT_CONF)).thenReturn(conf);
-    try {
-      ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-      doAnswer(new Answer<String>() {
-        @Override
-        public String answer(InvocationOnMock invocation) throws Throwable {
-          return null;
-        }
-      }).when(resp).sendRedirect(captor.capture());
+    when(context.getAttribute(JspHelper.CURRENT_CONF)).thenReturn(conf);    
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    doAnswer(new Answer<String>() {
+      @Override
+      public String answer(InvocationOnMock invocation) throws Throwable {
+        return null;
+      }
+    }).when(resp).sendRedirect(captor.capture());
 
-      NamenodeJspHelper.redirectToRandomDataNode(context, request, resp);      
-      assertTrue(pattern.matcher(captor.getValue()).matches());
-    } catch (Exception e) {
-      fail("testNamenodeJspHelperRedirectToRandomDataNode ex error " + e);
-    }
+    NamenodeJspHelper.redirectToRandomDataNode(context, request, resp);      
+    assertTrue(captor.getValue().contains(urlPart));    
   }
   
   private enum DataNodeStatus {
@@ -179,24 +173,19 @@ public class TestNameNodeJspHelper {
   }
 
   @Test
-  public void testNodeListJspGenerateNodesList() {
+  public void testNodeListJspGenerateNodesList() throws IOException {
     String output;
     NameNode nameNode = cluster.getNameNode();
     ServletContext context = mock(ServletContext.class);
     when(context.getAttribute("name.node")).thenReturn(nameNode);
     when(
         context.getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
-        .thenReturn(cluster.getNameNode().getHttpAddress());
-    try {
-      //
-      checkDeadLiveNodes(nameNode, 0, dataNodeNumber);
-      output = getOutputFromGeneratedNodesList(context, DataNodeStatus.LIVE);
-      assertCounts(DataNodeStatus.LIVE, output, dataNodeNumber);
-      output = getOutputFromGeneratedNodesList(context, DataNodeStatus.DEAD);
-      assertCounts(DataNodeStatus.DEAD, output, 0);
-    } catch (Exception ex) {
-      fail("testNodeListJspGenerateNodesList ex error" + ex);
-    }
+        .thenReturn(cluster.getNameNode().getHttpAddress());    
+    checkDeadLiveNodes(nameNode, 0, dataNodeNumber);
+    output = getOutputFromGeneratedNodesList(context, DataNodeStatus.LIVE);
+    assertCounts(DataNodeStatus.LIVE, output, dataNodeNumber);
+    output = getOutputFromGeneratedNodesList(context, DataNodeStatus.DEAD);
+    assertCounts(DataNodeStatus.DEAD, output, 0);    
   }
 
   private void assertCounts(DataNodeStatus dataNodeStatus, String output,
@@ -242,7 +231,7 @@ public class TestNameNodeJspHelper {
     for(String pattern: patterns) {
       assertTrue("testInodeLimitText error " + pattern,
           line.contains(pattern));
-    }    
+    }
   }
   
   @Test
@@ -252,10 +241,10 @@ public class TestNameNodeJspHelper {
     ImmutableSet<String> patterns = ImmutableSet.of(VersionInfo.getVersion(), 
         VersionInfo.getRevision(), VersionInfo.getUser(), VersionInfo.getBranch(),
         fsn.getClusterId(), fsn.getBlockPoolId());
-    String tableLine = NamenodeJspHelper.getVersionTable(fsn);
+    String line = NamenodeJspHelper.getVersionTable(fsn);
     for(String pattern: patterns) {
        assertTrue("testGetVersionTable error " + pattern,
-           tableLine.contains(pattern));
+           line.contains(pattern));
     }
-  }  
+  }
 }
