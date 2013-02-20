@@ -29,14 +29,20 @@ import org.junit.Test;
 
 public class TestClusterJspHelper {
 
-  private static MiniDFSCluster cluster;
-  private static Configuration conf = new Configuration();
+  private static MiniDFSCluster cluster;  
   private static final int dataNodeNumber = 2;
   private static final int nameNodePort = 45541;
   private static final int nameNodeHttpPort = 50070;
-
+  
+  private static final class FakeConfiguration extends Configuration {
+    static {
+      addDefaultResource("testClusterJspHelper.xml");
+    }
+  } 
+  
   @BeforeClass
   public static void before() throws IOException {
+    Configuration conf = new FakeConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nameNodePort)
         .nameNodeHttpPort(nameNodeHttpPort)
         .numDataNodes(dataNodeNumber)
