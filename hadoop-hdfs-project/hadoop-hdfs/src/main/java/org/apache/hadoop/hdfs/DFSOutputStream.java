@@ -46,12 +46,12 @@ import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
@@ -789,13 +790,18 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     private int findNewDatanode(final DatanodeInfo[] original
         ) throws IOException {
       if (nodes.length != original.length + 1) {
-        throw new IOException("Failed to add a datanode.  "
-            + "User may turn off this feature by setting "
-            + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY
-            + " in configuration, where the current policy is "
-            + dfsClient.dtpReplaceDatanodeOnFailure
-            + ".  (Nodes: current=" + Arrays.asList(nodes)
-            + ", original=" + Arrays.asList(original) + ")");
+        throw new IOException(
+            new StringBuilder()
+            .append("Failed to replace a bad datanode on the existing pipeline ")
+            .append("due to no more good datanodes being available to try. ")
+            .append("(Nodes: current=").append(Arrays.asList(nodes))
+            .append(", original=").append(Arrays.asList(original)).append("). ")
+            .append("The current failed datanode replacement policy is ")
+            .append(dfsClient.dtpReplaceDatanodeOnFailure).append(", and ")
+            .append("a client may configure this via '")
+            .append(DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY)
+            .append("' in its configuration.")
+            .toString());
       }
       for(int i = 0; i < nodes.length; i++) {
         int j = 0;
@@ -887,7 +893,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
 
         //ack
         BlockOpResponseProto response =
-          BlockOpResponseProto.parseFrom(HdfsProtoUtil.vintPrefixed(in));
+          BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
         if (SUCCESS != response.getStatus()) {
           throw new IOException("Failed to add a datanode");
         }
@@ -1077,7 +1083,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   
           // receive ack for connect
           BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
-              HdfsProtoUtil.vintPrefixed(blockReplyStream));
+              PBHelper.vintPrefixed(blockReplyStream));
           pipelineStatus = resp.getStatus();
           firstBadLink = resp.getFirstBadLink();
           
@@ -1496,9 +1502,14 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   @Override
   public void hflush() throws IOException {
-    flushOrSync(false);
+    flushOrSync(false, EnumSet.noneOf(SyncFlag.class));
   }
 
+  @Override
+  public void hsync() throws IOException {
+    hsync(EnumSet.noneOf(SyncFlag.class));
+  }
+  
   /**
    * The expected semantics is all data have flushed out to all replicas 
    * and all replicas have done posix fsync equivalent - ie the OS has 
@@ -1507,17 +1518,35 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    * Note that only the current block is flushed to the disk device.
    * To guarantee durable sync across block boundaries the stream should
    * be created with {@link CreateFlag#SYNC_BLOCK}.
+   * 
+   * @param syncFlags
+   *          Indicate the semantic of the sync. Currently used to specify
+   *          whether or not to update the block length in NameNode.
    */
-  @Override
-  public void hsync() throws IOException {
-    flushOrSync(true);
+  public void hsync(EnumSet<SyncFlag> syncFlags) throws IOException {
+    flushOrSync(true, syncFlags);
   }
 
-  private void flushOrSync(boolean isSync) throws IOException {
+  /**
+   * Flush/Sync buffered data to DataNodes.
+   * 
+   * @param isSync
+   *          Whether or not to require all replicas to flush data to the disk
+   *          device
+   * @param syncFlags
+   *          Indicate extra detailed semantic of the flush/sync. Currently
+   *          mainly used to specify whether or not to update the file length in
+   *          the NameNode
+   * @throws IOException
+   */
+  private void flushOrSync(boolean isSync, EnumSet<SyncFlag> syncFlags)
+      throws IOException {
     dfsClient.checkOpen();
     isClosed();
     try {
       long toWaitFor;
+      long lastBlockLength = -1L;
+      boolean updateLength = syncFlags.contains(SyncFlag.UPDATE_LENGTH);
       synchronized (this) {
         /* Record current blockOffset. This might be changed inside
          * flushBuffer() where a partial checksum chunk might be flushed.
@@ -1581,13 +1610,20 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       } // end synchronized
 
       waitForAckedSeqno(toWaitFor);
-
-      // If any new blocks were allocated since the last flush, 
-      // then persist block locations on namenode. 
-      //
-      if (persistBlocks.getAndSet(false)) {
+      
+      if (updateLength) {
+        synchronized (this) {
+          if (streamer != null && streamer.block != null) {
+            lastBlockLength = streamer.block.getNumBytes();
+          }
+        }
+      }
+      // If 1) any new blocks were allocated since the last flush, or 2) to
+      // update length in NN is requried, then persist block locations on
+      // namenode.
+      if (persistBlocks.getAndSet(false) || updateLength) {
         try {
-          dfsClient.namenode.fsync(src, dfsClient.clientName);
+          dfsClient.namenode.fsync(src, dfsClient.clientName, lastBlockLength);
         } catch (IOException ioe) {
           DFSClient.LOG.warn("Unable to persist blocks in hflush for " + src, ioe);
           // If we got an error here, it might be because some other thread called
