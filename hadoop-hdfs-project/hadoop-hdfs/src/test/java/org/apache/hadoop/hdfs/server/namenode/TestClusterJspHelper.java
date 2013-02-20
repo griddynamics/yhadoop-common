@@ -35,7 +35,7 @@ public class TestClusterJspHelper {
   private final int nameNodePort = 45541;
   private final int nameNodeHttpPort = 50070;    
   
-  static final class FakeConfiguration extends Configuration {
+  static final class ConfigurationForTestClusterJspHelper extends Configuration {
     static {
       addDefaultResource("testClusterJspHelperProp.xml");
     }
@@ -43,7 +43,7 @@ public class TestClusterJspHelper {
   
   @Before
   public void setUp() throws Exception {
-    conf = new FakeConfiguration();  
+    conf = new ConfigurationForTestClusterJspHelper();  
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(
             MiniDFSNNTopology.simpleSingleNN(nameNodePort, nameNodeHttpPort))
@@ -64,14 +64,17 @@ public class TestClusterJspHelper {
      .generateClusterHealthReport();
     assertNotNull("testClusterJspHelperReports ClusterStatus is null",
         clusterStatus);
-    assertTrue("testClusterJspHelperReports wrong ClusterStatus clusterid",
+    assertNotNull("testClusterJspHelperReports ClusterStatus.clusterid is null",
+        clusterStatus.clusterid);
+    assertEquals("testClusterJspHelperReports wrong ClusterStatus clusterid",
         clusterStatus.clusterid.equals("testClusterID"));
     DecommissionStatus decommissionStatus = clusterJspHelper
         .generateDecommissioningReport();
     assertNotNull("testClusterJspHelperReports DecommissionStatus is null",
         decommissionStatus);
-    assertTrue(
-        "testClusterJspHelperReports wrong DecommissionStatus clusterid",
+    assertNotNull("testClusterJspHelperReports DecommissionStatus.clusterid is null",
+        decommissionStatus.clusterid);
+    assertEquals("testClusterJspHelperReports wrong DecommissionStatus clusterid",
         decommissionStatus.clusterid.equals("testClusterID"));
   }
 }
