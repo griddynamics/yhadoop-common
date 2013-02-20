@@ -44,6 +44,8 @@ import org.apache.hadoop.util.VersionInfo;
 
 import com.google.common.base.Preconditions;
 
+import com.google.common.base.Charsets;
+
 
 
 /**
@@ -658,7 +660,7 @@ public abstract class Storage extends StorageInfo {
       FileLock res = null;
       try {
         res = file.getChannel().tryLock();
-        file.write(jvmName.getBytes());
+        file.write(jvmName.getBytes(Charsets.UTF_8));
         LOG.info("Lock on " + lockF + " acquired by nodename " + jvmName);
       } catch(OverlappingFileLockException oe) {
         LOG.error("It appears that another namenode " + file.readLine() 
@@ -903,7 +905,7 @@ public abstract class Storage extends StorageInfo {
     props.setProperty("storageType", storageType.toString());
     props.setProperty("namespaceID", String.valueOf(namespaceID));
     // Set clusterID in version with federation support
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (versionSupportsFederation()) {
       props.setProperty("clusterID", clusterID);
     }
     props.setProperty("cTime", String.valueOf(cTime));

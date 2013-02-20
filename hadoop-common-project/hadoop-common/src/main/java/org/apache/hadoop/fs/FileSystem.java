@@ -850,7 +850,7 @@ public abstract class FileSystem extends Configured implements Closeable {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getDefault().applyUMask(
+    return this.create(f, FsPermission.getFileDefault().applyUMask(
         FsPermission.getUMask(getConf())), overwrite, bufferSize,
         replication, blockSize, progress);
   }
@@ -1030,7 +1030,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       boolean overwrite,
       int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
-    return this.createNonRecursive(f, FsPermission.getDefault(),
+    return this.createNonRecursive(f, FsPermission.getFileDefault(),
         overwrite, bufferSize, replication, blockSize, progress);
   }
 
@@ -1127,6 +1127,17 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
+
+  /**
+   * Concat existing files together.
+   * @param trg the path to the target destination.
+   * @param psrcs the paths to the sources to use for the concatenation.
+   * @throws IOException
+   */
+  public void concat(final Path trg, final Path [] psrcs) throws IOException {
+    throw new UnsupportedOperationException("Not implemented by the " + 
+        getClass().getSimpleName() + " FileSystem implementation");
+  }
 
  /**
    * Get replication.
@@ -1866,7 +1877,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Call {@link #mkdirs(Path, FsPermission)} with default permission.
    */
   public boolean mkdirs(Path f) throws IOException {
-    return mkdirs(f, FsPermission.getDefault());
+    return mkdirs(f, FsPermission.getDirDefault());
   }
 
   /**

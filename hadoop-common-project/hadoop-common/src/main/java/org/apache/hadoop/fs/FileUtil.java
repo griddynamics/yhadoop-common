@@ -21,9 +21,12 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -87,33 +90,98 @@ public class FileUtil {
    * (4) If dir is a normal directory, then dir and all its contents recursively
    *     are deleted.
    */
-  public static boolean fullyDelete(File dir) {
-    if (dir.delete()) {
+  public static boolean fullyDelete(final File dir) {
+    return fullyDelete(dir, false);
+  }
+  
+  /**
+   * Delete a directory and all its contents.  If
+   * we return false, the directory may be partially-deleted.
+   * (1) If dir is symlink to a file, the symlink is deleted. The file pointed
+   *     to by the symlink is not deleted.
+   * (2) If dir is symlink to a directory, symlink is deleted. The directory
+   *     pointed to by symlink is not deleted.
+   * (3) If dir is a normal file, it is deleted.
+   * (4) If dir is a normal directory, then dir and all its contents recursively
+   *     are deleted.
+   * @param dir the file or directory to be deleted
+   * @param tryGrantPermissions true if permissions should be modified to delete a file.
+   * @return true on success false on failure.
+   */
+  public static boolean fullyDelete(final File dir, boolean tryGrantPermissions) {
+    if (tryGrantPermissions) {
+      // try to chmod +rwx the parent folder of the 'dir': 
+      File parent = dir.getParentFile();
+      grantPermissions(parent);
+    }
+    if (deleteImpl(dir, false)) {
       // dir is (a) normal file, (b) symlink to a file, (c) empty directory or
       // (d) symlink to a directory
       return true;
     }
-
     // handle nonempty directory deletion
-    if (!fullyDeleteContents(dir)) {
+    if (!fullyDeleteContents(dir, tryGrantPermissions)) {
       return false;
     }
-    return dir.delete();
+    return deleteImpl(dir, true);
+  }
+  
+  /*
+   * Pure-Java implementation of "chmod +rwx f".
+   */
+  private static void grantPermissions(final File f) {
+      f.setExecutable(true);
+      f.setReadable(true);
+      f.setWritable(true);
   }
 
+  private static boolean deleteImpl(final File f, final boolean doLog) {
+    if (f == null) {
+      LOG.warn("null file argument.");
+      return false;
+    }
+    final boolean wasDeleted = f.delete();
+    if (wasDeleted) {
+      return true;
+    }
+    final boolean ex = f.exists();
+    if (doLog && ex) {
+      LOG.warn("Failed to delete file or dir ["
+          + f.getAbsolutePath() + "]: it still exists.");
+    }
+    return !ex;
+  }
+  
   /**
    * Delete the contents of a directory, not the directory itself.  If
    * we return false, the directory may be partially-deleted.
    * If dir is a symlink to a directory, all the contents of the actual
    * directory pointed to by dir will be deleted.
    */
-  public static boolean fullyDeleteContents(File dir) {
+  public static boolean fullyDeleteContents(final File dir) {
+    return fullyDeleteContents(dir, false);
+  }
+  
+  /**
+   * Delete the contents of a directory, not the directory itself.  If
+   * we return false, the directory may be partially-deleted.
+   * If dir is a symlink to a directory, all the contents of the actual
+   * directory pointed to by dir will be deleted.
+   * @param tryGrantPermissions if 'true', try grant +rwx permissions to this 
+   * and all the underlying directories before trying to delete their contents.
+   */
+  public static boolean fullyDeleteContents(final File dir, final boolean tryGrantPermissions) {
+    if (tryGrantPermissions) {
+      // to be able to list the dir and delete files from it
+      // we must grant the dir rwx permissions: 
+      grantPermissions(dir);
+    }
     boolean deletionSucceeded = true;
-    File contents[] = dir.listFiles();
+    final File[] contents = dir.listFiles();
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
-          if (!contents[i].delete()) {// normal file or symlink to another file
+          if (!deleteImpl(contents[i], true)) {// normal file or symlink to another file
             deletionSucceeded = false;
             continue; // continue deletion of other files/dirs under dir
           }
@@ -121,16 +189,16 @@ public class FileUtil {
           // Either directory or symlink to another directory.
           // Try deleting the directory as this might be a symlink
           boolean b = false;
-          b = contents[i].delete();
+          b = deleteImpl(contents[i], false);
           if (b){
             //this was indeed a symlink or an empty directory
             continue;
           }
           // if not an empty directory or symlink let
           // fullydelete handle it.
-          if (!fullyDelete(contents[i])) {
+          if (!fullyDelete(contents[i], tryGrantPermissions)) {
             deletionSucceeded = false;
-            continue; // continue deletion of other files/dirs under dir
+            // continue deletion of other files/dirs under dir
           }
         }
       }
@@ -559,14 +627,28 @@ public class FileUtil {
    * @throws IOException
    */
   public static void unTar(File inFile, File untarDir) throws IOException {
-    if (!untarDir.mkdirs()) {           
+    if (!untarDir.mkdirs()) {
       if (!untarDir.isDirectory()) {
         throw new IOException("Mkdirs failed to create " + untarDir);
       }
     }
 
-    StringBuilder untarCommand = new StringBuilder();
     boolean gzipped = inFile.toString().endsWith("gz");
+    if(Shell.WINDOWS) {
+      // Tar is not native to Windows. Use simple Java based implementation for 
+      // tests and simple tar archives
+      unTarUsingJava(inFile, untarDir, gzipped);
+    }
+    else {
+      // spawn tar utility to untar archive for full fledged unix behavior such 
+      // as resolving symlinks in tar archives
+      unTarUsingTar(inFile, untarDir, gzipped);
+    }
+  }
+  
+  private static void unTarUsingTar(File inFile, File untarDir,
+      boolean gzipped) throws IOException {
+    StringBuffer untarCommand = new StringBuffer();
     if (gzipped) {
       untarCommand.append(" gzip -dc '");
       untarCommand.append(FileUtil.makeShellPath(inFile));
@@ -591,7 +673,62 @@ public class FileUtil {
                   ". Tar process exited with exit code " + exitcode);
     }
   }
+  
+  private static void unTarUsingJava(File inFile, File untarDir,
+      boolean gzipped) throws IOException {
+    InputStream inputStream = null;
+    if (gzipped) {
+      inputStream = new BufferedInputStream(new GZIPInputStream(
+          new FileInputStream(inFile)));
+    } else {
+      inputStream = new BufferedInputStream(new FileInputStream(inFile));
+    }
 
+    TarArchiveInputStream tis = new TarArchiveInputStream(inputStream);
+
+    for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
+      unpackEntries(tis, entry, untarDir);
+      entry = tis.getNextTarEntry();
+    }
+  }
+  
+  private static void unpackEntries(TarArchiveInputStream tis,
+      TarArchiveEntry entry, File outputDir) throws IOException {
+    if (entry.isDirectory()) {
+      File subDir = new File(outputDir, entry.getName());
+      if (!subDir.mkdir() && !subDir.isDirectory()) {
+        throw new IOException("Mkdirs failed to create tar internal dir "
+            + outputDir);
+      }
+
+      for (TarArchiveEntry e : entry.getDirectoryEntries()) {
+        unpackEntries(tis, e, subDir);
+      }
+
+      return;
+    }
+
+    File outputFile = new File(outputDir, entry.getName());
+    if (!outputDir.exists()) {
+      if (!outputDir.mkdirs()) {
+        throw new IOException("Mkdirs failed to create tar internal dir "
+            + outputDir);
+      }
+    }
+
+    int count;
+    byte data[] = new byte[2048];
+    BufferedOutputStream outputStream = new BufferedOutputStream(
+        new FileOutputStream(outputFile));
+
+    while ((count = tis.read(data)) != -1) {
+      outputStream.write(data, 0, count);
+    }
+
+    outputStream.flush();
+    outputStream.close();
+  }
+  
   /**
    * Class for creating hardlinks.
    * Supports Unix, Cygwin, WindXP.
