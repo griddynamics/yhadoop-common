@@ -420,7 +420,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   /*
    * print a job list 
    */
-  private void testJobList(String jobId, Configuration conf) throws Exception {
+  protected void testJobList(String jobId, Configuration conf) throws Exception {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // bad options
 
