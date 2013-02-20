@@ -29,9 +29,7 @@ import java.net.Proxy;
 import java.net.Proxy.Type;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,11 +41,35 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.SocksSocketFactory;
 import org.apache.hadoop.net.StandardSocketFactory;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
+/*
+ * test StandardSocketFactory and SocksSocketFactory NetUtils
+ * 
+ */
 public class TestSocketFactory {
 
   private volatile int port;
+  private ServerThread serverThread;
+
+  @Before
+  public void start() throws Exception {
+    // start simple tcp server
+    serverThread = new ServerThread();
+    Thread server = new Thread(serverThread);
+    server.start();
+    while (!serverThread.isReady()) {
+      Thread.sleep(10);
+    }
+  }
+
+  @After
+  public void stop() {
+    // stop server
+    serverThread.stop();
+  }
 
   @Test
   public void testSocketFactoryAsKeyInMap() throws Exception {
@@ -85,41 +107,53 @@ public class TestSocketFactory {
 
   }
 
+  /*
+   * test SocksSocketFactory. test different constructors
+   */
   @Test
   public void testSocksSocketFactory() throws Exception {
-    ServerThread serverThread = new ServerThread();
-    Thread server = new Thread(serverThread);
-    server.start();
-    while (!serverThread.isReady()) {
-      Thread.sleep(10);
-    }
-    try {
 
-      InetAddress addr = InetAddress.getLocalHost();
-      SocksSocketFactory socketFactory = new SocksSocketFactory();
-      Socket socket = socketFactory.createSocket(addr, port);
-      checkSoket(socket);
-      socket.close();
-
-      socket = socketFactory.createSocket(addr, port,
-          InetAddress.getLocalHost(), 0);
-      checkSoket(socket);
-      socket.close();
-
-      socket = socketFactory.createSocket("localhost", port);
-      checkSoket(socket);
-      socket.close();
-
-      socket = socketFactory.createSocket("localhost", port,
-          InetAddress.getLocalHost(), 0);
-      checkSoket(socket);
-      socket.close();
-
-    } finally {
-      serverThread.stop();
-    }
+    testSocketFactory(new SocksSocketFactory());
   }
 
+  /*
+   * test SocksSocketFactory. test different constructors
+   */
+
+  @Test
+  public void testStandardSocketFactory() throws Exception {
+
+    testSocketFactory(new StandardSocketFactory());
+
+  }
+
+  /*
+   * common test socket should works
+   */
+  private void testSocketFactory(SocketFactory socketFactory) throws Exception {
+    InetAddress addr = InetAddress.getLocalHost();
+    Socket socket = socketFactory.createSocket(addr, port);
+    checkSoket(socket);
+    socket.close();
+
+    socket = socketFactory.createSocket(addr, port, InetAddress.getLocalHost(),
+        0);
+    checkSoket(socket);
+    socket.close();
+
+    socket = socketFactory.createSocket("localhost", port);
+    checkSoket(socket);
+    socket.close();
+
+    socket = socketFactory.createSocket("localhost", port,
+        InetAddress.getLocalHost(), 0);
+    checkSoket(socket);
+    socket.close();
+
+  }
+  /*
+   * test proxy methods
+   */
   @Test
   public void testProxy() throws Exception {
     SocksSocketFactory templateWithoutProxy = new SocksSocketFactory();
@@ -143,12 +177,13 @@ public class TestSocketFactory {
     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
     out.writeBytes("test\n");
     String answer = input.readLine();
-
-    System.out.println("ss:" + answer);
     assertEquals("TEST", answer);
 
   }
 
+  /*
+   * simple tcp server
+   */
   private class ServerThread implements Runnable {
 
     private volatile boolean works = true;
@@ -160,7 +195,6 @@ public class TestSocketFactory {
       try {
         testSocket = new ServerSocket(0);
         port = testSocket.getLocalPort();
-        System.out.println("port:" + port);
         ready = true;
         while (works) {
           try {
