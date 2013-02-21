@@ -63,18 +63,10 @@ public class TestClusterJspHelper {
     ClusterStatus clusterStatus = clusterJspHelper
      .generateClusterHealthReport();
     assertNotNull("testClusterJspHelperReports ClusterStatus is null",
-        clusterStatus);
-    assertNotNull("testClusterJspHelperReports ClusterStatus.clusterid is null",
-        clusterStatus.clusterid);
-    assertEquals("testClusterJspHelperReports wrong ClusterStatus clusterid",
-        clusterStatus.clusterid.equals("testClusterID"));
+        clusterStatus);       
     DecommissionStatus decommissionStatus = clusterJspHelper
         .generateDecommissioningReport();
     assertNotNull("testClusterJspHelperReports DecommissionStatus is null",
-        decommissionStatus);
-    assertNotNull("testClusterJspHelperReports DecommissionStatus.clusterid is null",
-        decommissionStatus.clusterid);
-    assertEquals("testClusterJspHelperReports wrong DecommissionStatus clusterid",
-        decommissionStatus.clusterid.equals("testClusterID"));
+        decommissionStatus);    
   }
 }
