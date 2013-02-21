@@ -81,7 +81,7 @@ public class TestRMAdminProtocolPBClientImpl {
 
   @Test
   public void testRefreshNodes() throws Exception {
-    resourceManager.getClientRMService().
+    resourceManager.getClientRMService();
     RefreshNodesRequest request = recordFactory
         .newRecordInstance(RefreshNodesRequest.class);
     RefreshNodesResponse responce = client.refreshNodes(request);
