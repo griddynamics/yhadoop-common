@@ -104,7 +104,7 @@ public class TestNameNodeJspHelper {
         securityOnOff.contains("OFF"));
   }
 
-  @Test
+  @Test(timeout = 2000)
   public void testGetRandomDatanode() {
     ImmutableSet<String> set = ImmutableSet.of();
     NameNode nameNode = cluster.getNameNode();
@@ -122,7 +122,7 @@ public class TestNameNodeJspHelper {
     }
   }
 
-  @Test
+  @Test(timeout = 2000)
   public void testNamenodeJspHelperRedirectToRandomDataNode() throws IOException, InterruptedException {
     final String urlPart = "browseDirectory.jsp?namenodeInfoPort=";     
     
@@ -172,7 +172,7 @@ public class TestNameNodeJspHelper {
         && dead.size() == deadCount);
   }
 
-  @Test
+  @Test(timeout = 2000)
   public void testNodeListJspGenerateNodesList() throws IOException {
     String output;
     NameNode nameNode = cluster.getNameNode();
@@ -221,7 +221,7 @@ public class TestNameNodeJspHelper {
     return buffer.toString();
   }
 
-  @Test
+  @Test(timeout = 2000)
   public void testGetInodeLimitText() {
     NameNode nameNode = cluster.getNameNode();
     FSNamesystem fsn = nameNode.getNamesystem();
@@ -234,7 +234,7 @@ public class TestNameNodeJspHelper {
     }
   }
   
-  @Test
+  @Test(timeout = 2000)
   public void testGetVersionTable() {
     NameNode nameNode = cluster.getNameNode();
     FSNamesystem fsn = nameNode.getNamesystem();

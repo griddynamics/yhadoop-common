@@ -55,7 +55,7 @@ public class TestClusterJspHelper {
     cluster.shutdown();
   }
 
-  @Test
+  @Test(timeout = 2000)
   public void testClusterJspHelperReports() {
     try {
       ClusterJspHelper clusterJspHelper = new ClusterJspHelper();
