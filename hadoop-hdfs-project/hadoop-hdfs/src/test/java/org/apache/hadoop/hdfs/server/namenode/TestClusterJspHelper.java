@@ -34,7 +34,7 @@ public class TestClusterJspHelper {
   private static final int nameNodePort = 45541;
   private static final int nameNodeHttpPort = 50070;
   
-  private static final class FakeConfiguration extends Configuration {
+  private static final class ConfigurationForTestClusterJspHelper extends Configuration {
     static {
       addDefaultResource("testClusterJspHelper.xml");
     }
@@ -42,7 +42,7 @@ public class TestClusterJspHelper {
   
   @BeforeClass
   public static void before() throws IOException {
-    Configuration conf = new FakeConfiguration();
+    Configuration conf = new ConfigurationForTestClusterJspHelper();
     cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nameNodePort)
         .nameNodeHttpPort(nameNodeHttpPort)
         .numDataNodes(dataNodeNumber)

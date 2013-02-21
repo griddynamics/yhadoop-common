@@ -43,9 +43,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
@@ -54,15 +54,15 @@ import com.google.common.collect.ImmutableSet;
 
 public class TestNameNodeJspHelper {
 
-  private MiniDFSCluster cluster;
-  private Configuration conf;
+  private static MiniDFSCluster cluster;
+  private static Configuration conf;
   private static final int dataNodeNumber = 2;
-  private static final int nameNodePort = 45541;
-  private static final int nameNodeHttpPort = 50070;
+  private static final int nameNodePort = 45542;
+  private static final int nameNodeHttpPort = 50071;
   private static final String NAMENODE_ATTRIBUTE_KEY = "name.node";  
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeClass
+  public static void setUp() throws Exception {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
         .nameNodePort(nameNodePort)
@@ -71,8 +71,8 @@ public class TestNameNodeJspHelper {
     cluster.waitClusterUp();
   }
 
-  @After
-  public void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDown() throws Exception {
     if (cluster != null)
       cluster.shutdown();
   }
