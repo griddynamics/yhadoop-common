@@ -56,7 +56,7 @@ public class TestSocketFactory {
 
   @Before
   public void start() throws Exception {
-    // start simple tcp server
+    // start simple tcp server.
     serverThread = new ServerThread();
     Thread server = new Thread(serverThread);
     server.start();
@@ -100,8 +100,15 @@ public class TestSocketFactory {
 
   }
 
-   /*
-   * test SocksSocketFactory. test different constructors
+  /**
+   * A dummy socket factory class that extends the StandardSocketFactory.
+   */
+  static class DummySocketFactory extends StandardSocketFactory {
+
+  }
+
+  /*
+   * Test SocksSocketFactory. test different constructors
    */
   @Test
   public void testSocksSocketFactory() throws Exception {
@@ -110,7 +117,7 @@ public class TestSocketFactory {
   }
 
   /*
-   * test SocksSocketFactory. test different constructors
+   * Test SocksSocketFactory. Test different constructors
    */
 
   @Test
@@ -121,7 +128,7 @@ public class TestSocketFactory {
   }
 
   /*
-   * common test socket should works
+   * common test. Socket should works
    */
   private void testSocketFactory(SocketFactory socketFactory) throws Exception {
     InetAddress address = InetAddress.getLocalHost();
@@ -129,8 +136,8 @@ public class TestSocketFactory {
     checkSocket(socket);
     socket.close();
 
-    socket = socketFactory.createSocket(address, port, InetAddress.getLocalHost(),
-        0);
+    socket = socketFactory.createSocket(address, port,
+        InetAddress.getLocalHost(), 0);
     checkSocket(socket);
     socket.close();
 
@@ -144,6 +151,7 @@ public class TestSocketFactory {
     socket.close();
 
   }
+
   /*
    * test proxy methods
    */
@@ -175,7 +183,8 @@ public class TestSocketFactory {
   }
 
   /*
-   * simple tcp server
+   * simple tcp server. Server gets a string transforms to upper case and return
+   * this.
    */
   private class ServerThread implements Runnable {
 
