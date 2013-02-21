@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -244,9 +245,10 @@ public class JsonUtil {
     final FsPermission permission = toFsPermission((String) m.get("permission"));
     final long aTime = longFromMap(m, "accessTime");
     final long mTime = longFromMap(m, "modificationTime");
-    final long blockSize = (Long) m.get("blockSize");
+    final long blockSize = longFromMap(m, "blockSize");
     final short replication = shortFromMap(m, "replication");
-    final long fileId = longFromMap(m, "fileId");
+    final long fileId = m.containsKey("fileId") ? longFromMap(m, "fileId")
+        : INodeId.GRANDFATHER_INODE_ID;
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group,
         symlink, DFSUtil.string2Bytes(localName), fileId);
