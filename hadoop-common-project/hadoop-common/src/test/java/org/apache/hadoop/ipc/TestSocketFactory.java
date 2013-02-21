@@ -56,7 +56,7 @@ public class TestSocketFactory {
 
   @Before
   public void start() throws Exception {
-    // start simple tcp server
+    // start simple tcp server.
     serverThread = new ServerThread();
     Thread server = new Thread(serverThread);
     server.start();
@@ -100,13 +100,11 @@ public class TestSocketFactory {
 
   }
 
-   /*
-   * test SocksSocketFactory. Test different constructors
+  /**
+   * A dummy socket factory class that extends the StandardSocketFactory.
    */
-  @Test
-  public void testSocksSocketFactory() throws Exception {
+  static class DummySocketFactory extends StandardSocketFactory {
 
-    testSocketFactory(new SocksSocketFactory());
   }
 
   /*
@@ -175,7 +173,7 @@ public class TestSocketFactory {
   }
 
   /*
-   * simple tcp server
+   * simple tcp server. Server gets a string transforms to upper case and return this.
    */
   private class ServerThread implements Runnable {
 
