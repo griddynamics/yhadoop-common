@@ -32,7 +32,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
@@ -124,10 +123,6 @@ public class FSEditLogLoader {
     long numTxns = (lastTxId - expectedStartingTxId) + 1;
     long lastLogTime = now();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("edit log length: " + in.length() + ", start txid: "
-          + expectedStartingTxId + ", last txid: " + lastTxId);
-    }
     try {
       while (true) {
         try {
@@ -362,10 +357,8 @@ public class FSEditLogLoader {
     }
     case OP_RENAME_OLD: {
       RenameOldOp renameOp = (RenameOldOp)op;
-      HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp);
-      fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
       break;
     }
     case OP_DELETE: {
@@ -435,11 +428,8 @@ public class FSEditLogLoader {
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
-
-      HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp, renameOp.options);
-      fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
       break;
     }
     case OP_GET_DELEGATION_TOKEN: {
@@ -671,7 +661,9 @@ public class FSEditLogLoader {
         FSImage.LOG.warn("Caught exception after reading " + numValid +
             " ops from " + in + " while determining its valid length." +
             "Position was " + lastPos, t);
-        break;
+        in.resync();
+        FSImage.LOG.warn("After resync, position is " + in.getPosition());
+        continue;
       }
       if (lastTxId == HdfsConstants.INVALID_TXID
           || op.getTransactionId() > lastTxId) {
