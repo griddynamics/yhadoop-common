@@ -34,16 +34,15 @@ public class TestClusterJspHelper {
   private final int dataNodeNumber = 2;
   private final int nameNodePort = 45541;
   private final int nameNodeHttpPort = 50070;    
-  
-  static final class ConfigurationForTestClusterJspHelper extends Configuration {
-    static {
-      addDefaultResource("testClusterJspHelperProp.xml");
-    }
+    
+  static {
+    Configuration.addDefaultResource("testClusterJspHelperProp.xml");
   }
+  
   
   @Before
   public void setUp() throws Exception {
-    conf = new ConfigurationForTestClusterJspHelper();  
+    conf = new Configuration();  
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(
             MiniDFSNNTopology.simpleSingleNN(nameNodePort, nameNodeHttpPort))
@@ -57,7 +56,7 @@ public class TestClusterJspHelper {
       cluster.shutdown();    
   }
   
-  @Test
+  @Test(timeout = 15000)
   public void testClusterJspHelperReports() {
     ClusterJspHelper clusterJspHelper = new ClusterJspHelper();
     ClusterStatus clusterStatus = clusterJspHelper
