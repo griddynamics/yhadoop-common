@@ -106,7 +106,7 @@ public class TestYarnApiClasses {
   
   @Test
   public void testApplicationMasterPBImpl (){
-    ApplicationId appId=recordFactory.newRecordInstance(ApplicationId.class);
+    
     ClientToken clientToken= recordFactory.newRecordInstance(ClientToken.class);
     clientToken.setKind("");
     clientToken.setService("");
@@ -114,10 +114,13 @@ public class TestYarnApiClasses {
     clientToken.setPassword(ByteBuffer.allocate(0));
     
     ApplicationStatus appStatus=recordFactory.newRecordInstance(ApplicationStatus.class);
+    appStatus.setApplicationAttemptId(getApplicationAttemptId());
+    appStatus.setProgress(0.6f);
+    appStatus.setResponseId(6);
     
     ApplicationMasterPBImpl original= new ApplicationMasterPBImpl();
     original.setAMFailCount(1);
-    original.setApplicationId(appId);
+    original.setApplicationId(getApplicationId());
     original.setClientToken(clientToken);
     original.setContainerCount(2);
     original.setDiagnostics("diagnostics");
@@ -144,10 +147,9 @@ public class TestYarnApiClasses {
   
   @Test
   public void testApplicationStatusPBImpl(){
-    ApplicationAttemptId appAttemptId=recordFactory.newRecordInstance(ApplicationAttemptId.class);
     
     ApplicationStatusPBImpl original = new ApplicationStatusPBImpl();
-    original.setApplicationAttemptId(appAttemptId);
+    original.setApplicationAttemptId(getApplicationAttemptId());
     original.setProgress(0.4f);
     original.setResponseId(1);
     
@@ -157,5 +159,16 @@ public class TestYarnApiClasses {
     assertEquals(original.getProgress(), copy.getProgress(),0.0001);
     assertEquals(original.getResponseId(), copy.getResponseId());
   
+  }
+  private ApplicationAttemptId getApplicationAttemptId(){
+    ApplicationAttemptId appAttemptId=recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(getApplicationId());
+    appAttemptId.setAttemptId(5);
+    return appAttemptId;
+  }
+  private ApplicationId getApplicationId(){
+    ApplicationId appId=recordFactory.newRecordInstance(ApplicationId.class);
+    appId.setId(4);
+    return appId;
   }
 }
