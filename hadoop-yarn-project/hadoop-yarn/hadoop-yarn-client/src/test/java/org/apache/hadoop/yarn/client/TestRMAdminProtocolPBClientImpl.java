@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.yarn.api.impl.pb.client.RMAdminProtocolPBClientImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
@@ -36,6 +37,7 @@ public class TestRMAdminProtocolPBClientImpl {
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   private static Configuration conf;
+                
   private static RMAdminProtocolPBClientImpl client;
 
   @BeforeClass
