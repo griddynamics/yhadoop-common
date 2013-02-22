@@ -5,7 +5,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
-import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CancelDelegationTokenRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -29,82 +28,86 @@ public class TestYarnApiClasses {
       .getRecordFactory(null);
 
   /*
-   * simple test Resource request
+   * Simple test Resource request.
+   * Test hashCode, equals and compare.
    */
-  @Test
-  public void testResiurceRequest(){
+  @Test (timeout=1000)
+  public void testResourceRequest(){
 
     Resource resource =recordFactory.newRecordInstance(Resource.class);
     Priority priority=recordFactory.newRecordInstance(Priority.class);
 
-    ResourceRequest test1= recordFactory.newRecordInstance(ResourceRequest.class);
-    test1.setHostName("localhost");
-    test1.setNumContainers(2);
-    test1.setPriority(priority);
-    test1.setCapability(resource);
+    ResourceRequest original= recordFactory.newRecordInstance(ResourceRequest.class);
+    original.setHostName("localhost");
+    original.setNumContainers(2);
+    original.setPriority(priority);
+    original.setCapability(resource);
     
-    ResourceRequest test2= recordFactory.newRecordInstance(ResourceRequest.class);
-    test2.setHostName("localhost");
-    test2.setNumContainers(2);
-    test2.setPriority(priority);
-    test2.setCapability(resource);
+    ResourceRequest copy= recordFactory.newRecordInstance(ResourceRequest.class);
+    copy.setHostName("localhost");
+    copy.setNumContainers(2);
+    copy.setPriority(priority);
+    copy.setCapability(resource);
     
-   assertTrue( test1.equals(test2));
-   assertEquals(0, test1.compareTo(test2));
-   assertTrue( test1.hashCode()==test2.hashCode());
+   assertTrue(original.equals(copy));
+   assertEquals(0, original.compareTo(copy));
+   assertTrue(original.hashCode() == copy.hashCode());
 
-   test2.setNumContainers(1);
+   copy.setNumContainers(1);
    
-   assertFalse( test1.equals(test2));
-   assertNotSame(0, test1.compareTo(test2));
-   assertFalse( test1.hashCode()==test2.hashCode());
+   assertFalse(original.equals(copy));
+   assertNotSame(0, original.compareTo(copy));
+   assertFalse(original.hashCode() == copy.hashCode());
     
   }
   
-  @Test 
+  /*
+   * Test CancelDelegationTokenRequestPBImpl. 
+   * Test a transformation to prototype and back 
+   */
+  @Test (timeout=500)
   public void testCancelDelegationTokenRequestPBImpl(){
     
     DelegationToken token=getDelegationToken();
     
-    CancelDelegationTokenRequestPBImpl test = new CancelDelegationTokenRequestPBImpl();
-    test.setDelegationToken(token);
-    CancelDelegationTokenRequestProto proto=test.getProto();
+    CancelDelegationTokenRequestPBImpl original = new CancelDelegationTokenRequestPBImpl();
+    original.setDelegationToken(token);
+    CancelDelegationTokenRequestProto protoType=original.getProto();
     
-    CancelDelegationTokenRequestPBImpl test2= new CancelDelegationTokenRequestPBImpl(proto);
-    assertNotNull(test2.getDelegationToken());
+    CancelDelegationTokenRequestPBImpl copy= new CancelDelegationTokenRequestPBImpl(protoType);
+    assertNotNull(copy.getDelegationToken());
     //compare source and converted
-    assertEquals(token, test2.getDelegationToken());
+    assertEquals(token, copy.getDelegationToken());
     
   }
-  
-  
-  
-  @Test 
+
+  /*
+  * Test RenewDelegationTokenRequestPBImpl.
+  * Test a transformation to prototype and back
+  */
+
+  @Test (timeout=500)
   public void testRenewDelegationTokenRequestPBImpl(){
     
     DelegationToken token=getDelegationToken();
 
-    RenewDelegationTokenRequestPBImpl test = new RenewDelegationTokenRequestPBImpl();
-    test.setDelegationToken(token);
-    RenewDelegationTokenRequestProto proto=test.getProto();
-    
-    RenewDelegationTokenRequestPBImpl test2= new RenewDelegationTokenRequestPBImpl(proto);
-    assertNotNull(test2.getDelegationToken());
+    RenewDelegationTokenRequestPBImpl original = new RenewDelegationTokenRequestPBImpl();
+    original.setDelegationToken(token);
+    RenewDelegationTokenRequestProto protoType =original.getProto();
+
+    RenewDelegationTokenRequestPBImpl copy = new RenewDelegationTokenRequestPBImpl(protoType);
+    assertNotNull(copy.getDelegationToken());
     //compare source and converted
-    assertEquals(token, test2.getDelegationToken());
+    assertEquals(token, copy.getDelegationToken());
     
   }
-  
-  private DelegationToken getDelegationToken(){
-    DelegationToken token=recordFactory.newRecordInstance(DelegationToken.class);
-    token.setKind("");
-    token.setService("");
-    token.setIdentifier(ByteBuffer.allocate(0));
-    token.setPassword(ByteBuffer.allocate(0));
-    return token;
-  }
-  
-  @Test
+
+  /*
+  * Test ApplicationMasterPBImpl.
+  * Test a transformation to prototype and back
+  */
+
+  @Test (timeout=500)
   public void testApplicationMasterPBImpl (){
     
     ClientToken clientToken= recordFactory.newRecordInstance(ClientToken.class);
@@ -129,7 +132,8 @@ public class TestYarnApiClasses {
     original.setState(YarnApplicationState.NEW);
     original.setStatus(appStatus);
     original.setTrackingUrl("TrackingUrl");
-    
+
+    // get copy
     ApplicationMasterPBImpl copy= new ApplicationMasterPBImpl(original.getProto());
     // test copy
     assertEquals(original.getAMFailCount(), copy.getAMFailCount());
@@ -144,8 +148,13 @@ public class TestYarnApiClasses {
     assertEquals(original.getTrackingUrl(), copy.getTrackingUrl());
     
   }
-  
-  @Test
+
+  /*
+  * Test ApplicationStatusPBImpl.
+  * Test a transformation to prototype and back
+  */
+
+  @Test (timeout=500)
   public void testApplicationStatusPBImpl(){
     
     ApplicationStatusPBImpl original = new ApplicationStatusPBImpl();
@@ -153,19 +162,29 @@ public class TestYarnApiClasses {
     original.setProgress(0.4f);
     original.setResponseId(1);
     
-    
     ApplicationStatusPBImpl copy = new ApplicationStatusPBImpl(  original.getProto());
     assertEquals(original.getApplicationAttemptId(), copy.getApplicationAttemptId());
     assertEquals(original.getProgress(), copy.getProgress(),0.0001);
     assertEquals(original.getResponseId(), copy.getResponseId());
   
   }
+
+  private DelegationToken getDelegationToken(){
+    DelegationToken token=recordFactory.newRecordInstance(DelegationToken.class);
+    token.setKind("");
+    token.setService("");
+    token.setIdentifier(ByteBuffer.allocate(0));
+    token.setPassword(ByteBuffer.allocate(0));
+    return token;
+  }
+
   private ApplicationAttemptId getApplicationAttemptId(){
     ApplicationAttemptId appAttemptId=recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(getApplicationId());
     appAttemptId.setAttemptId(5);
     return appAttemptId;
   }
+
   private ApplicationId getApplicationId(){
     ApplicationId appId=recordFactory.newRecordInstance(ApplicationId.class);
     appId.setId(4);
