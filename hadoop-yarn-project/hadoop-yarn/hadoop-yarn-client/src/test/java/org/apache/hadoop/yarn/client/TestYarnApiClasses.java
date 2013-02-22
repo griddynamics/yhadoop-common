@@ -1,6 +1,14 @@
 package org.apache.hadoop.yarn.client;
 
 
+import java.nio.ByteBuffer;
+
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CancelDelegationTokenRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -42,7 +50,49 @@ public class TestYarnApiClasses {
    assertFalse( test1.equals(test2));
    assertNotSame(0, test1.compareTo(test2));
    assertFalse( test1.hashCode()==test2.hashCode());
-
     
+  }
+  
+  @Test 
+  public void testCancelDelegationTokenRequestPBImpl(){
+    
+    DelegationToken token=getDelegationToken();
+    
+    CancelDelegationTokenRequestPBImpl test = new CancelDelegationTokenRequestPBImpl();
+    test.setDelegationToken(token);
+    CancelDelegationTokenRequestProto proto=test.getProto();
+    
+    CancelDelegationTokenRequestPBImpl test2= new CancelDelegationTokenRequestPBImpl(proto);
+    assertNotNull(test2.getDelegationToken());
+    //compare source and converted
+    assertEquals(token, test2.getDelegationToken());
+    
+  }
+  
+  
+  
+  @Test 
+  public void testRenewDelegationTokenRequestPBImpl(){
+    
+    DelegationToken token=getDelegationToken();
+
+    RenewDelegationTokenRequestPBImpl test = new RenewDelegationTokenRequestPBImpl();
+    test.setDelegationToken(token);
+    RenewDelegationTokenRequestProto proto=test.getProto();
+    
+    RenewDelegationTokenRequestPBImpl test2= new RenewDelegationTokenRequestPBImpl(proto);
+    assertNotNull(test2.getDelegationToken());
+    //compare source and converted
+    assertEquals(token, test2.getDelegationToken());
+    
+  }
+  
+  private DelegationToken getDelegationToken(){
+    DelegationToken token=recordFactory.newRecordInstance(DelegationToken.class);
+    token.setKind("");
+    token.setService("");
+    token.setIdentifier(ByteBuffer.allocate(0));
+    token.setPassword(ByteBuffer.allocate(0));
+    return token;
   }
 }
