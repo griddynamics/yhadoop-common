@@ -211,7 +211,7 @@ public class TestShortCircuitLocalRead {
     doTestShortCircuitRead(true, 10*blockSize+100, 777);
   }
    
-  @Test
+  @Test(timeout = 15000)
   public void testReadWithRemoteBlockReader() throws IOException {
     doTestShortCircuitReadWithRemoteBlockReader(true, 3*blockSize+100, 0);
   }
