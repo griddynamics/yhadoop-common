@@ -3,6 +3,10 @@ package org.apache.hadoop.yarn.client;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CancelDelegationTokenRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
@@ -165,10 +169,15 @@ public class TestYarnApiClasses {
   
   }
 
-  
-  
-  
- 
+  private DelegationToken getDelegationToken(){
+    DelegationToken token=recordFactory.newRecordInstance(DelegationToken.class);
+    token.setKind("");
+    token.setService("");
+    token.setIdentifier(ByteBuffer.allocate(0));
+    token.setPassword(ByteBuffer.allocate(0));
+    return token;
+  }
+
   private ApplicationAttemptId getApplicationAttemptId(){
     ApplicationAttemptId appAttemptId=recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(getApplicationId());
