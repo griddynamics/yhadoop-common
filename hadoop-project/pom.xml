@@ -55,7 +55,7 @@
 
     <!-- Changed version to use the patched surefire/plexus plugin
          (Note that the custom repository must be defined to use the patched version.) -->
-    <maven-surefire-plugin-version>2.12.3-GD</maven-surefire-plugin-version>
+    <maven-surefire-plugin-version>2.12.3-GD-02</maven-surefire-plugin-version>
   </properties>
 
   <repositories>
