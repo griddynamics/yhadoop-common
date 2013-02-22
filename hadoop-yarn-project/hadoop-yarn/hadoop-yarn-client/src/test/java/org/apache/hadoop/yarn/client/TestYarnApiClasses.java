@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -67,7 +68,11 @@ public class TestYarnApiClasses {
   @Test (timeout=500)
   public void testApplicationMasterPBImpl (){
     
-    
+    ClientToken clientToken= recordFactory.newRecordInstance(ClientToken.class);
+    clientToken.setKind("");
+    clientToken.setService("");
+    clientToken.setIdentifier(ByteBuffer.allocate(0));
+    clientToken.setPassword(ByteBuffer.allocate(0));
     
     ApplicationStatus appStatus=recordFactory.newRecordInstance(ApplicationStatus.class);
     appStatus.setApplicationAttemptId(getApplicationAttemptId());
@@ -77,7 +82,7 @@ public class TestYarnApiClasses {
     ApplicationMasterPBImpl original= new ApplicationMasterPBImpl();
     original.setAMFailCount(1);
     original.setApplicationId(getApplicationId());
-    original.setClientToken("ClientToken");
+    original.setClientToken(clientToken);
     original.setContainerCount(2);
     original.setDiagnostics("diagnostics");
     original.setHost("localhost");

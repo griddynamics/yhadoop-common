@@ -24,8 +24,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -53,9 +51,8 @@ public class TestRMAdminProtocolPBClientImpl {
   public static void setUpResourceManager() throws IOException,
       InterruptedException {
     Configuration configuration = new YarnConfiguration();
-    Store store = StoreFactory.getStore(configuration);
 
-    resourceManager = new ResourceManager(store) {
+    resourceManager = new ResourceManager() {
       @Override
       protected void doSecureLogin() throws IOException {
       }
