@@ -299,6 +299,9 @@ Trunk (Unreleased)
     HDFS-4340. Update addBlock() to inculde inode id as additional argument.
     (Brandon Li via suresh)
 
+    HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
+    exists.  (Brandon Li via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -306,6 +309,8 @@ Release 2.0.4-beta - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
 
   OPTIMIZATIONS
 
@@ -316,6 +321,13 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4471. Namenode WebUI file browsing does not work with wildcard
     addresses configured. (Andrew Wang via atm)
+
+    HDFS-4342. Directories configured in dfs.namenode.edits.dir.required
+    but not in dfs.namenode.edits.dir are silently ignored.  (Arpit Agarwal
+    via szetszwo)
+
+    HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race 
+    between delete and replication of same file. (umamahesh)
 
 Release 2.0.3-alpha - 2013-02-06
 
@@ -2291,6 +2303,9 @@ Release 0.23.7 - UNRELEASED
   BUG FIXES
 
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
+
+    HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
+    (kihwal)
 
 Release 0.23.6 - UNRELEASED
 

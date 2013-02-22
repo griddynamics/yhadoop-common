@@ -152,6 +152,9 @@ Trunk (Unreleased)
     MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
     queue configuration. (Chris Nauroth via suresh)
 
+    MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
+    via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -166,6 +169,22 @@ Release 2.0.4-beta - UNRELEASED
 
     MAPREDUCE-4671. AM does not tell the RM about container requests which are
     no longer needed. (Bikas Saha via sseth)
+
+    MAPREDUCE-4994. -jt generic command line option does not work. (sandyr via tucu)
+
+    MAPREDUCE-5000. Fixes getCounters when speculating by fixing the selection
+    of the best attempt for a task. (Jason Lowe via sseth)
+
+    MAPREDUCE-4994. Addendum fixing testcases failures. (sandyr via tucu)
+
+    MAPREDUCE-4846. Some JobQueueInfo methods are public in MR1 but protected
+    in MR2. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-5013. mapred.JobStatus compatibility: MR2 missing constructors
+    from MR1. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4951. Container preemption interpreted as task failure.
+    (Sandy Ryza via tomwhite)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -694,6 +713,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4905. test org.apache.hadoop.mapred.pipes 
     (Aleksey Gorshkov via bobby)
 
+    MAPREDUCE-4989. JSONify DataTables input data for Attempts page (Ravi
+    Prakash via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
@@ -706,6 +728,13 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
     (Robert Parker via jeagles)
+
+    MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
+    speculative attempts (Robert Parker via jlowe)
+
+    MAPREDUCE-5009. Killing the Task Attempt slated for commit does not clear
+    the value from the Task commitAttempt member (Robert Parker via jeagles)
+
 
 Release 0.23.6 - UNRELEASED
 
