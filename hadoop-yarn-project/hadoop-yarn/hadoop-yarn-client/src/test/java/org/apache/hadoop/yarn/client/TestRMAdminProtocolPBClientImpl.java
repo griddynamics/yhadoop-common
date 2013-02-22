@@ -50,6 +50,7 @@ public class TestRMAdminProtocolPBClientImpl {
   @BeforeClass
   public static void setUpResourceManager() throws IOException,
       InterruptedException {
+    Configuration.addDefaultResource("config-with-sequrity.xml");
     Configuration configuration = new YarnConfiguration();
 
     resourceManager = new ResourceManager() {

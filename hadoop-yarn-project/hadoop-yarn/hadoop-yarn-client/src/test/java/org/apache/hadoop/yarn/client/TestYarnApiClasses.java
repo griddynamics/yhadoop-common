@@ -57,8 +57,46 @@ public class TestYarnApiClasses {
     
   }
   
-  
+  /*
+   * Test CancelDelegationTokenRequestPBImpl. 
+   * Test a transformation to prototype and back 
+   */
+  @Test (timeout=500)
+  public void testCancelDelegationTokenRequestPBImpl(){
+    
+    DelegationToken token=getDelegationToken();
+    
+    CancelDelegationTokenRequestPBImpl original = new CancelDelegationTokenRequestPBImpl();
+    original.setDelegationToken(token);
+    CancelDelegationTokenRequestProto protoType=original.getProto();
+    
+    CancelDelegationTokenRequestPBImpl copy= new CancelDelegationTokenRequestPBImpl(protoType);
+    assertNotNull(copy.getDelegationToken());
+    //compare source and converted
+    assertEquals(token, copy.getDelegationToken());
+    
+  }
 
+  /*
+  * Test RenewDelegationTokenRequestPBImpl.
+  * Test a transformation to prototype and back
+  */
+
+  @Test (timeout=500)
+  public void testRenewDelegationTokenRequestPBImpl(){
+    
+    DelegationToken token=getDelegationToken();
+
+    RenewDelegationTokenRequestPBImpl original = new RenewDelegationTokenRequestPBImpl();
+    original.setDelegationToken(token);
+    RenewDelegationTokenRequestProto protoType =original.getProto();
+
+    RenewDelegationTokenRequestPBImpl copy = new RenewDelegationTokenRequestPBImpl(protoType);
+    assertNotNull(copy.getDelegationToken());
+    //compare source and converted
+    assertEquals(token, copy.getDelegationToken());
+    
+  }
 
   /*
   * Test ApplicationMasterPBImpl.
@@ -127,6 +165,9 @@ public class TestYarnApiClasses {
   
   }
 
+  
+  
+  
  
   private ApplicationAttemptId getApplicationAttemptId(){
     ApplicationAttemptId appAttemptId=recordFactory.newRecordInstance(ApplicationAttemptId.class);
