@@ -16,11 +16,6 @@
 <configuration>
   <property>
     <name>fs.defaultFS</name>
-    <value>hdfs://localhost.localdomain:45541</value>
-    <description></description>
-  </property>
-  <property>
-    <name>hadoop.security.authentication</name>
-    <value>simple</value>
-    </property>
+    <value>hdfs://localhost.localdomain:45541</value>    
+  </property>  
 </configuration>
