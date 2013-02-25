@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -171,20 +172,19 @@ public class BlockManager {
    */
   private final Set<Block> postponedMisreplicatedBlocks = Sets.newHashSet();
 
-  //
-  // Keeps a TreeSet for every named node. Each treeset contains
-  // a list of the blocks that are "extra" at that location. We'll
-  // eventually remove these extras.
-  // Mapping: StorageID -> TreeSet<Block>
-  //
+  /**
+   * Maps a StorageID to the set of blocks that are "extra" for this
+   * DataNode. We'll eventually remove these extras.
+   */
   public final Map<String, LightWeightLinkedSet<Block>> excessReplicateMap =
     new TreeMap<String, LightWeightLinkedSet<Block>>();
 
-  //
-  // Store set of Blocks that need to be replicated 1 or more times.
-  // We also store pending replication-orders.
-  //
+  /**
+   * Store set of Blocks that need to be replicated 1 or more times.
+   * We also store pending replication-orders.
+   */
   public final UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
+
   @VisibleForTesting
   final PendingReplicationBlocks pendingReplications;
 
@@ -1577,7 +1577,10 @@ public class BlockManager {
     }
 
     // Log the block report processing stats from Namenode perspective
-    NameNode.getNameNodeMetrics().addBlockReport((int) (endTime - startTime));
+    final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+    if (metrics != null) {
+      metrics.addBlockReport((int) (endTime - startTime));
+    }
     blockLog.info("BLOCK* processReport: from "
         + nodeID + ", blocks: " + newReport.getNumberOfBlocks()
         + ", processing time: " + (endTime - startTime) + " msecs");

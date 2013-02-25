@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -43,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -130,6 +132,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private static final TaskAttemptCompletionEvent[]
     EMPTY_TASK_ATTEMPT_COMPLETION_EVENTS = new TaskAttemptCompletionEvent[0];
 
+  private static final TaskCompletionEvent[]
+    EMPTY_TASK_COMPLETION_EVENTS = new TaskCompletionEvent[0];
+
   private static final Log LOG = LogFactory.getLog(JobImpl.class);
 
   //The maximum fraction of fetch failures allowed for a map
@@ -196,7 +201,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private int allowedMapFailuresPercent = 0;
   private int allowedReduceFailuresPercent = 0;
   private List<TaskAttemptCompletionEvent> taskAttemptCompletionEvents;
-  private List<TaskAttemptCompletionEvent> mapAttemptCompletionEvents;
+  private List<TaskCompletionEvent> mapAttemptCompletionEvents;
+  private List<Integer> taskCompletionIdxToMapCompletionIdx;
   private final List<String> diagnostics = new ArrayList<String>();
   
   //task/attempt related datastructures
@@ -684,27 +690,31 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public TaskAttemptCompletionEvent[] getTaskAttemptCompletionEvents(
       int fromEventId, int maxEvents) {
-    return getAttemptCompletionEvents(taskAttemptCompletionEvents,
-        fromEventId, maxEvents);
-  }
-
-  @Override
-  public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
-      int startIndex, int maxEvents) {
-    return getAttemptCompletionEvents(mapAttemptCompletionEvents,
-        startIndex, maxEvents);
-  }
-
-  private TaskAttemptCompletionEvent[] getAttemptCompletionEvents(
-      List<TaskAttemptCompletionEvent> eventList,
-      int startIndex, int maxEvents) {
     TaskAttemptCompletionEvent[] events = EMPTY_TASK_ATTEMPT_COMPLETION_EVENTS;
     readLock.lock();
     try {
-      if (eventList.size() > startIndex) {
+      if (taskAttemptCompletionEvents.size() > fromEventId) {
         int actualMax = Math.min(maxEvents,
-            (eventList.size() - startIndex));
-        events = eventList.subList(startIndex,
+            (taskAttemptCompletionEvents.size() - fromEventId));
+        events = taskAttemptCompletionEvents.subList(fromEventId,
+            actualMax + fromEventId).toArray(events);
+      }
+      return events;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public TaskCompletionEvent[] getMapAttemptCompletionEvents(
+      int startIndex, int maxEvents) {
+    TaskCompletionEvent[] events = EMPTY_TASK_COMPLETION_EVENTS;
+    readLock.lock();
+    try {
+      if (mapAttemptCompletionEvents.size() > startIndex) {
+        int actualMax = Math.min(maxEvents,
+            (mapAttemptCompletionEvents.size() - startIndex));
+        events = mapAttemptCompletionEvents.subList(startIndex,
             actualMax + startIndex).toArray(events);
       }
       return events;
@@ -1068,9 +1078,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     boolean smallCpu =
         (
             Math.max(
-                conf.getInt(MRJobConfig.MAP_CPU_VCORES, 1), 
-                conf.getInt(MRJobConfig.REDUCE_CPU_VCORES, 1)) < 
-             sysCPUSizeForUberSlot
+                conf.getInt(
+                    MRJobConfig.MAP_CPU_VCORES, 
+                    MRJobConfig.DEFAULT_MAP_CPU_VCORES), 
+                conf.getInt(
+                    MRJobConfig.REDUCE_CPU_VCORES, 
+                    MRJobConfig.DEFAULT_REDUCE_CPU_VCORES)) 
+             <= sysCPUSizeForUberSlot
         );
     boolean notChainJob = !isChainJob(conf);
 
@@ -1179,6 +1193,39 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
   */
+  /**
+    * Get the workflow adjacencies from the job conf
+    * The string returned is of the form "key"="value" "key"="value" ...
+    */
+  private static String getWorkflowAdjacencies(Configuration conf) {
+    int prefixLen = MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_STRING.length();
+    Map<String,String> adjacencies = 
+        conf.getValByRegex(MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_PATTERN);
+    if (adjacencies.isEmpty()) {
+      return "";
+    }
+    int size = 0;
+    for (Entry<String,String> entry : adjacencies.entrySet()) {
+      int keyLen = entry.getKey().length();
+      size += keyLen - prefixLen;
+      size += entry.getValue().length() + 6;
+    }
+    StringBuilder sb = new StringBuilder(size);
+    for (Entry<String,String> entry : adjacencies.entrySet()) {
+      int keyLen = entry.getKey().length();
+      sb.append("\"");
+      sb.append(escapeString(entry.getKey().substring(prefixLen, keyLen)));
+      sb.append("\"=\"");
+      sb.append(escapeString(entry.getValue()));
+      sb.append("\" ");
+    }
+    return sb.toString();
+  }
+  
+  public static String escapeString(String data) {
+    return StringUtils.escapeString(data, StringUtils.ESCAPE_CHAR,
+        new char[] {'"', '=', '.'});
+  }
 
   public static class InitTransition 
       implements MultipleArcTransition<JobImpl, JobEvent, JobStateInternal> {
@@ -1204,7 +1251,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             job.conf.get(MRJobConfig.USER_NAME, "mapred"),
             job.appSubmitTime,
             job.remoteJobConfFile.toString(),
-            job.jobACLs, job.queueName);
+            job.jobACLs, job.queueName,
+            job.conf.get(MRJobConfig.WORKFLOW_ID, ""),
+            job.conf.get(MRJobConfig.WORKFLOW_NAME, ""),
+            job.conf.get(MRJobConfig.WORKFLOW_NODE_NAME, ""),
+            getWorkflowAdjacencies(job.conf));
         job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
         //TODO JH Verify jobACLs, UserName via UGI?
 
@@ -1243,7 +1294,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             new ArrayList<TaskAttemptCompletionEvent>(
                 job.numMapTasks + job.numReduceTasks + 10);
         job.mapAttemptCompletionEvents =
-            new ArrayList<TaskAttemptCompletionEvent>(job.numMapTasks + 10);
+            new ArrayList<TaskCompletionEvent>(job.numMapTasks + 10);
+        job.taskCompletionIdxToMapCompletionIdx = new ArrayList<Integer>(
+            job.numMapTasks + job.numReduceTasks + 10);
 
         job.allowedMapFailuresPercent =
             job.conf.getInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 0);
@@ -1558,19 +1611,37 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       //eventId is equal to index in the arraylist
       tce.setEventId(job.taskAttemptCompletionEvents.size());
       job.taskAttemptCompletionEvents.add(tce);
+      int mapEventIdx = -1;
       if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
-        job.mapAttemptCompletionEvents.add(tce);
+        // we track map completions separately from task completions because
+        // - getMapAttemptCompletionEvents uses index ranges specific to maps
+        // - type converting the same events over and over is expensive
+        mapEventIdx = job.mapAttemptCompletionEvents.size();
+        job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(tce));
       }
+      job.taskCompletionIdxToMapCompletionIdx.add(mapEventIdx);
       
       TaskAttemptId attemptId = tce.getAttemptId();
       TaskId taskId = attemptId.getTaskId();
       //make the previous completion event as obsolete if it exists
-      Object successEventNo = 
-        job.successAttemptCompletionEventNoMap.remove(taskId);
+      Integer successEventNo =
+          job.successAttemptCompletionEventNoMap.remove(taskId);
       if (successEventNo != null) {
         TaskAttemptCompletionEvent successEvent = 
-          job.taskAttemptCompletionEvents.get((Integer) successEventNo);
+          job.taskAttemptCompletionEvents.get(successEventNo);
         successEvent.setStatus(TaskAttemptCompletionEventStatus.OBSOLETE);
+        int mapCompletionIdx =
+            job.taskCompletionIdxToMapCompletionIdx.get(successEventNo);
+        if (mapCompletionIdx >= 0) {
+          // update the corresponding TaskCompletionEvent for the map
+          TaskCompletionEvent mapEvent =
+              job.mapAttemptCompletionEvents.get(mapCompletionIdx);
+          job.mapAttemptCompletionEvents.set(mapCompletionIdx,
+              new TaskCompletionEvent(mapEvent.getEventId(),
+                  mapEvent.getTaskAttemptId(), mapEvent.idWithinJob(),
+                  mapEvent.isMapTask(), TaskCompletionEvent.Status.OBSOLETE,
+                  mapEvent.getTaskTrackerHttp()));
+        }
       }
       
       // if this attempt is not successful then why is the previous successful 
