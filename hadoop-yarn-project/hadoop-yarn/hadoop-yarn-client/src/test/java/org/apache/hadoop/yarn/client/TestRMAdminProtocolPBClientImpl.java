@@ -106,7 +106,7 @@ public class TestRMAdminProtocolPBClientImpl {
     field.set(client, stub);
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testCancelDelegationToken() throws YarnRemoteException {
     CancelDelegationTokenRequest request = recordFactory
         .newRecordInstance(CancelDelegationTokenRequest.class);
@@ -137,7 +137,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testRenewDelegationToken() throws YarnRemoteException {
     RenewDelegationTokenRequest request = recordFactory
         .newRecordInstance(RenewDelegationTokenRequest.class);
@@ -168,7 +168,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetDelegationToken() throws YarnRemoteException {
     GetDelegationTokenRequest request = recordFactory
         .newRecordInstance(GetDelegationTokenRequest.class);
@@ -198,7 +198,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetQueueUserAcls() throws YarnRemoteException {
     GetQueueUserAclsInfoRequest request = recordFactory
         .newRecordInstance(GetQueueUserAclsInfoRequest.class);
@@ -228,7 +228,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetQueueInfo() throws YarnRemoteException {
     GetQueueInfoRequest request = recordFactory
         .newRecordInstance(GetQueueInfoRequest.class);
@@ -258,7 +258,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetClusterNodes() throws YarnRemoteException {
     GetClusterNodesRequest request = recordFactory
         .newRecordInstance(GetClusterNodesRequest.class);
@@ -288,7 +288,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetAllApplications() throws YarnRemoteException {
     GetAllApplicationsRequest request = recordFactory
         .newRecordInstance(GetAllApplicationsRequest.class);
@@ -318,7 +318,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testSubmitApplication() throws YarnRemoteException {
     SubmitApplicationRequest request = recordFactory
         .newRecordInstance(SubmitApplicationRequest.class);
@@ -348,7 +348,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetNewApplication() throws YarnRemoteException {
     GetNewApplicationRequest request = recordFactory
         .newRecordInstance(GetNewApplicationRequest.class);
@@ -378,7 +378,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetClusterMetrics() throws YarnRemoteException {
     GetClusterMetricsRequest request = recordFactory
         .newRecordInstance(GetClusterMetricsRequest.class);
@@ -408,7 +408,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testGetApplicationReport() throws YarnRemoteException {
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
@@ -438,7 +438,7 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 100)
   public void testForceKillApplication() throws YarnRemoteException {
     KillApplicationRequest request = recordFactory
         .newRecordInstance(KillApplicationRequest.class);
@@ -468,13 +468,12 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  
-  //ApplicationConstants.Environment       
-  @Test
-  public void testApplicationConstants(){
-    ApplicationConstants.Environment env= ApplicationConstants.Environment.PATH;  
-    assertEquals("PATH",env.key());
+  @Test(timeout = 100)
+  public void testApplicationConstants() {
+    ApplicationConstants.Environment env = ApplicationConstants.Environment.PATH;
+    assertEquals("PATH", env.key());
   }
+
   private static InetSocketAddress getProtocolAddress(Configuration conf)
       throws IOException {
     return conf.getSocketAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
@@ -559,7 +558,7 @@ public class TestRMAdminProtocolPBClientImpl {
     @Override
     public RenewDelegationTokenResponse renewDelegationToken(
         RenewDelegationTokenRequest request) throws YarnRemoteException {
-      RenewDelegationTokenResponse result=recordFactory
+      RenewDelegationTokenResponse result = recordFactory
           .newRecordInstance(RenewDelegationTokenResponse.class);
       result.setNextExpirationTime(System.currentTimeMillis());
       return result;
