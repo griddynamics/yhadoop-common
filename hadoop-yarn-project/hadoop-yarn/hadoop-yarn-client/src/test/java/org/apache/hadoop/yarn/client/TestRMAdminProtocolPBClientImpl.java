@@ -7,20 +7,34 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.impl.pb.client.ClientRMProtocolPBClientImpl;
+import org.apache.hadoop.yarn.api.impl.pb.service.ClientRMProtocolPBServiceImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -28,6 +42,7 @@ import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.ClientRMProtocol.ClientRMProtocolService;
+import org.apache.hadoop.yarn.proto.ClientRMProtocol.ClientRMProtocolService.BlockingInterface;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsRequestProto;
@@ -55,7 +70,6 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationResponseP
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -66,7 +80,7 @@ import static org.junit.Assert.*;
  * 
  */
 public class TestRMAdminProtocolPBClientImpl {
-  private final RecordFactory recordFactory = RecordFactoryProvider
+  private final static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
   private static ClientRMProtocol client;
@@ -454,6 +468,13 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
+  
+  //ApplicationConstants.Environment       
+  @Test
+  public void testApplicationConstants(){
+    ApplicationConstants.Environment env= ApplicationConstants.Environment.PATH;  
+    assertEquals("PATH",env.key());
+  }
   private static InetSocketAddress getProtocolAddress(Configuration conf)
       throws IOException {
     return conf.getSocketAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
@@ -471,8 +492,92 @@ public class TestRMAdminProtocolPBClientImpl {
     return token;
   }
 
+  private static class ClientRMProtocolImpl implements ClientRMProtocol {
+
+    @Override
+    public GetNewApplicationResponse getNewApplication(
+        GetNewApplicationRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(GetNewApplicationResponse.class);
+    }
+
+    @Override
+    public SubmitApplicationResponse submitApplication(
+        SubmitApplicationRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(SubmitApplicationResponse.class);
+    }
+
+    @Override
+    public KillApplicationResponse forceKillApplication(
+        KillApplicationRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(KillApplicationResponse.class);
+    }
+
+    @Override
+    public GetApplicationReportResponse getApplicationReport(
+        GetApplicationReportRequest request) throws YarnRemoteException {
+      return recordFactory
+          .newRecordInstance(GetApplicationReportResponse.class);
+    }
+
+    @Override
+    public GetClusterMetricsResponse getClusterMetrics(
+        GetClusterMetricsRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(GetClusterMetricsResponse.class);
+    }
+
+    @Override
+    public GetAllApplicationsResponse getAllApplications(
+        GetAllApplicationsRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(GetAllApplicationsResponse.class);
+    }
+
+    @Override
+    public GetClusterNodesResponse getClusterNodes(
+        GetClusterNodesRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(GetClusterNodesResponse.class);
+    }
+
+    @Override
+    public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
+        throws YarnRemoteException {
+      return recordFactory.newRecordInstance(GetQueueInfoResponse.class);
+    }
+
+    @Override
+    public GetQueueUserAclsInfoResponse getQueueUserAcls(
+        GetQueueUserAclsInfoRequest request) throws YarnRemoteException {
+      return recordFactory
+          .newRecordInstance(GetQueueUserAclsInfoResponse.class);
+    }
+
+    @Override
+    public GetDelegationTokenResponse getDelegationToken(
+        GetDelegationTokenRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(GetDelegationTokenResponse.class);
+    }
+
+    @Override
+    public RenewDelegationTokenResponse renewDelegationToken(
+        RenewDelegationTokenRequest request) throws YarnRemoteException {
+      RenewDelegationTokenResponse result=recordFactory
+          .newRecordInstance(RenewDelegationTokenResponse.class);
+      result.setNextExpirationTime(System.currentTimeMillis());
+      return result;
+    }
+
+    @Override
+    public CancelDelegationTokenResponse cancelDelegationToken(
+        CancelDelegationTokenRequest request) throws YarnRemoteException {
+      return recordFactory
+          .newRecordInstance(CancelDelegationTokenResponse.class);
+    }
+
+  }
+
   private static class ProtocolServiceStub implements
       ClientRMProtocolService.BlockingInterface {
+    private BlockingInterface client = new ClientRMProtocolPBServiceImpl(
+        new ClientRMProtocolImpl());
 
     public ProtocolServiceStub() {
 
@@ -482,7 +587,11 @@ public class TestRMAdminProtocolPBClientImpl {
     public GetNewApplicationResponseProto getNewApplication(
         RpcController controller, GetNewApplicationRequestProto request)
         throws ServiceException {
-      return (GetNewApplicationResponseProto) processMessage(GetNewApplicationResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.getNewApplication(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -490,7 +599,11 @@ public class TestRMAdminProtocolPBClientImpl {
     public GetApplicationReportResponseProto getApplicationReport(
         RpcController controller, GetApplicationReportRequestProto request)
         throws ServiceException {
-      return (GetApplicationReportResponseProto) processMessage(GetApplicationReportResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.getApplicationReport(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -498,7 +611,11 @@ public class TestRMAdminProtocolPBClientImpl {
     public SubmitApplicationResponseProto submitApplication(
         RpcController controller, SubmitApplicationRequestProto request)
         throws ServiceException {
-      return (SubmitApplicationResponseProto) processMessage(SubmitApplicationResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.submitApplication(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -506,7 +623,11 @@ public class TestRMAdminProtocolPBClientImpl {
     public KillApplicationResponseProto forceKillApplication(
         RpcController controller, KillApplicationRequestProto request)
         throws ServiceException {
-      return (KillApplicationResponseProto) processMessage(KillApplicationResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.forceKillApplication(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -514,7 +635,11 @@ public class TestRMAdminProtocolPBClientImpl {
     public GetClusterMetricsResponseProto getClusterMetrics(
         RpcController controller, GetClusterMetricsRequestProto request)
         throws ServiceException {
-      return (GetClusterMetricsResponseProto) processMessage(GetClusterMetricsResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.getClusterMetrics(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -522,7 +647,11 @@ public class TestRMAdminProtocolPBClientImpl {
     public GetAllApplicationsResponseProto getAllApplications(
         RpcController controller, GetAllApplicationsRequestProto request)
         throws ServiceException {
-      return (GetAllApplicationsResponseProto) processMessage(GetAllApplicationsResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.getAllApplications(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -530,14 +659,22 @@ public class TestRMAdminProtocolPBClientImpl {
     public GetClusterNodesResponseProto getClusterNodes(
         RpcController controller, GetClusterNodesRequestProto request)
         throws ServiceException {
-      return (GetClusterNodesResponseProto) processMessage(GetClusterNodesResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.getClusterNodes(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
     @Override
     public GetQueueInfoResponseProto getQueueInfo(RpcController controller,
         GetQueueInfoRequestProto request) throws ServiceException {
-      return (GetQueueInfoResponseProto) processMessage(GetQueueInfoResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.getQueueInfo(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -545,15 +682,22 @@ public class TestRMAdminProtocolPBClientImpl {
     public GetQueueUserAclsInfoResponseProto getQueueUserAcls(
         RpcController controller, GetQueueUserAclsInfoRequestProto request)
         throws ServiceException {
-      return (GetQueueUserAclsInfoResponseProto) processMessage(GetQueueUserAclsInfoResponseProto.getDefaultInstance());
-
+      if (resultFlag == 0) {
+        return client.getQueueUserAcls(null, request);
+      }
+      processMessage();
+      return null;
     }
 
     @Override
     public GetDelegationTokenResponseProto getDelegationToken(
         RpcController controller, GetDelegationTokenRequestProto request)
         throws ServiceException {
-      return (GetDelegationTokenResponseProto) processMessage(GetDelegationTokenResponseProto.getDefaultInstance());
+      if (resultFlag == 0) {
+        return client.getDelegationToken(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -561,8 +705,11 @@ public class TestRMAdminProtocolPBClientImpl {
     public RenewDelegationTokenResponseProto renewDelegationToken(
         RpcController controller, RenewDelegationTokenRequestProto request)
         throws ServiceException {
-      return (RenewDelegationTokenResponseProto) processMessage(RenewDelegationTokenResponseProto.getDefaultInstance());
-
+      if (resultFlag == 0) {
+        return client.renewDelegationToken(null, request);
+      }
+      processMessage();
+      return null;
 
     }
 
@@ -570,14 +717,15 @@ public class TestRMAdminProtocolPBClientImpl {
     public CancelDelegationTokenResponseProto cancelDelegationToken(
         RpcController controller, CancelDelegationTokenRequestProto request)
         throws ServiceException {
-        return (CancelDelegationTokenResponseProto) processMessage(CancelDelegationTokenResponseProto.getDefaultInstance());
-    
-    }
-    
-    private GeneratedMessage processMessage(GeneratedMessage result) throws ServiceException{
       if (resultFlag == 0) {
-        return result;
-      } else if (resultFlag == 1) {
+        return client.cancelDelegationToken(null, request);
+      }
+      processMessage();
+      return null;
+    }
+
+    private void processMessage() throws ServiceException {
+      if (resultFlag == 1) {
         throw new ServiceException(new YarnRemoteExceptionPBImpl(
             "YarnRemoteException test message"));
       } else if (resultFlag == 2) {
