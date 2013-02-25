@@ -28,18 +28,18 @@ import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
  * Test   RMAdminProtocolPBClientImpl. Test a methods and the proxy without  logic.
- *
  */
 public class TestRMAdminProtocolPBClientImpl {
   private static ResourceManager resourceManager;
   private static final Log LOG = LogFactory
-      .getLog(TestRMAdminProtocolPBClientImpl.class);
+          .getLog(TestRMAdminProtocolPBClientImpl.class);
   private final RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
+          .getRecordFactory(null);
 
   private static RMAdminProtocol client;
 
@@ -49,7 +49,7 @@ public class TestRMAdminProtocolPBClientImpl {
 
   @BeforeClass
   public static void setUpResourceManager() throws IOException,
-      InterruptedException {
+          InterruptedException {
     Configuration.addDefaultResource("config-with-security.xml");
     Configuration configuration = new YarnConfiguration();
     resourceManager = new ResourceManager() {
@@ -65,84 +65,80 @@ public class TestRMAdminProtocolPBClientImpl {
     }.start();
     int waitCount = 0;
     while (resourceManager.getServiceState() == STATE.INITED
-        && waitCount++ < 10) {
+            && waitCount++ < 10) {
       LOG.info("Waiting for RM to start...");
       Thread.sleep(1000);
     }
     if (resourceManager.getServiceState() != STATE.STARTED) {
       throw new IOException("ResourceManager failed to start. Final state is "
-          + resourceManager.getServiceState());
+              + resourceManager.getServiceState());
     }
     LOG.info("ResourceManager RMAdmin address: "
-        + configuration.get(YarnConfiguration.RM_ADMIN_ADDRESS));
+            + configuration.get(YarnConfiguration.RM_ADMIN_ADDRESS));
 
     client = new RMAdminProtocolPBClientImpl(1L,
-        getProtocolAddress(configuration), configuration);
+            getProtocolAddress(configuration), configuration);
 
   }
 
   /**
    * Test method refreshQueues. This method present and it works.
-   *
    */
   @Test(timeout = 1000)
   public void testRefreshQueues() throws Exception {
 
     RefreshQueuesRequest request = recordFactory
-        .newRecordInstance(RefreshQueuesRequest.class);
+            .newRecordInstance(RefreshQueuesRequest.class);
     RefreshQueuesResponse response = client.refreshQueues(request);
     assertNotNull(response);
   }
 
   /**
    * Test method refreshNodes. This method present and it works.
-   *
    */
 
   @Test(timeout = 500)
   public void testRefreshNodes() throws Exception {
     resourceManager.getClientRMService();
     RefreshNodesRequest request = recordFactory
-        .newRecordInstance(RefreshNodesRequest.class);
+            .newRecordInstance(RefreshNodesRequest.class);
     RefreshNodesResponse response = client.refreshNodes(request);
     assertNotNull(response);
   }
 
   /**
    * Test method refreshSuperUserGroupsConfiguration. This method present and it works.
-   *
    */
   @Test(timeout = 500)
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
 
     RefreshSuperUserGroupsConfigurationRequest request = recordFactory
-        .newRecordInstance(RefreshSuperUserGroupsConfigurationRequest.class);
+            .newRecordInstance(RefreshSuperUserGroupsConfigurationRequest.class);
     RefreshSuperUserGroupsConfigurationResponse response = client
-        .refreshSuperUserGroupsConfiguration(request);
+            .refreshSuperUserGroupsConfiguration(request);
     assertNotNull(response);
   }
+
   /**
    * Test method refreshUserToGroupsMappings. This method present and it works.
-   *
    */
   @Test(timeout = 500)
   public void testRefreshUserToGroupsMappings() throws Exception {
     RefreshUserToGroupsMappingsRequest request = recordFactory
-        .newRecordInstance(RefreshUserToGroupsMappingsRequest.class);
+            .newRecordInstance(RefreshUserToGroupsMappingsRequest.class);
     RefreshUserToGroupsMappingsResponse response = client
-        .refreshUserToGroupsMappings(request);
+            .refreshUserToGroupsMappings(request);
     assertNotNull(response);
   }
 
   /**
    * Test method refreshAdminAcls. This method present and it works.
-   *
    */
 
   @Test(timeout = 500)
   public void testRefreshAdminAcls() throws Exception {
     RefreshAdminAclsRequest request = recordFactory
-        .newRecordInstance(RefreshAdminAclsRequest.class);
+            .newRecordInstance(RefreshAdminAclsRequest.class);
     RefreshAdminAclsResponse response = client.refreshAdminAcls(request);
     assertNotNull(response);
   }
@@ -150,7 +146,7 @@ public class TestRMAdminProtocolPBClientImpl {
   @Test(timeout = 1000)
   public void testRefreshServiceAcls() throws Exception {
     RefreshServiceAclsRequest request = recordFactory
-        .newRecordInstance(RefreshServiceAclsRequest.class);
+            .newRecordInstance(RefreshServiceAclsRequest.class);
     RefreshServiceAclsResponse response = client.refreshServiceAcls(request);
     assertNotNull(response);
 
@@ -169,10 +165,10 @@ public class TestRMAdminProtocolPBClientImpl {
   }
 
   private static InetSocketAddress getProtocolAddress(Configuration conf)
-      throws IOException {
+          throws IOException {
     return conf.getSocketAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
+            YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
   }
 
 }
