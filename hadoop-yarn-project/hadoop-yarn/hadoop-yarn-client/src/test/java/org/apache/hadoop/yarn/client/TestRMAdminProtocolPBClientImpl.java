@@ -171,9 +171,9 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  private static InetSocketAddress getProtocolAddress(Configuration conf)
+  private static InetSocketAddress getProtocolAddress(Configuration configuration)
       throws IOException {
-    return conf.getSocketAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
+    return configuration.getSocketAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
   }
