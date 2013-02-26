@@ -40,7 +40,7 @@ import static org.junit.Assert.*;
 
 /**
  * Test ResourceTrackerPBClientImpl. this class should has methods
- * registerNodeManager  and newRecordInstance.
+ * registerNodeManager and newRecordInstance.
  */
 public class TestResourceTrackerPBClientImpl {
 
@@ -62,7 +62,8 @@ public class TestResourceTrackerPBClientImpl {
 
     try {
       client = (ResourceTracker) RpcClientFactoryPBImpl.get().getClient(
-          ResourceTracker.class, 1, NetUtils.getConnectAddress(server), configuration);
+          ResourceTracker.class, 1, NetUtils.getConnectAddress(server),
+          configuration);
     } catch (YarnException e) {
       e.printStackTrace();
       Assert.fail("Failed to create client");
@@ -78,7 +79,9 @@ public class TestResourceTrackerPBClientImpl {
   }
 
   /**
-   * Test the method  registerNodeManager. Method should return a not null result.
+   * Test the method registerNodeManager. Method should return a not null
+   * result.
+   * 
    * @throws Exception
    */
   @Test
@@ -87,8 +90,10 @@ public class TestResourceTrackerPBClientImpl {
         .newRecordInstance(RegisterNodeManagerRequest.class);
     assertNotNull(client.registerNodeManager(request));
   }
+
   /**
-   * Test the method  nodeHeartbeat. Method should return a not null result.
+   * Test the method nodeHeartbeat. Method should return a not null result.
+   * 
    * @throws Exception
    */
 

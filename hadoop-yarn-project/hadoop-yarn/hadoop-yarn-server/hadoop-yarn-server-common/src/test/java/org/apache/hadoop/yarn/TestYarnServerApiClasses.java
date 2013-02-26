@@ -188,7 +188,7 @@ public class TestYarnServerApiClasses {
    * data from prototype
    */
 
-  @Test(timeout = 500000)
+  @Test(timeout = 500)
   public void testHeartbeatResponsePBImpl() {
     HeartbeatResponsePBImpl original = new HeartbeatResponsePBImpl();
     original.setMasterKey(getMasterKey());
