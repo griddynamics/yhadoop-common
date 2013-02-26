@@ -127,7 +127,6 @@ public class TestYarnServerApiClasses {
     original.setNodeId(getNodeId());
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(10000);
-    resource.setVirtualCores(3);
     original.setResource(resource);
     RegisterNodeManagerRequestPBImpl copy = new RegisterNodeManagerRequestPBImpl(
         original.getProto());
