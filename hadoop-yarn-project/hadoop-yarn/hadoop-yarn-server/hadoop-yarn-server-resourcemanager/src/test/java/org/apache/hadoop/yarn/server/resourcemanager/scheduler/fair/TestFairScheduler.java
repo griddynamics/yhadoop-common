@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -45,7 +46,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -1396,5 +1396,26 @@ public class TestFairScheduler {
       numTries++;
     }
     assertEquals(FinalApplicationStatus.FAILED, application.getFinalApplicationStatus());
+  }
+  
+  @Test(timeout = 30000)
+  public void testAggregateCapacityTrackingWithPreemptionEnabled() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.setBoolean("yarn.scheduler.fair.preemption", true);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());                   
+    RMNode node = MockNodes.newNodeInfo(1, Resources.createResource(1024 * 10));
+    NodeAddedSchedulerEvent nodeAddEvent = new NodeAddedSchedulerEvent(node);
+    scheduler.handle(nodeAddEvent);        
+    
+    for (int i = 0; i < 10; i++) {      
+      createSchedulingRequest(1024, "queue1", "user1", 1);
+      scheduler.update();
+      NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+      scheduler.handle(updateEvent);
+
+      assertEquals(1024 * (i+1), 
+          scheduler.getQueueManager().getQueue("queue1").getResourceUsage().getMemory());
+      TimeUnit.SECONDS.sleep(1);
+    }    
   }
 }
