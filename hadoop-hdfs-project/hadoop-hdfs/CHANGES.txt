@@ -9,6 +9,8 @@ Release 0.23.7 - UNRELEASED
                via hairong)
 
   IMPROVEMENTS
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -36,6 +38,9 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
     pre-federation version of HDFS. (atm)
+
+    HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
+    (kihwal)
 
 Release 0.23.6 - 2013-02-06
 
