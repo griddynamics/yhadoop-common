@@ -55,7 +55,6 @@ public class TestHamletGen {
     }
 
     File file = new File(OUTPUT_CLASS + ".java");
-    assertTrue("TestHamletGen Output file not exist ", file.exists());
-    file.delete();
+    assertTrue("TestHamletGen Output file not exist ", file.delete());
   }
 }
