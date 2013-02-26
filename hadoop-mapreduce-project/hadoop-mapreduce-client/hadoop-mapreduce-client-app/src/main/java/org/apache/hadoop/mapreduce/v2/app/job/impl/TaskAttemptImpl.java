@@ -39,7 +39,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,7 +56,6 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -68,6 +66,8 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
+import org.apache.hadoop.mapreduce.v2.api.records.Locality;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
@@ -76,6 +76,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
+import org.apache.hadoop.mapreduce.v2.app.commit.CommitterTaskAbortEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
@@ -99,7 +100,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
-import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -157,9 +157,9 @@ public abstract class TaskAttemptImpl implements
   private final Clock clock;
   private final org.apache.hadoop.mapred.JobID oldJobId;
   private final TaskAttemptListener taskAttemptListener;
-  private final OutputCommitter committer;
   private final Resource resourceCapability;
-  private final String[] dataLocalHosts;
+  protected Set<String> dataLocalHosts;
+  protected Set<String> dataLocalRacks;
   private final List<String> diagnostics = new ArrayList<String>();
   private final Lock readLock;
   private final Lock writeLock;
@@ -168,6 +168,7 @@ public abstract class TaskAttemptImpl implements
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
   private static String initialClasspath = null;
+  private static String initialAppClasspath = null;
   private static Object commonContainerSpecLock = new Object();
   private static ContainerLaunchContext commonContainerSpec = null;
   private static final Object classpathLock = new Object();
@@ -177,6 +178,8 @@ public abstract class TaskAttemptImpl implements
   private int shufflePort = -1;
   private String trackerName;
   private int httpPort;
+  private Locality locality;
+  private Avataar avataar;
 
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
@@ -235,7 +238,6 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_CONTAINER_COMPLETED,
          CLEANUP_CONTAINER_TRANSITION)
-      // ^ If RM kills the container due to expiry, preemption etc. 
      .addTransition(TaskAttemptStateInternal.ASSIGNED, 
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_KILL, CLEANUP_CONTAINER_TRANSITION)
@@ -501,7 +503,7 @@ public abstract class TaskAttemptImpl implements
   public TaskAttemptImpl(TaskId taskId, int i, 
       EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
-      JobConf conf, String[] dataLocalHosts, OutputCommitter committer,
+      JobConf conf, String[] dataLocalHosts,
       Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
       AppContext appContext) {
@@ -525,15 +527,25 @@ public abstract class TaskAttemptImpl implements
     this.credentials = credentials;
     this.jobToken = jobToken;
     this.eventHandler = eventHandler;
-    this.committer = committer;
     this.jobFile = jobFile;
     this.partition = partition;
 
     //TODO:create the resource reqt for this Task attempt
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
-    this.resourceCapability.setMemory(getMemoryRequired(conf, taskId.getTaskType()));
-    this.dataLocalHosts = dataLocalHosts;
+    this.resourceCapability.setMemory(
+        getMemoryRequired(conf, taskId.getTaskType()));
+    this.resourceCapability.setVirtualCores(
+        getCpuRequired(conf, taskId.getTaskType()));
+
+    this.dataLocalHosts = resolveHosts(dataLocalHosts);
     RackResolver.init(conf);
+    this.dataLocalRacks = new HashSet<String>(); 
+    for (String host : this.dataLocalHosts) {
+      this.dataLocalRacks.add(RackResolver.resolve(host).getNetworkLocation());
+    }
+
+    locality = Locality.OFF_SWITCH;
+    avataar = Avataar.VIRGIN;
 
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
@@ -553,6 +565,21 @@ public abstract class TaskAttemptImpl implements
     }
     
     return memory;
+  }
+
+  private int getCpuRequired(Configuration conf, TaskType taskType) {
+    int vcores = 1;
+    if (taskType == TaskType.MAP)  {
+      vcores =
+          conf.getInt(MRJobConfig.MAP_CPU_VCORES,
+              MRJobConfig.DEFAULT_MAP_CPU_VCORES);
+    } else if (taskType == TaskType.REDUCE) {
+      vcores =
+          conf.getInt(MRJobConfig.REDUCE_CPU_VCORES,
+              MRJobConfig.DEFAULT_REDUCE_CPU_VCORES);
+    }
+    
+    return vcores;
   }
 
   /**
@@ -585,6 +612,7 @@ public abstract class TaskAttemptImpl implements
       Map<String, String> env = new HashMap<String, String>();
       MRApps.setClasspath(env, conf);
       initialClasspath = env.get(Environment.CLASSPATH.name());
+      initialAppClasspath = env.get(Environment.APP_CLASSPATH.name());
       initialClasspathFlag.set(true);
       return initialClasspath;
     }
@@ -683,6 +711,13 @@ public abstract class TaskAttemptImpl implements
           environment,  
           Environment.CLASSPATH.name(), 
           getInitialClasspath(conf));
+
+      if (initialAppClasspath != null) {
+        Apps.addToEnvironment(
+            environment,  
+            Environment.APP_CLASSPATH.name(), 
+            initialAppClasspath);
+      }
     } catch (IOException e) {
       throw new YarnException(e);
     }
@@ -1009,6 +1044,23 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
+  public Locality getLocality() {
+    return locality;
+  }
+  
+  public void setLocality(Locality locality) {
+    this.locality = locality;
+  }
+
+  public Avataar getAvataar()
+  {
+    return avataar;
+  }
+  
+  public void setAvataar(Avataar avataar) {
+    this.avataar = avataar;
+  }
+  
   private static TaskAttemptState getExternalState(
       TaskAttemptStateInternal smState) {
     switch (smState) {
@@ -1209,25 +1261,27 @@ public abstract class TaskAttemptImpl implements
                 taskAttempt.attemptId, 
                 taskAttempt.resourceCapability));
       } else {
-        Set<String> racks = new HashSet<String>(); 
-        for (String host : taskAttempt.dataLocalHosts) {
-          racks.add(RackResolver.resolve(host).getNetworkLocation());
-        }
         taskAttempt.eventHandler.handle(new ContainerRequestEvent(
-            taskAttempt.attemptId, taskAttempt.resourceCapability, taskAttempt
-                .resolveHosts(taskAttempt.dataLocalHosts), racks
-                .toArray(new String[racks.size()])));
+            taskAttempt.attemptId, taskAttempt.resourceCapability,
+            taskAttempt.dataLocalHosts.toArray(
+                new String[taskAttempt.dataLocalHosts.size()]),
+            taskAttempt.dataLocalRacks.toArray(
+                new String[taskAttempt.dataLocalRacks.size()])));
       }
     }
   }
 
-  protected String[] resolveHosts(String[] src) {
-    String[] result = new String[src.length];
-    for (int i = 0; i < src.length; i++) {
-      if (isIP(src[i])) {
-        result[i] = resolveHost(src[i]);
-      } else {
-        result[i] = src[i];
+  protected Set<String> resolveHosts(String[] src) {
+    Set<String> result = new HashSet<String>();
+    if (src != null) {
+      for (int i = 0; i < src.length; i++) {
+        if (src[i] == null) {
+          continue;
+        } else if (isIP(src[i])) {
+          result.add(resolveHost(src[i]));
+        } else {
+          result.add(src[i]);
+        }
       }
     }
     return result;
@@ -1277,6 +1331,20 @@ public abstract class TaskAttemptImpl implements
           taskAttempt.remoteTask.isMapTask(), taskAttempt.containerID.getId());
       taskAttempt.taskAttemptListener.registerPendingTask(
           taskAttempt.remoteTask, taskAttempt.jvmID);
+
+      taskAttempt.locality = Locality.OFF_SWITCH;
+      if (taskAttempt.dataLocalHosts.size() > 0) {
+        String cHost = taskAttempt.resolveHost(
+            taskAttempt.containerNodeId.getHost());
+        if (taskAttempt.dataLocalHosts.contains(cHost)) {
+          taskAttempt.locality = Locality.NODE_LOCAL;
+        }
+      }
+      if (taskAttempt.locality == Locality.OFF_SWITCH) {
+        if (taskAttempt.dataLocalRacks.contains(taskAttempt.nodeRackName)) {
+          taskAttempt.locality = Locality.RACK_LOCAL;
+        }
+      }
       
       //launch the container
       //create the container object to be launched for a given Task attempt
@@ -1353,7 +1421,7 @@ public abstract class TaskAttemptImpl implements
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       } else {
         LOG.debug("Not generating HistoryFinish event since start event not " +
-        		"generated for taskAttempt: " + taskAttempt.getID());
+            "generated for taskAttempt: " + taskAttempt.getID());
       }
     }
   }
@@ -1398,7 +1466,8 @@ public abstract class TaskAttemptImpl implements
             TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()),
             taskAttempt.launchTime,
             nodeHttpInetAddr.getHostName(), nodeHttpInetAddr.getPort(),
-            taskAttempt.shufflePort, taskAttempt.containerID);
+            taskAttempt.shufflePort, taskAttempt.containerID,
+            taskAttempt.locality.toString(), taskAttempt.avataar.toString());
       taskAttempt.eventHandler.handle
           (new JobHistoryEvent(taskAttempt.attemptId.getTaskId().getJobId(), tase));
       taskAttempt.eventHandler.handle
@@ -1436,10 +1505,8 @@ public abstract class TaskAttemptImpl implements
       TaskAttemptContext taskContext =
         new TaskAttemptContextImpl(taskAttempt.conf,
             TypeConverter.fromYarn(taskAttempt.attemptId));
-      taskAttempt.eventHandler.handle(new TaskCleanupEvent(
-          taskAttempt.attemptId,
-          taskAttempt.committer,
-          taskContext));
+      taskAttempt.eventHandler.handle(new CommitterTaskAbortEvent(
+          taskAttempt.attemptId, taskContext));
     }
   }
 
@@ -1489,7 +1556,7 @@ public abstract class TaskAttemptImpl implements
         // handling failed map/reduce events.
       }else {
         LOG.debug("Not generating HistoryFinish event since start event not " +
-        		"generated for taskAttempt: " + taskAttempt.getID());
+            "generated for taskAttempt: " + taskAttempt.getID());
       }
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
@@ -1559,7 +1626,7 @@ public abstract class TaskAttemptImpl implements
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       }else {
         LOG.debug("Not generating HistoryFinish event since start event not " +
-        		"generated for taskAttempt: " + taskAttempt.getID());
+            "generated for taskAttempt: " + taskAttempt.getID());
       }
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
@@ -1627,7 +1694,7 @@ public abstract class TaskAttemptImpl implements
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       }else {
         LOG.debug("Not generating HistoryFinish event since start event not " +
-        		"generated for taskAttempt: " + taskAttempt.getID());
+            "generated for taskAttempt: " + taskAttempt.getID());
       }
 //      taskAttempt.logAttemptFinishedEvent(TaskAttemptStateInternal.KILLED); Not logging Map/Reduce attempts in case of failure.
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(

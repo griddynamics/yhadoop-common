@@ -26,6 +26,7 @@ import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -61,7 +62,7 @@ import org.apache.hadoop.util.DiskChecker;
  */
 @InterfaceAudience.Private
 public class DataStorage extends Storage {
-  // Constants
+
   public final static String BLOCK_SUBDIR_PREFIX = "subdir";
   final static String BLOCK_FILE_PREFIX = "blk_";
   final static String COPY_FILE_PREFIX = "dncp_";
@@ -70,15 +71,15 @@ public class DataStorage extends Storage {
   public final static String STORAGE_DIR_FINALIZED = "finalized";
   public final static String STORAGE_DIR_TMP = "tmp";
 
-  /** Access to this variable is guarded by "this" */
+  /** Unique storage ID. {@see DataNode#createNewStorageId(int)} for details */
   private String storageID;
 
-  // flag to ensure initialzing storage occurs only once
-  private boolean initilized = false;
+  // Flag to ensure we only initialize storage once
+  private boolean initialized = false;
   
-  // BlockPoolStorage is map of <Block pool Id, BlockPoolStorage>
+  // Maps block pool IDs to block pool storage
   private Map<String, BlockPoolSliceStorage> bpStorageMap
-    = new HashMap<String, BlockPoolSliceStorage>();
+      = Collections.synchronizedMap(new HashMap<String, BlockPoolSliceStorage>());
 
 
   DataStorage() {
@@ -129,7 +130,7 @@ public class DataStorage extends Storage {
   synchronized void recoverTransitionRead(DataNode datanode,
       NamespaceInfo nsInfo, Collection<File> dataDirs, StartupOption startOpt)
       throws IOException {
-    if (initilized) {
+    if (initialized) {
       // DN storage has been initialized, no need to do anything
       return;
     }
@@ -199,7 +200,7 @@ public class DataStorage extends Storage {
     this.writeAll();
     
     // 4. mark DN storage is initilized
-    this.initilized = true;
+    this.initialized = true;
   }
 
   /**

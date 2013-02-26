@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -47,6 +46,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskFailedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
@@ -100,7 +100,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   protected final JobConf conf;
   protected final Path jobFile;
-  protected final OutputCommitter committer;
   protected final int partition;
   protected final TaskAttemptListener taskAttemptListener;
   protected final EventHandler eventHandler;
@@ -231,7 +230,12 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     // Transitions from FAILED state        
     .addTransition(TaskStateInternal.FAILED, TaskStateInternal.FAILED,
         EnumSet.of(TaskEventType.T_KILL,
-                   TaskEventType.T_ADD_SPEC_ATTEMPT))
+                   TaskEventType.T_ADD_SPEC_ATTEMPT,
+                   TaskEventType.T_ATTEMPT_COMMIT_PENDING,
+                   TaskEventType.T_ATTEMPT_FAILED,
+                   TaskEventType.T_ATTEMPT_KILLED,
+                   TaskEventType.T_ATTEMPT_LAUNCHED,
+                   TaskEventType.T_ATTEMPT_SUCCEEDED))
 
     // Transitions from KILLED state
     .addTransition(TaskStateInternal.KILLED, TaskStateInternal.KILLED,
@@ -273,7 +277,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   public TaskImpl(JobId jobId, TaskType taskType, int partition,
       EventHandler eventHandler, Path remoteJobConfFile, JobConf conf,
-      TaskAttemptListener taskAttemptListener, OutputCommitter committer,
+      TaskAttemptListener taskAttemptListener,
       Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
@@ -296,7 +300,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     this.partition = partition;
     this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
-    this.committer = committer;
     this.credentials = credentials;
     this.jobToken = jobToken;
     this.metrics = metrics;
@@ -536,6 +539,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   //select the nextAttemptNumber with best progress
   // always called inside the Read Lock
   private TaskAttempt selectBestAttempt() {
+    if (successfulAttempt != null) {
+      return attempts.get(successfulAttempt);
+    }
+
     float progress = 0f;
     TaskAttempt result = null;
     for (TaskAttempt at : attempts.values()) {
@@ -592,8 +599,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   }
 
   // This is always called in the Write Lock
-  private void addAndScheduleAttempt() {
+  private void addAndScheduleAttempt(Avataar avataar) {
     TaskAttempt attempt = createAttempt();
+    ((TaskAttemptImpl) attempt).setAvataar(avataar);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created attempt " + attempt.getID());
     }
@@ -747,7 +755,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
-      task.addAndScheduleAttempt();
+      task.addAndScheduleAttempt(Avataar.VIRGIN);
       task.scheduledTime = task.clock.getTime();
       TaskStartedEvent tse = new TaskStartedEvent(
           TypeConverter.fromYarn(task.taskId), task.getLaunchTime(),
@@ -770,7 +778,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
       LOG.info("Scheduling a redundant attempt for task " + task.taskId);
-      task.addAndScheduleAttempt();
+      task.addAndScheduleAttempt(Avataar.SPECULATIVE);
     }
   }
 
@@ -847,7 +855,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.finishedAttempts.add(taskAttemptId);
       task.inProgressAttempts.remove(taskAttemptId);
       if (task.successfulAttempt == null) {
-        task.addAndScheduleAttempt();
+        task.addAndScheduleAttempt(Avataar.VIRGIN);
+      }
+      if ((task.commitAttempt != null) && (task.commitAttempt == taskAttemptId)) {
+    	task.commitAttempt = null;
       }
     }
   }
@@ -935,12 +946,19 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         task.inProgressAttempts.remove(taskAttemptId);
         if (task.inProgressAttempts.size() == 0
             && task.successfulAttempt == null) {
-          task.addAndScheduleAttempt();
+          task.addAndScheduleAttempt(Avataar.VIRGIN);
         }
       } else {
         task.handleTaskAttemptCompletion(
             taskAttemptId, 
             TaskAttemptCompletionEventStatus.TIPFAILED);
+
+        // issue kill to all non finished attempts
+        for (TaskAttempt taskAttempt : task.attempts.values()) {
+          task.killUnfinishedAttempt
+            (taskAttempt, "Task has failed. Killing attempt!");
+        }
+        task.inProgressAttempts.clear();
         
         if (task.historyTaskStartGenerated) {
         TaskFailedEvent taskFailedEvent = createTaskFailedEvent(task, attempt.getDiagnostics(),
@@ -1044,7 +1062,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       // from the map splitInfo. So the bad node might be sent as a location
       // to the RM. But the RM would ignore that just like it would ignore
       // currently pending container requests affinitized to bad nodes.
-      task.addAndScheduleAttempt();
+      task.addAndScheduleAttempt(Avataar.VIRGIN);
       return TaskStateInternal.SCHEDULED;
     }
   }

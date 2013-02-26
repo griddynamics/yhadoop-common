@@ -20,12 +20,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>2.0.3-SNAPSHOT</version>
+    <version>2.0.4-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs</artifactId>
-  <version>2.0.3-SNAPSHOT</version>
+  <version>2.0.4-SNAPSHOT</version>
   <description>Apache Hadoop HDFS</description>
   <name>Apache Hadoop HDFS</name>
   <packaging>jar</packaging>
@@ -204,7 +204,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
               <webFragmentFile>${project.build.directory}/hdfs-jsp-servlet-definitions.xml</webFragmentFile>
               <packageName>org.apache.hadoop.hdfs.server.namenode</packageName>
               <sources>
@@ -223,11 +223,30 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
               <webFragmentFile>${project.build.directory}/secondary-jsp-servlet-definitions.xml</webFragmentFile>
               <packageName>org.apache.hadoop.hdfs.server.namenode</packageName>
               <sources>
                 <directory>${basedir}/src/main/webapps/secondary</directory>
+                <includes>
+                  <include>*.jsp</include>
+                </includes>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>journal</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <compile>false</compile>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
+              <webFragmentFile>${project.build.directory}/journal-jsp-servlet-definitions.xml</webFragmentFile>
+              <packageName>org.apache.hadoop.hdfs.server.journalservice</packageName>
+              <sources>
+                <directory>${basedir}/src/main/webapps/journal</directory>
                 <includes>
                   <include>*.jsp</include>
                 </includes>
@@ -242,7 +261,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
               <webFragmentFile>${project.build.directory}/datanode-jsp-servlet-definitions.xml</webFragmentFile>
               <packageName>org.apache.hadoop.hdfs.server.datanode</packageName>
               <sources>
@@ -277,7 +296,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>add-source</id>
+            <id>add-jsp-generated-sources-directory</id>
             <phase>generate-sources</phase>
             <goals>
               <goal>add-source</goal>
@@ -285,7 +304,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <sources>
                 <source>${project.build.directory}/generated-sources/java</source>
-                <source>${project.build.directory}/generated-src/main/jsp</source>
               </sources>
             </configuration>
           </execution>
@@ -299,14 +317,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </configuration>
         <executions>
           <execution>
-            <id>create-protobuf-generated-sources-directory</id>
+            <id>create-jsp-generated-sources-directory</id>
             <phase>initialize</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
               <target>
-                <mkdir dir="target/generated-sources/java" />
+                <mkdir dir="${project.build.directory}/generated-sources/java" />
               </target>
             </configuration>
           </execution>
@@ -321,6 +339,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <loadfile property="hdfs.servlet.definitions" srcFile="${project.build.directory}/hdfs-jsp-servlet-definitions.xml"/>
                 <loadfile property="secondary.servlet.definitions" srcFile="${project.build.directory}/secondary-jsp-servlet-definitions.xml"/>
                 <loadfile property="datanode.servlet.definitions" srcFile="${project.build.directory}/datanode-jsp-servlet-definitions.xml"/>
+                <loadfile property="journal.servlet.definitions" srcFile="${project.build.directory}/journal-jsp-servlet-definitions.xml"/>               
                 <echoproperties destfile="${project.build.directory}/webxml.properties">
                   <propertyset>
                     <propertyref regex=".*.servlet.definitions"/>
@@ -335,6 +354,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                       filtering="true"/>
                 <copy file="${basedir}/src/main/webapps/proto-datanode-web.xml"
                       tofile="${project.build.directory}/webapps/datanode/WEB-INF/web.xml"
+                      filtering="true"/>
+                <copy file="${basedir}/src/main/webapps/proto-journal-web.xml"
+                      tofile="${project.build.directory}/webapps/journal/WEB-INF/web.xml"
                       filtering="true"/>
                 <copy toDir="${project.build.directory}/webapps">
                   <fileset dir="${basedir}/src/main/webapps">
@@ -380,61 +402,96 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
           <execution>
-            <id>compile-proto</id>
+            <id>compile-protoc</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/GetUserMappingsProtocol.proto</argument>
-                <argument>src/main/proto/HAZKInfo.proto</argument>
-                <argument>src/main/proto/InterDatanodeProtocol.proto</argument>
-                <argument>src/main/proto/JournalProtocol.proto</argument>
-                <argument>src/main/proto/RefreshAuthorizationPolicyProtocol.proto</argument>
-                <argument>src/main/proto/RefreshUserMappingsProtocol.proto</argument>
-                <argument>src/main/proto/datatransfer.proto</argument>
-                <argument>src/main/proto/hdfs.proto</argument>
-              </arguments>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>GetUserMappingsProtocol.proto</include>
+                  <include>HAZKInfo.proto</include>
+                  <include>InterDatanodeProtocol.proto</include>
+                  <include>JournalProtocol.proto</include>
+                  <include>RefreshAuthorizationPolicyProtocol.proto</include>
+                  <include>RefreshUserMappingsProtocol.proto</include>
+                  <include>datatransfer.proto</include>
+                  <include>hdfs.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
-            <id>compile-proto-datanode</id>
+            <id>compile-protoc-datanode</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/ClientDatanodeProtocol.proto</argument>
-                <argument>src/main/proto/DatanodeProtocol.proto</argument>
-              </arguments>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>ClientDatanodeProtocol.proto</include>
+                  <include>DatanodeProtocol.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
-            <id>compile-proto-namenode</id>
+            <id>compile-protoc-namenode</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/ClientNamenodeProtocol.proto</argument>
-                <argument>src/main/proto/NamenodeProtocol.proto</argument>
-              </arguments>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>ClientNamenodeProtocol.proto</include>
+                  <include>NamenodeProtocol.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-protoc-qjournal</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>protoc</goal>
+            </goals>
+            <configuration>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>QJournalProtocol.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
         </executions>
@@ -469,9 +526,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/test/resources/data*</exclude>
             <exclude>src/test/resources/editsStored*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
+            <exclude>src/main/native/util/tree.h</exclude>
+            <exclude>src/test/aop/org/apache/hadoop/hdfs/server/datanode/DataXceiverAspects.aj</exclude>
             <exclude>src/main/webapps/datanode/robots.txt</exclude>
             <exclude>src/main/docs/releasenotes.html</exclude>
             <exclude>src/contrib/**</exclude>
+            <exclude>src/site/resources/images/*</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -516,6 +576,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
                       <arg line="VERBOSE=1"/>
                     </exec>
+                    <!-- The second make is a workaround for HADOOP-9215.  It can
+                         be removed when version 2.6 of cmake is no longer supported . -->
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true"></exec>
                   </target>
                 </configuration>
               </execution>
