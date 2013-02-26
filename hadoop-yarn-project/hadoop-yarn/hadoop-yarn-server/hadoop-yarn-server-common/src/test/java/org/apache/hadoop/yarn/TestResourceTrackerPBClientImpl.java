@@ -39,7 +39,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Test ResourceTrackerPBClientImpl
+ * Test ResourceTrackerPBClientImpl. this class should has methods
+ * registerNodeManager  and newRecordInstance.
  */
 public class TestResourceTrackerPBClientImpl {
 
@@ -50,18 +51,18 @@ public class TestResourceTrackerPBClientImpl {
 
   @BeforeClass
   public static void start() {
-    InetSocketAddress addr = new InetSocketAddress(0);
-    Configuration conf = new Configuration();
+    InetSocketAddress address = new InetSocketAddress(0);
+    Configuration configuration = new Configuration();
     ResourceTracker instance = new ResourceTrackerTestImpl();
     server = RpcServerFactoryPBImpl.get().getServer(ResourceTracker.class,
-        instance, addr, conf, null, 1);
+        instance, address, configuration, null, 1);
     server.start();
     System.err.println(server.getListenerAddress());
     System.err.println(NetUtils.getConnectAddress(server));
 
     try {
       client = (ResourceTracker) RpcClientFactoryPBImpl.get().getClient(
-          ResourceTracker.class, 1, NetUtils.getConnectAddress(server), conf);
+          ResourceTracker.class, 1, NetUtils.getConnectAddress(server), configuration);
     } catch (YarnException e) {
       e.printStackTrace();
       Assert.fail("Failed to create client");
@@ -76,12 +77,20 @@ public class TestResourceTrackerPBClientImpl {
     }
   }
 
+  /**
+   * Test the method  registerNodeManager. Method should return a not null result.
+   * @throws Exception
+   */
   @Test
   public void testResourceTrackerPBClientImpl() throws Exception {
     RegisterNodeManagerRequest request = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
     assertNotNull(client.registerNodeManager(request));
   }
+  /**
+   * Test the method  nodeHeartbeat. Method should return a not null result.
+   * @throws Exception
+   */
 
   @Test
   public void testNodeHeartbeat() throws Exception {

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -47,11 +49,19 @@ import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
+/**
+ * Simple test some classes from org.apache.hadoop.yarn.server.api
+ */
 public class TestYarnServerApiClasses {
 
   private final static org.apache.hadoop.yarn.factories.RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
+  /**
+   * Test RegisterNodeManagerResponsePBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
   @Test(timeout = 500)
   public void testRegisterNodeManagerResponsePBImpl() {
     RegisterNodeManagerResponsePBImpl original = new RegisterNodeManagerResponsePBImpl();
@@ -66,6 +76,11 @@ public class TestYarnServerApiClasses {
 
   }
 
+  /**
+   * Test NodeHeartbeatRequestPBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
   @Test(timeout = 500)
   public void testNodeHeartbeatRequestPBImpl() {
     NodeHeartbeatRequestPBImpl original = new NodeHeartbeatRequestPBImpl();
@@ -77,21 +92,33 @@ public class TestYarnServerApiClasses {
     assertEquals("localhost", copy.getNodeStatus().getNodeId().getHost());
   }
 
-  @Test
+  /**
+   * Test NodeHeartbeatResponsePBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
+
+  @Test(timeout = 500)
   public void testNodeHeartbeatResponsePBImpl() {
     NodeHeartbeatResponsePBImpl original = new NodeHeartbeatResponsePBImpl();
 
-    HeartbeatResponse responce = recordFactory
+    HeartbeatResponse response = recordFactory
         .newRecordInstance(HeartbeatResponse.class);
-    responce.setMasterKey(getMasterKey());
-    responce.setNodeAction(NodeAction.REBOOT);
-    responce.setResponseId(1);
-    original.setHeartbeatResponse(responce);
+    response.setMasterKey(getMasterKey());
+    response.setNodeAction(NodeAction.REBOOT);
+    response.setResponseId(1);
+    original.setHeartbeatResponse(response);
 
     NodeHeartbeatResponsePBImpl copy = new NodeHeartbeatResponsePBImpl(
         original.getProto());
     assertEquals(NodeAction.REBOOT, copy.getHeartbeatResponse().getNodeAction());
   }
+
+  /**
+   * Test RegisterNodeManagerRequestPBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
 
   @Test(timeout = 500)
   public void testRegisterNodeManagerRequestPBImpl() {
@@ -110,6 +137,12 @@ public class TestYarnServerApiClasses {
     assertEquals(10000, copy.getResource().getMemory());
   }
 
+  /**
+   * Test MasterKeyPBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
+
   @Test(timeout = 500)
   public void testMasterKeyPBImpl() {
     MasterKeyPBImpl original = new MasterKeyPBImpl();
@@ -121,12 +154,18 @@ public class TestYarnServerApiClasses {
 
   }
 
+  /**
+   * Test NodeStatusPBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
+
   @Test(timeout = 500)
   public void testNodeStatusPBImpl() {
     NodeStatusPBImpl original = new NodeStatusPBImpl();
 
-    original.setContainersStatuses(Arrays.asList(getContainerStatus(1, 2),
-        getContainerStatus(2, 3)));
+    original.setContainersStatuses(Arrays.asList(getContainerStatus(1, 2, 1),
+        getContainerStatus(2, 3, 1)));
     original.setKeepAliveApplications(Arrays.asList(getApplicationId(3),
         getApplicationId(4)));
     original.setNodeHealthStatus(getNodeHealthStatus());
@@ -143,19 +182,43 @@ public class TestYarnServerApiClasses {
 
   }
 
-  @Test(timeout = 500)
+  /**
+   * Test HeartbeatResponsePBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
+
+  @Test(timeout = 500000)
   public void testHeartbeatResponsePBImpl() {
     HeartbeatResponsePBImpl original = new HeartbeatResponsePBImpl();
     original.setMasterKey(getMasterKey());
     original.setNodeAction(NodeAction.NORMAL);
     original.setResponseId(30);
+    original.addApplicationToCleanup(getApplicationId(1));
+    original.addApplicationToCleanup(getApplicationId(2));
+    original.addAllContainersToCleanup(Arrays.asList(getContainerId(0, 0),
+        getContainerId(1, 1), getContainerId(2, 2)));
+    assertEquals(2, original.getApplicationsToCleanupCount());
+    assertEquals(2, original.getContainerToCleanup(2).getId());
 
-    HeartbeatResponsePBImpl copy = new HeartbeatResponsePBImpl(
+    HeartbeatResponsePBImpl middle = new HeartbeatResponsePBImpl(
         original.getProto());
+    HeartbeatResponsePBImpl copy = new HeartbeatResponsePBImpl(
+        middle.getProto());
+
     assertEquals(30, copy.getResponseId());
     assertEquals(NodeAction.NORMAL, copy.getNodeAction());
     assertEquals(1, copy.getMasterKey().getKeyId());
+    assertEquals(2, copy.getApplicationsToCleanupCount());
+    assertEquals(1, copy.getContainerToCleanup(1).getId());
+    assertEquals(3, copy.getContainersToCleanupCount());
   }
+
+  /**
+   * Test RegistrationResponsePBImpl. test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
+   * data from prototype
+   */
 
   @Test(timeout = 500)
   public void testRegistrationResponsePBImpl() {
@@ -169,19 +232,27 @@ public class TestYarnServerApiClasses {
 
   }
 
-  private ContainerStatus getContainerStatus(int applicationId, int contaynerId) {
+  private ContainerStatus getContainerStatus(int applicationId,
+      int containerID, int appAttemptId) {
     ContainerStatus status = recordFactory
         .newRecordInstance(ContainerStatus.class);
-    ContainerIdPBImpl containerId = new ContainerIdPBImpl();
-    containerId.setId(contaynerId);
-    ApplicationAttemptIdPBImpl appAttemptId = new ApplicationAttemptIdPBImpl();
-
-    appAttemptId.setApplicationId(getApplicationId(applicationId));
-    appAttemptId.setAttemptId(1);
-
-    containerId.setApplicationAttemptId(appAttemptId);
-    status.setContainerId(containerId);
+    status.setContainerId(getContainerId(containerID, appAttemptId));
     return status;
+  }
+
+  private ApplicationAttemptId getApplicationAttemptId(int appAttemptId) {
+    ApplicationAttemptIdPBImpl result = new ApplicationAttemptIdPBImpl();
+
+    result.setApplicationId(getApplicationId(appAttemptId));
+    result.setAttemptId(1);
+    return result;
+  }
+
+  private ContainerId getContainerId(int containerID, int appAttemptId) {
+    ContainerIdPBImpl containerId = new ContainerIdPBImpl();
+    containerId.setId(containerID);
+    containerId.setApplicationAttemptId(getApplicationAttemptId(appAttemptId));
+    return containerId;
   }
 
   private ApplicationId getApplicationId(int applicationId) {
