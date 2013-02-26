@@ -198,6 +198,8 @@ public class TestYarnServerApiClasses {
     original.addApplicationToCleanup(getApplicationId(2));
     original.addAllContainersToCleanup(Arrays.asList(getContainerId(0, 0),
         getContainerId(1, 1), getContainerId(2, 2)));
+    original.addContainerToCleanup( getContainerId(3, 3));
+    
     assertEquals(2, original.getApplicationsToCleanupCount());
     assertEquals(2, original.getContainerToCleanup(2).getId());
 
@@ -210,8 +212,18 @@ public class TestYarnServerApiClasses {
     assertEquals(NodeAction.NORMAL, copy.getNodeAction());
     assertEquals(1, copy.getMasterKey().getKeyId());
     assertEquals(2, copy.getApplicationsToCleanupCount());
+    assertEquals(2, copy.getApplicationsToCleanup(1).getId());
+    copy.removeApplicationToCleanup(1);
+    assertEquals(1, copy.getApplicationsToCleanupList().size());
+    copy.clearApplicationsToCleanup();
+    assertEquals(0, copy.getApplicationsToCleanupCount());
+
     assertEquals(1, copy.getContainerToCleanup(1).getId());
+    assertEquals(4, copy.getContainersToCleanupCount());
+    copy.removeContainerToCleanup(2);
     assertEquals(3, copy.getContainersToCleanupCount());
+    copy.clearContainersToCleanup();
+    assertEquals(0, copy.getContainersToCleanupCount());
   }
 
   /**
