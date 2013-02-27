@@ -85,7 +85,19 @@ public class TestMRJobs {
   private static Configuration conf = new Configuration();
   private static FileSystem localFs;
   private static FileSystem remoteFs;
-  static {
+  private static Class<?> testClass = TestMRJobs.class;
+  private static Path testRootDir;
+  protected static Path appJar;
+  
+  protected static void setTestClass(Class<?> testClass) {
+      TestMRJobs.testClass = testClass;
+  }
+
+  @BeforeClass
+  public static void setup() throws IOException {
+    testRootDir = new Path("target", testClass + "-tmpDir").makeQualified(localFs);
+    appJar = new Path(testRootDir, "MRAppJar.jar");
+      
     try {
       localFs = FileSystem.getLocal(conf);
     } catch (IOException io) {
@@ -93,20 +105,12 @@ public class TestMRJobs {
     }
     try {
       dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
-        .format(true).racks(null).build();
+          .format(true).racks(null).build();
       remoteFs = dfsCluster.getFileSystem();
     } catch (IOException io) {
       throw new RuntimeException("problem starting mini dfs cluster", io);
     }
-  }
-
-  private static Path TEST_ROOT_DIR = new Path("target",
-      TestMRJobs.class.getName() + "-tmpDir").makeQualified(localFs);
-  static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
-
-  @BeforeClass
-  public static void setup() throws IOException {
-
+        
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
                + " not found. Not running test.");
@@ -124,8 +128,8 @@ public class TestMRJobs {
 
     // Copy MRAppJar and make it private. TODO: FIXME. This is a hack to
     // workaround the absent public discache.
-    localFs.copyFromLocalFile(new Path(MiniMRYarnCluster.APPJAR), APP_JAR);
-    localFs.setPermission(APP_JAR, new FsPermission("700"));
+    localFs.copyFromLocalFile(new Path(MiniMRYarnCluster.APPJAR), appJar);
+    localFs.setPermission(appJar, new FsPermission("700"));
   }
 
   @AfterClass
@@ -163,7 +167,7 @@ public class TestMRJobs {
     // job with 3 maps (10s) and numReduces reduces (5s), 1 "record" each:
     Job job = sleepJob.createJob(3, numReduces, 10000, 1, 5000, 1);
 
-    job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
+    job.addFileToClassPath(appJar); // The AppMaster jar itself.
     job.setJarByClass(SleepJob.class);
     job.setMaxMapAttempts(1); // speed up failures
     job.submit();
@@ -230,7 +234,7 @@ public class TestMRJobs {
         new Path(mrCluster.getTestWorkDir().getAbsolutePath(), "random-output");
     FileOutputFormat.setOutputPath(job, outputDir);
     job.setSpeculativeExecution(false);
-    job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
+    job.addFileToClassPath(appJar); // The AppMaster jar itself.
     job.setJarByClass(RandomTextWriterJob.class);
     job.setMaxMapAttempts(1); // speed up failures
     job.submit();
@@ -345,7 +349,7 @@ public class TestMRJobs {
     FileOutputFormat.setOutputPath(job,
         new Path(mrCluster.getTestWorkDir().getAbsolutePath(),
         "failmapper-output"));
-    job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
+    job.addFileToClassPath(appJar); // The AppMaster jar itself.
     job.submit();
     String trackingUrl = job.getTrackingURL();
     String jobId = job.getJobID().toString();
@@ -394,7 +398,7 @@ public class TestMRJobs {
         Job job = sleepJob.createJob(3, 0, 10000, 1, 0, 0);
         // //Job with reduces
         // Job job = sleepJob.createJob(3, 2, 10000, 1, 10000, 1);
-        job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
+        job.addFileToClassPath(appJar); // The AppMaster jar itself.
         job.submit();
         String trackingUrl = job.getTrackingURL();
         String jobId = job.getJobID().toString();
@@ -473,11 +477,11 @@ public class TestMRJobs {
     Path first = createTempFile("distributed.first", "x");
     // Create two jars with a single file inside them.
     Path second =
-        makeJar(new Path(TEST_ROOT_DIR, "distributed.second.jar"), 2);
+        makeJar(new Path(testRootDir, "distributed.second.jar"), 2);
     Path third =
-        makeJar(new Path(TEST_ROOT_DIR, "distributed.third.jar"), 3);
+        makeJar(new Path(testRootDir, "distributed.third.jar"), 3);
     Path fourth =
-        makeJar(new Path(TEST_ROOT_DIR, "distributed.fourth.jar"), 4);
+        makeJar(new Path(testRootDir, "distributed.fourth.jar"), 4);
 
     Job job = Job.getInstance(mrCluster.getConfig());
     
@@ -501,7 +505,7 @@ public class TestMRJobs {
     job.addFileToClassPath(second);
     // The AppMaster jar itself
     job.addFileToClassPath(
-            APP_JAR.makeQualified(localFs.getUri(), APP_JAR.getParent())); 
+            appJar.makeQualified(localFs.getUri(), appJar.getParent())); 
     job.addArchiveToClassPath(third);
     job.addCacheArchive(fourth.toUri());
     job.setMaxMapAttempts(1); // speed up failures
@@ -518,7 +522,7 @@ public class TestMRJobs {
   @Test
   public void testDistributedCache() throws Exception {
     // Test with a local (file:///) Job Jar
-    Path localJobJarPath = makeJobJarWithLib(TEST_ROOT_DIR.toUri().toString());
+    Path localJobJarPath = makeJobJarWithLib(testRootDir.toUri().toString());
     _testDistributedCache(localJobJarPath.toUri().toString());
     
     // Test with a remote (hdfs://) Job Jar
@@ -534,7 +538,7 @@ public class TestMRJobs {
 
   private Path createTempFile(String filename, String contents)
       throws IOException {
-    Path path = new Path(TEST_ROOT_DIR, filename);
+    Path path = new Path(testRootDir, filename);
     FSDataOutputStream os = localFs.create(path);
     os.writeBytes(contents);
     os.close();

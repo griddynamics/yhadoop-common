@@ -53,7 +53,7 @@ public class TestMRAppWithCombiner {
 
   protected static MiniMRYarnCluster mrCluster;
   private static Configuration conf = new Configuration();
-  private static FileSystem localFs;
+  private final static FileSystem localFs;
   private static final Log LOG = LogFactory.getLog(TestMRAppWithCombiner.class);
 
   static {
@@ -63,6 +63,9 @@ public class TestMRAppWithCombiner {
       throw new RuntimeException("problem getting local fs", io);
     }
   }
+
+  private final static Path TEST_ROOT_DIR = new Path("target", TestMRAppWithCombiner.class + "-tmpDir").makeQualified(localFs);
+  private final static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
   @BeforeClass
   public static void setup() throws IOException {
@@ -82,9 +85,8 @@ public class TestMRAppWithCombiner {
 
     // Copy MRAppJar and make it private. TODO: FIXME. This is a hack to
     // workaround the absent public discache.
-    localFs.copyFromLocalFile(new Path(MiniMRYarnCluster.APPJAR),
-        TestMRJobs.APP_JAR);
-    localFs.setPermission(TestMRJobs.APP_JAR, new FsPermission("700"));
+    localFs.copyFromLocalFile(new Path(MiniMRYarnCluster.APPJAR), APP_JAR);
+    localFs.setPermission(APP_JAR, new FsPermission("700"));
   }
 
   @AfterClass
@@ -110,7 +112,7 @@ public class TestMRAppWithCombiner {
     conf.setCombinerClass(MyCombinerToCheckReporter.class);
     //conf.setJarByClass(MyCombinerToCheckReporter.class);
     conf.setReducerClass(IdentityReducer.class);
-    DistributedCache.addFileToClassPath(TestMRJobs.APP_JAR, conf);
+    DistributedCache.addFileToClassPath(APP_JAR, conf);
     conf.setOutputCommitter(CustomOutputCommitter.class);
     conf.setInputFormat(TextInputFormat.class);
     conf.setOutputKeyClass(LongWritable.class);

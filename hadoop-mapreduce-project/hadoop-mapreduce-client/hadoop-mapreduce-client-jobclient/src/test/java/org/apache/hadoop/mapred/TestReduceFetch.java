@@ -32,7 +32,7 @@ public class TestReduceFetch extends TestReduceFetchFromPartialMem {
    */
   public void testReduceFromDisk() throws Exception {
     final int MAP_TASKS = 8;
-    JobConf job = mrCluster.createJobConf();
+    JobConf job = new JobConf(mrCluster.getConfig());
     job.set(JobContext.REDUCE_INPUT_BUFFER_PERCENT, "0.0");
     job.setNumMapTasks(MAP_TASKS);
     job.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, "-Xmx128m");
@@ -55,7 +55,7 @@ public class TestReduceFetch extends TestReduceFetchFromPartialMem {
    */
   public void testReduceFromMem() throws Exception {
     final int MAP_TASKS = 3;
-    JobConf job = mrCluster.createJobConf();
+    JobConf job = new JobConf(mrCluster.getConfig());
     job.set(JobContext.REDUCE_INPUT_BUFFER_PERCENT, "1.0");
     job.set(JobContext.SHUFFLE_INPUT_BUFFER_PERCENT, "1.0");
     job.setLong(JobContext.REDUCE_MEMORY_TOTAL_BYTES, 128 << 20);

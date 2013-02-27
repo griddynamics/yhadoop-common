@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
-import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -151,8 +151,12 @@ public class MiniHadoopClusterManager {
   public void start() throws IOException, FileNotFoundException,
       URISyntaxException {
     if (!noDFS) {
-      dfs = new MiniDFSCluster(nnPort, conf, numDataNodes, true, true,
-          dfsOpts, null, null);
+      dfs = new MiniDFSCluster.Builder(conf)
+          .nameNodePort(nnPort)
+          .numDataNodes(numDataNodes)
+          .manageDataDfsDirs(true)
+          .startupOption(dfsOpts)
+          .build();
       LOG.info("Started MiniDFSCluster -- namenode on port "
           + dfs.getNameNodePort());
     }
@@ -171,8 +175,9 @@ public class MiniHadoopClusterManager {
           + ":" + this.rmPort);
       conf.set(JHAdminConfig.MR_HISTORY_ADDRESS, MiniYARNCluster.getHostname()
           + ":" + this.jhsPort);
-      mr = MiniMRClientClusterFactory.create(this.getClass(), numNodeManagers,
-          conf);
+      mr = new MiniMRClientClusterBuilder(this.getClass(), conf)
+          .noOfNMs(numNodeManagers).
+          build();
       LOG.info("Started MiniMRCluster");
     }
 

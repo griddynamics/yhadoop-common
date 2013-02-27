@@ -26,7 +26,6 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -48,8 +47,7 @@ public class TestBlockLimits extends TestCase {
       ClassNotFoundException {
     MiniMRClientCluster mr = null;
     try {
-      mr = MiniMRClientClusterFactory.create(this.getClass(), 2,
-          new Configuration());
+      mr = new MiniMRClientClusterBuilder(this.getClass()).noOfNMs(2).build();
       runCustomFormat(mr);
     } finally {
       if (mr != null) {

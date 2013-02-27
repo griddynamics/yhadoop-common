@@ -34,8 +34,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.apache.hadoop.mapreduce.MRConfig;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -100,16 +98,15 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
   public void testJobWithDFS() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
     try {
       final int taskTrackers = 4;
-      final int jobTrackerPort = 60050;
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
-      mr = new MiniMRCluster(taskTrackers, namenode, 2);
+      mr = new MiniMRClientClusterBuilder(getClass()).noOfNMs(taskTrackers).namenode(namenode).build();
       JobConf jobConf = new JobConf();
       boolean result;
       result = launchJob(fileSys.getUri(), jobConf, 3, 1);
@@ -117,7 +114,7 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
           
     } finally {
       if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown(); }
+      if (mr != null) { mr.stop(); }
     }
   }
 

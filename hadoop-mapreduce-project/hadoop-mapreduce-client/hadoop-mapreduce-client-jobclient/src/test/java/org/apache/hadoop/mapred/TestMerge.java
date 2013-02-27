@@ -76,10 +76,11 @@ public class TestMerge extends TestCase {
     try {
       Configuration conf = new Configuration();
       // Start the mini-MR and mini-DFS clusters
-      dfsCluster = new MiniDFSCluster(conf, NUM_HADOOP_DATA_NODES, true, null);
+      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_HADOOP_DATA_NODES).build();
       fileSystem = dfsCluster.getFileSystem();
-      mrCluster = MiniMRClientClusterFactory.create(this.getClass(),
-                                                 NUM_HADOOP_DATA_NODES, conf);
+      mrCluster = new MiniMRClientClusterBuilder(this.getClass(), conf)
+          .noOfNMs(NUM_HADOOP_DATA_NODES)
+          .build();
       // Generate input.
       createInput(fileSystem);
       // Run the test.

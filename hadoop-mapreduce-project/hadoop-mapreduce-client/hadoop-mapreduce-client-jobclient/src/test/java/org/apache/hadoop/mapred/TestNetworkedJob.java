@@ -64,8 +64,7 @@ public class TestNetworkedJob {
     FileSystem fileSys = null;
 
     try {
-      mr = MiniMRClientClusterFactory.create(this.getClass(), 2,
-          new Configuration());
+      mr = new MiniMRClientClusterBuilder(this.getClass()).noOfNMs(2).build();
 
       JobConf job = new JobConf(mr.getConfig());
 

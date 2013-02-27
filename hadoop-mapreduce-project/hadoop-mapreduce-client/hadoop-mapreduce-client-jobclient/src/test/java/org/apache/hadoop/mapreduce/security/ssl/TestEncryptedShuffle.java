@@ -26,27 +26,23 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
-import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.mapred.RunningJob;
 
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Assert;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.net.URL;
 
 public class TestEncryptedShuffle {
 
@@ -89,7 +85,7 @@ public class TestEncryptedShuffle {
     String cp = conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH) +
       File.pathSeparator + classpathDir;
     conf.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH, cp);
-    dfsCluster = new MiniDFSCluster(conf, 1, true, null);
+    dfsCluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fileSystem = dfsCluster.getFileSystem();
     fileSystem.mkdirs(new Path("/tmp"));
     fileSystem.mkdirs(new Path("/user"));
@@ -101,7 +97,7 @@ public class TestEncryptedShuffle {
     fileSystem.setPermission(
       new Path("/hadoop/mapred/system"), FsPermission.valueOf("-rwx------"));
     FileSystem.setDefaultUri(conf, fileSystem.getUri());
-    mrCluster = MiniMRClientClusterFactory.create(this.getClass(), 1, conf);
+    mrCluster = new MiniMRClientClusterBuilder(this.getClass(), conf).build();
 
     // so the minicluster conf is avail to the containers.
     Writer writer = new FileWriter(classpathDir + "/core-site.xml");

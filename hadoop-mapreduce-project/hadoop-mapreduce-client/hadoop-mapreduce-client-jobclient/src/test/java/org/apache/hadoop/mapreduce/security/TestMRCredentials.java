@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
-import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -53,15 +53,16 @@ public class TestMRCredentials {
   private static int numSlaves = 1;
   private static JobConf jConf;
 
-  @SuppressWarnings("deprecation")
   @BeforeClass
   public static void setUp() throws Exception {
     System.setProperty("hadoop.log.dir", "logs");
     Configuration conf = new Configuration();
-    dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);  
+    dfsCluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numSlaves)
+        .build();  
     jConf = new JobConf(conf);
     FileSystem.setDefaultUri(conf, dfsCluster.getFileSystem().getUri().toString());
-    mrCluster = MiniMRClientClusterFactory.create(TestMRCredentials.class, 1, jConf);
+    mrCluster = new MiniMRClientClusterBuilder(TestMRCredentials.class, jConf).build();
     createKeysAsJson("keys.json");
   }
 

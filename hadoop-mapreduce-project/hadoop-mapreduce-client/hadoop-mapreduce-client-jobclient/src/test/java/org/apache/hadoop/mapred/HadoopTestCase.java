@@ -21,10 +21,8 @@ package org.apache.hadoop.mapred;
 import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRConfig;
 
-import java.io.File;
 import java.io.IOException;
 
 /**
@@ -131,7 +129,7 @@ public abstract class HadoopTestCase extends TestCase {
 
 
   private MiniDFSCluster dfsCluster = null;
-  private MiniMRCluster mrCluster = null;
+  private MiniMRClientCluster mrCluster = null;
   private FileSystem fileSystem = null;
 
   /**
@@ -146,14 +144,16 @@ public abstract class HadoopTestCase extends TestCase {
       fileSystem = FileSystem.getLocal(new JobConf());
     }
     else {
-      dfsCluster = new MiniDFSCluster(new JobConf(), dataNodes, true, null);
+      dfsCluster = new MiniDFSCluster.Builder(new JobConf()).numDataNodes(dataNodes).build();
       fileSystem = dfsCluster.getFileSystem();
     }
     if (localMR) {
     }
     else {
-      //noinspection deprecation
-      mrCluster = new MiniMRCluster(taskTrackers, fileSystem.getUri().toString(), 1);
+      mrCluster = new MiniMRClientClusterBuilder(getClass())
+          .noOfNMs(taskTrackers)
+          .namenode(fileSystem.getUri().toString())
+          .build();
     }
   }
 
@@ -166,7 +166,7 @@ public abstract class HadoopTestCase extends TestCase {
   protected void tearDown() throws Exception {
     try {
       if (mrCluster != null) {
-        mrCluster.shutdown();
+        mrCluster.stop();
       }
     }
     catch (Exception ex) {
@@ -200,14 +200,14 @@ public abstract class HadoopTestCase extends TestCase {
    * managed by the testcase.
    * @return configuration that works on the testcase Hadoop instance
    */
-  protected JobConf createJobConf() {
+  protected JobConf createJobConf() throws IOException {
     if (localMR) {
       JobConf conf = new JobConf();
       conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
       return conf;
     } 
     else {
-      return mrCluster.createJobConf();
+      return new JobConf(mrCluster.getConfig());
     }
   }
 

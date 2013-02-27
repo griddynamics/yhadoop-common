@@ -45,18 +45,21 @@ public class TestCommandLineJobSubmission extends TestCase {
   File buildDir = new File(System.getProperty("test.build.data", "/tmp"));
   public void testJobShell() throws Exception {
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     FileSystem fs = null;
     Path testFile = new Path(input, "testfile");
     try {
       Configuration conf = new Configuration();
       //start the mini mr and dfs cluster.
-      dfs = new MiniDFSCluster(conf, 2 , true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       fs = dfs.getFileSystem();
       FSDataOutputStream stream = fs.create(testFile);
       stream.write("teststring".getBytes());
       stream.close();
-      mr = new MiniMRCluster(2, fs.getUri().toString(), 1);
+      mr = new MiniMRClientClusterBuilder(getClass())
+          .noOfNMs(2)
+          .namenode(fs.getUri().toString())
+          .build();
       File thisbuildDir = new File(buildDir, "jobCommand");
       assertTrue("create build dir", thisbuildDir.mkdirs()); 
       File f = new File(thisbuildDir, "files_tmp");
@@ -117,7 +120,7 @@ public class TestCommandLineJobSubmission extends TestCase {
       args[8] = input.toString();
       args[9] = output.toString();
       
-      JobConf jobConf = mr.createJobConf();
+      JobConf jobConf = new JobConf(mr.getConfig());
       //before running the job, verify that libjar is not in client classpath
       assertTrue("libjar not in client classpath", loadLibJar(jobConf)==null);
       int ret = ToolRunner.run(jobConf,
@@ -130,7 +133,7 @@ public class TestCommandLineJobSubmission extends TestCase {
       thisbuildDir.delete();
     } finally {
       if (dfs != null) {dfs.shutdown();};
-      if (mr != null) {mr.shutdown();};
+      if (mr != null) {mr.stop();};
     }
   }
   

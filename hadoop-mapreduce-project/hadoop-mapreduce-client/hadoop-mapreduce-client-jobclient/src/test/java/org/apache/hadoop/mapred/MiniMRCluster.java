@@ -35,7 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * unimplemented/unsupported or were re-implemented to provide wrappers around
  * MR2 functionality.
  *
- * @deprecated Use {@link org.apache.hadoop.mapred.MiniMRClientClusterFactory}
+ * @deprecated Use {@link org.apache.hadoop.mapred.MiniMRClientClusterBuilder}
  * instead
  */
 @Deprecated
@@ -177,8 +177,9 @@ public class MiniMRCluster {
       int numTrackerToExclude, Clock clock) throws IOException {
     if (conf == null) conf = new JobConf();
     FileSystem.setDefaultUri(conf, namenode);
-    mrClientCluster = MiniMRClientClusterFactory.create(this.getClass(),
-        numTaskTrackers, conf);
+    mrClientCluster = new MiniMRClientClusterBuilder(this.getClass(), conf)
+        .noOfNMs(numTaskTrackers)
+        .build();
   }
 
   public UserGroupInformation getUgi() {

@@ -43,7 +43,7 @@ import java.util.Properties;
  */
 public abstract class ClusterMapReduceTestCase extends TestCase {
   private MiniDFSCluster dfsCluster = null;
-  private MiniMRCluster mrCluster = null;
+  private MiniMRClientCluster mrCluster = null;
 
   /**
    * Creates Hadoop Cluster and DFS before a test case is run.
@@ -79,36 +79,12 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
         }
       }
       dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
-      .format(reformatDFS).racks(null).build();
+          .format(reformatDFS).racks(null).build();
 
-      ConfigurableMiniMRCluster.setConfiguration(props);
-      //noinspection deprecation
-      mrCluster = new ConfigurableMiniMRCluster(2,
-          getFileSystem().getUri().toString(), 1, conf);
-    }
-  }
-
-  private static class ConfigurableMiniMRCluster extends MiniMRCluster {
-    private static Properties config;
-
-    public static void setConfiguration(Properties props) {
-      config = props;
-    }
-
-    public ConfigurableMiniMRCluster(int numTaskTrackers, String namenode,
-                                     int numDir, JobConf conf)
-        throws Exception {
-      super(0,0, numTaskTrackers, namenode, numDir, null, null, null, conf);
-    }
-
-    public JobConf createJobConf() {
-      JobConf conf = super.createJobConf();
-      if (config != null) {
-        for (Map.Entry entry : config.entrySet()) {
-          conf.set((String) entry.getKey(), (String) entry.getValue());
-        }
-      }
-      return conf;
+      mrCluster = new MiniMRClientClusterBuilder(getClass(), conf)
+          .noOfNMs(2)
+          .namenode(getFileSystem().getUri().toString())
+          .build();
     }
   }
 
@@ -125,7 +101,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
    */
   protected void stopCluster() throws Exception {
     if (mrCluster != null) {
-      mrCluster.shutdown();
+      mrCluster.stop();
       mrCluster = null;
     }
     if (dfsCluster != null) {
@@ -157,7 +133,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
     return dfsCluster.getFileSystem();
   }
 
-  protected MiniMRCluster getMRCluster() {
+  protected MiniMRClientCluster getMRCluster() {
     return mrCluster;
   }
 
@@ -194,8 +170,8 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
    *
    * @return configuration that works on the testcase Hadoop instance
    */
-  protected JobConf createJobConf() {
-    return mrCluster.createJobConf();
+  protected JobConf createJobConf() throws IOException {
+    return new JobConf(mrCluster.getConfig());
   }
 
 }

@@ -33,20 +33,23 @@ import org.junit.Ignore;
 public class TestMiniMRDFSCaching extends TestCase {
 
   public void testWithDFS() throws IOException {
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     MiniDFSCluster dfs = null;
     FileSystem fileSys = null;
     try {
       JobConf conf = new JobConf();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(2, fileSys.getUri().toString(), 4);
+      mr = new MiniMRClientClusterBuilder(getClass())
+          .noOfNMs(2)
+          .namenode(fileSys.getUri().toString())
+          .build();
       MRCaching.setupCache("/cachedir", fileSys);
       // run the wordcount example with caching
       TestResult ret = MRCaching.launchMRCache("/testing/wc/input",
                                             "/testing/wc/output",
                                             "/cachedir",
-                                            mr.createJobConf(),
+                                            new JobConf(mr.getConfig()),
                                             "The quick brown fox\nhas many silly\n"
                                             + "red fox sox\n");
       assertTrue("Archives not matching", ret.isOutputOk);
@@ -54,7 +57,7 @@ public class TestMiniMRDFSCaching extends TestCase {
       ret = MRCaching.launchMRCache("/testing/wc/input",
                                     "/testing/wc/output",
                                     "/cachedir",
-                                    mr.createJobConf(),
+                                    new JobConf(mr.getConfig()),
                                     "The quick brown fox\nhas many silly\n"
                                     + "red fox sox\n");
       assertTrue("Archives not matching", ret.isOutputOk);
@@ -66,7 +69,7 @@ public class TestMiniMRDFSCaching extends TestCase {
         dfs.shutdown();
       }
       if (mr != null) {
-        mr.shutdown();
+        mr.stop();
       }
     }
   }

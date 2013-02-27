@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -162,18 +160,20 @@ public class TestMiniMRClasspath {
   public void testClassPath() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
     try {
       final int taskTrackers = 4;
-      final int jobTrackerPort = 60050;
 
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
-      mr = new MiniMRCluster(taskTrackers, namenode, 3);
-      JobConf jobConf = mr.createJobConf();
+      mr = new MiniMRClientClusterBuilder(getClass())
+          .noOfNMs(taskTrackers)
+          .namenode(namenode)
+          .build();
+      JobConf jobConf = new JobConf(mr.getConfig());
       String result;
       result = launchWordCount(fileSys.getUri(), jobConf,
           "The quick brown fox\nhas many silly\n" + "red fox sox\n", 3, 1);
@@ -182,7 +182,7 @@ public class TestMiniMRClasspath {
           
     } finally {
       if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown();
+      if (mr != null) { mr.stop();
       }
     }
   }
@@ -193,7 +193,7 @@ public class TestMiniMRClasspath {
  
     String namenode = null;
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
 
     try {
@@ -201,11 +201,14 @@ public class TestMiniMRClasspath {
       final int taskTrackers = 4;
 
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
-      mr = new MiniMRCluster(taskTrackers, namenode, 3);      
-      JobConf jobConf = mr.createJobConf();
+      mr = new MiniMRClientClusterBuilder(getClass())
+          .noOfNMs(taskTrackers)
+          .namenode(namenode)
+          .build();
+      JobConf jobConf = new JobConf(mr.getConfig());
       String result;
       
       result = launchExternal(fileSys.getUri(), jobConf,
@@ -215,7 +218,7 @@ public class TestMiniMRClasspath {
     } 
     finally {
       if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown();
+      if (mr != null) { mr.stop();
       }
     }
   }

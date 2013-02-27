@@ -132,7 +132,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
       "?jobId=$jobId&amp;jobStatus=$jobStatus";
   }
 
-  protected JobConf createJobConf() {
+  protected JobConf createJobConf() throws IOException {
     JobConf conf = super.createJobConf();
     conf.setJobEndNotificationURI(getNotificationUrlTemplate());
     conf.setInt(JobContext.MR_JOB_END_RETRY_ATTEMPTS, 3);

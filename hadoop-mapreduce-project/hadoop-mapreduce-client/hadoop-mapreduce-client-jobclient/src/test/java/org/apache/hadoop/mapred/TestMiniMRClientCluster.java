@@ -77,8 +77,7 @@ public class TestMiniMRClientCluster {
     }
 
     // create the mini cluster to be used for the tests
-    mrCluster = MiniMRClientClusterFactory.create(
-        InternalClass.class, 1, new Configuration());
+    mrCluster = new MiniMRClientClusterBuilder(InternalClass.class).build();
   }
 
   @AfterClass

@@ -525,7 +525,6 @@ public class TestJobCounters {
     }
   }
   
-  @SuppressWarnings("deprecation")
   private long getTaskCounterUsage (JobClient client, JobID id, int numReports,
                                     int taskId, TaskType type) 
   throws Exception {
@@ -599,7 +598,6 @@ public class TestJobCounters {
    * @throws IOException
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void testHeapUsageCounter() throws Exception {
     JobConf conf = new JobConf();
     // create a local filesystem handle
@@ -617,11 +615,12 @@ public class TestJobCounters {
     fileSystem.deleteOnExit(testRootDir);
     
     // create a mini cluster using the local file system
-    MiniMRCluster mrCluster = 
-      new MiniMRCluster(1, fileSystem.getUri().toString(), 1);
+    MiniMRClientCluster mrCluster = new MiniMRClientClusterBuilder(getClass())
+        .namenode(fileSystem.getUri().toString())
+        .build();
     
     try {
-      conf = mrCluster.createJobConf();
+      conf = new JobConf(mrCluster.getConfig());
       JobClient jobClient = new JobClient(conf);
 
       // define job input
@@ -668,7 +667,7 @@ public class TestJobCounters {
                  lowMemJobReduceHeapUsage < highMemJobReduceHeapUsage);
     } finally {
       // shutdown the mr cluster
-      mrCluster.shutdown();
+      mrCluster.stop();
       try {
         fileSystem.delete(testRootDir, true);
       } catch (IOException ioe) {} 

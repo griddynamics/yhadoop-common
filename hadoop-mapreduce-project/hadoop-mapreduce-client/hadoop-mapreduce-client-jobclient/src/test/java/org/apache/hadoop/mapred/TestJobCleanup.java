@@ -41,7 +41,6 @@ import static org.junit.Assert.*;
 /**
  * A JUnit test to test Map-Reduce job cleanup.
  */
-@SuppressWarnings("deprecation")
 public class TestJobCleanup {
   private static String TEST_ROOT_DIR = new File(System.getProperty(
       "test.build.data", "/tmp") + "/" + "test-job-cleanup").toString();
@@ -49,7 +48,7 @@ public class TestJobCleanup {
   private static final String ABORT_KILLED_FILE_NAME = "_custom_abort_killed";
   private static final String ABORT_FAILED_FILE_NAME = "_custom_abort_failed";
   private static FileSystem fileSys = null;
-  private static MiniMRCluster mr = null;
+  private static MiniMRClientCluster mr = null;
   private static Path inDir = null;
   private static Path emptyInDir = null;
   private static int outDirs = 0;
@@ -70,7 +69,7 @@ public class TestJobCleanup {
     conf.set(org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
       .SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, "true");
 
-    mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
+    mr = new MiniMRClientClusterBuilder(TestJobCleanup.class, conf).namenode("file:///").build();
     inDir = new Path(TEST_ROOT_DIR, "test-input");
     String input = "The quick brown fox\n" + "has many silly\n"
         + "red fox sox\n";
@@ -88,7 +87,7 @@ public class TestJobCleanup {
       fileSys.close();
     }
     if (mr != null) {
-      mr.shutdown();
+      mr.stop();
     }
   }
 
@@ -156,7 +155,7 @@ public class TestJobCleanup {
   private void testSuccessfulJob(String filename,
       Class<? extends OutputCommitter> committer, String[] exclude)
       throws IOException {
-    JobConf jc = mr.createJobConf();
+    JobConf jc = new JobConf(mr.getConfig());
     Path outDir = getNewOutputDir();
     configureJob(jc, "job with cleanup()", 1, 0, outDir);
     jc.setOutputCommitter(committer);
@@ -183,7 +182,7 @@ public class TestJobCleanup {
   private void testFailedJob(String fileName,
       Class<? extends OutputCommitter> committer, String[] exclude)
       throws IOException {
-    JobConf jc = mr.createJobConf();
+    JobConf jc = new JobConf(mr.getConfig());
     Path outDir = getNewOutputDir();
     configureJob(jc, "fail job with abort()", 1, 0, outDir);
     jc.setMaxMapAttempts(1);
@@ -216,7 +215,7 @@ public class TestJobCleanup {
   private void testKilledJob(String fileName,
       Class<? extends OutputCommitter> committer, String[] exclude)
       throws IOException {
-    JobConf jc = mr.createJobConf();
+    JobConf jc = new JobConf(mr.getConfig());
     Path outDir = getNewOutputDir();
     configureJob(jc, "kill job with abort()", 1, 0, outDir);
     // set the job to wait for long

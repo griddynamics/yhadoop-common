@@ -80,7 +80,7 @@ public class TestMultipleLevelCaching extends TestCase {
   private void testCachingAtLevel(int level) throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
     String testName = "TestMultiLevelCaching";
     try {
@@ -92,8 +92,7 @@ public class TestMultipleLevelCaching extends TestCase {
       String rack2 = getRack(1, level);
       Configuration conf = new Configuration();
       // Run a datanode on host1 under /a/b/c/..../d1/e1/f1
-      dfs = new MiniDFSCluster(conf, 1, true, new String[] {rack1}, 
-                               new String[] {"host1.com"});
+      dfs = new MiniDFSCluster.Builder(conf).racks(new String[] {rack1}).hosts(new String[] {"host1.com"}).build();
       dfs.waitActive();
       fileSys = dfs.getFileSystem();
       if (!fileSys.mkdirs(inDir)) {
@@ -110,8 +109,10 @@ public class TestMultipleLevelCaching extends TestCase {
       // cache-level = level (unshared levels) + 1(topmost shared node i.e /a) 
       //               + 1 (for host)
       jc.setInt(JTConfig.JT_TASKCACHE_LEVELS, level + 2);
-      mr = new MiniMRCluster(taskTrackers, namenode, 1, new String[] {rack2}, 
-    		                 new String[] {"host2.com"}, jc);
+      mr = new MiniMRClientClusterBuilder(getClass(), jc)
+          .noOfNMs(taskTrackers)
+          .namenode(namenode)
+          .build();
 
       /* The job is configured with 1 map for one (non-splittable) file. 
        * Since the datanode is running under different subtree, there is no
@@ -119,7 +120,7 @@ public class TestMultipleLevelCaching extends TestCase {
        */
       launchJobAndTestCounters(
     		  testName, mr, fileSys, inDir, outputPath, 1, 1, 0, 0);
-      mr.shutdown();
+      mr.stop();
     } finally {
       if (null != fileSys) {
         // inDir, outputPath only exist if fileSys is valid.
@@ -145,12 +146,12 @@ public class TestMultipleLevelCaching extends TestCase {
    * @param datalocalMaps Expected value of data(node) local maps
    * @param racklocalMaps Expected value of rack local maps
    */
-  static void launchJobAndTestCounters(String jobName, MiniMRCluster mr,
+  static void launchJobAndTestCounters(String jobName, MiniMRClientCluster mr,
                                        FileSystem fileSys, Path in, Path out,
                                        int numMaps, int otherLocalMaps,
                                        int dataLocalMaps, int rackLocalMaps)
   throws IOException {
-    JobConf jobConf = mr.createJobConf();
+    JobConf jobConf = new JobConf(mr.getConfig());
     if (fileSys.exists(out)) {
         fileSys.delete(out, true);
     }
@@ -164,8 +165,8 @@ public class TestMultipleLevelCaching extends TestCase {
     assertEquals("Number of Rack-local maps",
             counters.getCounter(JobCounter.RACK_LOCAL_MAPS),
                                 rackLocalMaps);
-    mr.waitUntilIdle();
-    mr.shutdown();
+    //TBD mr.waitUntilIdle();
+    mr.stop();
   }
   
   static RunningJob launchJob(JobConf jobConf, Path inDir, Path outputPath,

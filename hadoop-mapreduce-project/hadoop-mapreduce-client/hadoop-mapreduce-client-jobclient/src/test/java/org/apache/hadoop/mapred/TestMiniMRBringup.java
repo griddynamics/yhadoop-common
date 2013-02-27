@@ -27,11 +27,11 @@ import junit.framework.TestCase;
 public class TestMiniMRBringup extends TestCase {
 
   public void testBringUp() throws IOException {
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     try {
-      mr = new MiniMRCluster(1, "local", 1);
+      mr = new MiniMRClientClusterBuilder(getClass()).namenode("local").build();
     } finally {
-      if (mr != null) { mr.shutdown(); }
+      if (mr != null) { mr.stop(); }
     }
   }
   

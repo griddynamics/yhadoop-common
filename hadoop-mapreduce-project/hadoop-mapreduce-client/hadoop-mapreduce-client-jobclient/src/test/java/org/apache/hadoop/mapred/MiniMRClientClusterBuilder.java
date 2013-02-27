@@ -24,20 +24,45 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.JarFinder;
 
 /**
- * A MiniMRCluster factory. In MR2, it provides a wrapper MiniMRClientCluster
+ * A MiniMRCluster builder. In MR2, it provides a wrapper MiniMRClientCluster
  * interface around the MiniMRYarnCluster. While in MR1, it provides such
  * wrapper around MiniMRCluster. This factory should be used in tests to provide
  * an easy migration of tests across MR1 and MR2.
  */
-public class MiniMRClientClusterFactory {
+public class MiniMRClientClusterBuilder {
 
-  public static MiniMRClientCluster create(Class<?> caller, int noOfNMs,
-      Configuration conf) throws IOException {
+  private Configuration conf;
+  private Class<?> caller;
+  private int noOfNMs;
+
+  public MiniMRClientClusterBuilder(Class<?> caller) {
+      this.caller = caller;
+      this.conf = new JobConf();
+  }
+    
+  public MiniMRClientClusterBuilder(Class<?> caller, Configuration conf) {
+      this.caller = caller;
+      this.conf = conf;
+  }
+
+  public MiniMRClientClusterBuilder namenode(String namenode) {
+    FileSystem.setDefaultUri(conf, namenode);
+    return this;
+  }
+
+  public MiniMRClientClusterBuilder noOfNMs(int noOfNMs) throws IOException {
+    this.noOfNMs = noOfNMs;
+    return this;
+  }
+  
+  public MiniMRClientCluster build() throws IOException {
 
     if (conf == null) {
       conf = new Configuration();

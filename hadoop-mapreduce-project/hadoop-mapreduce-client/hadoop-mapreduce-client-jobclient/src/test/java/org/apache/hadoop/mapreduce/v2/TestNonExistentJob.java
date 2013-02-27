@@ -22,27 +22,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.MiniMRClientCluster;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 
 import java.net.InetAddress;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.security.PrivilegedExceptionAction;
+import java.io.IOException;
 
 public class TestNonExistentJob extends TestCase {
 
   private MiniDFSCluster dfsCluster = null;
-  private MiniMRCluster mrCluster = null;
+  private MiniMRClientCluster mrCluster = null;
 
   protected void setUp() throws Exception {
     super.setUp();
@@ -51,8 +45,6 @@ public class TestNonExistentJob extends TestCase {
     }
     int taskTrackers = 2;
     int dataNodes = 2;
-    String proxyUser = System.getProperty("user.name");
-    String proxyGroup = "g";
     StringBuilder sb = new StringBuilder();
     sb.append("127.0.0.1,localhost");
     for (InetAddress i : InetAddress.getAllByName(InetAddress.getLocalHost().getHostName())) {
@@ -64,7 +56,7 @@ public class TestNonExistentJob extends TestCase {
     conf.set("dfs.permissions", "true");
     conf.set("hadoop.security.authentication", "simple");
 
-    dfsCluster = new MiniDFSCluster(conf, dataNodes, true, null);
+    dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(dataNodes).build();
     FileSystem fileSystem = dfsCluster.getFileSystem();
     fileSystem.mkdirs(new Path("/tmp"));
     fileSystem.mkdirs(new Path("/user"));
@@ -73,21 +65,21 @@ public class TestNonExistentJob extends TestCase {
     fileSystem.setPermission(new Path("/user"), FsPermission.valueOf("-rwxrwxrwx"));
     fileSystem.setPermission(new Path("/hadoop/mapred/system"), FsPermission.valueOf("-rwx------"));
     String nnURI = fileSystem.getUri().toString();
-    int numDirs = 1;
-    String[] racks = null;
-    String[] hosts = null;
-    mrCluster = new MiniMRCluster(0, 0, taskTrackers, nnURI, numDirs, racks, hosts, null, conf);
+    mrCluster = new MiniMRClientClusterBuilder(getClass(), conf)
+        .noOfNMs(taskTrackers)
+        .namenode(nnURI)
+        .build();
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
 
-  protected JobConf getJobConf() {
-    return mrCluster.createJobConf();
+  protected JobConf getJobConf() throws IOException {
+    return new JobConf(mrCluster.getConfig());
   }
 
   @Override
   protected void tearDown() throws Exception {
     if (mrCluster != null) {
-      mrCluster.shutdown();
+      mrCluster.stop();
     }
     if (dfsCluster != null) {
       dfsCluster.shutdown();

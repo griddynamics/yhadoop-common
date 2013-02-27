@@ -37,7 +37,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
+import org.apache.hadoop.mapred.MiniMRClientCluster;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.log4j.Level;
 
@@ -129,7 +130,8 @@ public class TestDistCh extends junit.framework.TestCase {
 
     conf.set(CapacitySchedulerConfiguration.PREFIX+CapacitySchedulerConfiguration.ROOT+"."+CapacitySchedulerConfiguration.QUEUES, "default");
     conf.set(CapacitySchedulerConfiguration.PREFIX+CapacitySchedulerConfiguration.ROOT+".default."+CapacitySchedulerConfiguration.CAPACITY, "100");
-    final MiniDFSCluster cluster=  new MiniDFSCluster.Builder(conf).numDataNodes(2).format(true).build();
+    final MiniDFSCluster cluster =  new MiniDFSCluster.Builder(conf).numDataNodes(2).format(true).build();
+    MiniMRClientCluster mrCluster = null;
     
     final FileSystem fs = cluster.getFileSystem();
     final FsShell shell = new FsShell(conf);
@@ -169,7 +171,8 @@ public class TestDistCh extends junit.framework.TestCase {
       System.out.println("newstatus=" + Arrays.asList(newstatus).toString().replace(",", ",\n  "));
 
       //run DistCh
-      new DistCh(MiniMRClientClusterFactory.create(this.getClass(), 2, conf).getConfig()).run(args);
+      mrCluster = new MiniMRClientClusterBuilder(this.getClass(), conf).noOfNMs(2).build();
+      new DistCh(mrCluster.getConfig()).run(args);
       runLsr(shell, tree.root, 0);
 
       //check results
@@ -181,6 +184,9 @@ public class TestDistCh extends junit.framework.TestCase {
         }
       }
     } finally {
+      if (mrCluster != null) {
+        mrCluster.stop();
+      }
       cluster.shutdown();
     }
   }

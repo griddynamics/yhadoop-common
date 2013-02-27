@@ -135,15 +135,18 @@ public class TestLazyOutput extends TestCase {
 
   public void testLazyOutput() throws Exception {
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
     try {
       Configuration conf = new Configuration();
 
       // Start the mini-MR and mini-DFS clusters
-      dfs = new MiniDFSCluster(conf, NUM_HADOOP_SLAVES, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_HADOOP_SLAVES).build();
       fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(NUM_HADOOP_SLAVES, fileSys.getUri().toString(), 1);
+      mr = new MiniMRClientClusterBuilder(getClass())
+          .noOfNMs(NUM_HADOOP_SLAVES)
+          .namenode(fileSys.getUri().toString())
+          .build();
 
       int numReducers = 2;
       int numMappers = NUM_HADOOP_SLAVES * NUM_MAPS_PER_NODE;
@@ -152,7 +155,7 @@ public class TestLazyOutput extends TestCase {
       Path output1 = new Path("/testlazy/output1");
 
       // Test 1. 
-      runTestLazyOutput(mr.createJobConf(), output1, 
+      runTestLazyOutput(new JobConf(mr.getConfig()), output1, 
           numReducers, true);
 
       Path[] fileList = 
@@ -165,7 +168,7 @@ public class TestLazyOutput extends TestCase {
 
       // Test 2. 0 Reducers, maps directly write to the output files
       Path output2 = new Path("/testlazy/output2");
-      runTestLazyOutput(mr.createJobConf(), output2, 0, true);
+      runTestLazyOutput(new JobConf(mr.getConfig()), output2, 0, true);
 
       fileList =
         FileUtil.stat2Paths(fileSys.listStatus(output2,
@@ -178,7 +181,7 @@ public class TestLazyOutput extends TestCase {
 
       // Test 3. 0 Reducers, but flag is turned off
       Path output3 = new Path("/testlazy/output3");
-      runTestLazyOutput(mr.createJobConf(), output3, 0, false);
+      runTestLazyOutput(new JobConf(mr.getConfig()), output3, 0, false);
 
       fileList =
         FileUtil.stat2Paths(fileSys.listStatus(output3,
@@ -191,7 +194,7 @@ public class TestLazyOutput extends TestCase {
 
     } finally {
       if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown();
+      if (mr != null) { mr.stop();
       }
     }
   }

@@ -97,7 +97,7 @@ public class TestJobSysDirWithDFS extends TestCase {
     return new TestResult(job, MapReduceTestUtil.readOutput(outDir, conf));
   }
 
- static void runWordCount(MiniMRCluster mr, JobConf jobConf, String sysDir) 
+ static void runWordCount(MiniMRClientCluster mr, JobConf jobConf, String sysDir) 
  throws IOException {
     LOG.info("runWordCount");
     // Run a word count example
@@ -118,21 +118,24 @@ public class TestJobSysDirWithDFS extends TestCase {
 
   public void testWithDFS() throws IOException {
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
     try {
       final int taskTrackers = 4;
 
       JobConf conf = new JobConf();
       conf.set(JTConfig.JT_SYSTEM_DIR, "/tmp/custom/mapred/system");
-      dfs = new MiniDFSCluster(conf, 4, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1, null, null, conf);
+      mr = new MiniMRClientClusterBuilder(getClass(), conf)
+          .noOfNMs(taskTrackers)
+          .namenode(fileSys.getUri().toString())
+          .build();
 
-      runWordCount(mr, mr.createJobConf(), conf.get("mapred.system.dir"));
+      runWordCount(mr, new JobConf(mr.getConfig()), conf.get("mapred.system.dir"));
     } finally {
       if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown();
+      if (mr != null) { mr.stop();
       }
     }
   }

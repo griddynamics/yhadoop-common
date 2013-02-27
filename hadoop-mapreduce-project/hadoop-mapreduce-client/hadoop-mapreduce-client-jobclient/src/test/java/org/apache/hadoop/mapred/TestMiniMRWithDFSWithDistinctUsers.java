@@ -41,7 +41,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
   static final UserGroupInformation ALICE_UGI = createUGI("alice", false); 
   static final UserGroupInformation BOB_UGI = createUGI("bob", false); 
 
-  MiniMRCluster mr = null;
+  MiniMRClientCluster mr = null;
   MiniDFSCluster dfs = null;
   FileSystem fs = null;
   Configuration conf = new Configuration();
@@ -75,7 +75,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
 
   @Before
   public void setUp() throws Exception {
-    dfs = new MiniDFSCluster(conf, 4, true, null);
+    dfs = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
 
     fs = DFS_UGI.doAs(new PrivilegedExceptionAction<FileSystem>() {
         public FileSystem run() throws IOException {
@@ -94,19 +94,21 @@ public class TestMiniMRWithDFSWithDistinctUsers {
     JobConf mrConf = new JobConf();
     mrConf.set(JTConfig.JT_STAGING_AREA_ROOT, "/staging");
 
-    mr = new MiniMRCluster(0, 0, 4, dfs.getFileSystem().getUri().toString(),
-                           1, null, null, MR_UGI, mrConf);
+    mr = new MiniMRClientClusterBuilder(getClass(), mrConf)
+        .noOfNMs(4)
+        .namenode(dfs.getFileSystem().getUri().toString())
+        .build();
   }
 
   @After
   public void tearDown() throws Exception {
-    if (mr != null) { mr.shutdown();}
+    if (mr != null) { mr.stop();}
     if (dfs != null) { dfs.shutdown(); }
   }
   
   @Test
   public void testDistinctUsers() throws Exception {
-    JobConf job1 = mr.createJobConf();
+    JobConf job1 = new JobConf(mr.getConfig());
     String input = "The quick brown fox\nhas many silly\n" 
       + "red fox sox\n";
     Path inDir = new Path("/testing/distinct/input");
@@ -115,7 +117,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
         .configureWordCount(fs, job1, input, 2, 1, inDir, outDir);
     runJobAsUser(job1, ALICE_UGI);
 
-    JobConf job2 = mr.createJobConf();
+    JobConf job2 = new JobConf(mr.getConfig());
     Path inDir2 = new Path("/testing/distinct/input2");
     Path outDir2 = new Path("/user/bob/output2");
     TestMiniMRClasspath.configureWordCount(fs, job2, input, 2, 1, inDir2,
@@ -130,7 +132,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
    */
   @Test
   public void testMultipleSpills() throws Exception {
-    JobConf job1 = mr.createJobConf();
+    JobConf job1 = new JobConf(mr.getConfig());
 
     // Make sure it spills twice
     job1.setFloat(MRJobConfig.MAP_SORT_SPILL_PERCENT, 0.0001f);

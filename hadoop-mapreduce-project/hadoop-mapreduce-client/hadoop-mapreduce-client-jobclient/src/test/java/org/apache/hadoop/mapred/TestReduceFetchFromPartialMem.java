@@ -30,7 +30,6 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.TaskCounter;
-import org.apache.hadoop.mapreduce.MRConfig;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -41,12 +40,14 @@ import java.util.Iterator;
 
 public class TestReduceFetchFromPartialMem extends TestCase {
 
-  protected static MiniMRCluster mrCluster = null;
+  protected static MiniMRClientCluster mrCluster = null;
   protected static MiniDFSCluster dfsCluster = null;
+  protected static Class<? extends TestCase> testClass;
   protected static TestSuite mySuite;
 
   protected static void setSuite(Class<? extends TestCase> klass) {
     mySuite  = new TestSuite(klass);
+    testClass = klass;
   }
 
   static {
@@ -57,13 +58,15 @@ public class TestReduceFetchFromPartialMem extends TestCase {
     TestSetup setup = new TestSetup(mySuite) {
       protected void setUp() throws Exception {
         Configuration conf = new Configuration();
-        dfsCluster = new MiniDFSCluster(conf, 2, true, null);
-        mrCluster = new MiniMRCluster(2,
-            dfsCluster.getFileSystem().getUri().toString(), 1);
+        dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+        mrCluster = new MiniMRClientClusterBuilder(testClass)
+            .noOfNMs(2)
+            .namenode(dfsCluster.getFileSystem().getUri().toString())
+            .build();
       }
       protected void tearDown() throws Exception {
         if (dfsCluster != null) { dfsCluster.shutdown(); }
-        if (mrCluster != null) { mrCluster.shutdown(); }
+        if (mrCluster != null) { mrCluster.stop(); }
       }
     };
     return setup;
@@ -80,7 +83,7 @@ public class TestReduceFetchFromPartialMem extends TestCase {
   /** Verify that at least one segment does not hit disk */
   public void testReduceFromPartialMem() throws Exception {
     final int MAP_TASKS = 7;
-    JobConf job = mrCluster.createJobConf();
+    JobConf job = new JobConf(mrCluster.getConfig());
     job.setNumMapTasks(MAP_TASKS);
     job.setInt(JobContext.REDUCE_MERGE_INMEM_THRESHOLD, 0);
     job.set(JobContext.REDUCE_INPUT_BUFFER_PERCENT, "1.0");

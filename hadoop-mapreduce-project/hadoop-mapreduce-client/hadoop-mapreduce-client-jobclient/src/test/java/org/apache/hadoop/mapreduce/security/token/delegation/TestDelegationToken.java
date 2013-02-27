@@ -22,7 +22,8 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.MiniMRClientCluster;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -35,7 +36,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 @Ignore
 public class TestDelegationToken {
-  private MiniMRCluster cluster;
+  private MiniMRClientCluster cluster;
   private UserGroupInformation user1;
   private UserGroupInformation user2;
   
@@ -45,7 +46,7 @@ public class TestDelegationToken {
                                                       new String[]{"users"});
     user2 = UserGroupInformation.createUserForTesting("bob", 
                                                       new String[]{"users"});
-    cluster = new MiniMRCluster(0,0,1,"file:///",1);
+    cluster = new MiniMRClientClusterBuilder(getClass()).namenode("file:///").build();
   }
   
   @SuppressWarnings("deprecation")
@@ -56,7 +57,7 @@ public class TestDelegationToken {
     client = user1.doAs(new PrivilegedExceptionAction<JobClient>(){
       @Override
       public JobClient run() throws Exception {
-        return new JobClient(cluster.createJobConf());
+        return new JobClient(new JobConf(cluster.getConfig()));
       }
     });
     
@@ -64,7 +65,7 @@ public class TestDelegationToken {
     bobClient = user2.doAs(new PrivilegedExceptionAction<JobClient>(){
       @Override
       public JobClient run() throws Exception {
-        return new JobClient(cluster.createJobConf());
+        return new JobClient(new JobConf(cluster.getConfig()));
       }
     });
     

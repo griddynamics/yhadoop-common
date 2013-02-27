@@ -36,6 +36,8 @@ import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRClientCluster;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.Utils;
@@ -73,14 +75,17 @@ public class TestPipes extends TestCase {
       return;
     }
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniMRClientCluster mr = null;
     Path inputPath = new Path("testing/in");
     Path outputPath = new Path("testing/out");
     try {
       final int numSlaves = 2;
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, numSlaves, true, null);
-      mr = new MiniMRCluster(numSlaves, dfs.getFileSystem().getUri().toString(), 1);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(numSlaves).build();
+      mr = new MiniMRClientClusterBuilder(getClass())
+          .noOfNMs(numSlaves)
+          .namenode(dfs.getFileSystem().getUri().toString())
+          .build();
       writeInputFile(dfs.getFileSystem(), inputPath);
       runProgram(mr, dfs, wordCountSimple, 
                  inputPath, outputPath, 3, 2, twoSplitOutput, null);
@@ -91,9 +96,9 @@ public class TestPipes extends TestCase {
       runProgram(mr, dfs, wordCountPart,
                  inputPath, outputPath, 3, 2, fixedPartitionOutput, null);
       runNonPipedProgram(mr, dfs, wordCountNoPipes, null);
-      mr.waitUntilIdle();
+      //TBD mr.waitUntilIdle();
     } finally {
-      mr.shutdown();
+      mr.stop();
       dfs.shutdown();
     }
   }
@@ -147,7 +152,7 @@ public class TestPipes extends TestCase {
     out.close();
   }
 
-  static void runProgram(MiniMRCluster mr, MiniDFSCluster dfs, 
+  static void runProgram(MiniMRClientCluster mr, MiniDFSCluster dfs, 
                           Path program, Path inputPath, Path outputPath,
                           int numMaps, int numReduces, String[] expectedResults,
                           JobConf conf
@@ -155,7 +160,7 @@ public class TestPipes extends TestCase {
     Path wordExec = new Path("testing/bin/application");
     JobConf job = null;
     if(conf == null) {
-      job = mr.createJobConf();
+      job = new JobConf(mr.getConfig());
     }else {
       job = new JobConf(conf);
     } 
@@ -218,11 +223,11 @@ public class TestPipes extends TestCase {
    * @param program the program to run
    * @throws IOException
    */
-  static void runNonPipedProgram(MiniMRCluster mr, MiniDFSCluster dfs,
+  static void runNonPipedProgram(MiniMRClientCluster mr, MiniDFSCluster dfs,
                                   Path program, JobConf conf) throws IOException {
     JobConf job;
     if(conf == null) {
-      job = mr.createJobConf();
+      job = new JobConf(mr.getConfig());
     }else {
       job = new JobConf(conf);
     }
