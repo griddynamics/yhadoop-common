@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -72,10 +73,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.xml.sax.SAXException;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.UnmodifiableIterator;
 
 public class TestFairScheduler {
 
@@ -1417,5 +1423,63 @@ public class TestFairScheduler {
           scheduler.getQueueManager().getQueue("queue1").getResourceUsage().getMemory());
       TimeUnit.SECONDS.sleep(1);
     }    
+  }
+  
+  private static final class ExternalAppAddedSchedulerEvent extends SchedulerEvent {
+    public ExternalAppAddedSchedulerEvent() {
+      super(SchedulerEventType.APP_ADDED);
+    }    
+  }
+  
+  private static final class ExternalNodeRemovedSchedulerEvent extends SchedulerEvent {
+    public ExternalNodeRemovedSchedulerEvent() {
+      super(SchedulerEventType.NODE_REMOVED);
+    }
+  }
+  
+  private static final class ExternalNodeUpdateSchedulerEvent extends SchedulerEvent {
+    public ExternalNodeUpdateSchedulerEvent() {
+      super(SchedulerEventType.NODE_UPDATE);
+    }
+  }
+  
+  private static final class ExternalNodeAddedSchedulerEvent extends SchedulerEvent {
+    public ExternalNodeAddedSchedulerEvent() {
+      super(SchedulerEventType.NODE_ADDED);
+    }
+  }
+  
+  private static final class ExternalAppRemovedSchedulerEvent extends SchedulerEvent {
+    public ExternalAppRemovedSchedulerEvent() {
+      super(SchedulerEventType.APP_REMOVED);
+    }
+  }
+  
+  private static final class ExternalContainerExpiredSchedulerEvent extends SchedulerEvent {
+    public ExternalContainerExpiredSchedulerEvent() {
+      super(SchedulerEventType.CONTAINER_EXPIRED);
+    }
+  }
+  
+  @Test(timeout = 5000)
+  public void testSchedulerHandleFailWithExternalEvents() throws Exception {
+    Configuration conf = createConfiguration();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    ImmutableSet<? extends SchedulerEvent> externalEvents = ImmutableSet.of(new ExternalAppAddedSchedulerEvent(),
+        new ExternalNodeRemovedSchedulerEvent(), new ExternalNodeUpdateSchedulerEvent(),
+        new ExternalNodeAddedSchedulerEvent(), new ExternalAppRemovedSchedulerEvent(),
+        new ExternalContainerExpiredSchedulerEvent());
+    
+    UnmodifiableIterator<? extends SchedulerEvent> iter = externalEvents.iterator();
+    while(iter.hasNext())
+      handleExternalEvent(iter.next());
+  }
+
+  private void handleExternalEvent(SchedulerEvent event) throws Exception {
+    try {
+      scheduler.handle(event);
+    } catch(RuntimeException ex) {
+      //expected
+    }
   }
 }
