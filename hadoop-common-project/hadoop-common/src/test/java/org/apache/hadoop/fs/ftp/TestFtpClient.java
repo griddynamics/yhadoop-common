@@ -287,6 +287,7 @@ public class TestFtpClient extends TestCase {
     ftpFs.close();
   }
 
+  @SuppressWarnings("resource")
   @Test(timeout = 10000)
   public void testFTPInputStream() throws Exception {
 
@@ -303,10 +304,26 @@ public class TestFtpClient extends TestCase {
     Configuration conf = getConfiguration();
     FTPClient client = new FTPClient();
     client.connect(conf.get("fs.ftp.host"), port);
-
-    InputStream is = new FileInputStream(new File(tmpfile));
-    @SuppressWarnings("resource")
-    FTPInputStream ftpInputstream = new FTPInputStream(is, client,
+  
+    InputStream   is = new FileInputStream(new File(tmpfile));
+    FTPInputStream ftpInputstream=null;
+    try{
+      ftpInputstream = new FTPInputStream(null, client,
+          FileSystem.getStatistics(getURI().getScheme(), FTPFileSystem.class));
+      fail();
+     }catch(IllegalArgumentException e){
+       assertEquals("Null InputStream", e.getMessage());
+     }
+    
+    try{
+      ftpInputstream = new FTPInputStream(is, null,
+          FileSystem.getStatistics(getURI().getScheme(), FTPFileSystem.class));
+      fail();
+     }catch(IllegalArgumentException e){
+       assertEquals("Null InputStream", e.getMessage());
+     }
+    
+    ftpInputstream = new FTPInputStream(is, client,
         FileSystem.getStatistics(getURI().getScheme(), FTPFileSystem.class));
 
     int counter = 0;
@@ -315,13 +332,42 @@ public class TestFtpClient extends TestCase {
       assertEquals(counter, ftpInputstream.getPos());
     }
     assertEquals(14, counter);
+    
+    assertFalse(ftpInputstream.markSupported());
+    
+    try{
+      ftpInputstream.seek(0);
+      fail();
+    }catch(IOException e){
+      assertEquals("Seek not supported", e.getMessage());
+    }
+    try{
+      ftpInputstream.seekToNewSource(0);
+      fail();
+    }catch(IOException e){
+      assertEquals("Seek not supported", e.getMessage());
+    }
+    try{
+      ftpInputstream.reset();
+      fail();
+    }catch(IOException e){
+      assertEquals("Mark not supported", e.getMessage());
+    }
 
+    
+    
     ftpFs.delete(new Path("test1"), true);
     assertFalse(ftpFs.exists(new Path("test1")));
 
     ftpFs.close();
   }
 
+  @Test(timeout=5000)
+  public void  testFtpFs() throws Exception, URISyntaxException{
+    FtpFs test= new FtpFs(getURI(), getConfiguration());
+    assertEquals(21, test.getUriDefaultPort());
+    assertNotNull(test.getServerDefaults());
+  }
   private Configuration getConfiguration() {
     Configuration conf = new Configuration();
     conf.set("fs.ftp.host", "localhost");
