@@ -21,6 +21,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -47,6 +48,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Progressable;
 import org.junit.Test;
 
 public class TestFtpClient extends TestCase {
@@ -98,6 +100,23 @@ public class TestFtpClient extends TestCase {
     Path testFile = new Path("test1/test2/testFile.txt");
     ftpFs.create(testFile);
     assertTrue(ftpFs.exists(testFile));
+    
+    try{
+    ftpFs.create(testFile, new FsPermission ((short)777), false, 512, (short) 0, 256L, new Progressable() {
+      @Override
+      public void progress() {}
+    });
+    }catch(IOException e){
+      assertEquals("File already exists: test1/test2/testFile.txt", e.getMessage());
+    }
+   
+    try{
+      ftpFs.delete(new Path("test1"), false);
+      fail();
+    }catch(IOException e){
+      assertEquals("Directory: test1 is not empty.", e.getMessage());
+    }
+    
     ftpFs.delete(new Path("test1"), true);
     assertFalse(ftpFs.exists(new Path("test1")));
 
@@ -108,12 +127,20 @@ public class TestFtpClient extends TestCase {
   public void testCreateDirectories() throws Exception {
 
     FTPFileSystem ftpFs = new FTPFileSystem();
+    FsPermission permission = new FsPermission((short) 777);
 
     ftpFs.initialize(getURI(), getConfiguration());
+    Path testFile = new Path("test1/test2/testFile.txt");
+    ftpFs.create(testFile);
+    try {
+      ftpFs.mkdirs(testFile, permission);
+      fail();
+    } catch (IOException e) {
+      assertEquals("Can't make directory for path /test1/test2/testFile.txt since it is a file.",
+          e.getMessage());
+    }
+    testFile = new Path("test1/test2");
 
-    Path testFile = new Path("test1/test2");
-
-    FsPermission permission = new FsPermission((short) 777);
     ftpFs.mkdirs(testFile, permission);
     assertTrue(ftpFs.exists(testFile));
     FileStatus status = ftpFs.getFileStatus(testFile);
@@ -193,6 +220,17 @@ public class TestFtpClient extends TestCase {
     FileStatus[] statuses = ftpFs.listStatus(new Path("test1"));
     assertEquals(2, statuses.length);
 
+    statuses = ftpFs.listStatus(testFile);
+    assertEquals(1, statuses.length);
+    assertTrue( statuses[0].isFile());
+
+    try{
+    statuses = ftpFs.listStatus(new Path("test2"));
+    }catch(IOException e){
+      assertEquals("File /test2 does not exist.", e.getMessage());
+    }
+
+    
     ftpFs.delete(new Path("test1"), true);
     ftpFs.delete(new Path("testFile3.txt"), false);
     assertFalse(ftpFs.exists(new Path("test1")));
@@ -213,6 +251,29 @@ public class TestFtpClient extends TestCase {
     ftpFs.copyFromLocalFile(new Path(tmpfile), testFile);
     assertTrue(ftpFs.exists(testFile));
 
+    try {
+      ftpFs.rename(new Path("test1/sss"), copyFile);
+      fail();
+    } catch (IOException e) {
+      assertEquals("Source path test1/sss does not exist", e.getMessage());
+    }
+
+    try {
+      ftpFs.rename(testFile, testFile);
+      fail();
+    } catch (IOException e) {
+      assertEquals(
+          "Destination path test1/test2/testFile.txt already exist, cannot rename!",
+          e.getMessage());
+    }
+    try {
+      ftpFs.rename(testFile, new Path("test1/copyFile.txt"));
+      fail();
+    } catch (IOException e) {
+      assertEquals(
+          "Cannot rename parent(source): /test1/test2, parent(destination):  /test1",
+          e.getMessage());
+    }
     ftpFs.rename(testFile, copyFile);
     assertFalse(ftpFs.exists(testFile));
     assertTrue(ftpFs.exists(copyFile));
@@ -254,8 +315,7 @@ public class TestFtpClient extends TestCase {
       assertEquals(counter, ftpInputstream.getPos());
     }
     assertEquals(14, counter);
-    
-    
+
     ftpFs.delete(new Path("test1"), true);
     assertFalse(ftpFs.exists(new Path("test1")));
 
