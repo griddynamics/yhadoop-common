@@ -246,7 +246,6 @@
       <artifactId>commons-compress</artifactId>
       <version>1.4</version>
     </dependency>
-  </dependencies>
 
 	<dependency>
 		<groupId>org.apache.mina</groupId>
