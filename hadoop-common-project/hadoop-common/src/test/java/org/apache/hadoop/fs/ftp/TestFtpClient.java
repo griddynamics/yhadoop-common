@@ -19,13 +19,16 @@ package org.apache.hadoop.fs.ftp;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.net.ftp.FTPClient;
 import org.apache.ftpserver.FtpServer;
 import org.apache.ftpserver.FtpServerFactory;
 import org.apache.ftpserver.ftplet.UserManager;
@@ -39,7 +42,7 @@ import org.apache.ftpserver.usermanager.impl.TransferRatePermission;
 import org.apache.ftpserver.usermanager.impl.WritePermission;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -88,7 +91,6 @@ public class TestFtpClient extends TestCase {
   @Test(timeout = 10000)
   public void testCreateFile() throws Exception {
 
-
     FTPFileSystem ftpFs = new FTPFileSystem();
 
     ftpFs.initialize(getURI(), getConfiguration());
@@ -101,26 +103,27 @@ public class TestFtpClient extends TestCase {
 
     ftpFs.close();
   }
+
   @Test(timeout = 10000)
   public void testCreateDirectories() throws Exception {
-
 
     FTPFileSystem ftpFs = new FTPFileSystem();
 
     ftpFs.initialize(getURI(), getConfiguration());
-    
+
     Path testFile = new Path("test1/test2");
-    
-    FsPermission permission = new FsPermission((short)777);
+
+    FsPermission permission = new FsPermission((short) 777);
     ftpFs.mkdirs(testFile, permission);
     assertTrue(ftpFs.exists(testFile));
-    FileStatus status=ftpFs.getFileStatus(testFile);
-    assertTrue( status.isDirectory());
+    FileStatus status = ftpFs.getFileStatus(testFile);
+    assertTrue(status.isDirectory());
     ftpFs.delete(new Path("test1"), true);
     assertFalse(ftpFs.exists(new Path("test1")));
 
     ftpFs.close();
   }
+
   @Test(timeout = 10000)
   public void testTransferFile() throws Exception {
 
@@ -137,13 +140,13 @@ public class TestFtpClient extends TestCase {
     FileStatus status = ftpFs.getFileStatus(testFile);
     assertEquals(14, status.getLen());
 
-    File localfile=new File(workspace.getParent()+File.separator+"locafile");
-    
+    File localfile = new File(workspace.getParent() + File.separator
+        + "locafile");
+
     ftpFs.copyToLocalFile(testFile, new Path(localfile.getAbsolutePath()));
     assertTrue(localfile.exists());
     assertEquals(14, localfile.length());
 
-    
     ftpFs.delete(new Path("test1"), true);
     assertFalse(ftpFs.exists(new Path("test1")));
 
@@ -157,7 +160,7 @@ public class TestFtpClient extends TestCase {
     FTPFileSystem ftpFs = new FTPFileSystem();
 
     ftpFs.initialize(getURI(), getConfiguration());
-    
+
     Path testFile = new Path("test1/test2/testFile.txt");
     Path testFile2 = new Path("test1/testFile2.txt");
     Path testFile3 = new Path("testFile3.txt");
@@ -167,31 +170,31 @@ public class TestFtpClient extends TestCase {
     assertTrue(ftpFs.exists(testFile2));
     ftpFs.copyFromLocalFile(new Path(tmpfile), testFile3);
     assertTrue(ftpFs.exists(testFile3));
-    
-    int counter=0;
-    RemoteIterator<LocatedFileStatus> it= ftpFs.listFiles(new Path("test1"), true);
-    while(it.hasNext()){
+
+    int counter = 0;
+    RemoteIterator<LocatedFileStatus> it = ftpFs.listFiles(new Path("test1"),
+        true);
+    while (it.hasNext()) {
       counter++;
-      LocatedFileStatus status= it.next();
+      LocatedFileStatus status = it.next();
       assertEquals(14, status.getLen());
     }
     assertEquals(2, counter);
 
-     counter=0;
-     it= ftpFs.listFiles(new Path("/"), true);
-     while(it.hasNext()){
-       counter++;
-       LocatedFileStatus status= it.next();
-       assertEquals(14, status.getLen());
-     }
-     assertEquals(3, counter);
+    counter = 0;
+    it = ftpFs.listFiles(new Path("/"), true);
+    while (it.hasNext()) {
+      counter++;
+      LocatedFileStatus status = it.next();
+      assertEquals(14, status.getLen());
+    }
+    assertEquals(3, counter);
 
-     
-     FileStatus[] statuses= ftpFs.listStatus(new Path("test1"));
-     assertEquals(2, statuses.length);
-    
+    FileStatus[] statuses = ftpFs.listStatus(new Path("test1"));
+    assertEquals(2, statuses.length);
+
     ftpFs.delete(new Path("test1"), true);
-    ftpFs.delete(new Path("testFile3.txt"),false);
+    ftpFs.delete(new Path("testFile3.txt"), false);
     assertFalse(ftpFs.exists(new Path("test1")));
 
     ftpFs.close();
@@ -213,15 +216,52 @@ public class TestFtpClient extends TestCase {
     ftpFs.rename(testFile, copyFile);
     assertFalse(ftpFs.exists(testFile));
     assertTrue(ftpFs.exists(copyFile));
-    
+
     FileStatus status = ftpFs.getFileStatus(copyFile);
     assertEquals(14, status.getLen());
+
+    ftpFs.delete(new Path("test1"), true);
+    assertFalse(ftpFs.exists(new Path("test1")));
+
+    ftpFs.close();
+  }
+
+  @Test(timeout = 10000)
+  public void testFTPInputStream() throws Exception {
+
+    String tmpfile = createFile("temproary file");
+
+    FTPFileSystem ftpFs = new FTPFileSystem();
+
+    ftpFs.initialize(getURI(), getConfiguration());
+
+    Path testFile = new Path("test1/test2/testFile.txt");
+    ftpFs.copyFromLocalFile(new Path(tmpfile), testFile);
+    assertTrue(ftpFs.exists(testFile));
+
+    Configuration conf = getConfiguration();
+    FTPClient client = new FTPClient();
+    client.connect(conf.get("fs.ftp.host"), port);
+
+    InputStream is = new FileInputStream(new File(tmpfile));
+    @SuppressWarnings("resource")
+    FTPInputStream ftpInputstream = new FTPInputStream(is, client,
+        FileSystem.getStatistics(getURI().getScheme(), FTPFileSystem.class));
+
+    int counter = 0;
+    while (ftpInputstream.read() >= 0) {
+      counter++;
+      assertEquals(counter, ftpInputstream.getPos());
+    }
+    assertEquals(14, counter);
+    
     
     ftpFs.delete(new Path("test1"), true);
     assertFalse(ftpFs.exists(new Path("test1")));
 
     ftpFs.close();
   }
+
   private Configuration getConfiguration() {
     Configuration conf = new Configuration();
     conf.set("fs.ftp.host", "localhost");
@@ -231,9 +271,10 @@ public class TestFtpClient extends TestCase {
     return conf;
   }
 
-  private URI getURI() throws URISyntaxException{
+  private URI getURI() throws URISyntaxException {
     return new URI("ftp://localhost:" + port);
   }
+
   private String createFile(String content) throws Exception {
     File tmpfile = new File(workspace.getParent() + File.separator + "tmp.txt");
     BufferedWriter writer = new BufferedWriter(new FileWriter(tmpfile));
