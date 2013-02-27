@@ -358,6 +358,8 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9279. Document the need to build hadoop-maven-plugins for
     eclipse and separate project builds. (Tsuyoshi Ozawa via suresh)
 
+    HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -389,6 +391,9 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-7487. DF should throw a more reasonable exception when mount cannot
     be determined. (Andrew Wang via atm)
+
+    HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
+    (Arpit Gupta via suresh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
