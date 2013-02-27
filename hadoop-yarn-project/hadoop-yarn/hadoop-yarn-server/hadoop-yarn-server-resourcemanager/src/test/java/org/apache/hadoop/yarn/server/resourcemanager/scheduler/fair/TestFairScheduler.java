@@ -1406,20 +1406,22 @@ public class TestFairScheduler {
   
   @Test(timeout = 30000)
   public void testAggregateCapacityTrackingWithPreemptionEnabled() throws Exception {
+    int KB = 1024;
+    int iterationNumber = 10;
     Configuration conf = createConfiguration();
     conf.setBoolean("yarn.scheduler.fair.preemption", true);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());                   
-    RMNode node = MockNodes.newNodeInfo(1, Resources.createResource(1024 * 10));
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    RMNode node = MockNodes.newNodeInfo(1, Resources.createResource(KB * iterationNumber));
     NodeAddedSchedulerEvent nodeAddEvent = new NodeAddedSchedulerEvent(node);
-    scheduler.handle(nodeAddEvent);        
+    scheduler.handle(nodeAddEvent);
     
-    for (int i = 0; i < 10; i++) {      
-      createSchedulingRequest(1024, "queue1", "user1", 1);
+    for (int i = 0; i < iterationNumber; i++) {      
+      createSchedulingRequest(KB, "queue1", "user1", 1);
       scheduler.update();
       NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
       scheduler.handle(updateEvent);
 
-      assertEquals(1024 * (i+1), 
+      assertEquals(KB * (i + 1), 
           scheduler.getQueueManager().getQueue("queue1").getResourceUsage().getMemory());
       TimeUnit.SECONDS.sleep(1);
     }    
@@ -1461,6 +1463,12 @@ public class TestFairScheduler {
     }
   }
   
+  /**
+   * try to handle external events type
+   * and get {@code RuntimeException}  
+   * 
+   * @throws Exception
+   */
   @Test(timeout = 5000)
   public void testSchedulerHandleFailWithExternalEvents() throws Exception {
     Configuration conf = createConfiguration();
