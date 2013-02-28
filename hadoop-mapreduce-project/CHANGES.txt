@@ -65,6 +65,15 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
     speculative attempts (Robert Parker via jlowe)
 
+    MAPREDUCE-5000. Fixes getCounters when speculating by fixing the selection
+    of the best attempt for a task. (Jason Lowe via sseth)
+
+    MAPREDUCE-5009. Killing the Task Attempt slated for commit does not clear
+    the value from the Task commitAttempt member (Robert Parker via jeagles)
+
+    MAPREDUCE-4007. JobClient getJob(JobID) should return NULL if the job 
+    does not exist (for backwards compatibility) (tucu via jlowe)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
