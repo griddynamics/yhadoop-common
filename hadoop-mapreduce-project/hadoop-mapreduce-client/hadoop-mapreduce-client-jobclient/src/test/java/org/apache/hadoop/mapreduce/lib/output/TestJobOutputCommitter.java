@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.test.PathUtils;
 
 /**
  * A JUnit test to test Map-Reduce job committer.
@@ -43,9 +44,7 @@ public class TestJobOutputCommitter extends HadoopTestCase {
     super(CLUSTER_MR, LOCAL_FS, 1, 1);
   }
 
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-      "test.build.data", "/tmp")
-      + "/" + "test-job-output-committer").toString();
+  private static String TEST_ROOT_DIR = PathUtils.getTestDirName(TestJobOutputCommitter.class);
   private static final String CUSTOM_CLEANUP_FILE_NAME = "_custom_cleanup";
   private static final String ABORT_KILLED_FILE_NAME = "_custom_abort_killed";
   private static final String ABORT_FAILED_FILE_NAME = "_custom_abort_failed";

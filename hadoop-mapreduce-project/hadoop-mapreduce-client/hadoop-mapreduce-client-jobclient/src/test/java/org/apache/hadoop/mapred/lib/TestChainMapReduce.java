@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.test.PathUtils;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -29,25 +30,24 @@ import java.util.Iterator;
 
 public class TestChainMapReduce extends HadoopTestCase {
 
-  private static Path getFlagDir(boolean local) {
+  private Path getFlagDir(boolean local) {
     Path flagDir = new Path("testing/chain/flags");
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (local) {
-      String localPathRoot = System.getProperty("test.build.data", "/tmp")
-        .replace(' ', '+');
+      String localPathRoot = PathUtils.getTestDirName(getClass());
       flagDir = new Path(localPathRoot, flagDir);
     }
     return flagDir;
   }
 
-  private static void cleanFlags(JobConf conf) throws IOException {
+  private void cleanFlags(JobConf conf) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     fs.delete(getFlagDir(conf.getBoolean("localFS", true)), true);
     fs.mkdirs(getFlagDir(conf.getBoolean("localFS", true)));
   }
 
-  private static void writeFlag(JobConf conf, String flag) throws IOException {
+  private void writeFlag(JobConf conf, String flag) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     if (getFlag(conf, flag)) {
       fail("Flag " + flag + " already exists");
@@ -57,7 +57,7 @@ public class TestChainMapReduce extends HadoopTestCase {
     file.close();
   }
 
-  private static boolean getFlag(JobConf conf, String flag) throws IOException {
+  private boolean getFlag(JobConf conf, String flag) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     return fs
       .exists(new Path(getFlagDir(conf.getBoolean("localFS", true)), flag));
@@ -73,8 +73,7 @@ public class TestChainMapReduce extends HadoopTestCase {
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
-      String localPathRoot = System.getProperty("test.build.data", "/tmp")
-        .replace(' ', '+');
+      String localPathRoot = PathUtils.getTestDirName(getClass());
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }
@@ -157,37 +156,37 @@ public class TestChainMapReduce extends HadoopTestCase {
     assertTrue(getFlag(conf, "close.E"));
   }
 
-  public static class AMap extends IDMap {
+  public class AMap extends IDMap {
     public AMap() {
       super("A", "A", true);
     }
   }
 
-  public static class BMap extends IDMap {
+  public class BMap extends IDMap {
     public BMap() {
       super("B", "X", false);
     }
   }
 
-  public static class CReduce extends IDReduce {
+  public class CReduce extends IDReduce {
     public CReduce() {
       super("C", "C");
     }
   }
 
-  public static class DMap extends IDMap {
+  public class DMap extends IDMap {
     public DMap() {
       super("D", "X", false);
     }
   }
 
-  public static class EMap extends IDMap {
+  public class EMap extends IDMap {
     public EMap() {
       super("E", "E", true);
     }
   }
 
-  public static class IDMap
+  public class IDMap
     implements Mapper<LongWritable, Text, LongWritable, Text> {
     private JobConf conf;
     private String name;
@@ -233,7 +232,7 @@ public class TestChainMapReduce extends HadoopTestCase {
     }
   }
 
-  public static class IDReduce
+  public class IDReduce
     implements Reducer<LongWritable, Text, LongWritable, Text> {
 
     private JobConf conf;

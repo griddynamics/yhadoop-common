@@ -28,6 +28,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.test.PathUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,9 +50,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
     _testMOWithJavaSerialization(true);
   }
 
-  private static String localPathRoot = 
-    System.getProperty("test.build.data", "/tmp");
-  private static final Path ROOT_DIR = new Path(localPathRoot, "testing/mo");
+  private static final Path ROOT_DIR = PathUtils.getTestPath(TestMRMultipleOutputs.class);
   private static final Path IN_DIR = new Path(ROOT_DIR, "input");
   private static final Path OUT_DIR = new Path(ROOT_DIR, "output");
   private static String TEXT = "text";

@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.conf.*;
 
 public class TestSequenceFileInputFilter extends TestCase {
@@ -35,7 +36,7 @@ public class TestSequenceFileInputFilter extends TestCase {
   private static final Configuration conf = new Configuration();
   private static final JobConf job = new JobConf(conf);
   private static final FileSystem fs;
-  private static final Path inDir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+  private static final Path inDir = PathUtils.getTestPath(TestSequenceFileInputFilter.class);
   private static final Path inFile = new Path(inDir, "test.seq");
   private static final Random random = new Random(1);
   private static final Reporter reporter = Reporter.NULL;

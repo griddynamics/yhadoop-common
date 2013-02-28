@@ -37,15 +37,15 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestJavaSerialization extends TestCase {
 
   private static String TEST_ROOT_DIR =
-    new File(System.getProperty("test.build.data", "/tmp")).toURI()
-    .toString().replace(' ', '+');
+    PathUtils.getTestDirName(TestJavaSerialization.class);
 
-  private final Path INPUT_DIR = new Path(TEST_ROOT_DIR + "/input");
-  private final Path OUTPUT_DIR = new Path(TEST_ROOT_DIR + "/out");
+  private final Path INPUT_DIR = new Path(TEST_ROOT_DIR, "input");
+  private final Path OUTPUT_DIR = new Path(TEST_ROOT_DIR, "out");
   private final Path INPUT_FILE = new Path(INPUT_DIR , "inp");
 
   static class WordCountMapper extends MapReduceBase implements

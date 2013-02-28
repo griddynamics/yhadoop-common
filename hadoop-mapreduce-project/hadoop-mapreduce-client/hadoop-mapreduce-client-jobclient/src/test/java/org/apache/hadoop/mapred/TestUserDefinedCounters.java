@@ -35,12 +35,12 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestUserDefinedCounters extends TestCase {
   
   private static String TEST_ROOT_DIR =
-    new File(System.getProperty("test.build.data", "/tmp")).toURI()
-    .toString().replace(' ', '+');
+    PathUtils.getTestDirName(TestUserDefinedCounters.class);
 
   private final Path INPUT_DIR = new Path(TEST_ROOT_DIR + "/input");
   private final Path OUTPUT_DIR = new Path(TEST_ROOT_DIR + "/out");

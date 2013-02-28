@@ -28,10 +28,11 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.JobContextImpl;
 import org.apache.hadoop.mapred.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestFileOutputCommitter extends TestCase {
   private static Path outDir = new Path(
-     System.getProperty("test.build.data", "/tmp"), "output");
+     PathUtils.getTestPath(TestFileOutputCommitter.class), "output");
 
   // A random task attempt id for testing.
   private static String attempt = "attempt_200707121733_0001_m_000000_0";

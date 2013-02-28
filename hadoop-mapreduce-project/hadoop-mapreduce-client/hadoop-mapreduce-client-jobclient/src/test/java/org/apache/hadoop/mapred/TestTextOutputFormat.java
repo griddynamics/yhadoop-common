@@ -23,6 +23,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestTextOutputFormat extends TestCase {
   private static JobConf defaultConf = new JobConf();
@@ -40,8 +41,7 @@ public class TestTextOutputFormat extends TestCase {
 
   private static Path workDir = 
     new Path(new Path(
-                      new Path(System.getProperty("test.build.data", "."), 
-                               "data"), 
+                      PathUtils.getTestPath(TestTextOutputFormat.class), 
                       FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
 
   @SuppressWarnings("unchecked")

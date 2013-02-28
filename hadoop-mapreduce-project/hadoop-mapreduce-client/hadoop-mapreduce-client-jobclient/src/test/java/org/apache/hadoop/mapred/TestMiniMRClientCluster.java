@@ -33,6 +33,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -57,9 +58,7 @@ public class TestMiniMRClientCluster {
   @BeforeClass
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
-    final Path TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
-        "/tmp"));
-    testdir = new Path(TEST_ROOT_DIR, "TestMiniMRClientCluster");
+    testdir = PathUtils.getTestPath(TestMiniMRClientCluster.class);
     inDir = new Path(testdir, "in");
     outDir = new Path(testdir, "out");
 

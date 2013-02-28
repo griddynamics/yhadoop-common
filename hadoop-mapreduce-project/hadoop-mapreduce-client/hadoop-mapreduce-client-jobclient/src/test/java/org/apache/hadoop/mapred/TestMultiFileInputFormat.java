@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestMultiFileInputFormat extends TestCase{
 
@@ -56,8 +57,7 @@ public class TestMultiFileInputFormat extends TestCase{
   }
   
   private Path initFiles(FileSystem fs, int numFiles, int numBytes) throws IOException{
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
-    Path multiFileDir = new Path(dir, "test.multifile");
+    Path multiFileDir = PathUtils.getTestPath(getClass());
     fs.delete(multiFileDir, true);
     fs.mkdirs(multiFileDir);
     LOG.info("Creating " + numFiles + " file(s) in " + multiFileDir);

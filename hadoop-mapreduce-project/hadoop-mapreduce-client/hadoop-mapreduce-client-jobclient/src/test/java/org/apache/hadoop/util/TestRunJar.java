@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,8 +35,7 @@ import org.junit.Test;
  */
 public class TestRunJar {
 
-  private static String TEST_ROOT_DIR = new Path(System.getProperty(
-      "test.build.data", "/tmp")).toString();
+  private static String TEST_ROOT_DIR = PathUtils.getTestDirName(TestRunJar.class);
 
   private static final String TEST_JAR_NAME = "testjar.jar";
   private static final String CLASS_NAME = "Hello.class";

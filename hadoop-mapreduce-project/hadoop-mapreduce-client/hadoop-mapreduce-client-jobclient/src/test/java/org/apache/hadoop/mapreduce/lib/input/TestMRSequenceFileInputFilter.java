@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.conf.*;
 
 public class TestMRSequenceFileInputFilter extends TestCase {
@@ -45,7 +46,7 @@ public class TestMRSequenceFileInputFilter extends TestCase {
   private static final Job job;
   private static final FileSystem fs;
   private static final Path inDir = 
-    new Path(System.getProperty("test.build.data",".") + "/mapred");
+    PathUtils.getTestPath(TestMRSequenceFileInputFilter.class);
   private static final Path inFile = new Path(inDir, "test.seq");
   private static final Random random = new Random(1);
   

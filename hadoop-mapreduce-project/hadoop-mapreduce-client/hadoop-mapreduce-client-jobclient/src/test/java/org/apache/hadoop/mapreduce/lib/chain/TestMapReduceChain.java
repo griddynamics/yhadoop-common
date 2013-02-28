@@ -30,12 +30,12 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestMapReduceChain extends HadoopTestCase {
 
-  private static String localPathRoot = System.getProperty("test.build.data",
-      "/tmp");
-  private static Path flagDir = new Path(localPathRoot, "testing/chain/flags");
+  private static String localPathRoot = PathUtils.getTestDirName(TestMapReduceChain.class);
+  private static Path flagDir = new Path(localPathRoot, "flags");
 
   private static void cleanFlags(Configuration conf) throws IOException {
     FileSystem fs = FileSystem.get(conf);
@@ -64,8 +64,8 @@ public class TestMapReduceChain extends HadoopTestCase {
   }
 
   public void testChain() throws Exception {
-    Path inDir = new Path(localPathRoot, "testing/chain/input");
-    Path outDir = new Path(localPathRoot, "testing/chain/output");
+    Path inDir = new Path(localPathRoot, "TestMapReduceChain/input");
+    Path outDir = new Path(localPathRoot, "TestMapReduceChain/output");
     String input = "1\n2\n";
     String expectedOutput = "0\t1ABCRDEF\n2\t2ABCRDEF\n";
 

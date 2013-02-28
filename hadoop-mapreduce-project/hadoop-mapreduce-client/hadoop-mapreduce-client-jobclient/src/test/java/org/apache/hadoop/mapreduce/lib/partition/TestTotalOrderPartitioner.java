@@ -41,6 +41,7 @@ import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.WritableSerialization;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestTotalOrderPartitioner extends TestCase {
 
@@ -115,8 +116,7 @@ public class TestTotalOrderPartitioner extends TestCase {
   private static <T> Path writePartitionFile(
       String testname, Configuration conf, T[] splits) throws IOException {
     final FileSystem fs = FileSystem.getLocal(conf);
-    final Path testdir = new Path(System.getProperty("test.build.data", "/tmp")
-                                 ).makeQualified(
+    final Path testdir = PathUtils.getTestPath(TestTotalOrderPartitioner.class).makeQualified(
                                      fs.getUri(),
                                      fs.getWorkingDirectory());
     Path p = new Path(testdir, testname + "/_partition.lst");

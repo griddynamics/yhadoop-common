@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.test.PathUtils;
 
 /**
  * HadoopTestCase that tests the local job runner.
@@ -62,8 +63,7 @@ public class TestLocalJobControl extends HadoopTestCase {
   public void testLocalJobControlDataCopy() throws Exception {
 
     FileSystem fs = FileSystem.get(createJobConf());
-    Path rootDataDir = new Path(System.getProperty("test.build.data", "."),
-        "TestLocalJobControlData");
+    Path rootDataDir = PathUtils.getTestPath(getClass());
     Path indir = new Path(rootDataDir, "indir");
     Path outdir_1 = new Path(rootDataDir, "outdir_1");
     Path outdir_2 = new Path(rootDataDir, "outdir_2");

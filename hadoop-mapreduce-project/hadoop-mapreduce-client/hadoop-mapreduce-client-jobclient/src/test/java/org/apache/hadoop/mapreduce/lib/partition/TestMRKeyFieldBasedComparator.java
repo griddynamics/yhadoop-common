@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.map.InverseMapper;
+import org.apache.hadoop.test.PathUtils;
 
 
 public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
@@ -48,9 +49,9 @@ public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
   
   private void testComparator(String keySpec, int expect) 
       throws Exception {
-    String root = System.getProperty("test.build.data", "/tmp");
-    Path inDir = new Path(root, "test_cmp/in");
-    Path outDir = new Path(root, "test_cmp/out");
+    String root = PathUtils.getTestDirName(getClass());
+    Path inDir = new Path(root, "in");
+    Path outDir = new Path(root, "out");
     
     conf.set("mapreduce.partition.keycomparator.options", keySpec);
     conf.set("mapreduce.partition.keypartitioner.options", "-k1.1,1.1");

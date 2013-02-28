@@ -49,6 +49,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = FileSystem.LOG;
@@ -59,7 +60,7 @@ public class TestFileSystem extends TestCase {
   private static final long MEGA = 1024 * 1024;
   private static final int SEEKS_PER_FILE = 4;
 
-  private static String ROOT = System.getProperty("test.build.data","fs_test");
+  private static Path ROOT = PathUtils.getTestPath(TestFileSystem.class);
   private static Path CONTROL_DIR = new Path(ROOT, "fs_control");
   private static Path WRITE_DIR = new Path(ROOT, "fs_write");
   private static Path READ_DIR = new Path(ROOT, "fs_read");

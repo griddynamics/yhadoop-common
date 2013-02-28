@@ -24,27 +24,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 
 public class TestNetworkedJob {
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-      "test.build.data", "/tmp")).toURI().toString().replace(' ', '+');
-  private static Path testDir = new Path(TEST_ROOT_DIR + "/test_mini_mr_local");
+  private static Path testDir = PathUtils.getTestPath(TestNetworkedJob.class);
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testGetNullCounters() throws Exception {
     //mock creation

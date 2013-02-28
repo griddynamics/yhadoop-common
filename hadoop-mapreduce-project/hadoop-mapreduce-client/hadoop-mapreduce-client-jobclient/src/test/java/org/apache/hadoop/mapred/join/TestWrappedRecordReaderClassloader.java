@@ -34,6 +34,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestWrappedRecordReaderClassloader extends TestCase {
@@ -49,8 +50,7 @@ public class TestWrappedRecordReaderClassloader extends TestCase {
     assertTrue(job.getClassLoader() instanceof Fake_ClassLoader);
 
     FileSystem fs = FileSystem.get(job);
-    Path testdir = new Path(System.getProperty("test.build.data", "/tmp"))
-        .makeQualified(fs);
+    Path testdir = PathUtils.getTestPath(getClass()).makeQualified(fs);
 
     Path base = new Path(testdir, "/empty");
     Path[] src = { new Path(base, "i0"), new Path("i1"), new Path("i2") };

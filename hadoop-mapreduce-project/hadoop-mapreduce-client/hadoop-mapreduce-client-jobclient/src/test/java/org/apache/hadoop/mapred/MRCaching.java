@@ -32,6 +32,7 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
@@ -211,12 +212,11 @@ public class MRCaching {
     fs.copyFromLocalFile(tarPath2, cachePath);
   }
   
-  public static TestResult launchMRCache(String indir,
+  public static TestResult launchMRCache(Class<?> caller, String indir,
                                          String outdir, String cacheDir, 
                                          JobConf conf, String input)
     throws IOException {
-    String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/tmp"))
-      .toString().replace(' ', '+');
+    String TEST_ROOT_DIR = PathUtils.getTestDirName(caller);
     //if (TEST_ROOT_DIR.startsWith("C:")) TEST_ROOT_DIR = "/tmp";
     conf.set("test.build.data", TEST_ROOT_DIR);
     final Path inDir = new Path(indir);

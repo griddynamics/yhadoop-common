@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.test.PathUtils;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -52,8 +53,7 @@ public class TestFileInputFormatPathFilter extends TestCase {
   }
 
   private static Path workDir =
-      new Path(new Path(System.getProperty("test.build.data", "."), "data"),
-          "TestFileInputFormatPathFilter");
+      PathUtils.getTestPath(TestFileInputFormatPathFilter.class);
 
 
   public void setUp() throws Exception {

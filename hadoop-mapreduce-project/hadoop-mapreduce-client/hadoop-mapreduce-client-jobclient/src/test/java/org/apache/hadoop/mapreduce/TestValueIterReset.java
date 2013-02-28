@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.test.PathUtils;
 
 /**
  * A JUnit test to test the Map-Reduce framework's support for the
@@ -54,7 +55,7 @@ public class TestValueIterReset extends TestCase {
   private static final int NUM_VALUES = 40;
 
   private static Path TEST_ROOT_DIR =
-    new Path(System.getProperty("test.build.data","/tmp"));
+    PathUtils.getTestPath(TestValueIterReset.class);
   private static Configuration conf = new Configuration();
   private static FileSystem localFs;
   static {

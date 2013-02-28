@@ -25,7 +25,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.Vector;
 import java.util.regex.Matcher;
@@ -34,7 +33,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -48,8 +47,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
 
   private static final Log LOG = LogFactory
       .getLog(TestProcfsBasedProcessTree.class);
-  private static String TEST_ROOT_DIR = new Path(System.getProperty(
-         "test.build.data", "/tmp")).toString().replace(' ', '+');
+  private static String TEST_ROOT_DIR = PathUtils.getTestDirName(TestProcfsBasedProcessTree.class);
 
   private ShellCommandExecutor shexec = null;
   private String pidFile, lowestDescendant;

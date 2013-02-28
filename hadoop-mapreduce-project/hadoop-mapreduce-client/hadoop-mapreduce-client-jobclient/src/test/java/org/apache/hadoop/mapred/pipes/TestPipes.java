@@ -38,11 +38,11 @@ import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
 import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Ignore;
@@ -223,7 +223,7 @@ public class TestPipes extends TestCase {
    * @param program the program to run
    * @throws IOException
    */
-  static void runNonPipedProgram(MiniMRClientCluster mr, MiniDFSCluster dfs,
+  void runNonPipedProgram(MiniMRClientCluster mr, MiniDFSCluster dfs,
                                   Path program, JobConf conf) throws IOException {
     JobConf job;
     if(conf == null) {
@@ -234,8 +234,7 @@ public class TestPipes extends TestCase {
     
     job.setInputFormat(WordCountInputFormat.class);
     FileSystem local = FileSystem.getLocal(job);
-    Path testDir = new Path("file:" + System.getProperty("test.build.data"), 
-                            "pipes");
+    Path testDir = PathUtils.getTestPath(getClass());
     Path inDir = new Path(testDir, "input");
     nonPipedOutDir = new Path(testDir, "output");
     Path wordExec = new Path("testing/bin/application");

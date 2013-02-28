@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -56,8 +57,7 @@ public class TestMultipleInputs extends HadoopTestCase {
   private Path getDir(Path dir) {
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
-      String localPathRoot = System.getProperty("test.build.data", "/tmp")
-          .replace(' ', '+');
+      String localPathRoot = PathUtils.getTestDirName(getClass());
       dir = new Path(localPathRoot, dir);
     }
     return dir;

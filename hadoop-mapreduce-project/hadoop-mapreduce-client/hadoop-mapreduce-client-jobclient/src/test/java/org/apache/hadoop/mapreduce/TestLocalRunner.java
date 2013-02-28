@@ -38,6 +38,7 @@ import org.apache.hadoop.mapred.LocalJobRunner;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.junit.Test;
@@ -176,21 +177,13 @@ public class TestLocalRunner extends TestCase {
   private final String OUTPUT_DIR = "multiMapOutput";
 
   private Path getInputPath() {
-    String dataDir = System.getProperty("test.build.data");
-    if (null == dataDir) {
-      return new Path(INPUT_DIR);
-    } else {
-      return new Path(new Path(dataDir), INPUT_DIR);
-    }
+    Path dataPath = PathUtils.getTestPath(getClass());
+    return new Path(dataPath, INPUT_DIR);
   }
 
   private Path getOutputPath() {
-    String dataDir = System.getProperty("test.build.data");
-    if (null == dataDir) {
-      return new Path(OUTPUT_DIR);
-    } else {
-      return new Path(new Path(dataDir), OUTPUT_DIR);
-    }
+    Path dataPath = PathUtils.getTestPath(getClass());
+    return new Path(dataPath, OUTPUT_DIR);
   }
 
   /**

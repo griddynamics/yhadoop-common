@@ -44,6 +44,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
@@ -331,8 +332,7 @@ public class TestMapRed extends Configured implements Tool {
       values.add(m);
       m = m.replace((char)('A' + i - 1), (char)('A' + i));
     }
-    Path testdir = new Path(
-        System.getProperty("test.build.data","/tmp")).makeQualified(fs);
+    Path testdir = PathUtils.getTestPath(getClass()).makeQualified(fs);
     fs.delete(testdir, true);
     Path inFile = new Path(testdir, "nullin/blah");
     SequenceFile.Writer w = SequenceFile.createWriter(fs, conf, inFile,

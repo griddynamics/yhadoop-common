@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.test.PathUtils;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -35,8 +36,7 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
  */
 public class TestMapReduceJobControl extends HadoopTestCase {
 
-  static Path rootDataDir = new Path(
-    System.getProperty("test.build.data", "."), "TestData");
+  static Path rootDataDir = PathUtils.getTestPath(TestMapReduceJobControl.class);
   static Path indir = new Path(rootDataDir, "indir");
   static Path outdir_1 = new Path(rootDataDir, "outdir_1");
   static Path outdir_2 = new Path(rootDataDir, "outdir_2");

@@ -30,12 +30,12 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 public class TestLineRecordReader extends TestCase {
 
-  private static Path workDir = new Path(new Path(System.getProperty(
-      "test.build.data", "."), "data"), "TestTextInputFormat");
+  private static Path workDir = PathUtils.getTestPath(TestLineRecordReader.class);
   private static Path inputDir = new Path(workDir, "input");
   private static Path outputDir = new Path(workDir, "output");
 

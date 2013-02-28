@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -147,7 +148,7 @@ public class TestJobCounters {
   public static void initPaths() throws IOException {
     final Configuration conf = new Configuration();
     final Path TEST_ROOT_DIR =
-      new Path(System.getProperty("test.build.data", "/tmp"));
+      PathUtils.getTestPath(TestJobCounters.class);
     testdir = new Path(TEST_ROOT_DIR, "spilledRecords.countertest");
     IN_DIR = new Path(testdir, "in");
     OUT_DIR = new Path(testdir, "out");
@@ -604,9 +605,7 @@ public class TestJobCounters {
     FileSystem fileSystem = FileSystem.getLocal(conf);
     
     // define test root directories
-    Path rootDir =
-      new Path(System.getProperty("test.build.data", "/tmp"));
-    Path testRootDir = new Path(rootDir, "testHeapUsageCounter");
+    Path testRootDir = PathUtils.getTestPath(getClass());
     // cleanup the test root directory
     fileSystem.delete(testRootDir, true);
     // set the current working directory

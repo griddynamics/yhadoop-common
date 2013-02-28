@@ -25,6 +25,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestLineInputFormat extends TestCase {
   private static int MAX_LENGTH = 200;
@@ -40,9 +41,7 @@ public class TestLineInputFormat extends TestCase {
     }
   }
 
-  private static Path workDir = 
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"),
-             "TestLineInputFormat");
+  private static Path workDir = PathUtils.getTestPath(TestLineInputFormat.class);
   
   public void testFormat() throws Exception {
     JobConf job = new JobConf();

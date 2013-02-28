@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -78,8 +79,12 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
           conf.set((String) entry.getKey(), (String) entry.getValue());
         }
       }
-      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
-          .format(reformatDFS).racks(null).build();
+      Builder builder = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+          .format(reformatDFS).racks(null);
+      if (!reformatDFS && dfsCluster != null) {
+          builder.dfsBaseDir(dfsCluster.getDfsBaseDir());
+      }
+      dfsCluster = builder.build();
 
       mrCluster = new MiniMRClientClusterBuilder(getClass(), conf)
           .noOfNMs(2)

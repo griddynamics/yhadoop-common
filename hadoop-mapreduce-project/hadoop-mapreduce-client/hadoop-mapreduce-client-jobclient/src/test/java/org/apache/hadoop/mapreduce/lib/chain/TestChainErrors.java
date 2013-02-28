@@ -29,21 +29,21 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.test.PathUtils;
 
 /**
  * Tests error conditions in ChainMapper/ChainReducer.
  */
 public class TestChainErrors extends HadoopTestCase {
 
-  private static String localPathRoot = System.getProperty("test.build.data",
-      "/tmp");
+  private static String localPathRoot = PathUtils.getTestDirName(TestChainErrors.class);
 
   public TestChainErrors() throws IOException {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
   }
 
-  private Path inDir = new Path(localPathRoot, "testing/chain/input");
-  private Path outDir = new Path(localPathRoot, "testing/chain/output");
+  private Path inDir = new Path(localPathRoot, "input");
+  private Path outDir = new Path(localPathRoot, "output");
   private String input = "a\nb\nc\nd\n";
 
   /**

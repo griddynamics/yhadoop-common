@@ -24,6 +24,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.test.PathUtils;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.*;
@@ -41,7 +42,7 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
     FileSystem fs = FileSystem.getLocal(job);
     
     Path dir = 
-      new Path(new Path(new Path(System.getProperty("test.build.data",".")), 
+      new Path(new Path(PathUtils.getTestPath(getClass()), 
                         FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
     Path file = new Path(dir, "testbinary.seq");
     Random r = new Random();
@@ -166,9 +167,8 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
   public void testcheckOutputSpecsForbidRecordCompression() throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
-    Path outputdir = new Path(System.getProperty("test.build.data",".") 
-                              + "/output");
+    Path dir = new Path(PathUtils.getTestPath(getClass()), "mapred");
+    Path outputdir = new Path(dir, "output");
 
     fs.delete(dir, true);
     fs.delete(outputdir, true);

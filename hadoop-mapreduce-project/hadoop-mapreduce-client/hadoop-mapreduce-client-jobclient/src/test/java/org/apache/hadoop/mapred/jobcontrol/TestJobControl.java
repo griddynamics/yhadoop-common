@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.test.PathUtils;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -49,11 +50,11 @@ public class TestJobControl extends junit.framework.TestCase {
    * Finally, it creates a thread to run the JobControl object and monitors/reports
    * the job states.
    */
-  public static void doJobControlTest() throws Exception {
+  public void doJobControlTest() throws Exception {
 
     Configuration defaults = new Configuration();
     FileSystem fs = FileSystem.get(defaults);
-    Path rootDataDir = new Path(System.getProperty("test.build.data", "."), "TestJobControlData");
+    Path rootDataDir = PathUtils.getTestPath(getClass());
     Path indir = new Path(rootDataDir, "indir");
     Path outdir_1 = new Path(rootDataDir, "outdir_1");
     Path outdir_2 = new Path(rootDataDir, "outdir_2");

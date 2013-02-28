@@ -36,11 +36,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.test.PathUtils;
 
 
 public class TestFileOutputCommitter extends TestCase {
-  private static Path outDir = new Path(System.getProperty("test.build.data",
-      "/tmp"), "output");
+  private static Path outDir = PathUtils.getTestPath(TestFileOutputCommitter.class);
 
   // A random task attempt id for testing.
   private static String attempt = "attempt_200707121733_0001_m_000000_0";

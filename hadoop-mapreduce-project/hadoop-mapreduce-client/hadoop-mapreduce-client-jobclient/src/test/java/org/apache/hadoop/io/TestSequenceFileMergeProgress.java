@@ -31,6 +31,7 @@ import org.apache.hadoop.io.SequenceFile.Sorter.SegmentDescriptor;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.test.PathUtils;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.*;
@@ -54,7 +55,7 @@ public class TestSequenceFileMergeProgress extends TestCase {
   public void runTest(CompressionType compressionType) throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path dir = PathUtils.getTestPath(getClass());
     Path file = new Path(dir, "test.seq");
     Path tempDir = new Path(dir, "tmp");
 

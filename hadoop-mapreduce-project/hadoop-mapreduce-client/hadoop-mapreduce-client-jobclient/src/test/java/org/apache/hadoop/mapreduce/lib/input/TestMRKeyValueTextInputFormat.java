@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -64,8 +65,7 @@ public class TestMRKeyValueTextInputFormat {
     }
   }
   private static Path workDir = 
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"),
-             "TestKeyValueTextInputFormat");
+    PathUtils.getTestPath(TestMRKeyValueTextInputFormat.class);
   
   @Test
   public void testFormat() throws Exception {

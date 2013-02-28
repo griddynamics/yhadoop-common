@@ -25,6 +25,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.test.PathUtils;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -55,8 +56,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
   private Path getDir(Path dir) {
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
-      String localPathRoot = System.getProperty("test.build.data", "/tmp")
-        .replace(' ', '+');
+      String localPathRoot = PathUtils.getTestDirName(getClass());
       dir = new Path(localPathRoot, dir);
     }
     return dir;

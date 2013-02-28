@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.test.PathUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -168,8 +169,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
-      String localPathRoot = System.getProperty("test.build.data","/tmp")
-        .toString().replace(' ', '+');;
+      String localPathRoot = PathUtils.getTestDirName(getClass());
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }
@@ -206,8 +206,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
-      String localPathRoot = System.getProperty("test.build.data","/tmp")
-        .toString().replace(' ', '+');;
+      String localPathRoot = PathUtils.getTestDirName(getClass());
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }

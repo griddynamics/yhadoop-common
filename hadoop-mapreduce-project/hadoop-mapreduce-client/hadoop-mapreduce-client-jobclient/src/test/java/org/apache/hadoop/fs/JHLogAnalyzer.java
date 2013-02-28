@@ -44,6 +44,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -147,7 +148,7 @@ public class JHLogAnalyzer {
   private static final Log LOG = LogFactory.getLog(JHLogAnalyzer.class);
   // Constants
   private static final String JHLA_ROOT_DIR = 
-                            System.getProperty("test.build.data", "stats/JHLA");
+                            PathUtils.getTestDirName(JHLogAnalyzer.class);
   private static final Path INPUT_DIR = new Path(JHLA_ROOT_DIR, "jhla_input");
   private static final String BASE_INPUT_FILE_NAME = "jhla_in_";
   private static final Path OUTPUT_DIR = new Path(JHLA_ROOT_DIR, "jhla_output");

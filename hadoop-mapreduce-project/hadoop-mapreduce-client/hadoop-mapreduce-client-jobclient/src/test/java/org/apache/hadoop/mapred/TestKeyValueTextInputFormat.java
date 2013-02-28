@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -44,9 +45,7 @@ public class TestKeyValueTextInputFormat extends TestCase {
       throw new RuntimeException("init failure", e);
     }
   }
-  private static Path workDir = 
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"),
-             "TestKeyValueTextInputFormat");
+  private static Path workDir = PathUtils.getTestPath(TestKeyValueTextInputFormat.class);
   
   public void testFormat() throws Exception {
     JobConf job = new JobConf();

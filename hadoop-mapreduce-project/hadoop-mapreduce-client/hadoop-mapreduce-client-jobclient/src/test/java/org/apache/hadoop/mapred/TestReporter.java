@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.test.PathUtils;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -41,10 +42,8 @@ import static org.junit.Assert.*;
  * Tests the old mapred APIs with {@link Reporter#getProgress()}.
  */
 public class TestReporter {
-  private static final Path rootTempDir =
-    new Path(System.getProperty("test.build.data", "/tmp"));
   private static final Path testRootTempDir = 
-    new Path(rootTempDir, "TestReporter");
+    PathUtils.getTestPath(TestReporter.class);
   
   private static FileSystem fs = null;
 
@@ -64,7 +63,6 @@ public class TestReporter {
   private static final String INPUT = "Hi\nHi\nHi\nHi\n";
   private static final int INPUT_LINES = INPUT.split("\n").length;
   
-  @SuppressWarnings("deprecation")
   static class ProgressTesterMapper extends MapReduceBase 
   implements Mapper<LongWritable, Text, Text, Text> {
     private float progressRange = 0;
@@ -130,7 +128,6 @@ public class TestReporter {
    * Test {@link Reporter}'s progress for a map-only job.
    * This will make sure that only the map phase decides the attempt's progress.
    */
-  @SuppressWarnings("deprecation")
   @Test
   public void testReporterProgressForMapOnlyJob() throws IOException {
     Path test = new Path(testRootTempDir, "testReporterProgressForMapOnlyJob");
@@ -154,7 +151,6 @@ public class TestReporter {
    * A {@link Reducer} implementation that checks the progress on every call
    * to {@link Reducer#reduce(Object, Iterator, OutputCollector, Reporter)}.
    */
-  @SuppressWarnings("deprecation")
   static class ProgressTestingReducer extends MapReduceBase 
   implements Reducer<Text, Text, Text, Text> {
     private int recordCount = 0;

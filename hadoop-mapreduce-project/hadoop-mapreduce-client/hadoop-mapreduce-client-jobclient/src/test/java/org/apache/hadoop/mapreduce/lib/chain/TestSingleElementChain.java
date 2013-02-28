@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.lib.map.TokenCounterMapper;
 import org.apache.hadoop.mapreduce.lib.reduce.IntSumReducer;
+import org.apache.hadoop.test.PathUtils;
 
 import java.io.IOException;
 
@@ -34,8 +35,7 @@ import java.io.IOException;
  */
 public class TestSingleElementChain extends HadoopTestCase {
 
-  private static String localPathRoot = System.getProperty("test.build.data",
-      "/tmp");
+  private static String localPathRoot = PathUtils.getTestDirName(TestSingleElementChain.class);
 
   public TestSingleElementChain() throws IOException {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
@@ -43,8 +43,8 @@ public class TestSingleElementChain extends HadoopTestCase {
 
   // test chain mapper and reducer by adding single mapper and reducer to chain
   public void testNoChain() throws Exception {
-    Path inDir = new Path(localPathRoot, "testing/chain/input");
-    Path outDir = new Path(localPathRoot, "testing/chain/output");
+    Path inDir = new Path(localPathRoot, "input");
+    Path outDir = new Path(localPathRoot, "output");
     String input = "a\nb\na\n";
     String expectedOutput = "a\t2\nb\t1\n";
 

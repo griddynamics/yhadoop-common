@@ -24,6 +24,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.test.PathUtils;
 
 import java.io.IOException;
 
@@ -45,9 +46,9 @@ public class TestMultithreadedMapper extends HadoopTestCase {
   }
 
   private void run(boolean ioEx, boolean rtEx) throws Exception {
-    String localPathRoot = System.getProperty("test.build.data", "/tmp");
-    Path inDir = new Path(localPathRoot, "testing/mt/input");
-    Path outDir = new Path(localPathRoot, "testing/mt/output");
+    String localPathRoot = PathUtils.getTestDirName(getClass());
+    Path inDir = new Path(localPathRoot, "input");
+    Path outDir = new Path(localPathRoot, "output");
 
 
     Configuration conf = createJobConf();

@@ -38,6 +38,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Ignore;
 
 /**
@@ -80,7 +81,7 @@ public class DFSCIOTest extends TestCase {
   
   private static Configuration fsConfig = new Configuration();
   private static final long MEGA = 0x100000;
-  private static String TEST_ROOT_DIR = System.getProperty("test.build.data","/benchmarks/DFSCIOTest");
+  private static Path TEST_ROOT_DIR = PathUtils.getTestPath(DFSCIOTest.class);
   private static Path CONTROL_DIR = new Path(TEST_ROOT_DIR, "io_control");
   private static Path WRITE_DIR = new Path(TEST_ROOT_DIR, "io_write");
   private static Path READ_DIR = new Path(TEST_ROOT_DIR, "io_read");
@@ -546,7 +547,7 @@ public class DFSCIOTest extends TestCase {
 
   private static void cleanup(FileSystem fs) throws Exception {
     LOG.info("Cleaning up test files");
-    fs.delete(new Path(TEST_ROOT_DIR), true);
+    fs.delete(TEST_ROOT_DIR, true);
     fs.delete(HDFS_TEST_DIR, true);
   }
 }

@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +32,7 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,8 +42,7 @@ import static org.junit.Assert.*;
  * A JUnit test to test Map-Reduce job cleanup.
  */
 public class TestJobCleanup {
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-      "test.build.data", "/tmp") + "/" + "test-job-cleanup").toString();
+  private static String TEST_ROOT_DIR = PathUtils.getTestDirName(TestJobCleanup.class);
   private static final String CUSTOM_CLEANUP_FILE_NAME = "_custom_cleanup";
   private static final String ABORT_KILLED_FILE_NAME = "_custom_abort_killed";
   private static final String ABORT_FAILED_FILE_NAME = "_custom_abort_failed";

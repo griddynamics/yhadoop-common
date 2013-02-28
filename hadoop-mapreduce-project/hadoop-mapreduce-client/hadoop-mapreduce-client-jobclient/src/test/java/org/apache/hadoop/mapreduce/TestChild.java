@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,12 +28,12 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 
 public class TestChild extends HadoopTestCase {
   private static String TEST_ROOT_DIR =
-    new File(System.getProperty("test.build.data","/tmp"))
-    .toURI().toString().replace(' ', '+');
+    PathUtils.getTestDirName(TestChild.class);
   private final Path inDir = new Path(TEST_ROOT_DIR, "./wc/input");
   private final Path outDir = new Path(TEST_ROOT_DIR, "./wc/output");
   

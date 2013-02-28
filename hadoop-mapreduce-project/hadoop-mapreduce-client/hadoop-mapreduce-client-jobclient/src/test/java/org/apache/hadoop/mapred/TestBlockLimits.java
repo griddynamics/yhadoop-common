@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
@@ -33,6 +32,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -40,8 +40,6 @@ import org.apache.hadoop.util.StringUtils;
  * A JUnit test to test limits on block locations
  */
 public class TestBlockLimits extends TestCase {
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-      "test.build.data", "/tmp")).toURI().toString().replace(' ', '+');
 
   public void testWithLimits() throws IOException, InterruptedException,
       ClassNotFoundException {
@@ -59,7 +57,7 @@ public class TestBlockLimits extends TestCase {
   private void runCustomFormat(MiniMRClientCluster mr) throws IOException {
     JobConf job = new JobConf(mr.getConfig());
     FileSystem fileSys = FileSystem.get(job);
-    Path testDir = new Path(TEST_ROOT_DIR + "/test_mini_mr_local");
+    Path testDir = PathUtils.getTestPath(TestBlockLimits.class);
     Path outDir = new Path(testDir, "out");
     System.out.println("testDir= " + testDir);
     fileSys.delete(testDir, true);

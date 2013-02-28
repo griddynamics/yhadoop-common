@@ -21,6 +21,8 @@ package org.apache.hadoop.mapreduce.lib.output;
 import java.io.IOException;
 import java.util.Random;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -38,8 +40,8 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.test.PathUtils;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.*;
 
 public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
@@ -52,8 +54,7 @@ public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
     Configuration conf = new Configuration();
     Job job = Job.getInstance(conf);
     
-    Path outdir = new Path(System.getProperty("test.build.data", "/tmp"),
-                    "outseq");
+    Path outdir = new Path(PathUtils.getTestPath(getClass()), "outseq");
     Random r = new Random();
     long seed = r.nextLong();
     r.setSeed(seed);
@@ -176,8 +177,7 @@ public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
       throws IOException {
     Job job = Job.getInstance();
     FileSystem fs = FileSystem.getLocal(job.getConfiguration());
-    Path outputdir = new Path(System.getProperty("test.build.data", "/tmp") 
-                              + "/output");
+    Path outputdir = new Path(PathUtils.getTestPath(getClass()), "output");
     fs.delete(outputdir, true);
 
     // Without outputpath, FileOutputFormat.checkoutputspecs will throw 

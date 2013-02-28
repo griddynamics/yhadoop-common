@@ -23,6 +23,7 @@ import java.util.Random;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.test.PathUtils;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.*;
@@ -34,7 +35,7 @@ public class TestSequenceFileAsBinaryInputFormat extends TestCase {
   public void testBinary() throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path dir = PathUtils.getTestPath(getClass());
     Path file = new Path(dir, "testbinary.seq");
     Random r = new Random();
     long seed = r.nextLong();

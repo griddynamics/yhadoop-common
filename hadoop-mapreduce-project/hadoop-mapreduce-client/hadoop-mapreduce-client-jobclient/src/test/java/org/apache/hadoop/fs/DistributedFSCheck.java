@@ -41,6 +41,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Ignore;
 
 /**
@@ -64,7 +65,7 @@ public class DistributedFSCheck extends TestCase {
   private static final long MEGA = 0x100000;
   
   private static Configuration fsConfig = new Configuration();
-  private static Path TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/benchmarks/DistributedFSCheck"));
+  private static Path TEST_ROOT_DIR = PathUtils.getTestPath(DistributedFSCheck.class);
   private static Path MAP_INPUT_DIR = new Path(TEST_ROOT_DIR, "map_input");
   private static Path READ_DIR = new Path(TEST_ROOT_DIR, "io_read");
 

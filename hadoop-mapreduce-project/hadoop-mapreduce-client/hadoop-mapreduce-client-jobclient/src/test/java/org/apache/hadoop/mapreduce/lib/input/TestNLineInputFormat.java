@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestNLineInputFormat extends TestCase {
   private static int MAX_LENGTH = 200;
@@ -42,9 +43,7 @@ public class TestNLineInputFormat extends TestCase {
     }
   }
 
-  private static Path workDir = 
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"),
-             "TestNLineInputFormat");
+  private static Path workDir = PathUtils.getTestPath(TestNLineInputFormat.class);
   
   public void testFormat() throws Exception {
     Job job = Job.getInstance(conf);

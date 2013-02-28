@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 /**
@@ -39,8 +40,7 @@ public class TestMRAsyncDiskService extends TestCase {
 
   public static final Log LOG = LogFactory.getLog(TestMRAsyncDiskService.class);
   
-  private static String TEST_ROOT_DIR = new Path(System.getProperty(
-      "test.build.data", "/tmp")).toString();
+  private static String TEST_ROOT_DIR = PathUtils.getTestDirName(TestMRAsyncDiskService.class);
   
   @Override
   protected void setUp() {

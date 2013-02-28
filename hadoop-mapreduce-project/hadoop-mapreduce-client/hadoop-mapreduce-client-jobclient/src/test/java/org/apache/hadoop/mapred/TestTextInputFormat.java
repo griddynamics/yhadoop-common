@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -62,8 +63,7 @@ public class TestTextInputFormat {
     }
   }
   private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestTextInputFormat").makeQualified(localFs);
+    PathUtils.getTestPath(TestTextInputFormat.class).makeQualified(localFs);
 
   @Test
   public void testFormat() throws Exception {

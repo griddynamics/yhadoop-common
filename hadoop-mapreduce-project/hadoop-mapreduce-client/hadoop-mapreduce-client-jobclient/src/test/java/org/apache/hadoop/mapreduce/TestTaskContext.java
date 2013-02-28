@@ -28,6 +28,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil.DataCopyMapper;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil.DataCopyReducer;
+import org.apache.hadoop.test.PathUtils;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -40,10 +41,8 @@ import org.junit.Test;
  */
 @Ignore
 public class TestTaskContext extends HadoopTestCase {
-  private static final Path rootTempDir =
-    new Path(System.getProperty("test.build.data", "/tmp"));
   private static final Path testRootTempDir = 
-    new Path(rootTempDir, "TestTaskContext");
+    PathUtils.getTestPath(TestTaskContext.class);
   
   private static FileSystem fs = null;
 

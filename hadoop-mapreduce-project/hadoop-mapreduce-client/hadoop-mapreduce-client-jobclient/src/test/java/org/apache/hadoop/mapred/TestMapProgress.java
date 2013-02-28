@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -61,8 +62,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class TestMapProgress extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestMapProgress.class);
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-           "test.build.data", "/tmp")).getAbsolutePath() + "/mapPahseprogress";
+  private static String TEST_ROOT_DIR = PathUtils.getTestDirName(TestMapProgress.class);
 
   static class FakeUmbilical implements TaskUmbilicalProtocol {
 

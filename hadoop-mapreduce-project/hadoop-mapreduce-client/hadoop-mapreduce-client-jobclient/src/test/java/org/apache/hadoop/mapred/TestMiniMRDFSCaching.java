@@ -46,7 +46,8 @@ public class TestMiniMRDFSCaching extends TestCase {
           .build();
       MRCaching.setupCache("/cachedir", fileSys);
       // run the wordcount example with caching
-      TestResult ret = MRCaching.launchMRCache("/testing/wc/input",
+      TestResult ret = MRCaching.launchMRCache(getClass(), 
+                                            "/testing/wc/input",
                                             "/testing/wc/output",
                                             "/cachedir",
                                             new JobConf(mr.getConfig()),
@@ -54,7 +55,8 @@ public class TestMiniMRDFSCaching extends TestCase {
                                             + "red fox sox\n");
       assertTrue("Archives not matching", ret.isOutputOk);
       // launch MR cache with symlinks
-      ret = MRCaching.launchMRCache("/testing/wc/input",
+      ret = MRCaching.launchMRCache(getClass(),
+                                    "/testing/wc/input",
                                     "/testing/wc/output",
                                     "/cachedir",
                                     new JobConf(mr.getConfig()),

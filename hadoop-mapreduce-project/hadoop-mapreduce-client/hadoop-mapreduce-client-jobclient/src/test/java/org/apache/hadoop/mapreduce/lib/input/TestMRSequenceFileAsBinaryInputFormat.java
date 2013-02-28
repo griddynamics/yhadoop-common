@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.test.PathUtils;
 
 import junit.framework.TestCase;
 
@@ -40,7 +41,7 @@ public class TestMRSequenceFileAsBinaryInputFormat extends TestCase {
   public void testBinary() throws IOException, InterruptedException {
     Job job = Job.getInstance();
     FileSystem fs = FileSystem.getLocal(job.getConfiguration());
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path dir = PathUtils.getTestPath(getClass());
     Path file = new Path(dir, "testbinary.seq");
     Random r = new Random();
     long seed = r.nextLong();

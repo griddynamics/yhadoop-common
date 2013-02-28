@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.test.PathUtils;
 
 /**
  * Class to test mapred task's 
@@ -134,8 +135,7 @@ public class TestMiniMRChildTask {
     conf.setNumReduceTasks(0);
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
-    String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
-                                      "/tmp")).toString().replace(' ', '+');
+    String TEST_ROOT_DIR = PathUtils.getTestDirName(getClass());
     conf.set("test.build.data", TEST_ROOT_DIR);
   }
 

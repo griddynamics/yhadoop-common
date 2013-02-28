@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.apache.hadoop.test.PathUtils;
 
 import junit.framework.TestCase;
 import java.text.NumberFormat;
@@ -37,8 +38,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
   public void testFieldSelection() throws Exception {
     launch();
   }
-  private static Path testDir = new Path(
-    System.getProperty("test.build.data", "/tmp"), "field");
+  private static Path testDir = PathUtils.getTestPath(TestMRFieldSelection.class);
   
   public static void launch() throws Exception {
     Configuration conf = new Configuration();

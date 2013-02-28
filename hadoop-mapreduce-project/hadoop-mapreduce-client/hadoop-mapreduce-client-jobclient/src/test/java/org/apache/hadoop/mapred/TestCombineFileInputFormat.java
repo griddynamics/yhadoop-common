@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
+import org.apache.hadoop.test.PathUtils;
 
 import org.junit.Test;
 import static junit.framework.Assert.*;
@@ -48,8 +49,7 @@ public class TestCombineFileInputFormat {
     }
   }
   private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestCombineFileInputFormat").makeQualified(localFs);
+    PathUtils.getTestPath(TestCombineFileInputFormat.class).makeQualified(localFs);
 
   private static void writeFile(FileSystem fs, Path name, 
                                 String contents) throws IOException {

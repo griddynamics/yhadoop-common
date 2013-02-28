@@ -40,8 +40,10 @@ import org.apache.hadoop.fs.slive.ArgumentParser.ParsedOutput;
 import org.apache.hadoop.fs.slive.Constants.OperationType;
 import org.apache.hadoop.fs.slive.DataVerifier.VerifyOutput;
 import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 /**
@@ -53,26 +55,23 @@ public class TestSlive {
 
   private static final Random rnd = new Random(1L);
 
-  private static final String TEST_DATA_PROP = "test.build.data";
-
   private static Configuration getBaseConfig() {
     Configuration conf = new Configuration();
     return conf;
   }
 
   /** gets the test write location according to the coding guidelines */
-  private static File getWriteLoc() {
-    String writeLoc = System.getProperty(TEST_DATA_PROP, "build/test/data/");
-    return new File(writeLoc, "slive");
+  private File getWriteLoc() {
+    return PathUtils.getTestDir(getClass());
   }
 
   /** gets where the MR job places its data + output + results */
-  private static File getFlowLocation() {
+  private File getFlowLocation() {
     return new File(getWriteLoc(), "flow");
   }
 
   /** gets the test directory which is created by the mkdir op */
-  private static File getTestDir() {
+  private File getTestDir() {
     return new File(getWriteLoc(), "slivedir");
   }
 
@@ -80,7 +79,7 @@ public class TestSlive {
    * gets the test file location
    * which is used for reading, appending and created
    */
-  private static File getTestFile() {
+  private File getTestFile() {
     return new File(getWriteLoc(), "slivefile");
   }
 
@@ -88,16 +87,16 @@ public class TestSlive {
    * gets the rename file which is used in combination
    * with the test file to do a rename operation
    */
-  private static File getTestRenameFile() {
+  private File getTestRenameFile() {
     return new File(getWriteLoc(), "slivefile1");
   }
 
   /** gets the MR result file name */
-  private static File getResultFile() {
+  private File getResultFile() {
     return new File(getWriteLoc(), "sliveresfile");
   }
 
-  private static File getImaginaryFile() {
+  private File getImaginaryFile() {
     return new File(getWriteLoc(), "slivenofile");
   }
 

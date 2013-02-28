@@ -45,6 +45,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.AfterClass;
@@ -180,8 +181,7 @@ public class TestBinaryTokenFile {
   private static MiniMRYarnCluster mrCluster;
   private static MiniDFSCluster dfsCluster;
   
-  private static final Path TEST_DIR = 
-    new Path(System.getProperty("test.build.data","/tmp"));
+  private static final Path TEST_DIR = PathUtils.getTestPath(TestBinaryTokenFile.class);
   private static final Path binaryTokenFileName = new Path(TEST_DIR, "tokenFile.binary");
   
   private static final int numSlaves = 1; // num of data nodes

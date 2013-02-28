@@ -25,6 +25,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -42,7 +43,7 @@ public class TestCommandLineJobSubmission extends TestCase {
   // params 
   static final Path input = new Path("/test/input/");
   static final Path output = new Path("/test/output");
-  File buildDir = new File(System.getProperty("test.build.data", "/tmp"));
+  File buildDir = PathUtils.getTestDir(TestCommandLineJobSubmission.class);
   public void testJobShell() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRClientCluster mr = null;

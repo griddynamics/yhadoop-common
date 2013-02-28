@@ -26,6 +26,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil.Fake_RR;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestWrappedRRClassloader extends TestCase {
   /**
@@ -41,10 +42,8 @@ public class TestWrappedRRClassloader extends TestCase {
     assertTrue(conf.getClassLoader() instanceof Fake_ClassLoader);
 
     FileSystem fs = FileSystem.get(conf);
-    Path testdir = new Path(System.getProperty("test.build.data", "/tmp"))
-        .makeQualified(fs);
 
-    Path base = new Path(testdir, "/empty");
+    Path base = PathUtils.getTestPath(getClass()).makeQualified(fs);
     Path[] src = { new Path(base, "i0"), new Path("i1"), new Path("i2") };
     conf.set(CompositeInputFormat.JOIN_EXPR, 
       CompositeInputFormat.compose("outer", IF_ClassLoaderChecker.class, src));

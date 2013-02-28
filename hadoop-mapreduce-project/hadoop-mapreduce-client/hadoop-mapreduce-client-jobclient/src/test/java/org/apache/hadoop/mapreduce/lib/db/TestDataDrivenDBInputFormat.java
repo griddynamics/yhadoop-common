@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.db.*;
 import org.apache.hadoop.mapreduce.lib.input.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.hsqldb.server.Server;
 
@@ -54,14 +55,10 @@ public class TestDataDrivenDBInputFormat extends HadoopTestCase {
   private Server server;
   private Connection connection;
 
-  private static final String OUT_DIR;
+  private static final String OUT_DIR = PathUtils.getTestDirName(TestDataDrivenDBInputFormat.class);
 
   public TestDataDrivenDBInputFormat() throws IOException {
     super(LOCAL_MR, LOCAL_FS, 1, 1);
-  }
-
-  static {
-    OUT_DIR = System.getProperty("test.build.data", "/tmp") + "/dddbifout";
   }
 
   private void startHsqldbServer() {

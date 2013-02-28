@@ -27,10 +27,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestTaskCommit extends HadoopTestCase {
-  Path rootDir = 
-    new Path(System.getProperty("test.build.data",  "/tmp"), "test");
+  Path rootDir = PathUtils.getTestPath(TestTaskCommit.class);
 
   static class CommitterWithCommitFail extends FileOutputCommitter {
     public void commitTask(TaskAttemptContext context) throws IOException {

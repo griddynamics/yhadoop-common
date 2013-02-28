@@ -32,12 +32,12 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 public class TestLineRecordReader extends TestCase {
 
-  private static Path workDir = new Path(new Path(System.getProperty(
-      "test.build.data", "."), "data"), "TestTextInputFormat");
+  private static Path workDir = PathUtils.getTestPath(TestLineRecordReader.class);
   private static Path inputDir = new Path(workDir, "input");
   private static Path outputDir = new Path(workDir, "output");
 

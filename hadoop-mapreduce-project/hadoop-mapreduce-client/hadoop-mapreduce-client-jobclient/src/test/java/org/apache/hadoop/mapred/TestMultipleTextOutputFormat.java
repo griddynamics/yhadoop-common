@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 
 import org.apache.hadoop.mapred.lib.*;
+import org.apache.hadoop.test.PathUtils;
 
 public class TestMultipleTextOutputFormat extends TestCase {
   private static JobConf defaultConf = new JobConf();
@@ -43,8 +44,7 @@ public class TestMultipleTextOutputFormat extends TestCase {
 
   private static Path workDir = 
     new Path(new Path(
-                      new Path(System.getProperty("test.build.data", "."), 
-                               "data"), 
+                      PathUtils.getTestPath(TestMultipleTextOutputFormat.class), 
                       FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
 
   private static void writeData(RecordWriter<Text, Text> rw) throws IOException {

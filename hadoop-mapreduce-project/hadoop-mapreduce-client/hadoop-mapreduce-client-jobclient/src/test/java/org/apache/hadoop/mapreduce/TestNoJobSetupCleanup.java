@@ -29,12 +29,12 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Ignore;
 @Ignore
 public class TestNoJobSetupCleanup extends HadoopTestCase {
   private static String TEST_ROOT_DIR =
-    new File(System.getProperty("test.build.data","/tmp"))
-    .toURI().toString().replace(' ', '+');
+    PathUtils.getTestDirName(TestNoJobSetupCleanup.class);
   private final Path inDir = new Path(TEST_ROOT_DIR, "./wc/input");
   private final Path outDir = new Path(TEST_ROOT_DIR, "./wc/output");
 

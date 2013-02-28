@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -77,8 +78,7 @@ public class TestConcatenatedCompressedInput {
   }
 
   private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestConcatenatedCompressedInput").makeQualified(localFs);
+    PathUtils.getTestPath(TestConcatenatedCompressedInput.class).makeQualified(localFs);
 
   private static LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream(str.getBytes("UTF-8")),

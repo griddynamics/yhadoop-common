@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.test.PathUtils;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -42,8 +43,7 @@ public class TestFileOutputFormat extends HadoopTestCase {
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
-      String localPathRoot = System.getProperty("test.build.data", "/tmp")
-        .replace(' ', '+');
+      String localPathRoot = PathUtils.getTestDirName(getClass());
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }
