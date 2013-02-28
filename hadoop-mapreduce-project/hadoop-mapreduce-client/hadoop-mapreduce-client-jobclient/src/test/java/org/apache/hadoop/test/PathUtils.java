@@ -15,7 +15,7 @@ public class PathUtils {
   }
 
   public static String getTestDirName(Class<?> caller) {
-    String dir = System.getProperty("test.build.data", "/tmp") + File.pathSeparator + caller.getName();
+    String dir = System.getProperty("test.build.data", "/tmp") + File.separator + caller.getSimpleName();
     dir = dir.replace(' ', '+');
     return dir;
   }
