@@ -23,6 +23,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.ZKFCProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -39,13 +40,18 @@ import org.apache.hadoop.tools.GetUserMappingsProtocol;
 public class HDFSPolicyProvider extends PolicyProvider {
   private static final Service[] hdfsServices =
     new Service[] {
-    new Service("security.client.protocol.acl", ClientProtocol.class),
-    new Service("security.client.datanode.protocol.acl", 
-                ClientDatanodeProtocol.class),
-    new Service("security.datanode.protocol.acl", DatanodeProtocol.class),
-    new Service("security.inter.datanode.protocol.acl", 
-                InterDatanodeProtocol.class),
-    new Service("security.namenode.protocol.acl", NamenodeProtocol.class),
+    new Service(CommonConfigurationKeys.SECURITY_CLIENT_PROTOCOL_ACL,
+        ClientProtocol.class),
+    new Service(CommonConfigurationKeys.SECURITY_CLIENT_DATANODE_PROTOCOL_ACL,
+        ClientDatanodeProtocol.class),
+    new Service(CommonConfigurationKeys.SECURITY_DATANODE_PROTOCOL_ACL,
+        DatanodeProtocol.class),
+    new Service(CommonConfigurationKeys.SECURITY_INTER_DATANODE_PROTOCOL_ACL, 
+        InterDatanodeProtocol.class),
+    new Service(CommonConfigurationKeys.SECURITY_NAMENODE_PROTOCOL_ACL,
+        NamenodeProtocol.class),
+    new Service(CommonConfigurationKeys.SECURITY_QJOURNAL_SERVICE_PROTOCOL_ACL,
+        QJournalProtocol.class),
     new Service(CommonConfigurationKeys.SECURITY_HA_SERVICE_PROTOCOL_ACL,
         HAServiceProtocol.class),
     new Service(CommonConfigurationKeys.SECURITY_ZKFC_PROTOCOL_ACL,

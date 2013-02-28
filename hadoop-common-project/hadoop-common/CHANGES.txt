@@ -1,15 +1,86 @@
 Hadoop Change Log
 
-Release 2.0.3-alpha - Unreleased 
+Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
+    HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
+
+  IMPROVEMENTS
+
+    HADOOP-9253. Capture ulimit info in the logs at service start time.
+    (Arpit Gupta via suresh)
+
+    HADOOP-8924. Add maven plugin alternative to shell script to save
+    package-info.java. (Chris Nauroth via suresh)
+
+    HADOOP-9117. replace protoc ant plugin exec with a maven plugin. (tucu)
+
+    HADOOP-9279. Document the need to build hadoop-maven-plugins for
+    eclipse and separate project builds. (Tsuyoshi Ozawa via suresh)
+
+    HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
+
+    HADOOP-9305. Add support for running the Hadoop client on 64-bit AIX. (atm)
+
+    HADOOP-9245. mvn clean without running mvn install before fails.
+    (Karthik Kambatla via suresh)
+
+    HADOOP-9246 Execution phase for hadoop-maven-plugin should be
+    process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
+
+    HADOOP-9297. remove old record IO generation and tests. (tucu)
+
+    HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
+    the map. (Karthik Kambatla via tomwhite)
+
+    HADOOP-9304. remove addition of avro genreated-sources dirs to build. (tucu)
+
+    HADOOP-9267. hadoop -help, -h, --help should show usage instructions.
+    (Andrew Wang via atm)
+
+    HADOOP-8569. CMakeLists.txt: define _GNU_SOURCE and _LARGEFILE_SOURCE.
+    (Colin Patrick McCabe via atm)
+
+    HADOOP-9323. Fix typos in API documentation. (suresh)
+
+    HADOOP-7487. DF should throw a more reasonable exception when mount cannot
+    be determined. (Andrew Wang via atm)
+
+    HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
+    (Arpit Gupta via suresh)
+
+    HADOOP-9342. Remove jline from distribution. (thw via tucu)
+
+Release 2.0.3-alpha - 2013-02-06 
+
+  INCOMPATIBLE CHANGES
+
+    HADOOP-8999. SASL negotiation is flawed (daryn)
+
+  NEW FEATURES
+
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
     HADOOP-8597. Permit FsShell's text command to read Avro files.
     (Ivan Vladimirov Ivanov via cutting)
 
     HADOOP-9020. Add a SASL PLAIN server (daryn via bobby)
+
+    HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
+    suresh)
+
+    HADOOP-9054. Add AuthenticationHandler that uses Kerberos but allows for 
+    an alternate form of authentication for browsers. (rkanter via tucu)
 
   IMPROVEMENTS
 
@@ -83,6 +154,50 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9035. Generalize setup of LoginContext (daryn via bobby)
 
+    HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
+    (suresh)
+
+    HADOOP-9127. Update documentation for ZooKeeper Failover Controller.
+    (Daisuke Kobayashi via atm)
+
+    HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
+    via suresh)
+
+    HADOOP-9147. Add missing fields to FIleStatus.toString.
+    (Jonathan Allen via suresh)
+
+    HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
+
+    HADOOP-9162. Add utility to check native library availability.
+    (Binglin Chang via suresh)
+
+    HADOOP-9173. Add security token protobuf definition to common and
+    use it in hdfs. (suresh)
+
+    HADOOP-9119. Add test to FileSystemContractBaseTest to verify integrity
+    of overwritten files. (Steve Loughran via suresh)
+
+    HADOOP-9192. Move token related request/response messages to common.
+    (suresh)
+
+    HADOOP-8712. Change default hadoop.security.group.mapping to
+    JniBasedUnixGroupsNetgroupMappingWithFallback (Robert Parker via todd)
+
+    HADOOP-9106. Allow configuration of IPC connect timeout.
+    (Rober Parker via suresh)
+
+    HADOOP-9216. CompressionCodecFactory#getCodecClasses should trim the
+    result of parsing by Configuration. (Tsuyoshi Ozawa via todd)
+
+    HADOOP-9231. Parametrize staging URL for the uniformity of
+    distributionManagement. (Konstantin Boudnik via suresh)
+
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
+    HADOOP-9276. Allow BoundedByteArrayOutputStream to be resettable.
+    (Arun Murthy via hitesh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -95,6 +210,12 @@ Release 2.0.3-alpha - Unreleased
     (Colin McCabe via eli)
 
   BUG FIXES
+
+    HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
+    FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
+
+    HADOOP-8418. Update UGI Principal classes name for running with
+    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
 
     HADOOP-8795. BASH tab completion doesn't look in PATH, assumes path to
     executable is specified. (Sean Mackrory via atm)
@@ -148,12 +269,88 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
 
-    HADOOP-8999. SASL negotiation is flawed (daryn)
-
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
     HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
     should register/deregister to/from. (Karthik Kambatla via tomwhite)
+
+    HADOOP-9064. Augment DelegationTokenRenewer API to cancel the tokens on 
+    calls to removeRenewAction. (kkambatl via tucu)
+
+    HADOOP-9103. UTF8 class does not properly decode Unicode characters
+    outside the basic multilingual plane. (todd)
+
+    HADOOP-9070. Kerberos SASL server cannot find kerberos key. (daryn via atm)
+
+    HADOOP-6762. Exception while doing RPC I/O closes channel
+    (Sam Rash and todd via todd)
+
+    HADOOP-9126. FormatZK and ZKFC startup can fail due to zkclient connection
+    establishment delay. (Rakesh R and todd via todd)
+
+    HADOOP-9113. o.a.h.fs.TestDelegationTokenRenewer is failing intermittently.
+    (Karthik Kambatla via eli)
+
+    HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
+    rather than info during fallback. (Colin Patrick McCabe via todd)
+
+    HADOOP-9152. HDFS can report negative DFS Used on clusters with very small
+    amounts of data. (Brock Noland via atm)
+
+    HADOOP-9153. Support createNonRecursive in ViewFileSystem.
+    (Sandy Ryza via tomwhite)
+
+    HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool.
+    (Liang Xie via suresh)
+
+    HADOOP-9155. FsPermission should have different default value, 777 for
+    directory and 666 for file. (Binglin Chang via atm)
+
+    HADOOP-9183. Potential deadlock in ActiveStandbyElector. (tomwhite)
+
+    HADOOP-9203. RPCCallBenchmark should find a random available port.
+    (Andrew Purtell via suresh)
+
+    HADOOP-9178. src/main/conf is missing hadoop-policy.xml.
+    (Sandy Ryza via eli)
+
+    HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication. 
+    (moritzmoeller via tucu)
+    
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
+
+    HADOOP-8589 ViewFs tests fail when tests and home dirs are nested.
+    (sanjay Radia)
+
+    HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
+    when delegating to hdfs script. (Andy Isaacson via todd)
+
+    HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
+    (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
+
+    HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
+    should not state that secret is randomly generated. (tucu)
+
+    HADOOP-9190. packaging docs is broken. (Andy Isaacson via tgraves)
+
+    HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
+
+    HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong via suresh)
+    
+    HADOOP-9124. SortedMapWritable violates contract of Map interface for
+    equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
+
+    HADOOP-9252. In StringUtils, humanReadableInt(..) has a race condition and
+    the synchronization of limitDecimalTo2(double) can be avoided.  (szetszwo)
+
+    HADOOP-9260. Hadoop version may be not correct when starting name node or
+    data node. (Chris Nauroth via jlowe)
+
+    HADOOP-9278. Fix the file handle leak in HarMetaData.parseMetaData() in
+    HarFileSystem. (Chris Nauroth via szetszwo)
+
+    HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
+    suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -845,6 +1042,33 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
+    permissions (Ivan A. Veselovsky via bobby)
+
+    HADOOP-9067. provide test for LocalFileSystem.reportChecksumFailure
+    (Ivan A. Veselovsky via bobby) 
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9302. HDFS docs not linked from top level (Andy Isaacson via
+    tgraves)
+
+    HADOOP-9303. command manual dfsadmin missing entry for restoreFailedStorage
+    option (Andy Isaacson via tgraves)
+
+    HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via 
+    kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -852,6 +1076,8 @@ Release 0.23.6 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
 
   OPTIMIZATIONS
 
@@ -860,7 +1086,19 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9072. Hadoop-Common-0.23-Build Fails to build in Jenkins 
     (Robert Parker via tgraves)
 
-Release 0.23.5 - UNRELEASED
+    HADOOP-8992. Enhance unit-test coverage of class HarFileSystem (Ivan A.
+    Veselovsky via bobby)
+
+    HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
+    Veselovsky via bobby)
+
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
+    HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
+    HADOOP-9255. relnotes.py missing last jira (tgraves)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 

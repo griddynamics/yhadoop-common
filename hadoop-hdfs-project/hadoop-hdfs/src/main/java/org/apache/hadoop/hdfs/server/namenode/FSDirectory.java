@@ -419,19 +419,16 @@ public class FSDirectory implements Closeable {
   /**
    * Remove a block from the file.
    */
-  boolean removeBlock(String path, INodeFileUnderConstruction fileNode, 
+  void removeBlock(String path, INodeFileUnderConstruction fileNode,
                       Block block) throws IOException {
     waitForReady();
 
     writeLock();
     try {
       unprotectedRemoveBlock(path, fileNode, block);
-      // write modified block locations to log
-      fsImage.getEditLog().logOpenFile(path, fileNode);
     } finally {
       writeUnlock();
     }
-    return true;
   }
   
   void unprotectedRemoveBlock(String path, INodeFileUnderConstruction fileNode, 
@@ -600,6 +597,8 @@ public class FSDirectory implements Closeable {
         // update modification time of dst and the parent of src
         srcInodes[srcInodes.length-2].setModificationTime(timestamp);
         dstInodes[dstInodes.length-2].setModificationTime(timestamp);
+        // update moved leases with new filename
+        getFSNamesystem().unprotectedChangeLease(src, dst);        
         return true;
       }
     } finally {
@@ -757,6 +756,8 @@ public class FSDirectory implements Closeable {
         }
         srcInodes[srcInodes.length - 2].setModificationTime(timestamp);
         dstInodes[dstInodes.length - 2].setModificationTime(timestamp);
+        // update moved lease with new filename
+        getFSNamesystem().unprotectedChangeLease(src, dst);
 
         // Collect the blocks and remove the lease for previous dst
         if (removedDst != null) {
@@ -1420,6 +1421,11 @@ public class FSDirectory implements Closeable {
 
     // fill up the inodes in the path from this inode to root
     for (int i = 0; i < depth; i++) {
+      if (inode == null) {
+        NameNode.stateChangeLog.warn("Could not get full path."
+            + " Corresponding file might have deleted already.");
+        return null;
+      }
       inodes[depth-i-1] = inode;
       inode = inode.parent;
     }
