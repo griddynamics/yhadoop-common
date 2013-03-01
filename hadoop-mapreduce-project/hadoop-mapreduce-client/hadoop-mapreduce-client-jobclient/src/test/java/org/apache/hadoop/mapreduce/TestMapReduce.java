@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.hadoop.test.PathUtils;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -239,7 +240,7 @@ public class TestMapReduce extends TestCase {
     //
     // Write the answer key to a file.  
     //
-    Path testdir = new Path("mapred.loadtest");
+    Path testdir = PathUtils.getTestPath(TestMapReduce.class);
     if (!fs.mkdirs(testdir)) {
       throw new IOException("Mkdirs failed to create " + testdir.toString());
     }

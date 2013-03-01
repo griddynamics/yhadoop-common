@@ -30,6 +30,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -212,6 +213,9 @@ public class TestBinaryTokenFile {
     FileSystem fs = dfsCluster.getFileSystem(); 
     p1 = new Path("file1");
     p1 = fs.makeQualified(p1);
+    
+    FileSystem localFS = FileSystem.getLocal(conf);
+    localFS.mkdirs(TEST_DIR);
   }
 
   @AfterClass
