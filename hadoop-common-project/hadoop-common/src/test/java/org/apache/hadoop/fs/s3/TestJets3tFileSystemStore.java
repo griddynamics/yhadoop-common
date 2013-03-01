@@ -62,6 +62,18 @@ public class TestJets3tFileSystemStore {
     store.deleteBlock(block);
     assertFalse(result.exists());
     assertFalse(store.blockExists(1));
+    try {
+      stub.setThrowException(true);
+      store.retrieveBlock(block, 0);
+      fail();
+    } catch (IOException e) {
+      S3ServiceException parent = (S3ServiceException) e.getCause();
+      assertEquals("12345", parent.getS3ErrorCode());
+
+    } finally {
+      stub.setThrowException(false);
+
+    }
 
   }
 
@@ -102,7 +114,7 @@ public class TestJets3tFileSystemStore {
       node = store.retrieveINode(path);
       fail();
     } catch (IOException e) {
-      S3ServiceException parent=(S3ServiceException) e.getCause();
+      S3ServiceException parent = (S3ServiceException) e.getCause();
       assertEquals("12345", parent.getS3ErrorCode());
     } finally {
       stub.setThrowException(false);
@@ -135,7 +147,9 @@ public class TestJets3tFileSystemStore {
     store.purge();
     subPaths = store.listSubPaths(new Path("/"));
     assertEquals(0, subPaths.size());
-
+    // test 
+   
+    
   }
 
   @Test
