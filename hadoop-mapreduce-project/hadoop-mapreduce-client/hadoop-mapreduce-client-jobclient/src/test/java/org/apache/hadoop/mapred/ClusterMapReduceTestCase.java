@@ -111,7 +111,6 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
     }
     if (dfsCluster != null) {
       dfsCluster.shutdown();
-      dfsCluster = null;
     }
   }
 
