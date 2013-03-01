@@ -80,7 +80,7 @@ public class TestFileSink {
     return File.createTempFile(prefix, suffix, dir);
   }
   
-  @Test 
+  @Test(timeout=6000) 
   public void testFileSink() throws IOException {
     outFile = getTestTempFile("test-file-sink-", ".out");
     final String outPath = outFile.getAbsolutePath();  
