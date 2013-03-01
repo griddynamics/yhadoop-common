@@ -64,8 +64,8 @@ public class TestMapReduceChain extends HadoopTestCase {
   }
 
   public void testChain() throws Exception {
-    Path inDir = new Path(localPathRoot, "TestMapReduceChain/input");
-    Path outDir = new Path(localPathRoot, "TestMapReduceChain/output");
+    Path inDir = new Path(localPathRoot, "input");
+    Path outDir = new Path(localPathRoot, "output");
     String input = "1\n2\n";
     String expectedOutput = "0\t1ABCRDEF\n2\t2ABCRDEF\n";
 

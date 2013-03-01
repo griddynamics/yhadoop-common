@@ -30,24 +30,24 @@ import java.util.Iterator;
 
 public class TestChainMapReduce extends HadoopTestCase {
 
-  private Path getFlagDir(boolean local) {
+  private static Path getFlagDir(boolean local) {
     Path flagDir = new Path("testing/chain/flags");
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (local) {
-      String localPathRoot = PathUtils.getTestDirName(getClass());
+      String localPathRoot = PathUtils.getTestDirName(TestChainMapReduce.class);
       flagDir = new Path(localPathRoot, flagDir);
     }
     return flagDir;
   }
 
-  private void cleanFlags(JobConf conf) throws IOException {
+  private static void cleanFlags(JobConf conf) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     fs.delete(getFlagDir(conf.getBoolean("localFS", true)), true);
     fs.mkdirs(getFlagDir(conf.getBoolean("localFS", true)));
   }
 
-  private void writeFlag(JobConf conf, String flag) throws IOException {
+  private static void writeFlag(JobConf conf, String flag) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     if (getFlag(conf, flag)) {
       fail("Flag " + flag + " already exists");
@@ -57,7 +57,7 @@ public class TestChainMapReduce extends HadoopTestCase {
     file.close();
   }
 
-  private boolean getFlag(JobConf conf, String flag) throws IOException {
+  private static boolean getFlag(JobConf conf, String flag) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     return fs
       .exists(new Path(getFlagDir(conf.getBoolean("localFS", true)), flag));
@@ -156,37 +156,37 @@ public class TestChainMapReduce extends HadoopTestCase {
     assertTrue(getFlag(conf, "close.E"));
   }
 
-  public class AMap extends IDMap {
+  public static class AMap extends IDMap {
     public AMap() {
       super("A", "A", true);
     }
   }
 
-  public class BMap extends IDMap {
+  public static class BMap extends IDMap {
     public BMap() {
       super("B", "X", false);
     }
   }
 
-  public class CReduce extends IDReduce {
+  public static class CReduce extends IDReduce {
     public CReduce() {
       super("C", "C");
     }
   }
 
-  public class DMap extends IDMap {
+  public static class DMap extends IDMap {
     public DMap() {
       super("D", "X", false);
     }
   }
 
-  public class EMap extends IDMap {
+  public static class EMap extends IDMap {
     public EMap() {
       super("E", "E", true);
     }
   }
 
-  public class IDMap
+  public static class IDMap
     implements Mapper<LongWritable, Text, LongWritable, Text> {
     private JobConf conf;
     private String name;
@@ -232,7 +232,7 @@ public class TestChainMapReduce extends HadoopTestCase {
     }
   }
 
-  public class IDReduce
+  public static class IDReduce
     implements Reducer<LongWritable, Text, LongWritable, Text> {
 
     private JobConf conf;
