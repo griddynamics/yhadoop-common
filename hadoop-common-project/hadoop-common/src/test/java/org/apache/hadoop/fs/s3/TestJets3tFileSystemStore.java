@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -48,10 +49,10 @@ public class TestJets3tFileSystemStore {
   }
 
   @AfterClass
-  
-  public static void stop() throws Exception{
+  public static void stop() throws Exception {
     store.purge();
-  } 
+  }
+
   @Test
   public void testBlock() throws Exception {
 
@@ -67,25 +68,24 @@ public class TestJets3tFileSystemStore {
     assertNotNull(newFile);
     assertEquals(f.length(), newFile.length());
 
-    
     stub.setThrowException(true);
-    
-    try{
+
+    try {
       store.retrieveBlock(block, 0);
       fail();
-    }catch(IOException e){
-      
-      S3ServiceException s3e= (S3ServiceException)e.getCause();
-      assertEquals("12345",s3e.getS3ErrorCode());
+    } catch (IOException e) {
+
+      S3ServiceException s3e = (S3ServiceException) e.getCause();
+      assertEquals("12345", s3e.getS3ErrorCode());
     }
 
-    try{
+    try {
       store.deleteBlock(block);
       fail();
-    }catch(IOException e){
-      S3ServiceException s3e= (S3ServiceException)e.getCause();
-      assertEquals("12345",s3e.getS3ErrorCode());
-    }finally{
+    } catch (IOException e) {
+      S3ServiceException s3e = (S3ServiceException) e.getCause();
+      assertEquals("12345", s3e.getS3ErrorCode());
+    } finally {
       stub.setThrowException(false);
     }
     store.deleteBlock(block);
@@ -108,7 +108,7 @@ public class TestJets3tFileSystemStore {
 
   @Test
   public void testNode() throws Exception {
-    
+
     store.purge();
     stub.setThrowException(false);
     File f = getDummiTextFile("node file");
@@ -123,10 +123,9 @@ public class TestJets3tFileSystemStore {
       store.storeINode(new Path("testNode"), node);
       fail();
     } catch (IllegalArgumentException e) {
-       assertEquals("Path must be absolute: testNode",e.getMessage());
+      assertEquals("Path must be absolute: testNode", e.getMessage());
     }
 
-    
     try {
       stub.setThrowException(true);
       store.storeINode(path, node);
@@ -139,7 +138,6 @@ public class TestJets3tFileSystemStore {
     }
     assertFalse(store.inodeExists(path));
 
-    
     store.storeINode(path, node);
     assertTrue(store.inodeExists(path));
     File result = new File(workspace.getAbsolutePath() + "hostname"
@@ -164,8 +162,7 @@ public class TestJets3tFileSystemStore {
     } finally {
       stub.setThrowException(false);
     }
-    
-    
+
     try {
       store.deleteINode(path);
     } catch (IOException e) {
@@ -208,26 +205,26 @@ public class TestJets3tFileSystemStore {
 
     store.dump();
     assertEquals(1, subPaths.size());
-    
+
     stub.setThrowException(true);
-    try{
+    try {
       subPaths = store.listSubPaths(new Path("/"));
       fail();
-    }catch(Exception e){
-      S3ServiceException ex= (S3ServiceException)e.getCause();
+    } catch (Exception e) {
+      S3ServiceException ex = (S3ServiceException) e.getCause();
       assertEquals("12345", ex.getS3ErrorCode());
     }
-    try{
+    try {
       subPaths = store.listDeepSubPaths(new Path("/"));
       fail();
-      
-    }catch(Exception e){
-      
-      S3ServiceException ex= (S3ServiceException)e.getCause();
+
+    } catch (Exception e) {
+
+      S3ServiceException ex = (S3ServiceException) e.getCause();
       assertEquals("12345", ex.getS3ErrorCode());
-    }finally{
+    } finally {
       stub.setThrowException(false);
-      
+
     }
     store.purge();
   }
@@ -266,7 +263,7 @@ public class TestJets3tFileSystemStore {
         stats);
     int counter = 0;
     // test read method
-    while ( input.read() >= 0) {
+    while (input.read() >= 0) {
       counter++;
     }
 
@@ -275,13 +272,13 @@ public class TestJets3tFileSystemStore {
     store.purge();
     assertFalse(input.markSupported());
     assertFalse(input.seekToNewSource(0));
-    // finish 
-    assertEquals(0,input.available());
+    // finish
+    assertEquals(0, input.available());
     input.close();
   }
-  
+
   @Test
-  public void testMetaData() throws Exception{
+  public void testMetaData() throws Exception {
     store.purge();
     stub.setThrowException(false);
     File f = getDummiTextFile("node file");
@@ -293,32 +290,61 @@ public class TestJets3tFileSystemStore {
     INode node = new INode(FileType.FILE, blocks);
     store.storeINode(path, node);
 
-    Map<String, String> metaData= new HashMap<String, String>();
+    Map<String, String> metaData = new HashMap<String, String>();
     stub.setMetaData(metaData);
-    try{
+    try {
       store.inodeExists(path);
-      
+
       fail();
-    }catch(S3FileSystemException e){
+    } catch (S3FileSystemException e) {
       assertEquals("Not a Hadoop S3 file.", e.getMessage());
     }
     metaData.put("fs", "Hadoop");
-    try{
+    try {
       store.inodeExists(path);
       fail();
-    }catch(S3FileSystemException e){
+    } catch (S3FileSystemException e) {
       assertEquals("Not a block file.", e.getMessage());
     }
     metaData.put("fs-type", "block");
-    try{
+    try {
       store.inodeExists(path);
       fail();
-    }catch(VersionMismatchException e){
-      assertEquals("Version mismatch: client expects version 1, but data has version [unversioned]", e.getMessage());
+    } catch (VersionMismatchException e) {
+      assertEquals(
+          "Version mismatch: client expects version 1, but data has version [unversioned]",
+          e.getMessage());
     }
     metaData.put("fs-version", "1");
 
     assertTrue(store.inodeExists(path));
     stub.setMetaData(null);
+  }
+
+  @Test
+  public void testS3Credentials() throws Exception {
+    S3Credentials credentials = new S3Credentials();
+    Configuration conf = new Configuration();
+    try {
+      credentials.initialize(new URI("s3://abc"), conf);
+    } catch (IllegalArgumentException e) {
+      assertEquals(
+          "AWS Access Key ID and Secret Access Key must be specified as the "
+              + "username or password (respectively) of a s3 URL, or by setting the"
+              + " fs.s3.awsAccessKeyId or fs.s3.awsSecretAccessKey properties (respectively).",
+          e.getMessage());
+    }
+    conf.set("fs.s3.awsAccessKeyId", "xyz");
+    try {
+      credentials.initialize(new URI("s3://abc"), conf);
+      fail();
+    } catch (IllegalArgumentException e) {
+      assertEquals(
+          "AWS Secret Access Key must be specified as the password of a s3 URL,"
+              + " or by setting the fs.s3.awsSecretAccessKey property.",
+          e.getMessage());
+    }
+    conf.set("fs.s3.awsSecretAccessKey", "secret");
+    credentials.initialize(new URI("s3://abc"), conf);
   }
 }
