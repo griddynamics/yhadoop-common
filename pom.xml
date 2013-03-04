@@ -427,7 +427,7 @@
               <generateHistorical>${cloverGenHistorical}</generateHistorical>
               <excludes>
                 <exclude>**/examples/**/*.java</exclude>
-                <exclude>**/hamlet/*.java</exclude>
+                <exclude>**/hamlet/Hamlet.java</exclude>
                 <exclude>**/ha/proto/*.java</exclude>
                 <exclude>**/protocol/proto/*.java</exclude>
                 <exclude>**/compiler/generated/*.java</exclude>
