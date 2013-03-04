@@ -441,7 +441,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
               <generateHistorical>${cloverGenHistorical}</generateHistorical>
               <excludes>
                 <exclude>**/examples/**/*.java</exclude>
-                <exclude>**/hamlet/*.java</exclude>
+                <exclude>**/hamlet/Hamlet.java</exclude>
                 <exclude>**/ha/proto/*.java</exclude>
                 <exclude>**/protocol/proto/*.java</exclude>
                 <exclude>**/compiler/generated/*.java</exclude>
