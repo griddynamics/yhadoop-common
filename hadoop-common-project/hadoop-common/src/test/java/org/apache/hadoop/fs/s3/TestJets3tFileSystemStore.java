@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3.INode.FileType;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.security.AWSCredentials;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -44,6 +45,11 @@ public class TestJets3tFileSystemStore {
     inserveice.set(store, stub);
   }
 
+  @AfterClass
+  
+  public static void stop() throws Exception{
+    store.purge();
+  } 
   @Test
   public void testBlock() throws Exception {
 
@@ -59,6 +65,27 @@ public class TestJets3tFileSystemStore {
     assertNotNull(newFile);
     assertEquals(f.length(), newFile.length());
 
+    
+    stub.setThrowException(true);
+    
+    try{
+      store.retrieveBlock(block, 0);
+      fail();
+    }catch(IOException e){
+      
+      S3ServiceException s3e= (S3ServiceException)e.getCause();
+      assertEquals("12345",s3e.getS3ErrorCode());
+    }
+
+    try{
+      store.deleteBlock(block);
+      fail();
+    }catch(IOException e){
+      S3ServiceException s3e= (S3ServiceException)e.getCause();
+      assertEquals("12345",s3e.getS3ErrorCode());
+    }finally{
+      stub.setThrowException(false);
+    }
     store.deleteBlock(block);
     assertFalse(result.exists());
     assertFalse(store.blockExists(1));
@@ -79,6 +106,8 @@ public class TestJets3tFileSystemStore {
 
   @Test
   public void testNode() throws Exception {
+    
+    store.purge();
     stub.setThrowException(false);
     File f = getDummiTextFile("node file");
     Path path = new Path("/testNode");
@@ -87,6 +116,28 @@ public class TestJets3tFileSystemStore {
     blocks[1] = new Block(1, f.length());
 
     INode node = new INode(FileType.FILE, blocks);
+
+    try {
+      store.storeINode(new Path("testNode"), node);
+      fail();
+    } catch (IllegalArgumentException e) {
+       assertEquals("Path must be absolute: testNode",e.getMessage());
+    }
+
+    
+    try {
+      stub.setThrowException(true);
+      store.storeINode(path, node);
+      fail();
+    } catch (IOException e) {
+      S3ServiceException parent = (S3ServiceException) e.getCause();
+      assertEquals("12345", parent.getS3ErrorCode());
+    } finally {
+      stub.setThrowException(false);
+    }
+    assertFalse(store.inodeExists(path));
+
+    
     store.storeINode(path, node);
     assertTrue(store.inodeExists(path));
     File result = new File(workspace.getAbsolutePath() + "hostname"
@@ -101,6 +152,18 @@ public class TestJets3tFileSystemStore {
     assertFalse(store.inodeExists(path));
     assertFalse(result.exists());
 
+    try {
+      stub.setThrowException(true);
+      store.inodeExists(path);
+      fail();
+    } catch (IOException e) {
+      S3ServiceException parent = (S3ServiceException) e.getCause();
+      assertEquals("12345", parent.getS3ErrorCode());
+    } finally {
+      stub.setThrowException(false);
+    }
+    
+    
     try {
       store.deleteINode(path);
     } catch (IOException e) {
@@ -143,13 +206,28 @@ public class TestJets3tFileSystemStore {
 
     store.dump();
     assertEquals(1, subPaths.size());
-
-    store.purge();
-    subPaths = store.listSubPaths(new Path("/"));
-    assertEquals(0, subPaths.size());
-    // test 
-   
     
+    stub.setThrowException(true);
+    try{
+      subPaths = store.listSubPaths(new Path("/"));
+      fail();
+    }catch(Exception e){
+      S3ServiceException ex= (S3ServiceException)e.getCause();
+      assertEquals("12345", ex.getS3ErrorCode());
+    }
+    try{
+      subPaths = store.listDeepSubPaths(new Path("/"));
+      fail();
+      
+    }catch(Exception e){
+      
+      S3ServiceException ex= (S3ServiceException)e.getCause();
+      assertEquals("12345", ex.getS3ErrorCode());
+    }finally{
+      stub.setThrowException(false);
+      
+    }
+    store.purge();
   }
 
   @Test
@@ -193,6 +271,7 @@ public class TestJets3tFileSystemStore {
     assertEquals(18, stats.getBytesRead());
     assertEquals(18, counter);
     store.purge();
+    assertFalse(input.markSupported());
     input.close();
   }
 }

@@ -108,7 +108,13 @@ public class S3ServerStub extends S3Service {
   @Override
   protected S3Object[] listObjectsImpl(String bucketName, String prefix,
       String delimiter, long maxListingLength) throws S3ServiceException {
-    File f = new File(basePath+bucketName);
+    if(throwException){
+      throw new S3ServiceException("Exception", getErrorMessage());
+    }
+    if(prefix==null){
+      prefix="";
+    }
+    File f = new File(basePath+bucketName+prefix);
     File[] child = f.listFiles();
     if(child==null){
       return new S3Object[0];
@@ -177,12 +183,16 @@ public class S3ServerStub extends S3Service {
   @Override
   protected S3Object putObjectImpl(String bucketName, S3Object object)
       throws S3ServiceException {
+    if(throwException){
+      throw new S3ServiceException("Exception message", getErrorMessage());
+
+    }
     try {
       File f = new File(basePath + bucketName);
-      if (!f.exists()) {
-        f.mkdirs();
-      }
       f = new File(basePath + bucketName + File.separator + object.getKey());
+      if(!f.getParentFile().exists()){
+        f.getParentFile().mkdirs();
+      }
       f.createNewFile();
       if (object.getDataInputStream() != null) {
         writeFile(f, object.getDataInputStream());
@@ -233,6 +243,9 @@ public class S3ServerStub extends S3Service {
   @Override
   protected void deleteObjectImpl(String bucketName, String objectKey)
       throws S3ServiceException {
+    if(throwException){
+      throw new S3ServiceException("exception",getErrorMessage());
+    }
     if(objectKey.startsWith("%2F")){
       objectKey=objectKey.substring(3);
     }
