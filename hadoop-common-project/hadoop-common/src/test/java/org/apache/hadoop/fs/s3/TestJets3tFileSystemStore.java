@@ -186,13 +186,13 @@ public class TestJets3tFileSystemStore {
         stats);
     int counter = 0;
     // test read method
-    int data = 0;
-    while ((data = input.read()) >= 0) {
+    while ( input.read() >= 0) {
       counter++;
     }
 
     assertEquals(18, stats.getBytesRead());
     assertEquals(18, counter);
     store.purge();
+    input.close();
   }
 }

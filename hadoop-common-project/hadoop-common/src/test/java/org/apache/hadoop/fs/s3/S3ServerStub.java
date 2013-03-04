@@ -110,6 +110,9 @@ public class S3ServerStub extends S3Service {
       String delimiter, long maxListingLength) throws S3ServiceException {
     File f = new File(basePath+bucketName);
     File[] child = f.listFiles();
+    if(child==null){
+      return new S3Object[0];
+    }
     List<S3Object> result = new ArrayList<S3Object>();
     for (File file : child) {
       if (file.isFile()) {
@@ -230,6 +233,9 @@ public class S3ServerStub extends S3Service {
   @Override
   protected void deleteObjectImpl(String bucketName, String objectKey)
       throws S3ServiceException {
+    if(objectKey.startsWith("%2F")){
+      objectKey=objectKey.substring(3);
+    }
     File f = new File(basePath + bucketName + File.separator + objectKey);
     if (!f.delete()) {
       throw new S3ServiceException("Exception message", getErrorMessage());
@@ -254,7 +260,10 @@ public class S3ServerStub extends S3Service {
     if(throwException){
       throw new S3ServiceException("exception",getErrorMessage());
     }
-    File f = new File(basePath + bucketName + File.separator + objectKey);
+    if(objectKey.startsWith("%2F")){ // first /
+      objectKey=objectKey.substring(3);
+    }
+    File f = new File(basePath + bucketName + File.separator+ objectKey);
     S3Bucket bucket = new S3Bucket(bucketName, f.getParent());
     S3Object result = new S3Object(bucket, objectKey);
     result.addMetadata("fs", "Hadoop");
