@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -272,6 +274,51 @@ public class TestJets3tFileSystemStore {
     assertEquals(18, counter);
     store.purge();
     assertFalse(input.markSupported());
+    assertFalse(input.seekToNewSource(0));
+    // finish 
+    assertEquals(0,input.available());
     input.close();
+  }
+  
+  @Test
+  public void testMetaData() throws Exception{
+    store.purge();
+    stub.setThrowException(false);
+    File f = getDummiTextFile("node file");
+    Path path = new Path("/testNode");
+    Block[] blocks = new Block[2];
+    blocks[0] = new Block(0, f.length());
+    blocks[1] = new Block(1, f.length());
+
+    INode node = new INode(FileType.FILE, blocks);
+    store.storeINode(path, node);
+
+    Map<String, String> metaData= new HashMap<String, String>();
+    stub.setMetaData(metaData);
+    try{
+      store.inodeExists(path);
+      
+      fail();
+    }catch(S3FileSystemException e){
+      assertEquals("Not a Hadoop S3 file.", e.getMessage());
+    }
+    metaData.put("fs", "Hadoop");
+    try{
+      store.inodeExists(path);
+      fail();
+    }catch(S3FileSystemException e){
+      assertEquals("Not a block file.", e.getMessage());
+    }
+    metaData.put("fs-type", "block");
+    try{
+      store.inodeExists(path);
+      fail();
+    }catch(VersionMismatchException e){
+      assertEquals("Version mismatch: client expects version 1, but data has version [unversioned]", e.getMessage());
+    }
+    metaData.put("fs-version", "1");
+
+    assertTrue(store.inodeExists(path));
+    stub.setMetaData(null);
   }
 }

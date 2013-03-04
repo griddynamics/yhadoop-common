@@ -28,10 +28,16 @@ public class S3ServerStub extends S3Service {
   private static final long serialVersionUID = 4845644480879625579L;
   private String basePath;
   private final Map<String, AccessControlList> aclStorage = new HashMap<String, AccessControlList>();
-  private boolean throwException=false;
-  
-  
- 
+  private boolean throwException = false;
+  private Map<String, String> metaData = null;
+
+  public Map<String, String> getMetaData() {
+    return metaData;
+  }
+
+  public void setMetaData(Map<String, String> metaData) {
+    this.metaData = metaData;
+  }
 
   public boolean isThrowException() {
     return throwException;
@@ -108,23 +114,24 @@ public class S3ServerStub extends S3Service {
   @Override
   protected S3Object[] listObjectsImpl(String bucketName, String prefix,
       String delimiter, long maxListingLength) throws S3ServiceException {
-    if(throwException){
+    if (throwException) {
       throw new S3ServiceException("Exception", getErrorMessage());
     }
-    if(prefix==null){
-      prefix="";
-    }else if ("%2F".equals(prefix)){
-      prefix="/";
+    if (prefix == null) {
+      prefix = "";
+    } else if ("%2F".equals(prefix)) {
+      prefix = "/";
     }
-    File f = new File(basePath+bucketName+prefix);
+    File f = new File(basePath + bucketName + prefix);
     File[] child = f.listFiles();
-    if(child==null){
+    if (child == null) {
       return new S3Object[0];
     }
     List<S3Object> result = new ArrayList<S3Object>();
     for (File file : child) {
       if (file.isFile()) {
-        result.add(new S3Object(new S3Bucket(bucketName), "/"+file.getName()));
+        result
+            .add(new S3Object(new S3Bucket(bucketName), "/" + file.getName()));
       }
     }
     return result.toArray(new S3Object[result.size()]);
@@ -134,23 +141,24 @@ public class S3ServerStub extends S3Service {
   protected S3ObjectsChunk listObjectsChunkedImpl(String bucketName,
       String prefix, String delimiter, long maxListingLength,
       String priorLastKey, boolean completeListing) throws S3ServiceException {
-    
-    
-    File f = new File(basePath+bucketName);
+
+    File f = new File(basePath + bucketName);
     File[] child = f.listFiles();
     List<S3Object> result = new ArrayList<S3Object>();
     for (File file : child) {
       if (file.isFile()) {
-        result.add(new S3Object(new S3Bucket(bucketName), "/"+file.getName()));
+        result
+            .add(new S3Object(new S3Bucket(bucketName), "/" + file.getName()));
       }
     }
-    S3Object[] objects= result.toArray(new S3Object[result.size()]);
-    String[] commonPrefix= new String[objects.length];
-    for (int i=0; i<objects.length ; i++) {
-      commonPrefix[i]="";
+    S3Object[] objects = result.toArray(new S3Object[result.size()]);
+    String[] commonPrefix = new String[objects.length];
+    for (int i = 0; i < objects.length; i++) {
+      commonPrefix[i] = "";
     }
-    
-    return new S3ObjectsChunk(prefix,delimiter,objects,commonPrefix,priorLastKey);
+
+    return new S3ObjectsChunk(prefix, delimiter, objects, commonPrefix,
+        priorLastKey);
   }
 
   @Override
@@ -185,14 +193,14 @@ public class S3ServerStub extends S3Service {
   @Override
   protected S3Object putObjectImpl(String bucketName, S3Object object)
       throws S3ServiceException {
-    if(throwException){
+    if (throwException) {
       throw new S3ServiceException("Exception message", getErrorMessage());
 
     }
     try {
       File f = new File(basePath + bucketName);
       f = new File(basePath + bucketName + File.separator + object.getKey());
-      if(!f.getParentFile().exists()){
+      if (!f.getParentFile().exists()) {
         f.getParentFile().mkdirs();
       }
       f.createNewFile();
@@ -245,11 +253,11 @@ public class S3ServerStub extends S3Service {
   @Override
   protected void deleteObjectImpl(String bucketName, String objectKey)
       throws S3ServiceException {
-    if(throwException){
-      throw new S3ServiceException("exception",getErrorMessage());
+    if (throwException) {
+      throw new S3ServiceException("exception", getErrorMessage());
     }
-    if(objectKey.startsWith("%2F")){
-      objectKey=objectKey.substring(3);
+    if (objectKey.startsWith("%2F")) {
+      objectKey = objectKey.substring(3);
     }
     File f = new File(basePath + bucketName + File.separator + objectKey);
     if (!f.delete()) {
@@ -272,18 +280,22 @@ public class S3ServerStub extends S3Service {
       Calendar ifModifiedSince, Calendar ifUnmodifiedSince,
       String[] ifMatchTags, String[] ifNoneMatchTags, Long byteRangeStart,
       Long byteRangeEnd) throws S3ServiceException {
-    if(throwException){
-      throw new S3ServiceException("exception",getErrorMessage());
+    if (throwException) {
+      throw new S3ServiceException("exception", getErrorMessage());
     }
-    if(objectKey.startsWith("%2F")){ // first /
-      objectKey=objectKey.substring(3);
+    if (objectKey.startsWith("%2F")) { // first /
+      objectKey = objectKey.substring(3);
     }
-    File f = new File(basePath + bucketName + File.separator+ objectKey);
+    File f = new File(basePath + bucketName + File.separator + objectKey);
     S3Bucket bucket = new S3Bucket(bucketName, f.getParent());
     S3Object result = new S3Object(bucket, objectKey);
-    result.addMetadata("fs", "Hadoop");
-    result.addMetadata("fs-type", "block");
-    result.addMetadata("fs-version", "1");
+    if (metaData == null) {
+      result.addMetadata("fs", "Hadoop");
+      result.addMetadata("fs-type", "block");
+      result.addMetadata("fs-version", "1");
+    } else {
+      result.addAllMetadata(metaData);
+    }
     if (f.exists()) {
       result.setDataInputFile(f);
     }
