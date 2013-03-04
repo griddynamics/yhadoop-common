@@ -113,6 +113,8 @@ public class S3ServerStub extends S3Service {
     }
     if(prefix==null){
       prefix="";
+    }else if ("%2F".equals(prefix)){
+      prefix="/";
     }
     File f = new File(basePath+bucketName+prefix);
     File[] child = f.listFiles();

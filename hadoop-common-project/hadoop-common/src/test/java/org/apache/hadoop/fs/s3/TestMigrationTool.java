@@ -1,9 +1,7 @@
 package org.apache.hadoop.fs.s3;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.lang.reflect.Field;
 import java.net.URI;
 
