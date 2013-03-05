@@ -42,7 +42,7 @@ public class TestRunJar {
   private static final String CLASS_NAME = "Hello.class";
 
   @BeforeClass
-  public void setUp() {
+  public static void setUp() {
       if (!TEST_ROOT_DIR.exists()) {
           TEST_ROOT_DIR.mkdirs();
       }
