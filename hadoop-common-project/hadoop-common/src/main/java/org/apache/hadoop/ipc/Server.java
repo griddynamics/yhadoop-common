@@ -158,7 +158,8 @@ public abstract class Server {
   //     in ObjectWritable to efficiently transmit arrays of primitives
   // 6 : Made RPC payload header explicit
   // 7 : Changed Ipc Connection Header to use Protocol buffers
-  public static final byte CURRENT_VERSION = 7;
+  // 8 : SASL server always sends a final response
+  public static final byte CURRENT_VERSION = 8;
 
   /**
    * Initial and max size of response buffer
@@ -270,6 +271,14 @@ public abstract class Server {
     return (addr == null) ? null : addr.getHostAddress();
   }
 
+  /** Returns the RPC remote user when invoked inside an RPC.  Note this
+   *  may be different than the current user if called within another doAs
+   *  @return connection's UGI or null if not an RPC
+   */
+  public static UserGroupInformation getRemoteUser() {
+    Call call = CurCall.get();
+    return (call != null) ? call.connection.user : null;
+  }
  
   /** Return true if the invocation was through an RPC.
    */
@@ -1179,8 +1188,8 @@ public abstract class Server {
           AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
           throw e;
         }
-        if (replyToken == null && authMethod == AuthMethod.PLAIN) {
-          // client needs at least response to know if it should use SIMPLE
+        if (saslServer.isComplete() && replyToken == null) {
+          // send final response for success
           replyToken = new byte[0];
         }
         if (replyToken != null) {
@@ -1351,7 +1360,7 @@ public abstract class Server {
     }
 
     private AuthMethod initializeAuthContext(AuthMethod authMethod)
-        throws IOException {
+        throws IOException, InterruptedException {
       try {
         if (enabledAuthMethods.contains(authMethod)) {
           saslServer = createSaslServer(authMethod);
@@ -1384,8 +1393,7 @@ public abstract class Server {
     }
 
     private SaslServer createSaslServer(AuthMethod authMethod)
-        throws IOException {
-      SaslServer saslServer = null;
+        throws IOException, InterruptedException {
       String hostname = null;
       String saslProtocol = null;
       CallbackHandler saslCallback = null;
@@ -1421,10 +1429,23 @@ public abstract class Server {
               "Server does not support SASL " + authMethod);
       }
       
-      String mechanism = authMethod.getMechanismName();
-      saslServer = Sasl.createSaslServer(
-          mechanism, saslProtocol, hostname,
-          SaslRpcServer.SASL_PROPS, saslCallback);
+      return createSaslServer(authMethod.getMechanismName(), saslProtocol,
+                              hostname, saslCallback);                                    
+    }
+
+    private SaslServer createSaslServer(final String mechanism,
+                                        final String protocol,
+                                        final String hostname,
+                                        final CallbackHandler callback
+        ) throws IOException, InterruptedException {
+      SaslServer saslServer = UserGroupInformation.getCurrentUser().doAs(
+          new PrivilegedExceptionAction<SaslServer>() {
+            @Override
+            public SaslServer run() throws SaslException  {
+              return Sasl.createSaslServer(mechanism, protocol, hostname,
+                                           SaslRpcServer.SASL_PROPS, callback);
+            }
+          });
       if (saslServer == null) {
         throw new AccessControlException(
             "Unable to find SASL server implementation for " + mechanism);
@@ -1498,9 +1519,6 @@ public abstract class Server {
       UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);
       if (saslServer == null) {
         user = protocolUser;
-        if (user != null) {
-          user.setAuthenticationMethod(AuthMethod.SIMPLE);
-        }
       } else {
         // user is authenticated
         user.setAuthenticationMethod(authMethod);

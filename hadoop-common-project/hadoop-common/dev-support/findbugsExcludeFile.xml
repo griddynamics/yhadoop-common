@@ -294,6 +294,14 @@
       <!-- protobuf generated code -->
       <Class name="~org\.apache\.hadoop\.ha\.proto\.ZKFCProtocolProtos.*"/>
     </Match>
+    <Match>
+      <!-- protobuf generated code -->
+      <Class name="~org\.apache\.hadoop\.security\.proto\.SecurityProtos.*"/>
+    </Match>
+    <Match>
+      <!-- protobuf generated code -->
+      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.TestProtos.*"/>
+    </Match>
 
     <!--
        Manually checked, misses child thread manually syncing on parent's intrinsic lock.
@@ -303,5 +311,13 @@
        <Field name="previousSnapshot" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
-
+     <!--
+       The method uses a generic type T that extends two other types
+       T1 and T2. Findbugs complains of a cast from T1 to T2.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.fs.DelegationTokenRenewer" />
+       <Method name="removeRenewAction" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
  </FindBugsFilter>
