@@ -61,6 +61,12 @@ public class MigrationTool extends Configured implements Tool {
     System.exit(res);
   }
   
+  protected FileSystemStore getFileSystemStore(  URI uri) throws IOException{
+    FileSystemStore newStore = new Jets3tFileSystemStore();
+    newStore.initialize(uri, getConf());
+    return newStore;
+  } 
+  @Override
   public int run(String[] args) throws Exception {
     
     if (args.length == 0) {
@@ -73,9 +79,7 @@ public class MigrationTool extends Configured implements Tool {
     URI uri = URI.create(args[0]);
     
     initialize(uri);
-    
-    FileSystemStore newStore = new Jets3tFileSystemStore();
-    newStore.initialize(uri, getConf());
+    FileSystemStore newStore =getFileSystemStore(uri); 
     
     if (get("%2F") != null) { 
       System.err.println("Current version number is [unversioned].");
@@ -195,6 +199,7 @@ public class MigrationTool extends Configured implements Tool {
   
   class UnversionedStore implements Store {
 
+    @Override
     public Set<Path> listAllPaths() throws IOException {
       try {
         String prefix = urlEncode(Path.SEPARATOR);
@@ -212,6 +217,7 @@ public class MigrationTool extends Configured implements Tool {
       }   
     }
 
+    @Override
     public void deleteINode(Path path) throws IOException {
       delete(pathToKey(path));
     }
@@ -227,6 +233,7 @@ public class MigrationTool extends Configured implements Tool {
       }
     }
     
+    @Override
     public INode retrieveINode(Path path) throws IOException {
       return INode.deserialize(get(pathToKey(path)));
     }
