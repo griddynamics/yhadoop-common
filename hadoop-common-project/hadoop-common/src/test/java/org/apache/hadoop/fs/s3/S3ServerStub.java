@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.s3;
 
 import java.io.File;
@@ -31,16 +49,8 @@ public class S3ServerStub extends S3Service {
   private boolean throwException = false;
   private Map<String, String> metaData = null;
 
-  public Map<String, String> getMetaData() {
-    return metaData;
-  }
-
   public void setMetaData(Map<String, String> metaData) {
     this.metaData = metaData;
-  }
-
-  public boolean isThrowException() {
-    return throwException;
   }
 
   public void setThrowException(boolean throwException) {
@@ -61,10 +71,7 @@ public class S3ServerStub extends S3Service {
   public boolean isBucketAccessible(String bucketName)
       throws S3ServiceException {
     File f = new File(basePath + bucketName);
-    if (!f.exists()) {
-      return false;
-    }
-    return f.isDirectory();
+    return f.exists() && f.isDirectory();
   }
 
   @Override
@@ -83,9 +90,7 @@ public class S3ServerStub extends S3Service {
   @Override
   protected S3BucketLoggingStatus getBucketLoggingStatusImpl(String bucketName)
       throws S3ServiceException {
-    S3BucketLoggingStatus result = new S3BucketLoggingStatus(bucketName,
-        bucketName + "prefix");
-    return result;
+    return new S3BucketLoggingStatus(bucketName, bucketName + "prefix");
   }
 
   @Override
@@ -102,13 +107,16 @@ public class S3ServerStub extends S3Service {
   protected S3Bucket[] listAllBucketsImpl() throws S3ServiceException {
     File f = new File(basePath);
     File[] child = f.listFiles();
-    List<S3Bucket> result = new ArrayList<S3Bucket>();
-    for (File file : child) {
-      if (file.isDirectory()) {
-        result.add(new S3Bucket(file.getName()));
+    if (child != null) {
+      List<S3Bucket> result = new ArrayList<S3Bucket>();
+      for (File file : child) {
+        if (file.isDirectory()) {
+          result.add(new S3Bucket(file.getName()));
+        }
       }
+      return result.toArray(new S3Bucket[result.size()]);
     }
-    return result.toArray(new S3Bucket[result.size()]);
+    return new S3Bucket[0];
   }
 
   @Override
@@ -145,10 +153,12 @@ public class S3ServerStub extends S3Service {
     File f = new File(basePath + bucketName);
     File[] child = f.listFiles();
     List<S3Object> result = new ArrayList<S3Object>();
-    for (File file : child) {
-      if (file.isFile()) {
-        result
-            .add(new S3Object(new S3Bucket(bucketName), "/" + file.getName()));
+    if (child != null) {
+      for (File file : child) {
+        if (file.isFile()) {
+          result.add(new S3Object(new S3Bucket(bucketName), "/"
+              + file.getName()));
+        }
       }
     }
     S3Object[] objects = result.toArray(new S3Object[result.size()]);
@@ -165,8 +175,12 @@ public class S3ServerStub extends S3Service {
   protected S3Bucket createBucketImpl(String bucketName, String location,
       AccessControlList acl) throws S3ServiceException {
     File f = new File(basePath + location + File.separator + bucketName);
-    f.mkdirs();
+
     S3Bucket result = new S3Bucket();
+    if (!f.mkdirs()) {
+      throw new S3ServiceException("cannot create directory:"
+          + f.getAbsolutePath());
+    }
     result.setAcl(acl);
     result.setCreationDate(new Date(System.currentTimeMillis()));
     result.setLocation(location);
@@ -198,14 +212,18 @@ public class S3ServerStub extends S3Service {
 
     }
     try {
-      File f = new File(basePath + bucketName);
-      f = new File(basePath + bucketName + File.separator + object.getKey());
+      File f = new File(basePath + bucketName + File.separator
+          + object.getKey());
       if (!f.getParentFile().exists()) {
-        f.getParentFile().mkdirs();
+        if (!f.getParentFile().mkdirs()) {
+          throw new S3ServiceException("cannot create new directory:"
+              + f.getParentFile());
+        }
       }
-      f.createNewFile();
-      if (object.getDataInputStream() != null) {
-        writeFile(f, object.getDataInputStream());
+      if (f.createNewFile()) {
+        if (object.getDataInputStream() != null) {
+          writeFile(f, object.getDataInputStream());
+        }
       }
     } catch (Throwable e) {
       throw new S3ServiceException("Exception message", getErrorMessage());
@@ -218,7 +236,7 @@ public class S3ServerStub extends S3Service {
 
     OutputStream out = new FileOutputStream(result);
     byte[] buffer = new byte[512];
-    int read = 0;
+    int read;
     while ((read = in.read(buffer)) >= 0) {
       out.write(buffer, 0, read);
     }
@@ -228,7 +246,6 @@ public class S3ServerStub extends S3Service {
 
   }
 
-  @SuppressWarnings("rawtypes")
   @Override
   protected Map copyObjectImpl(String sourceBucketName, String sourceObjectKey,
       String destinationBucketName, String destinationObjectKey,
@@ -331,8 +348,6 @@ public class S3ServerStub extends S3Service {
   }
 
   private String getErrorMessage() {
-    String result = "<Error>" + "<Code>12345</Code>" + "<Message>msg</Message>"
-        + "<RequestId>23456</RequestId>" + "<HostId>host</HostId>" + "</Error>";
-    return result;
+    return "<Error><Code>12345</Code><Message>msg</Message><RequestId>23456</RequestId><HostId>host</HostId></Error>";
   }
 }
