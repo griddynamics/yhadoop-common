@@ -20,14 +20,11 @@ package org.apache.hadoop.mapreduce.v2;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.mapred.LocalContainerLauncher;
@@ -72,7 +69,8 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   @Override
   public void init(Configuration conf) {
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
-    if (conf.get(MRJobConfig.MR_AM_STAGING_DIR) == null) {
+    if (conf.get(MRJobConfig.MR_AM_STAGING_DIR) == null || 
+        conf.get(MRJobConfig.MR_AM_STAGING_DIR).equals(MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)) {
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
           "apps_staging_dir/").getAbsolutePath());
     }
