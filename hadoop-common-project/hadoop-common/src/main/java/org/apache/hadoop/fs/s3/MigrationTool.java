@@ -60,7 +60,10 @@ public class MigrationTool extends Configured implements Tool {
     int res = ToolRunner.run(new MigrationTool(), args);
     System.exit(res);
   }
-  
+
+  /**
+   * For test have to change  FileSystemStore
+   */
   protected FileSystemStore getFileSystemStore(  URI uri) throws IOException{
     FileSystemStore newStore = new Jets3tFileSystemStore();
     newStore.initialize(uri, getConf());
