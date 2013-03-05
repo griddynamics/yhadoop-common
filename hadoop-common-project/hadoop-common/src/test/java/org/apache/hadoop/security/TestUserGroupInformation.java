@@ -603,6 +603,13 @@ public class TestUserGroupInformation {
     }
   }
 
+  @Test(timeout=1000)
+  public void testSetLoginUser() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+    assertEquals(ugi, UserGroupInformation.getLoginUser());
+  }
+
   /**
    * Test for the case that UserGroupInformation.getCurrentUser()
    * is called when the AccessControlContext has a Subject associated

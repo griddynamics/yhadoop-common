@@ -41,6 +41,10 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4235. When outputting XML, OfflineEditsViewer can't handle some edits
     containing non-ASCII strings. (Colin Patrick McCabe via atm)
 
+    HDFS-4541. Set hadoop.log.dir and hadoop.id.str when starting secure
+    datanode to write the logs to right dir by default. (Arpit Gupta via
+    suresh)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
@@ -2088,12 +2092,17 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
+
   BUG FIXES
 
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
     HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
     (kihwal)
+
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
 
 Release 0.23.6 - UNRELEASED
 
