@@ -43,7 +43,7 @@ public class TestMigrationTool {
   private String url = "s3://abc:xyz@hostname/";
   private AWSCredentials awsCredentials;
 
-  @Test
+  @Test(timeout = 1000)
   public void testMigrationTool() throws Exception {
 
     conf = new Configuration();
