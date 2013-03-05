@@ -31,6 +31,7 @@ import org.apache.hadoop.mapred.RunningJob;
 
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.Before;
@@ -46,32 +47,27 @@ import java.io.Writer;
 
 public class TestEncryptedShuffle {
 
-  private static final String BASEDIR =
-    System.getProperty("test.build.dir", "target/test-dir") + "/" +
-    TestEncryptedShuffle.class.getSimpleName();
-  
-  private String classpathDir;
+  private static final File BASEDIR = PathUtils.getTestDir(TestEncryptedShuffle.class);
+  private static final File CLASSPATH_DIR = new File(BASEDIR, "test-classes");
 
   @BeforeClass
   public static void setUp() throws Exception {
-    File base = new File(BASEDIR);
-    FileUtil.fullyDelete(base);
-    base.mkdirs();
+    FileUtil.fullyDelete(BASEDIR);
+    CLASSPATH_DIR.mkdirs();
   }
 
   @Before
   public void createCustomYarnClasspath() throws Exception {
-    classpathDir = KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
-    new File(classpathDir, "core-site.xml").delete();
+    new File(CLASSPATH_DIR, "core-site.xml").delete();
   }
-
+  
   @After
   public void cleanUpMiniClusterSpecialConfig() throws Exception {
-    new File(classpathDir, "core-site.xml").delete();
-    String keystoresDir = new File(BASEDIR).getAbsolutePath();
-    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, classpathDir);
+    new File(CLASSPATH_DIR, "core-site.xml").delete();
+    String keystoresDir = BASEDIR.getAbsolutePath();
+    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, CLASSPATH_DIR.getAbsolutePath());
   }
-
+  
   private MiniDFSCluster dfsCluster = null;
   private MiniMRClientCluster mrCluster = null;
 
@@ -83,7 +79,7 @@ public class TestEncryptedShuffle {
     conf.set("dfs.permissions", "true");
     conf.set("hadoop.security.authentication", "simple");
     String cp = conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH) +
-      File.pathSeparator + classpathDir;
+      File.pathSeparator + CLASSPATH_DIR;
     conf.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH, cp);
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fileSystem = dfsCluster.getFileSystem();
@@ -100,7 +96,7 @@ public class TestEncryptedShuffle {
     mrCluster = new MiniMRClientClusterBuilder(this.getClass(), conf).build();
 
     // so the minicluster conf is avail to the containers.
-    Writer writer = new FileWriter(classpathDir + "/core-site.xml");
+    Writer writer = new FileWriter(CLASSPATH_DIR + "/core-site.xml");
     mrCluster.getConfig().writeXml(writer);
     writer.close();
   }
@@ -122,7 +118,7 @@ public class TestEncryptedShuffle {
     throws Exception {
     try {
       Configuration conf = new Configuration();
-      String keystoresDir = new File(BASEDIR).getAbsolutePath();
+      String keystoresDir = BASEDIR.getAbsolutePath();
       String sslConfsDir =
         KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
       KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfsDir, conf,

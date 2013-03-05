@@ -24,10 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.JarFinder;
 
 /**
@@ -40,7 +38,7 @@ public class MiniMRClientClusterBuilder {
 
   private Configuration conf;
   private Class<?> caller;
-  private int noOfNMs;
+  private int noOfNMs = 1;
 
   public MiniMRClientClusterBuilder(Class<?> caller) {
       this.caller = caller;
