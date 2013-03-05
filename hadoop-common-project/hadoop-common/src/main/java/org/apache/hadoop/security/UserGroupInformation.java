@@ -568,7 +568,7 @@ public class UserGroupInformation {
         if (proxyUser == null) {
           proxyUser = System.getProperty(HADOOP_PROXY_USER);
         }
-        loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
+        setLoginUser(proxyUser == null ? realUser : createProxyUser(proxyUser, realUser));
 
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null) {
@@ -592,12 +592,13 @@ public class UserGroupInformation {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  synchronized static void setLoginUser(UserGroupInformation ugi) {
+  @VisibleForTesting
+  public synchronized static void setLoginUser(UserGroupInformation ugi) {
     // if this is to become stable, should probably logout the currently
     // logged in ugi if it's different
-    loginUser = ugi; 
+    loginUser = ugi;
   }
-  
+
   /**
    * Is this user logged in from a keytab file?
    * @return true if the credentials are from a keytab file.
@@ -727,7 +728,7 @@ public class UserGroupInformation {
       start = System.currentTimeMillis();
       login.login();
       metrics.loginSuccess.add(System.currentTimeMillis() - start);
-      loginUser = new UserGroupInformation(subject);
+      setLoginUser(new UserGroupInformation(subject));
       loginUser.setLogin(login);
       loginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (LoginException le) {
