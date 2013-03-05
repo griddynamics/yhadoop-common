@@ -95,14 +95,15 @@ public class TestMRJobs {
 
   @BeforeClass
   public static void setup() throws IOException {
-    testRootDir = new Path("target", testClass + "-tmpDir").makeQualified(localFs);
-    appJar = new Path(testRootDir, "MRAppJar.jar");
-      
     try {
       localFs = FileSystem.getLocal(conf);
     } catch (IOException io) {
       throw new RuntimeException("problem getting local fs", io);
     }
+
+    testRootDir = new Path("target", testClass + "-tmpDir").makeQualified(localFs);
+    appJar = new Path(testRootDir, "MRAppJar.jar");
+      
     try {
       dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
           .format(true).racks(null).build();
