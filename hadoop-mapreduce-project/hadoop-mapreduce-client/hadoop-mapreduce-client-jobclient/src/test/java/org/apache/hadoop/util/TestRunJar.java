@@ -28,6 +28,7 @@ import java.util.zip.ZipEntry;
 
 import org.apache.hadoop.test.PathUtils;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -35,11 +36,18 @@ import org.junit.Test;
  */
 public class TestRunJar {
 
-  private static String TEST_ROOT_DIR = PathUtils.getTestDirName(TestRunJar.class);
+  private static File TEST_ROOT_DIR = PathUtils.getTestDir(TestRunJar.class);
 
   private static final String TEST_JAR_NAME = "testjar.jar";
   private static final String CLASS_NAME = "Hello.class";
 
+  @BeforeClass
+  public void setUp() {
+      if (!TEST_ROOT_DIR.exists()) {
+          TEST_ROOT_DIR.mkdirs();
+      }
+  }
+  
   @Test
   public void testRunjar() throws Throwable {
     File outFile = new File(TEST_ROOT_DIR, "out");
