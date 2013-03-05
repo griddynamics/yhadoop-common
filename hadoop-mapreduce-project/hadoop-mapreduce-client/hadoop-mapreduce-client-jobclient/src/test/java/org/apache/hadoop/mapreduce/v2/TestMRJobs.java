@@ -102,6 +102,10 @@ public class TestMRJobs {
     }
 
     testRootDir = new Path("target", testClass + "-tmpDir").makeQualified(localFs);
+    if (!localFs.exists(testRootDir)) {
+      localFs.mkdirs(testRootDir);
+    }
+    
     appJar = new Path(testRootDir, "MRAppJar.jar");
       
     try {
