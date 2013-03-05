@@ -727,7 +727,8 @@ public class UserGroupInformation {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  synchronized static void setLoginUser(UserGroupInformation ugi) {
+  @VisibleForTesting
+  public synchronized static void setLoginUser(UserGroupInformation ugi) {
     // if this is to become stable, should probably logout the currently
     // logged in ugi if it's different
     loginUser = ugi;
