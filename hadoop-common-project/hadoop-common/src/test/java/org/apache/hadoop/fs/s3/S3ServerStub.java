@@ -58,7 +58,7 @@ public class S3ServerStub extends S3Service {
   }
 
   protected S3ServerStub(AWSCredentials awsCredentials, String basePath)
-          throws S3ServiceException {
+      throws S3ServiceException {
     super(awsCredentials);
     this.basePath = basePath;
     if (this.basePath.endsWith("/") || this.basePath.endsWith("\\")) {
@@ -69,7 +69,7 @@ public class S3ServerStub extends S3Service {
 
   @Override
   public boolean isBucketAccessible(String bucketName)
-          throws S3ServiceException {
+      throws S3ServiceException {
     File f = new File(basePath + bucketName);
     return f.exists() && f.isDirectory();
   }
@@ -77,26 +77,25 @@ public class S3ServerStub extends S3Service {
   @Override
   public int checkBucketStatus(String bucketName) throws S3ServiceException {
     return isBucketAccessible(bucketName) ? BUCKET_STATUS__MY_BUCKET
-            : BUCKET_STATUS__DOES_NOT_EXIST;
+        : BUCKET_STATUS__DOES_NOT_EXIST;
   }
 
   @Override
   protected String getBucketLocationImpl(String bucketName)
-          throws S3ServiceException {
+      throws S3ServiceException {
     File f = new File(basePath + bucketName);
     return f.getAbsolutePath();
   }
 
   @Override
   protected S3BucketLoggingStatus getBucketLoggingStatusImpl(String bucketName)
-          throws S3ServiceException {
-    return new S3BucketLoggingStatus(bucketName,
-            bucketName + "prefix");
+      throws S3ServiceException {
+    return new S3BucketLoggingStatus(bucketName, bucketName + "prefix");
   }
 
   @Override
   protected void setBucketLoggingStatusImpl(String bucketName,
-                                            S3BucketLoggingStatus status) throws S3ServiceException {
+      S3BucketLoggingStatus status) throws S3ServiceException {
     File f = new File(basePath + bucketName);
     if (!f.exists()) {
       throw new S3ServiceException("Exception message", getErrorMessage());
@@ -122,7 +121,7 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected S3Object[] listObjectsImpl(String bucketName, String prefix,
-                                       String delimiter, long maxListingLength) throws S3ServiceException {
+      String delimiter, long maxListingLength) throws S3ServiceException {
     if (throwException) {
       throw new S3ServiceException("Exception", getErrorMessage());
     }
@@ -140,7 +139,7 @@ public class S3ServerStub extends S3Service {
     for (File file : child) {
       if (file.isFile()) {
         result
-                .add(new S3Object(new S3Bucket(bucketName), "/" + file.getName()));
+            .add(new S3Object(new S3Bucket(bucketName), "/" + file.getName()));
       }
     }
     return result.toArray(new S3Object[result.size()]);
@@ -148,8 +147,8 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected S3ObjectsChunk listObjectsChunkedImpl(String bucketName,
-                                                  String prefix, String delimiter, long maxListingLength,
-                                                  String priorLastKey, boolean completeListing) throws S3ServiceException {
+      String prefix, String delimiter, long maxListingLength,
+      String priorLastKey, boolean completeListing) throws S3ServiceException {
 
     File f = new File(basePath + bucketName);
     File[] child = f.listFiles();
@@ -157,8 +156,8 @@ public class S3ServerStub extends S3Service {
     if (child != null) {
       for (File file : child) {
         if (file.isFile()) {
-          result
-                  .add(new S3Object(new S3Bucket(bucketName), "/" + file.getName()));
+          result.add(new S3Object(new S3Bucket(bucketName), "/"
+              + file.getName()));
         }
       }
     }
@@ -169,17 +168,18 @@ public class S3ServerStub extends S3Service {
     }
 
     return new S3ObjectsChunk(prefix, delimiter, objects, commonPrefix,
-            priorLastKey);
+        priorLastKey);
   }
 
   @Override
   protected S3Bucket createBucketImpl(String bucketName, String location,
-                                      AccessControlList acl) throws S3ServiceException {
+      AccessControlList acl) throws S3ServiceException {
     File f = new File(basePath + location + File.separator + bucketName);
 
     S3Bucket result = new S3Bucket();
     if (!f.mkdirs()) {
-      throw new S3ServiceException("cannot create directory:" + f.getAbsolutePath());
+      throw new S3ServiceException("cannot create directory:"
+          + f.getAbsolutePath());
     }
     result.setAcl(acl);
     result.setCreationDate(new Date(System.currentTimeMillis()));
@@ -206,16 +206,18 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected S3Object putObjectImpl(String bucketName, S3Object object)
-          throws S3ServiceException {
+      throws S3ServiceException {
     if (throwException) {
       throw new S3ServiceException("Exception message", getErrorMessage());
 
     }
     try {
-      File f = new File(basePath + bucketName + File.separator + object.getKey());
+      File f = new File(basePath + bucketName + File.separator
+          + object.getKey());
       if (!f.getParentFile().exists()) {
         if (!f.getParentFile().mkdirs()) {
-          throw new S3ServiceException("cannot create new directory:" + f.getParentFile());
+          throw new S3ServiceException("cannot create new directory:"
+              + f.getParentFile());
         }
       }
       if (f.createNewFile()) {
@@ -246,15 +248,15 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected Map copyObjectImpl(String sourceBucketName, String sourceObjectKey,
-                               String destinationBucketName, String destinationObjectKey,
-                               AccessControlList acl, Map destinationMetadata, Calendar ifModifiedSince,
-                               Calendar ifUnmodifiedSince, String[] ifMatchTags, String[] ifNoneMatchTags)
-          throws S3ServiceException {
+      String destinationBucketName, String destinationObjectKey,
+      AccessControlList acl, Map destinationMetadata, Calendar ifModifiedSince,
+      Calendar ifUnmodifiedSince, String[] ifMatchTags, String[] ifNoneMatchTags)
+      throws S3ServiceException {
     File original = new File(basePath + sourceBucketName + File.separator
-            + sourceObjectKey);
+        + sourceObjectKey);
 
     File copy = new File(basePath + destinationBucketName + File.separator
-            + destinationObjectKey);
+        + destinationObjectKey);
 
     try {
       FileUtils.copyFile(original, copy);
@@ -267,7 +269,7 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected void deleteObjectImpl(String bucketName, String objectKey)
-          throws S3ServiceException {
+      throws S3ServiceException {
     if (throwException) {
       throw new S3ServiceException("exception", getErrorMessage());
     }
@@ -283,8 +285,8 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected S3Object getObjectDetailsImpl(String bucketName, String objectKey,
-                                          Calendar ifModifiedSince, Calendar ifUnmodifiedSince,
-                                          String[] ifMatchTags, String[] ifNoneMatchTags) throws S3ServiceException {
+      Calendar ifModifiedSince, Calendar ifUnmodifiedSince,
+      String[] ifMatchTags, String[] ifNoneMatchTags) throws S3ServiceException {
     File f = new File(basePath + bucketName + File.separator + objectKey);
     S3Bucket bucket = new S3Bucket(bucketName, f.getParent());
     return new S3Object(bucket, objectKey);
@@ -292,9 +294,9 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected S3Object getObjectImpl(String bucketName, String objectKey,
-                                   Calendar ifModifiedSince, Calendar ifUnmodifiedSince,
-                                   String[] ifMatchTags, String[] ifNoneMatchTags, Long byteRangeStart,
-                                   Long byteRangeEnd) throws S3ServiceException {
+      Calendar ifModifiedSince, Calendar ifUnmodifiedSince,
+      String[] ifMatchTags, String[] ifNoneMatchTags, Long byteRangeStart,
+      Long byteRangeEnd) throws S3ServiceException {
     if (throwException) {
       throw new S3ServiceException("exception", getErrorMessage());
     }
@@ -319,28 +321,28 @@ public class S3ServerStub extends S3Service {
 
   @Override
   protected void putBucketAclImpl(String bucketName, AccessControlList acl)
-          throws S3ServiceException {
+      throws S3ServiceException {
 
     aclStorage.put(bucketName, acl);
   }
 
   @Override
   protected void putObjectAclImpl(String bucketName, String objectKey,
-                                  AccessControlList acl) throws S3ServiceException {
+      AccessControlList acl) throws S3ServiceException {
     aclStorage.put(bucketName + File.separator + objectKey, acl);
 
   }
 
   @Override
   protected AccessControlList getObjectAclImpl(String bucketName,
-                                               String objectKey) throws S3ServiceException {
+      String objectKey) throws S3ServiceException {
 
     return aclStorage.get(bucketName + File.separator + objectKey);
   }
 
   @Override
   protected AccessControlList getBucketAclImpl(String bucketName)
-          throws S3ServiceException {
+      throws S3ServiceException {
 
     return aclStorage.get(bucketName);
   }

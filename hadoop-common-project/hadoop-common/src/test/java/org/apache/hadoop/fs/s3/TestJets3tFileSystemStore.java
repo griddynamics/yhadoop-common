@@ -48,7 +48,7 @@ public class TestJets3tFileSystemStore {
 
   private static Jets3tFileSystemStore store = null;
   private static File workspace = new File("target" + File.separator
-          + "s3FileSystem");
+      + "s3FileSystem");
   private static S3ServerStub stub;
 
   @BeforeClass
@@ -65,7 +65,7 @@ public class TestJets3tFileSystemStore {
     S3Credentials s3Credentials = new S3Credentials();
     s3Credentials.initialize(fakeUri, configuration);
     AWSCredentials awsCredentials = new AWSCredentials(
-            s3Credentials.getAccessKey(), s3Credentials.getSecretAccessKey());
+        s3Credentials.getAccessKey(), s3Credentials.getSecretAccessKey());
     stub = new S3ServerStub(awsCredentials, workspace.getAbsolutePath());
     internalService.set(store, stub);
   }
@@ -88,7 +88,7 @@ public class TestJets3tFileSystemStore {
     // test saved block
     assertTrue(store.blockExists(1));
     File result = new File(workspace.getAbsolutePath() + "hostname"
-            + File.separator + "block_" + block.getId());
+        + File.separator + "block_" + block.getId());
     assertTrue(result.exists());
     assertEquals(10, result.length());
     // get block
@@ -163,7 +163,7 @@ public class TestJets3tFileSystemStore {
     // test stored node
     assertTrue(store.inodeExists(path));
     File result = new File(workspace.getAbsolutePath() + "hostname"
-            + File.separator + "testNode");
+        + File.separator + "testNode");
     assertTrue(result.exists());
     assertTrue(result.length() > 0);
     node = store.retrieveINode(path);
@@ -262,7 +262,7 @@ public class TestJets3tFileSystemStore {
 
   private File getDummiTextFile(String text) throws Exception {
     File result = new File(workspace.getParent() + File.separator
-            + "tmpFile.txt");
+        + "tmpFile.txt");
     Writer writer = new FileWriter(result);
     writer.write(text);
     writer.flush();
@@ -273,7 +273,7 @@ public class TestJets3tFileSystemStore {
 
   /**
    * Test operations with S3InputStream
-   *
+   * 
    * @throws Exception
    */
   @Test(timeout = 500)
@@ -291,7 +291,7 @@ public class TestJets3tFileSystemStore {
 
     FileSystem.Statistics stats = new FileSystem.Statistics("statistic");
     S3InputStream input = new S3InputStream(new Configuration(), store, node,
-            stats);
+        stats);
     int counter = 0;
     // test read method
     while (input.read() >= 0) {
@@ -345,8 +345,8 @@ public class TestJets3tFileSystemStore {
       fail();
     } catch (VersionMismatchException e) {
       assertEquals(
-              "Version mismatch: client expects version 1, but data has version [unversioned]",
-              e.getMessage());
+          "Version mismatch: client expects version 1, but data has version [unversioned]",
+          e.getMessage());
     }
     metaData.put("fs-version", "1");
 
@@ -365,10 +365,10 @@ public class TestJets3tFileSystemStore {
       credentials.initialize(new URI("s3://abc"), conf);
     } catch (IllegalArgumentException e) {
       assertEquals(
-              "AWS Access Key ID and Secret Access Key must be specified as the "
-                      + "username or password (respectively) of a s3 URL, or by setting the"
-                      + " fs.s3.awsAccessKeyId or fs.s3.awsSecretAccessKey properties (respectively).",
-              e.getMessage());
+          "AWS Access Key ID and Secret Access Key must be specified as the "
+              + "username or password (respectively) of a s3 URL, or by setting the"
+              + " fs.s3.awsAccessKeyId or fs.s3.awsSecretAccessKey properties (respectively).",
+          e.getMessage());
     }
     conf.set("fs.s3.awsAccessKeyId", "xyz");
     try {
@@ -376,9 +376,9 @@ public class TestJets3tFileSystemStore {
       fail();
     } catch (IllegalArgumentException e) {
       assertEquals(
-              "AWS Secret Access Key must be specified as the password of a s3 URL,"
-                      + " or by setting the fs.s3.awsSecretAccessKey property.",
-              e.getMessage());
+          "AWS Secret Access Key must be specified as the password of a s3 URL,"
+              + " or by setting the fs.s3.awsSecretAccessKey property.",
+          e.getMessage());
     }
     conf.set("fs.s3.awsSecretAccessKey", "secret");
     credentials.initialize(new URI("s3://abc"), conf);

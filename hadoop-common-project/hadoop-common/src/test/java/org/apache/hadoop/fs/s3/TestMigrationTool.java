@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.hadoop.fs.s3;
 
 import java.io.File;
@@ -34,12 +33,12 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Test Migration tool test should reads from source bucket and moves to target bucket.
- * Source data should be removed
+ * Test Migration tool test should reads from source bucket and moves to target
+ * bucket. Source data should be removed
  */
 public class TestMigrationTool {
   private static File workspace = new File("target" + File.separator
-          + "s3FileSystem");
+      + "s3FileSystem");
   private Configuration configuration;
 
   private S3ServerStub stubSource;
@@ -54,15 +53,16 @@ public class TestMigrationTool {
     configuration.set("fs.defaultFS", url);
 
     MigrationTool tool = new MigrationToolForTest();
-    String[] args = {url};
+    String[] args = { url };
 
-    File source = new File(workspace.getAbsolutePath() + File.separator + "source");
+    File source = new File(workspace.getAbsolutePath() + File.separator
+        + "source");
 
     S3Credentials s3Credentials = new S3Credentials();
     s3Credentials.initialize(new URI(url), configuration);
 
-    awsCredentials = new AWSCredentials(
-            s3Credentials.getAccessKey(), s3Credentials.getSecretAccessKey());
+    awsCredentials = new AWSCredentials(s3Credentials.getAccessKey(),
+        s3Credentials.getSecretAccessKey());
 
     stubSource = new S3ServerStub(awsCredentials, source.getAbsolutePath());
 
@@ -70,7 +70,8 @@ public class TestMigrationTool {
     Configuration sourceConfiguration = new Configuration();
     sourceConfiguration.set("fs.defaultFS", url);
     sourceStore.initialize(new URI(url), sourceConfiguration);
-    Field internalService = sourceStore.getClass().getDeclaredField("s3Service");
+    Field internalService = sourceStore.getClass()
+        .getDeclaredField("s3Service");
     internalService.setAccessible(true);
     internalService.set(sourceStore, stubSource);
 
@@ -85,17 +86,17 @@ public class TestMigrationTool {
     sourceStore.storeINode(path, node);
 
     assertTrue(new File(source.getAbsolutePath() + "hostname" + File.separator
-            + "testNode").exists());
+        + "testNode").exists());
     // run test
     int res = ToolRunner.run(tool, args);
     assertEquals(0, res);
     // test that the source has been deleted
     assertFalse(new File(source.getAbsolutePath() + "hostname" + File.separator
-            + "testNode").exists());
-    // test that the target  exists
+        + "testNode").exists());
+    // test that the target exists
 
     assertTrue(new File(target.getAbsolutePath() + "hostname" + File.separator
-            + "testNode").exists());
+        + "testNode").exists());
 
   }
 
@@ -112,13 +113,13 @@ public class TestMigrationTool {
         internalService.setAccessible(true);
 
         target = new File(workspace.getAbsolutePath() + File.separator
-                + "target");
+            + "target");
         S3ServerStub stubTarget = new S3ServerStub(awsCredentials,
-                target.getAbsolutePath());
+            target.getAbsolutePath());
         internalService.set(store, stubTarget);
 
         internalService = this.getClass().getSuperclass()
-                .getDeclaredField("s3Service");
+            .getDeclaredField("s3Service");
         internalService.setAccessible(true);
         internalService.set(this, stubSource);
 
