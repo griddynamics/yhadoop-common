@@ -154,7 +154,6 @@ public class TestJobCounters {
     OUT_DIR = new Path(testdir, "out");
 
     FileSystem fs = FileSystem.getLocal(conf);
-    testdir = new Path(TEST_ROOT_DIR, "spilledRecords.countertest");
     if (fs.exists(testdir) && !fs.delete(testdir, true)) {
       throw new IOException("Could not delete " + testdir);
     }
