@@ -58,6 +58,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
@@ -67,8 +68,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TestPipeApplication {
-  private static File workSpace = new File("target",
-          TestPipeApplication.class.getName() + "-workSpace");
+  private static File workSpace = PathUtils.getTestDir(TestPipeApplication.class);
 
   private static String taskName = "attempt_001_02_r03_04_05";
 

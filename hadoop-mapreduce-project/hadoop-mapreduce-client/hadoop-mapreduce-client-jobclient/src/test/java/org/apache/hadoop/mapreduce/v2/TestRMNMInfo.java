@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -59,7 +60,7 @@ public class TestRMNMInfo {
     }
   }
   private static Path TEST_ROOT_DIR =
-         new Path("target",TestRMNMInfo.class.getName() + "-tmpDir")
+         PathUtils.getTestPath(TestRMNMInfo.class)
               .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.pipes.TestPipeApplication.FakeSplit;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -35,8 +36,7 @@ import static org.mockito.Mockito.*;
 
 
 public class TestPipesNonJavaInputFormat {
-  private static File workSpace = new File("target",
-      TestPipesNonJavaInputFormat.class.getName() + "-workSpace");
+  private static File workSpace = PathUtils.getTestDir(TestPipesNonJavaInputFormat.class);
 
   /**
    *  test PipesNonJavaInputFormat

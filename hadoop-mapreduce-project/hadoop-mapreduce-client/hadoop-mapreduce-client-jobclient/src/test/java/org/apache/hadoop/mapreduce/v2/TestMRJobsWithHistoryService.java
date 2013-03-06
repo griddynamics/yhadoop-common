@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -70,8 +71,7 @@ public class TestMRJobsWithHistoryService {
     }
   }
 
-  private static Path TEST_ROOT_DIR = new Path("target",
-      TestMRJobs.class.getName() + "-tmpDir").makeQualified(localFs);
+  private static Path TEST_ROOT_DIR = PathUtils.getTestPath(TestMRJobsWithHistoryService.class).makeQualified(localFs);
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
   @Before

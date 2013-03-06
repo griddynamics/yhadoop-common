@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.JarFinder;
 
 /**
@@ -68,8 +69,7 @@ public class MiniMRClientClusterBuilder {
 
     FileSystem fs = FileSystem.get(conf);
 
-    Path testRootDir = new Path("target", caller.getName() + "-tmpDir")
-        .makeQualified(fs);
+    Path testRootDir = PathUtils.getTestPath(caller).makeQualified(fs);
     Path appJar = new Path(testRootDir, "MRAppJar.jar");
 
     // Copy MRAppJar and make it private.

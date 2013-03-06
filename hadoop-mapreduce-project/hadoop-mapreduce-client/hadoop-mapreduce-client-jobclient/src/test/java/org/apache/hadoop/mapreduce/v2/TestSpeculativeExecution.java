@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -97,7 +98,7 @@ public class TestSpeculativeExecution {
   }
 
   private static Path TEST_ROOT_DIR =
-          new Path("target",TestSpeculativeExecution.class.getName() + "-tmpDir")
+          PathUtils.getTestPath(TestSpeculativeExecution.class)
                .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
   private static Path TEST_OUT_DIR = new Path(TEST_ROOT_DIR, "test.out.dir");

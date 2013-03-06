@@ -43,6 +43,7 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -64,7 +65,7 @@ public class TestMRAppWithCombiner {
     }
   }
 
-  private final static Path TEST_ROOT_DIR = new Path("target", TestMRAppWithCombiner.class + "-tmpDir").makeQualified(localFs);
+  private final static Path TEST_ROOT_DIR = PathUtils.getTestPath(TestMRAppWithCombiner.class).makeQualified(localFs);
   private final static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
   @BeforeClass

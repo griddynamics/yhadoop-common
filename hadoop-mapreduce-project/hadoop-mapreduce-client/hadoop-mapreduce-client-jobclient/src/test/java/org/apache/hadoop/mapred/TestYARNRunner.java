@@ -57,6 +57,7 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequ
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -108,8 +109,7 @@ public class TestYARNRunner extends TestCase {
   private ClientCache clientCache;
   private ApplicationId appId;
   private JobID jobId;
-  private File testWorkDir =
-      new File("target", TestYARNRunner.class.getName());
+  private File testWorkDir = PathUtils.getTestDir(getClass());
   private ApplicationSubmissionContext submissionContext;
   private  ClientServiceDelegate clientDelegate;
   private static final String failString = "Rejected job";
