@@ -86,7 +86,7 @@ import com.google.common.collect.Sets;
  */
 public class TestFsck {
   static final String auditLogFile = System.getProperty("test.build.dir",
-      "build/test") + "/audit.log";
+      "build/test") + "/TestFsck-audit.log";
   
   // Pattern for: 
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null

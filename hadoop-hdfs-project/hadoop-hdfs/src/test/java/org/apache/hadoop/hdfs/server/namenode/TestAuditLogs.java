@@ -58,7 +58,7 @@ import org.junit.Test;
  */
 public class TestAuditLogs {
   static final String auditLogFile = System.getProperty("test.build.dir",
-      "build/test") + "/audit.log";
+      "build/test") + "/TestAuditLogs-audit.log";
   
   // Pattern for: 
   // allowed=(true|false) ugi=name ip=/address cmd={cmd} src={path} dst=null perm=null
