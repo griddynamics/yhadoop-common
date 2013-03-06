@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -121,16 +120,20 @@ public class TestWebAppProxyServlet {
       URL wrongUrl = new URL("http://localhost:" + port + "/proxy/app");
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
+
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true"); 
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
           proxyConn.getResponseCode());
 
       URL url = new URL("http://localhost:" + port + "/proxy/application_00_0");
       proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true"); 
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
       answer = 1;
       proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true"); 
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
           proxyConn.getResponseCode());
@@ -152,7 +155,7 @@ public class TestWebAppProxyServlet {
   public void testWebAppProxyServer() throws Exception {
 
     Configuration configuration = new Configuration();
-    configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9090");
+    configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9098");
     configuration.setInt("hadoop.http.max.threads", 5);
     WebAppProxyServer proxy = new WebAppProxyServer();
     proxy.init(configuration);
@@ -160,7 +163,7 @@ public class TestWebAppProxyServlet {
 
     // wrong url
     try {
-      URL wrongUrl = new URL("http://localhost:9090/proxy/app");
+      URL wrongUrl = new URL("http://localhost:9098/proxy/app");
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
       proxyConn.connect();
@@ -170,6 +173,43 @@ public class TestWebAppProxyServlet {
       proxy.stop();
     }
 
+  }
+
+  @Test
+  public void testWebAppProxyServerMain() throws Exception {
+
+    Thread thread = new Thread(new Runnable() {
+
+      @Override
+      public void run() {
+        WebAppProxyServer.main(new String[0]);
+
+      }
+    });
+
+    int counter = 10;
+
+    thread.start();
+    URL wrongUrl = new URL("http://localhost:9099/proxy/app");
+    HttpURLConnection proxyConn = null;
+    while (counter > 0) {
+      counter--;
+      try {
+        proxyConn = (HttpURLConnection) wrongUrl.openConnection();
+        proxyConn.connect();
+        proxyConn.getResponseCode();
+        counter = 0;
+      } catch (Throwable e) {
+
+      }
+      Thread.sleep(500);
+    }
+    if (proxyConn != null) {
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
+          proxyConn.getResponseCode());
+    }
+
+    thread.interrupt();
   }
 
   private String readInputStream(InputStream input) throws Exception {
