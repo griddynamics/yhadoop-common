@@ -316,6 +316,12 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4304. Make FSEditLogOp.MAX_OP_SIZE configurable. (Colin Patrick
     McCabe via atm)
 
+    HDFS-4518. Finer grained metrics for HDFS capacity.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4519. Support overriding jsvc binary and log file locations
+    when launching secure datanode. (Chris Nauroth via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -335,6 +341,13 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4235. When outputting XML, OfflineEditsViewer can't handle some edits
     containing non-ASCII strings. (Colin Patrick McCabe via atm)
+
+    HDFS-4541. Set hadoop.log.dir and hadoop.id.str when starting secure
+    datanode to write the logs to right dir by default. (Arpit Gupta via
+    suresh)
+
+    HDFS-4540. Namenode http server should use the web authentication 
+    keytab for spnego principal. (Arpit Gupta via suresh)
 
 Release 2.0.3-alpha - 2013-02-06
 
@@ -2307,12 +2320,20 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
+
   BUG FIXES
 
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
     HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
     (kihwal)
+
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
+
+    HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
+    kihwal)
 
 Release 0.23.6 - UNRELEASED
 

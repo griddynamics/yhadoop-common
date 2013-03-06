@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,26 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-option java_package = "org.apache.hadoop.ipc.protobuf";
-option java_outer_classname = "TestRpcServiceProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-package hadoop.common;
 
-import "test.proto";
+package org.apache.hadoop.util;
 
+import java.io.File;
 
-/**
- * A protobuf service for use in tests
- */
-service TestProtobufRpcProto {
-  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
-  rpc echo(EchoRequestProto) returns (EchoResponseProto);
-  rpc error(EmptyRequestProto) returns (EmptyResponseProto);
-  rpc error2(EmptyRequestProto) returns (EmptyResponseProto);
-}
+import junit.framework.Assert;
 
-service TestProtobufRpc2Proto {
-  rpc ping2(EmptyRequestProto) returns (EmptyResponseProto);
-  rpc echo2(EchoRequestProto) returns (EchoResponseProto);
+import org.apache.log4j.Logger;
+import org.junit.Test;
+
+public class TestClassUtil {
+  @Test(timeout=1000)
+  public void testFindContainingJar() {
+    String containingJar = ClassUtil.findContainingJar(Logger.class);
+    Assert.assertNotNull("Containing jar not found for Logger", 
+        containingJar);
+    File jarFile = new File(containingJar);
+    Assert.assertTrue("Containing jar does not exist on file system", 
+        jarFile.exists());
+    Assert.assertTrue("Incorrect jar file" + containingJar,  
+        jarFile.getName().matches("log4j.+[.]jar"));
+  }
 }

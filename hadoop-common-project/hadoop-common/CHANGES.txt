@@ -153,6 +153,9 @@ Trunk (Unreleased)
     HADOOP-9112. test-patch should -1 for @Tests without a timeout 
     (Surenkumar Nihalani via bobby)
 
+    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    avoid an extra copy (Sanjay Radia)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
@@ -358,6 +361,10 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9279. Document the need to build hadoop-maven-plugins for
     eclipse and separate project builds. (Tsuyoshi Ozawa via suresh)
 
+    HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
+
+    HADOOP-9343. Allow additional exceptions through the RPC layer. (sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -389,6 +396,20 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-7487. DF should throw a more reasonable exception when mount cannot
     be determined. (Andrew Wang via atm)
+
+    HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
+    (Arpit Gupta via suresh)
+
+    HADOOP-9342. Remove jline from distribution. (thw via tucu)
+
+    HADOOP-9230. TestUniformSizeInputFormat fails intermittently. 
+    (kkambatl via tucu)
+
+    HADOOP-9349. Confusing output when running hadoop version from one hadoop 
+    installation when HADOOP_HOME points to another. (sandyr via tucu)
+
+    HADOOP-9337. org.apache.hadoop.fs.DF.getMount() does not work on Mac OS.
+    (Ivan A. Veselovsky via atm)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -1365,7 +1386,12 @@ Release 0.23.7 - UNRELEASED
     permissions (Ivan A. Veselovsky via bobby)
 
     HADOOP-9067. provide test for LocalFileSystem.reportChecksumFailure
-    (Ivan A. Veselovsky via bobby) 
+    (Ivan A. Veselovsky via bobby)
+
+    HADOOP-9336. Allow UGI of current connection to be queried. (Daryn Sharp
+    via kihwal)
+
+    HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
 
   OPTIMIZATIONS
 
@@ -1376,6 +1402,9 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9303. command manual dfsadmin missing entry for restoreFailedStorage
     option (Andy Isaacson via tgraves)
+
+    HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via 
+    kihwal)
 
 Release 0.23.6 - UNRELEASED
 
