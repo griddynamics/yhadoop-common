@@ -43,6 +43,9 @@ import java.util.Properties;
  * The DFS filesystem is formated before the testcase starts and after it ends.
  */
 public abstract class ClusterMapReduceTestCase extends TestCase {
+
+  private final String dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
+
   private MiniDFSCluster dfsCluster = null;
   private MiniMRClientCluster mrCluster = null;
 
@@ -79,12 +82,12 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
           conf.set((String) entry.getKey(), (String) entry.getValue());
         }
       }
-      Builder builder = new MiniDFSCluster.Builder(conf).numDataNodes(2)
-          .format(reformatDFS).racks(null);
-      if (!reformatDFS && dfsCluster != null) {
-          builder.dfsBaseDir(dfsCluster.getDfsBaseDir());
-      }
-      dfsCluster = builder.build();
+      dfsCluster = new MiniDFSCluster.Builder(conf)
+          .dfsBaseDir(dfsBaseDir)
+          .numDataNodes(2)
+          .format(reformatDFS)
+          .racks(null)
+          .build();
 
       mrCluster = new MiniMRClientClusterBuilder(getClass(), conf)
           .noOfNMs(2)
@@ -111,6 +114,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
     }
     if (dfsCluster != null) {
       dfsCluster.shutdown();
+      dfsCluster = null;
     }
   }
 

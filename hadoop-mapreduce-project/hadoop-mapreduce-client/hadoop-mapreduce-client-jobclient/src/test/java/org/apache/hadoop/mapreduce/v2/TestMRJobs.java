@@ -68,6 +68,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.AfterClass;
@@ -101,7 +102,7 @@ public class TestMRJobs {
       throw new RuntimeException("problem getting local fs", io);
     }
 
-    testRootDir = new Path("target", testClass + "-tmpDir").makeQualified(localFs);
+    testRootDir = PathUtils.getTestPath(testClass).makeQualified(localFs);
     if (!localFs.exists(testRootDir)) {
       localFs.mkdirs(testRootDir);
     }
