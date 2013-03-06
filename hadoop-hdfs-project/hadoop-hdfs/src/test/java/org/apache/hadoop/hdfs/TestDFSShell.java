@@ -109,7 +109,7 @@ public class TestDFSShell {
     System.out.println(Thread.currentThread().getStackTrace()[2] + " " + s);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testZeroSizeFile() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -152,7 +152,7 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testRecrusiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -178,7 +178,7 @@ public class TestDFSShell {
     }
   }
     
-  @Test
+  @Test (timeout = 30000)
   public void testDu() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -228,7 +228,8 @@ public class TestDFSShell {
     }
                                   
   }
-  @Test
+
+  @Test (timeout = 30000)
   public void testPut() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -327,7 +328,7 @@ public class TestDFSShell {
 
 
   /** check command error outputs and exit statuses. */
-  @Test
+  @Test (timeout = 30000)
   public void testErrOutPut() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -477,7 +478,7 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testURIPaths() throws Exception {
     Configuration srcConf = new HdfsConfiguration();
     Configuration dstConf = new HdfsConfiguration();
@@ -566,7 +567,7 @@ public class TestDFSShell {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testText() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -682,7 +683,7 @@ public class TestDFSShell {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCopyToLocal() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -780,7 +781,7 @@ public class TestDFSShell {
     return path;
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -947,7 +948,7 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testFilePermissions() throws IOException {
     Configuration conf = new HdfsConfiguration();
     
@@ -1013,7 +1014,7 @@ public class TestDFSShell {
   /**
    * Tests various options of DFSShell.
    */
-  @Test
+  @Test (timeout = 120000)
   public void testDFSShell() throws IOException {
     Configuration conf = new HdfsConfiguration();
     /* This tests some properties of ChecksumFileSystem as well.
@@ -1393,7 +1394,7 @@ public class TestDFSShell {
     String run(int exitcode, String... options) throws IOException;
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testRemoteException() throws Exception {
     UserGroupInformation tmpUGI = 
       UserGroupInformation.createUserForTesting("tmpname", new String[] {"mygroup"});
@@ -1437,73 +1438,96 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testGet() throws IOException {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
+
+    final String fname = "testGet.txt";
+    Path root = new Path("/test/get");
+    final Path remotef = new Path(root, fname);
     final Configuration conf = new HdfsConfiguration();
-    // Race can happen here: block scanner is reading the file when test tries
-    // to corrupt the test file, which will fail the test on Windows platform.
-    // Disable block scanner to avoid this race.
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
-    
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+    TestGetRunner runner = new TestGetRunner() {
+    	private int count = 0;
+    	private FsShell shell = new FsShell(conf);
+
+    	public String run(int exitcode, String... options) throws IOException {
+    	  String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
+    	  String[] args = new String[options.length + 3];
+    	  args[0] = "-get"; 
+    	  args[args.length - 2] = remotef.toString();
+    	  args[args.length - 1] = dst;
+    	  for(int i = 0; i < options.length; i++) {
+    	    args[i + 1] = options[i];
+    	  }
+    	  show("args=" + Arrays.asList(args));
+
+    	  try {
+    	    assertEquals(exitcode, shell.run(args));
+    	  } catch (Exception e) {
+    	    assertTrue(StringUtils.stringifyException(e), false); 
+    	  }
+    	  return exitcode == 0? DFSTestUtil.readFile(new File(dst)): null; 
+    	}
+    };
+
+    File localf = createLocalFile(new File(TEST_ROOT_DIR, fname));
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem dfs = null;
 
     try {
-      final String fname = "testGet.txt";
-      final File localf = createLocalFile(new File(TEST_ROOT_DIR, fname));
-      final String localfcontent = DFSTestUtil.readFile(localf);
-      final Path root = mkdir(dfs, new Path("/test/get"));
-      final Path remotef = new Path(root, fname);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(true)
+        .build();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+      mkdir(dfs, root);
       dfs.copyFromLocalFile(false, false, new Path(localf.getPath()), remotef);
-
-      final FsShell shell = new FsShell();
-      shell.setConf(conf);
-      TestGetRunner runner = new TestGetRunner() {
-        private int count = 0;
-
-        @Override
-        public String run(int exitcode, String... options) throws IOException {
-          String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
-          String[] args = new String[options.length + 3];
-          args[0] = "-get"; 
-          args[args.length - 2] = remotef.toString();
-          args[args.length - 1] = dst;
-          for(int i = 0; i < options.length; i++) {
-            args[i + 1] = options[i];
-          }
-          show("args=" + Arrays.asList(args));
-          
-          try {
-            assertEquals(exitcode, shell.run(args));
-          } catch (Exception e) {
-            assertTrue(StringUtils.stringifyException(e), false); 
-          }
-          return exitcode == 0? DFSTestUtil.readFile(new File(dst)): null; 
-        }
-      };
+      String localfcontent = DFSTestUtil.readFile(localf);
 
       assertEquals(localfcontent, runner.run(0));
       assertEquals(localfcontent, runner.run(0, "-ignoreCrc"));
 
-      //find and modify the block files
+      // find block files to modify later
       List<File> files = getBlockFiles(cluster);
+
+      // Shut down cluster and then corrupt the block files by overwriting a
+      // portion with junk data.  We must shut down the cluster so that threads
+      // in the data node do not hold locks on the block files while we try to
+      // write into them.  Particularly on Windows, the data node's use of the
+      // FileChannel.transferTo method can cause block files to be memory mapped
+      // in read-only mode during the transfer to a client, and this causes a
+      // locking conflict.  The call to shutdown the cluster blocks until all
+      // DataXceiver threads exit, preventing this problem.
+      dfs.close();
+      cluster.shutdown();
+
       show("files=" + files);
       corrupt(files);
+
+      // Start the cluster again, but do not reformat, so prior files remain.
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(false)
+        .build();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       assertEquals(null, runner.run(1));
       String corruptedcontent = runner.run(0, "-ignoreCrc");
       assertEquals(localfcontent.substring(1), corruptedcontent.substring(1));
       assertEquals(localfcontent.charAt(0)+1, corruptedcontent.charAt(0));
-
-      localf.delete();
     } finally {
-      try {dfs.close();} catch (Exception e) {}
-      cluster.shutdown();
+      if (null != dfs) {
+        try {
+          dfs.close();
+        } catch (Exception e) {
+        }
+      }
+      if (null != cluster) {
+        cluster.shutdown();
+      }
+      localf.delete();
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testLsr() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -1561,7 +1585,7 @@ public class TestDFSShell {
    * and return -1 exit code.
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testInvalidShell() throws Exception {
     Configuration conf = new Configuration(); // default FS (non-DFS)
     DFSAdmin admin = new DFSAdmin();
@@ -1571,7 +1595,7 @@ public class TestDFSShell {
   }
 
   // force Copy Option is -f
-  @Test
+  @Test (timeout = 30000)
   public void testCopyCommandsWithForceOption() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -1698,7 +1722,7 @@ public class TestDFSShell {
    * Test that the server trash configuration is respected when
    * the client configuration is not set.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testServerConfigRespected() throws Exception {
     deleteFileUsingTrash(true, false);
   }
@@ -1707,7 +1731,7 @@ public class TestDFSShell {
    * Test that server trash configuration is respected even when the
    * client configuration is set.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testServerConfigRespectedWithClient() throws Exception {
     deleteFileUsingTrash(true, true);
   }
@@ -1716,7 +1740,7 @@ public class TestDFSShell {
    * Test that the client trash configuration is respected when
    * the server configuration is not set.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testClientConfigRespected() throws Exception {
     deleteFileUsingTrash(false, true);
   }
@@ -1724,7 +1748,7 @@ public class TestDFSShell {
   /**
    * Test that trash is disabled by default.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testNoTrashConfig() throws Exception {
     deleteFileUsingTrash(false, false);
   }

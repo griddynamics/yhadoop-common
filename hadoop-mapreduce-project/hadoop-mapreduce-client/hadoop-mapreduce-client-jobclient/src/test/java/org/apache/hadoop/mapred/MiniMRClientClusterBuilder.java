@@ -89,9 +89,9 @@ public class MiniMRClientClusterBuilder {
     job.addFileToClassPath(remoteCallerJar);
 
     MiniMRYarnCluster miniMRYarnCluster = new MiniMRYarnCluster(caller
-        .getName(), noOfNMs);
+        .getSimpleName(), noOfNMs);
     job.getConfiguration().set("minimrclientcluster.caller.name",
-        caller.getName());
+        caller.getSimpleName());
     job.getConfiguration().setInt("minimrclientcluster.nodemanagers.number",
         noOfNMs);
     miniMRYarnCluster.init(job.getConfiguration());
