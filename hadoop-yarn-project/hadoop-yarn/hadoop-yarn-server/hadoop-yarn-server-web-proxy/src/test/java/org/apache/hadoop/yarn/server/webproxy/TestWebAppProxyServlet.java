@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,6 +35,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.YarnException;
@@ -50,6 +53,7 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 public class TestWebAppProxyServlet {
@@ -58,6 +62,7 @@ public class TestWebAppProxyServlet {
   private static int port = 0;
   private static int originalPort = 0;
   private static Context context;
+  private int answer = 0;
 
   private static final Log LOG = LogFactory
       .getLog(TestWebAppProxyServlet.class);
@@ -102,7 +107,7 @@ public class TestWebAppProxyServlet {
   }
 
   @Test
-  public void test1() throws Exception {
+  public void testWebAppProxyServlet() throws Exception {
 
     Configuration configuration = new Configuration();
     configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9090");
@@ -111,11 +116,70 @@ public class TestWebAppProxyServlet {
     proxy.init(configuration);
     proxy.start();
 
-    URL url = new URL("http://localhost:" + port + "/proxy/application_00_0");
-    HttpURLConnection proxyConn = (HttpURLConnection) url.openConnection();
-    proxyConn.connect();
-    assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+    // wrong url
+    try {
+      URL wrongUrl = new URL("http://localhost:" + port + "/proxy/app");
+      HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
+          .openConnection();
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
+          proxyConn.getResponseCode());
 
+      URL url = new URL("http://localhost:" + port + "/proxy/application_00_0");
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      answer = 1;
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          proxyConn.getResponseCode());
+      answer = 2;
+
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      String s = readInputStream(proxyConn.getInputStream());
+      assertTrue(s
+          .contains("to continue to an Application Master web interface owned by"));
+      assertTrue(s.contains("WARNING: The following page may not be safe!"));
+    } finally {
+      proxy.stop();
+    }
+  }
+
+  @Test
+  public void testWebAppProxyServer() throws Exception {
+
+    Configuration configuration = new Configuration();
+    configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9090");
+    configuration.setInt("hadoop.http.max.threads", 5);
+    WebAppProxyServer proxy = new WebAppProxyServer();
+    proxy.init(configuration);
+    proxy.start();
+
+    // wrong url
+    try {
+      URL wrongUrl = new URL("http://localhost:9090/proxy/app");
+      HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
+          .openConnection();
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
+          proxyConn.getResponseCode());
+    } finally {
+      proxy.stop();
+    }
+
+  }
+
+  private String readInputStream(InputStream input) throws Exception {
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    byte[] buffer = new byte[512];
+    int read;
+    while ((read = input.read(buffer)) >= 0) {
+      data.write(buffer, 0, read);
+    }
+    return new String(data.toByteArray(), "UTF-8");
   }
 
   @AfterClass
@@ -166,6 +230,7 @@ public class TestWebAppProxyServlet {
         Boolean isSecurityEnabled = (Boolean) getVolumeOfField("isSecurityEnabled");
         proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE,
             isSecurityEnabled);
+        proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE, Boolean.TRUE);
         String proxyHost = (String) getVolumeOfField("proxyHost");
         proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
         proxyServer.start();
@@ -194,11 +259,26 @@ public class TestWebAppProxyServlet {
 
     public ApplicationReport getApplicationReport(ApplicationId appId)
         throws YarnRemoteException {
+      if (answer == 0) {
+        return getDefaultApplicationReport(appId);
+      } else if (answer == 1) {
+        return null;
+      } else if (answer == 2) {
+        ApplicationReport result = getDefaultApplicationReport(appId);
+        result.setUser("user");
+        return result;
+      }
+      return null;
+    }
+
+    private ApplicationReport getDefaultApplicationReport(ApplicationId appId) {
       ApplicationReport result = new ApplicationReportPBImpl();
       result.setApplicationId(appId);
       result.setOriginalTrackingUrl(host + ":" + originalPort + "/foo/bar");
       result.setYarnApplicationState(YarnApplicationState.RUNNING);
+      result.setUser(CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER);
       return result;
+
     }
   }
 }
