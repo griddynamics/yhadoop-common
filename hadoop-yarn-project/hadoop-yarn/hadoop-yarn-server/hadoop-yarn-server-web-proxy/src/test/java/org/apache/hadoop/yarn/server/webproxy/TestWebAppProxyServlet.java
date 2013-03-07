@@ -121,19 +121,19 @@ public class TestWebAppProxyServlet {
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
 
-      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true"); 
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
           proxyConn.getResponseCode());
 
       URL url = new URL("http://localhost:" + port + "/proxy/application_00_0");
       proxyConn = (HttpURLConnection) url.openConnection();
-      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true"); 
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
       answer = 1;
       proxyConn = (HttpURLConnection) url.openConnection();
-      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true"); 
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
           proxyConn.getResponseCode());
@@ -177,39 +177,35 @@ public class TestWebAppProxyServlet {
 
   @Test
   public void testWebAppProxyServerMain() throws Exception {
+    WebAppProxyServer server = null;
+    try {
+      server = WebAppProxyServer.startServer(new String[0]);
 
-    Thread thread = new Thread(new Runnable() {
+      int counter = 10;
 
-      @Override
-      public void run() {
-        WebAppProxyServer.main(new String[0]);
+      URL wrongUrl = new URL("http://localhost:9099/proxy/app");
+      HttpURLConnection proxyConn = null;
+      while (counter > 0) {
+        counter--;
+        try {
+          proxyConn = (HttpURLConnection) wrongUrl.openConnection();
+          proxyConn.connect();
+          proxyConn.getResponseCode();
+          counter = 0;
+        } catch (Throwable e) {
 
+        }
+        Thread.sleep(500);
       }
-    });
-
-    int counter = 10;
-
-    thread.start();
-    URL wrongUrl = new URL("http://localhost:9099/proxy/app");
-    HttpURLConnection proxyConn = null;
-    while (counter > 0) {
-      counter--;
-      try {
-        proxyConn = (HttpURLConnection) wrongUrl.openConnection();
-        proxyConn.connect();
-        proxyConn.getResponseCode();
-        counter = 0;
-      } catch (Throwable e) {
-
+      if (proxyConn != null) {
+        assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
+            proxyConn.getResponseCode());
       }
-      Thread.sleep(500);
+    } finally {
+      if (server != null) {
+        server.stop();
+      }
     }
-    if (proxyConn != null) {
-      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
-          proxyConn.getResponseCode());
-    }
-
-    thread.interrupt();
   }
 
   private String readInputStream(InputStream input) throws Exception {
