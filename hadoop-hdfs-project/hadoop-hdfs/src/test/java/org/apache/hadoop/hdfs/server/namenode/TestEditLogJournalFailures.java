@@ -196,7 +196,7 @@ public class TestEditLogJournalFailures {
     String[] nameDirs = new String[4];
     for (int i = 0; i < nameDirs.length; i++) {
       File nameDir = new File(System.getProperty("test.build.data"),
-          "name-dir" + i);
+          getClass().getSimpleName() + File.separator + "name-dir" + i);
       nameDir.mkdirs();
       nameDirs[i] = nameDir.getAbsolutePath();
     }

@@ -38,6 +38,9 @@ import org.junit.Test;
  */
 public class TestUrlStreamHandler {
 
+  private static File TEST_ROOT_DIR = new File(System.getProperty("test.build.data","build/test/data") 
+      + File.separator + TestUrlStreamHandler.class.getSimpleName());
+    
   /**
    * Test opening and reading from an InputStream through a hdfs:// URL.
    * <p>
@@ -111,13 +114,12 @@ public class TestUrlStreamHandler {
     Configuration conf = new HdfsConfiguration();
 
     // Locate the test temporary directory.
-    File tmpDir = new File(conf.get("hadoop.tmp.dir"));
-    if (!tmpDir.exists()) {
-      if (!tmpDir.mkdirs())
-        throw new IOException("Cannot create temporary directory: " + tmpDir);
+    if (!TEST_ROOT_DIR.exists()) {
+      if (!TEST_ROOT_DIR.mkdirs())
+        throw new IOException("Cannot create temporary directory: " + TEST_ROOT_DIR);
     }
 
-    File tmpFile = new File(tmpDir, "thefile");
+    File tmpFile = new File(TEST_ROOT_DIR, "thefile");
     URI uri = tmpFile.toURI();
 
     FileSystem fs = FileSystem.get(uri, conf);

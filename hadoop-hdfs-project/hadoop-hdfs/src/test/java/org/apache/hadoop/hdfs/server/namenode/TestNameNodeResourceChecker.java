@@ -141,8 +141,8 @@ public class TestNameNodeResourceChecker {
   @Test
   public void testChecking2NameDirsOnOneVolume() throws IOException {
     Configuration conf = new Configuration();
-    File nameDir1 = new File(System.getProperty("test.build.data"), "name-dir1");
-    File nameDir2 = new File(System.getProperty("test.build.data"), "name-dir2");
+    File nameDir1 = new File(System.getProperty("test.build.data"), getClass().getSimpleName() + File.separator + "name-dir1");
+    File nameDir2 = new File(System.getProperty("test.build.data"), getClass().getSimpleName() + File.separator + "name-dir2");
     nameDir1.mkdirs();
     nameDir2.mkdirs();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
@@ -162,7 +162,7 @@ public class TestNameNodeResourceChecker {
   @Test
   public void testCheckingExtraVolumes() throws IOException {
     Configuration conf = new Configuration();
-    File nameDir = new File(System.getProperty("test.build.data"), "name-dir");
+    File nameDir = new File(System.getProperty("test.build.data"), getClass().getSimpleName() + File.separator + "name-dir");
     nameDir.mkdirs();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY, nameDir.getAbsolutePath());
@@ -182,8 +182,8 @@ public class TestNameNodeResourceChecker {
   @Test
   public void testLowResourceVolumePolicy() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
-    File nameDir1 = new File(System.getProperty("test.build.data"), "name-dir1");
-    File nameDir2 = new File(System.getProperty("test.build.data"), "name-dir2");
+    File nameDir1 = new File(System.getProperty("test.build.data"), getClass().getSimpleName() + File.separator + "name-dir1");
+    File nameDir2 = new File(System.getProperty("test.build.data"), getClass().getSimpleName() + File.separator + "name-dir2");
     nameDir1.mkdirs();
     nameDir2.mkdirs();
     
