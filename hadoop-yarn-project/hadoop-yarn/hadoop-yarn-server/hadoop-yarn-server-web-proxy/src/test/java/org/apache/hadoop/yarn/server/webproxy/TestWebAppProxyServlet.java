@@ -117,7 +117,7 @@ public class TestWebAppProxyServlet {
    * 
    * @throws Exception
    */
-  @Test (timeout=10000)
+  @Test (timeout=10000000)
   public void testWebAppProxyServlet() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -162,6 +162,13 @@ public class TestWebAppProxyServlet {
       assertTrue(s
           .contains("to continue to an Application Master web interface owned by"));
       assertTrue(s.contains("WARNING: The following page may not be safe!"));
+      //case if task killed
+      answer = 3;
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+     
     } finally {
       proxy.stop();
     }
@@ -331,14 +338,19 @@ public class TestWebAppProxyServlet {
 
     public ApplicationReport getApplicationReport(ApplicationId appId)
         throws YarnRemoteException {
+      ApplicationReport result=null;
       if (answer == 0) {
         return getDefaultApplicationReport(appId);
       } else if (answer == 1) {
         return null;
       } else if (answer == 2) {
-        ApplicationReport result = getDefaultApplicationReport(appId);
+         result = getDefaultApplicationReport(appId);
         result.setUser("user");
         return result;
+      }else if (answer == 3) {
+        result=  getDefaultApplicationReport(appId);
+        result.setYarnApplicationState(YarnApplicationState.KILLED);
+          return result;
       }
       return null;
     }
