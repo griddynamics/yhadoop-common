@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 
 /**
@@ -62,7 +61,9 @@ public class TestSlive {
 
   /** gets the test write location according to the coding guidelines */
   private File getWriteLoc() {
-    return PathUtils.getTestDir(getClass());
+    File testDir = PathUtils.getTestDir(getClass());
+    testDir.mkdirs();
+    return testDir;
   }
 
   /** gets where the MR job places its data + output + results */
