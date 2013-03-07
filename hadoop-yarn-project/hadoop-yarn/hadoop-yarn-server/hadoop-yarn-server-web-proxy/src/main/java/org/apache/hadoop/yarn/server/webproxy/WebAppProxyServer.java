@@ -50,6 +50,21 @@ public class WebAppProxyServer extends CompositeService {
     super(WebAppProxyServer.class.getName());
   }
 
+
+  /**
+   * for test this method
+   */
+  protected static WebAppProxyServer startServer(String[] args) throws Exception {
+    WebAppProxyServer proxy = new WebAppProxyServer();
+    ShutdownHookManager.get().addShutdownHook(
+        new CompositeServiceShutdownHook(proxy), SHUTDOWN_HOOK_PRIORITY);
+    YarnConfiguration configuration = new YarnConfiguration();
+    proxy.init(configuration);
+    proxy.start();
+    return proxy;
+  }
+
+  
   @Override
   public synchronized void init(Configuration conf) {
     Configuration config = new YarnConfiguration(conf);
@@ -71,19 +86,6 @@ public class WebAppProxyServer extends CompositeService {
   protected void doSecureLogin(Configuration conf) throws IOException {
     SecurityUtil.login(conf, YarnConfiguration.PROXY_KEYTAB,
         YarnConfiguration.PROXY_PRINCIPAL);
-  }
-
-  /**
-   * for test this method
-   */
-  protected static WebAppProxyServer startServer(String[] args) throws Exception {
-    WebAppProxyServer proxy = new WebAppProxyServer();
-    ShutdownHookManager.get().addShutdownHook(
-        new CompositeServiceShutdownHook(proxy), SHUTDOWN_HOOK_PRIORITY);
-    YarnConfiguration configuration = new YarnConfiguration();
-    proxy.init(configuration);
-    proxy.start();
-    return proxy;
   }
   
   
