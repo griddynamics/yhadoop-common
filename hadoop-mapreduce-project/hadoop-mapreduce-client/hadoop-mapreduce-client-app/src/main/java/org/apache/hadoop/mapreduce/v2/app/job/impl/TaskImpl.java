@@ -532,6 +532,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   //select the nextAttemptNumber with best progress
   // always called inside the Read Lock
   private TaskAttempt selectBestAttempt() {
+    if (successfulAttempt != null) {
+      return attempts.get(successfulAttempt);
+    }
+
     float progress = 0f;
     TaskAttempt result = null;
     for (TaskAttempt at : attempts.values()) {
@@ -843,6 +847,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.inProgressAttempts.remove(taskAttemptId);
       if (task.successfulAttempt == null) {
         task.addAndScheduleAttempt();
+      }
+      if ((task.commitAttempt != null) && (task.commitAttempt == taskAttemptId)) {
+    	task.commitAttempt = null;
       }
     }
   }

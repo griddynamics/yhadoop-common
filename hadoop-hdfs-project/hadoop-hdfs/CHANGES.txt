@@ -9,6 +9,8 @@ Release 0.23.7 - UNRELEASED
                via hairong)
 
   IMPROVEMENTS
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -20,6 +22,8 @@ Release 0.23.7 - UNRELEASED
     HDFS-2476. More CPU efficient data structure for under-replicated,
                over-replicated, and invalidated blocks.
                (Tomasz Nykiel via todd)
+
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
 
   BUG FIXES
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
@@ -36,6 +40,30 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
     pre-federation version of HDFS. (atm)
+
+    HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
+    (kihwal)
+
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
+
+    HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
+    kihwal)
+
+    HDFS-4553. Webhdfs will NPE on some unexpected response codes (Daryn Sharp
+    via kihwal)
+
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
+
+    HDFS-3266. DFSTestUtil#waitCorruptReplicas doesn't sleep between checks.
+    (Madhukara Phatak via atm)
+
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
+
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
 
 Release 0.23.6 - 2013-02-06
 
