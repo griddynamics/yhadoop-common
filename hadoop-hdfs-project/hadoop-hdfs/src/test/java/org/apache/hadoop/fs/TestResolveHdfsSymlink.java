@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -42,6 +43,8 @@ import org.junit.Test;
  * underlying file system as Hdfs.
  */
 public class TestResolveHdfsSymlink {
+  private static File TEST_ROOT_DIR = new File(System.getProperty("test.build.data","build/test/data") 
+      + File.separator + TestResolveHdfsSymlink.class.getSimpleName());
   private static MiniDFSCluster cluster = null;
 
   @BeforeClass
@@ -74,7 +77,7 @@ public class TestResolveHdfsSymlink {
         .getUri());
 
     Path alphaLocalPath = new Path(fcLocal.getDefaultFileSystem().getUri()
-        .toString(), "/tmp/alpha");
+        .toString(), new File(TEST_ROOT_DIR, "alpha").getAbsolutePath());
     DFSTestUtil.createFile(FileSystem.getLocal(conf), alphaLocalPath, 16,
         (short) 1, 2);
 
