@@ -453,7 +453,15 @@ Trunk (Unreleased)
     HADOOP-9373. Merge CHANGES.branch-trunk-win.txt to CHANGES.txt.
     (suresh)
 
-Release 2.0.4-beta - UNRELEASED
+    HADOOP-9372. Fix bad timeout annotations on tests.
+    (Arpit Agarwal via suresh)
+
+    HADOOP-9376. TestProxyUserFromEnv fails on a Windows domain joined machine.
+    (Ivan Mitic via suresh)
+
+    HADOOP-9365. TestHAZKUtil fails on Windows. (Ivan Mitic via suresh)
+
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -523,6 +531,18 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9337. org.apache.hadoop.fs.DF.getMount() does not work on Mac OS.
     (Ivan A. Veselovsky via atm)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -1506,7 +1526,15 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
 
+    HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
+    jeagles)
+
+    HADOOP-9374. Add tokens from -tokenCacheFile into UGI (daryn)
+
   OPTIMIZATIONS
+
+    HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
+    jlowe)
 
   BUG FIXES
 
