@@ -371,6 +371,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4544. Error in deleting blocks should not do check disk, for
     all types of errors. (Arpit Agarwal via suresh)
 
+    HDFS-4565. Use DFSUtil.getSpnegoKeytabKey() to get the spnego keytab key
+    in secondary namenode and namenode http server. (Arpit Gupta via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2370,6 +2373,8 @@ Release 0.23.7 - UNRELEASED
     kihwal)
 
     HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
+    HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
 
 Release 0.23.6 - UNRELEASED
 
