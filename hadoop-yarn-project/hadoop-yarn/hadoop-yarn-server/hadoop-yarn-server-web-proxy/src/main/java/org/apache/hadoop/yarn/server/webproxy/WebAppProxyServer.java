@@ -86,7 +86,6 @@ public class WebAppProxyServer extends CompositeService {
     StringUtils.startupShutdownMessage(WebAppProxyServer.class, args, LOG);
     try {
       startServer(args);
-
     } catch (Throwable t) {
       LOG.fatal("Error starting Proxy server", t);
       System.exit(-1);
@@ -106,7 +105,6 @@ public class WebAppProxyServer extends CompositeService {
     YarnConfiguration conf = new YarnConfiguration();
     proxy.init(conf);
     proxy.start();
-    proxy.join();
     return proxy;
   }
 

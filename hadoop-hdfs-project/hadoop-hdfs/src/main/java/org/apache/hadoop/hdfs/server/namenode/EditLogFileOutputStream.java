@@ -140,10 +140,8 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
         fc.close();
         fc = null;
       }
-      if (fp != null) {
-        fp.close();
-        fp = null;
-      }
+      fp.close();
+      fp = null;
     } finally {
       IOUtils.cleanup(FSNamesystem.LOG, fc, fp);
       doubleBuf = null;
@@ -176,7 +174,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    * accumulates new log records while readyBuffer will be flushed and synced.
    */
   @Override
-  public void flushAndSync() throws IOException {
+  public void flushAndSync(boolean durable) throws IOException {
     if (fp == null) {
       throw new IOException("Trying to use aborted output stream");
     }
@@ -186,7 +184,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     }
     preallocate(); // preallocate file if necessay
     doubleBuf.flushTo(fp);
-    if (!shouldSkipFsyncForTests) {
+    if (durable && !shouldSkipFsyncForTests) {
       fc.force(false); // metadata updates not needed
     }
   }

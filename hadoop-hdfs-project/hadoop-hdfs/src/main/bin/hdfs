@@ -15,6 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Environment Variables
+#
+#   JSVC_HOME  home directory of jsvc binary.  Required for starting secure
+#              datanode.
+#
+#   JSVC_OUTFILE  path to jsvc output file.  Defaults to
+#                 $HADOOP_LOG_DIR/jsvc.out.
+#
+#   JSVC_ERRFILE  path to jsvc error file.  Defaults to $HADOOP_LOG_DIR/jsvc.err.
+
 bin=`which $0`
 bin=`dirname ${bin}`
 bin=`cd "$bin"; pwd`
@@ -30,6 +40,7 @@ function print_usage(){
   echo "  namenode -format     format the DFS filesystem"
   echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  namenode             run the DFS namenode"
+  echo "  journalnode          run the DFS journalnode"
   echo "  zkfc                 run the ZK Failover Controller daemon"
   echo "  datanode             run a DFS datanode"
   echo "  dfsadmin             run a DFS admin client"
@@ -55,6 +66,14 @@ fi
 COMMAND=$1
 shift
 
+case $COMMAND in
+  # usage flags
+  --help|-help|-h)
+    print_usage
+    exit
+    ;;
+esac
+
 # Determine if we're starting a secure datanode, and if so, redefine appropriate variables
 if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
   if [ -n "$JSVC_HOME" ]; then
@@ -64,9 +83,11 @@ if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_
   
     if [ -n "$HADOOP_SECURE_DN_LOG_DIR" ]; then
       HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
+      HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
     fi
    
     HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
+    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
     starting_secure_dn="true"
   else
     echo "It looks like you're trying to start a secure DN, but \$JSVC_HOME"\
@@ -90,6 +111,9 @@ elif [ "$COMMAND" = "datanode" ] ; then
   else
     HADOOP_OPTS="$HADOOP_OPTS -server $HADOOP_DATANODE_OPTS"
   fi
+elif [ "$COMMAND" = "journalnode" ] ; then
+  CLASS='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOURNALNODE_OPTS"
 elif [ "$COMMAND" = "dfs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
@@ -144,9 +168,18 @@ if [ "$starting_secure_dn" = "true" ]; then
       "and set JSVC_HOME to the directory containing the jsvc binary."
     exit
   fi
+
+  if [[ ! $JSVC_OUTFILE ]]; then
+    JSVC_OUTFILE="$HADOOP_LOG_DIR/jsvc.out"
+  fi
+
+  if [[ ! $JSVC_ERRFILE ]]; then
+    JSVC_ERRFILE="$HADOOP_LOG_DIR/jsvc.err"
+  fi
+
   exec "$JSVC" \
-           -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-           -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+           -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
+           -errfile "$JSVC_ERRFILE" \
            -pidfile "$HADOOP_SECURE_DN_PID" \
            -nodetach \
            -user "$HADOOP_SECURE_DN_USER" \
