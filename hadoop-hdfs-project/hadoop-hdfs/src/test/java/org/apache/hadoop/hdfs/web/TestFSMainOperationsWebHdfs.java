@@ -50,12 +50,6 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   private static MiniDFSCluster cluster = null;
   private static Path defaultWorkingDirectory;
   private static FileSystem fileSystem;
-
-  public TestFSMainOperationsWebHdfs() {
-      // Initialize the test root directory to a DFS like path
-      // since we are testing based on the MiniDFSCluster.
-      super("/tmp/TestFSMainOperationsWebHdfs");
-  }
   
   @Override
   protected FileSystem createFileSystem() throws Exception {

@@ -42,16 +42,9 @@ public final class FileContextTestHelper {
    * Create a context with test root relative to the <wd>/build/test/data
    */
   public FileContextTestHelper() {
-      this(System.getProperty("test.build.data", "target/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10));
+      testRootDir = System.getProperty("test.build.data", "target/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10);
   }
   
-  /**
-   * Create a context with the given test root dir
-   */
-  public FileContextTestHelper(String testRootDir) {
-      this.testRootDir = testRootDir;
-  }
-
   public static int getDefaultBlockSize() {
     return DEFAULT_BLOCK_SIZE;
   }
