@@ -73,6 +73,20 @@ public class WebAppProxyServer extends CompositeService {
         YarnConfiguration.PROXY_PRINCIPAL);
   }
 
+  /**
+   * for test this method
+   */
+  protected static WebAppProxyServer startServer(String[] args) throws Exception {
+    WebAppProxyServer proxy = new WebAppProxyServer();
+    ShutdownHookManager.get().addShutdownHook(
+        new CompositeServiceShutdownHook(proxy), SHUTDOWN_HOOK_PRIORITY);
+    YarnConfiguration configuration = new YarnConfiguration();
+    proxy.init(configuration);
+    proxy.start();
+    return proxy;
+  }
+  
+  
   public static void main(String[] args) {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(WebAppProxyServer.class, args, LOG);
@@ -84,18 +98,6 @@ public class WebAppProxyServer extends CompositeService {
     }
   }
 
-  /**
-   * for test this method
-   */
-  protected static WebAppProxyServer startServer(String[] args) throws Exception {
-    WebAppProxyServer proxy = new WebAppProxyServer();
-    ShutdownHookManager.get().addShutdownHook(
-        new CompositeServiceShutdownHook(proxy), SHUTDOWN_HOOK_PRIORITY);
-    YarnConfiguration configuration = new YarnConfiguration();
-    proxy.init(configuration);
-    proxy.start();
-    proxy.join();
-    return proxy;
-  }
+
 
 }
