@@ -348,7 +348,7 @@ public class TestWebAppProxyServlet {
       result.setApplicationId(appId);
       result.setOriginalTrackingUrl(host + ":" + originalPort + "/foo/bar");
       result.setYarnApplicationState(YarnApplicationState.RUNNING);
-      result.setUser(CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER);
+      result.setUser("dr.web");
       return result;
 
     }
