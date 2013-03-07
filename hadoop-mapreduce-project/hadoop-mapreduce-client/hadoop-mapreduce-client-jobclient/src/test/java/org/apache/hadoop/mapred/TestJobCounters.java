@@ -604,7 +604,7 @@ public class TestJobCounters {
     FileSystem fileSystem = FileSystem.getLocal(conf);
     
     // define test root directories
-    Path testRootDir = PathUtils.getTestPath(getClass());
+    Path testRootDir = new Path(PathUtils.getTestPath(getClass()), "testHeapUsageCounter");
     // cleanup the test root directory
     fileSystem.delete(testRootDir, true);
     // set the current working directory

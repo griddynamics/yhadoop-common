@@ -37,7 +37,7 @@ import org.junit.Test;
 
 
 public class TestNetworkedJob {
-  private static Path testDir = PathUtils.getTestPath(TestNetworkedJob.class);
+  private static Path testDir = new Path(PathUtils.getTestPath(TestNetworkedJob.class), "data");
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
