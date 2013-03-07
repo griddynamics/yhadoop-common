@@ -453,6 +453,9 @@ Trunk (Unreleased)
     HADOOP-9373. Merge CHANGES.branch-trunk-win.txt to CHANGES.txt.
     (suresh)
 
+    HADOOP-9372. Fix bad timeout annotations on tests.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1506,7 +1509,13 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
 
+    HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
+    jeagles)
+
   OPTIMIZATIONS
+
+    HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
+    jlowe)
 
   BUG FIXES
 
