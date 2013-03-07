@@ -208,7 +208,7 @@ public class TestWebAppProxyServlet {
 
           try {
             mainServer = WebAppProxyServer.startServer(new String[0]);
-          } catch (Exception e) {
+          } catch (Exception ignored) {
 
           }
 

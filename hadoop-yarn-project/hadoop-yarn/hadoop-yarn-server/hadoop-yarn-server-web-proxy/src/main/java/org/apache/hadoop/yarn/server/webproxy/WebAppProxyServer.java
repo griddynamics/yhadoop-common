@@ -93,9 +93,6 @@ public class WebAppProxyServer extends CompositeService {
 
   /**
    * for test this method
-   * @param args
-   * @return
-   * @throws Exception
    */
   protected static WebAppProxyServer startServer(String[] args) throws Exception {
     Thread
