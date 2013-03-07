@@ -55,21 +55,28 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+/**
+ * Test the WebAppProxyServlet and WebAppProxy. For back end use simple web
+ * server.
+ */
 public class TestWebAppProxyServlet {
   private static Server server;
   private static String host = "localhost";
   private static int port = 0;
   private static int originalPort = 0;
-  private static Context context;
   private int answer = 0;
+  private WebAppProxyServer mainServer;
 
   private static final Log LOG = LogFactory
       .getLog(TestWebAppProxyServlet.class);
 
+  /**
+   * Simple http server. Server should send answer with status 200
+   */
   @BeforeClass
   public static void start() throws Exception {
     server = new Server(0);
-    context = new Context();
+    Context context = new Context();
     context.setContextPath("/foo");
     server.setHandler(context);
     context.addServlet(new ServletHolder(TestServlet.class), "/bar/");
@@ -105,7 +112,12 @@ public class TestWebAppProxyServlet {
     }
   }
 
-  @Test
+  /**
+   * Test proxy servlet. Test answer in different situations.
+   * 
+   * @throws Exception
+   */
+  @Test (timeout=10000)
   public void testWebAppProxyServlet() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -117,28 +129,32 @@ public class TestWebAppProxyServlet {
 
     // wrong url
     try {
+      // wrong url. Set wrong app ID
       URL wrongUrl = new URL("http://localhost:" + port + "/proxy/app");
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
 
-      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
+      // proxyConn.setRequestProperty("Cookie",
+      // "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
           proxyConn.getResponseCode());
-
+      // set true Application ID in url
       URL url = new URL("http://localhost:" + port + "/proxy/application_00_0");
       proxyConn = (HttpURLConnection) url.openConnection();
+      // set cookie
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      // cannot found application
       answer = 1;
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
           proxyConn.getResponseCode());
+      // wrong user
       answer = 2;
-
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
@@ -151,7 +167,11 @@ public class TestWebAppProxyServlet {
     }
   }
 
-  @Test
+  /**
+   * Test simple start/ stop WebAppProxyServer. server should listen the 9098
+   * port
+   */
+  @Test (timeout=1000)
   public void testWebAppProxyServer() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -175,12 +195,26 @@ public class TestWebAppProxyServlet {
 
   }
 
-  @Test
-  public void testWebAppProxyServerMain() throws Exception {
-    WebAppProxyServer server = null;
+  /**
+   * Test main method of WebAppProxyServer
+   */
+  @Test (timeout=10000)
+  public void testWebAppProxyServerMainMethod() throws Exception {
     try {
-      server = WebAppProxyServer.startServer(new String[0]);
+      Thread thread = new Thread(new Runnable() {
 
+        @Override
+        public void run() {
+
+          try {
+            mainServer = WebAppProxyServer.startServer(new String[0]);
+          } catch (Exception e) {
+
+          }
+
+        }
+      });
+      thread.start();
       int counter = 10;
 
       URL wrongUrl = new URL("http://localhost:9099/proxy/app");
@@ -188,22 +222,24 @@ public class TestWebAppProxyServlet {
       while (counter > 0) {
         counter--;
         try {
+
           proxyConn = (HttpURLConnection) wrongUrl.openConnection();
           proxyConn.connect();
           proxyConn.getResponseCode();
+          // server started ok
           counter = 0;
         } catch (Throwable e) {
 
         }
         Thread.sleep(500);
       }
-      if (proxyConn != null) {
-        assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
-            proxyConn.getResponseCode());
-      }
+      assertNotNull(proxyConn);
+      // wrong application Id
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
+          proxyConn.getResponseCode());
     } finally {
-      if (server != null) {
-        server.stop();
+      if (mainServer != null) {
+        mainServer.stop();
       }
     }
   }
