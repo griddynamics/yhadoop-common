@@ -1505,7 +1505,10 @@ public class TestDFSShell {
       corrupt(files);
 
       // Start the cluster again, but do not reformat, so prior files remain.
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(false)
+      cluster = new MiniDFSCluster.Builder(conf)
+        .dfsBaseDir(cluster.getDfsBaseDir())
+        .numDataNodes(2)
+        .format(false)
         .build();
       dfs = (DistributedFileSystem)cluster.getFileSystem();
 
