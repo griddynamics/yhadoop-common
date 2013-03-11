@@ -317,5 +317,12 @@
        <Class name="org.apache.hadoop.fs.DelegationTokenRenewer$BlockingPeekDelayQueue" />
        <Method name="blockingPeek" />
        <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+     </Match>  
+
+     <!-- Inconsistent synchronization flagged by findbugs is not valid. -->
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Client$Connection" />
+       <Field name="in" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
  </FindBugsFilter>
