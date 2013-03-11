@@ -114,19 +114,19 @@ public class TestDelegationTokenRenewer {
     }
   } 
   
-  @Test
   /*
    * Checks token addition, renewals, and implicit removal when the 
    * corresponding file system gets no longer used.
    */
+  @Test(timeout=50000)
   public void testImplicitTokenEvaporation() throws Exception {
     testImpl(true);
   }
 
-  @Test
   /*
    * Checks token addition, renewals, and explicit removal.
    */
+  @Test(timeout=50000)
   public void testExplicitTokenRemoval() throws Exception {
     testImpl(false);
   }

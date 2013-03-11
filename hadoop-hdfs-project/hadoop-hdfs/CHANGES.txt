@@ -12,6 +12,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
     configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
 
+    HDFS-3817. Avoid printing SafeModeException stack trace.
+    (Brandon Li via suresh)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)
@@ -68,6 +71,12 @@ Release 0.23.7 - UNRELEASED
     HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
 
     HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
+
+    HDFS-4567. Webhdfs does not need a token for token operations. (daryn via
+    kihwal)
+
+    HDFS-4577. Webhdfs operations should declare if authentication is required
+    (daryn via kihwal)
 
 Release 0.23.6 - 2013-02-06
 
