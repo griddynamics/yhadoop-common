@@ -94,7 +94,6 @@ public class WebAppProxyServer extends CompositeService {
     YarnConfiguration configuration = new YarnConfiguration();
     proxy.init(configuration);
     proxy.start();
-    proxy.join();
     return proxy;
   }
 
