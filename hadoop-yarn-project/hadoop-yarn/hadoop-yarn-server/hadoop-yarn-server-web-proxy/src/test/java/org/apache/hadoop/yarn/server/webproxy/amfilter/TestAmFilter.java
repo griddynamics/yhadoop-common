@@ -157,7 +157,7 @@ public class TestAmFilter {
     Mockito.when(request.getRequestURI()).thenReturn("/redirect");
     testFilter.doFilter(request, response, chain);
     // address "redirect" is not in host list 
-    assertEquals("http://bogus/reditect", response.getRedirect());
+    assertEquals("http://bogus/redirect", response.getRedirect());
     // "127.0.0.1" contains in host list.   Without cookie 
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     testFilter.doFilter(request, response, chain);
@@ -351,17 +351,14 @@ public class TestAmFilter {
 
     }
 
-    @Override
     public int getStatus() {
       return 0;
     }
 
-    @Override
     public String getHeader(String name) {
       return null;
     }
 
-    @Override
     public Collection<String> getHeaders(String name) {
       return null;
     }
