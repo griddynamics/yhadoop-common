@@ -42,6 +42,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * <code>GenericOptionsParser</code> is a utility to parse command line
@@ -268,7 +270,12 @@ public class GenericOptionsParser {
     }
 
     if (line.hasOption("jt")) {
-      conf.set("mapred.job.tracker", line.getOptionValue("jt"), 
+      String optionValue = line.getOptionValue("jt");
+      if (optionValue.equalsIgnoreCase("local")) {
+        conf.set("mapreduce.framework.name", optionValue);
+      }
+
+      conf.set("yarn.resourcemanager.address", optionValue, 
           "from -jt command line option");
     }
     if (line.hasOption("conf")) {
@@ -316,15 +323,17 @@ public class GenericOptionsParser {
       String fileName = line.getOptionValue("tokenCacheFile");
       // check if the local file exists
       FileSystem localFs = FileSystem.getLocal(conf);
-      Path p = new Path(fileName);
+      Path p = localFs.makeQualified(new Path(fileName));
       if (!localFs.exists(p)) {
           throw new FileNotFoundException("File "+fileName+" does not exist.");
       }
       if(LOG.isDebugEnabled()) {
         LOG.debug("setting conf tokensFile: " + fileName);
       }
-      conf.set("mapreduce.job.credentials.json", localFs.makeQualified(p)
-          .toString(), "from -tokenCacheFile command line option");
+      UserGroupInformation.getCurrentUser().addCredentials(
+          Credentials.readTokenStorageFile(p, conf));
+      conf.set("mapreduce.job.credentials.json", p.toString(),
+               "from -tokenCacheFile command line option");
 
     }
   }

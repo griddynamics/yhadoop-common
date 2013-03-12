@@ -296,6 +296,14 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.max.connections</name>
+  <value>0</value>
+  <description>Max allowed connections for the shuffle.  Set to 0 (zero)
+               to indicate no limit on the number of connections.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to
@@ -858,6 +866,17 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.admin.user.env</name>
+  <value></value>
+  <description> Environment variables for the MR App Master 
+  processes for admin purposes. These values are set first and can be 
+  overridden by the user env (yarn.app.mapreduce.am.env) Example :
+  1) A=foo  This will set the env variable A to foo
+  2) B=$B:c This is inherit app master's B env variable.  
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.command-opts</name>
   <value>-Xmx1024m</value>
   <description>Java opts for the MR App Master processes.  
@@ -959,6 +978,23 @@
   of CLASSPATH entries</description>
    <name>mapreduce.application.classpath</name>
    <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+</property>
+
+<property>
+   <name>mapreduce.job.classloader</name>
+   <value>false</value>
+  <description>Whether to use a separate (isolated) classloader for
+    user classes in the task JVM.</description>
+</property>
+
+<property>
+   <name>mapreduce.job.classloader.system.classes</name>
+   <value>java.,javax.,org.apache.commons.logging.,org.apache.log4j.,org.apache.hadoop.</value>
+  <description>A comma-separated list of classes that should be loaded from the
+    system classpath, not the user-supplied JARs, when mapreduce.job.classloader
+    is enabled. Names ending in '.' (period) are treated as package names,
+    and names starting with a '-' are treated as negative matches.
+  </description>
 </property>
 
 <!-- jobhistory properties -->
