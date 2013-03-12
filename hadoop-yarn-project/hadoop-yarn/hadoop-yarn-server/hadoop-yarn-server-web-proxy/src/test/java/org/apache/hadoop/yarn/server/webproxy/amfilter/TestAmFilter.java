@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,12 +30,13 @@ import javax.servlet.http.HttpServletResponse;
 import static junit.framework.Assert.*;
 
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
+import org.glassfish.grizzly.servlet.HttpServletResponseImpl;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 /**
- * Test AmIpFilter. Requests to a no declared hosts should has way through proxy.
- * Another requests can be filtered with (without) user name. 
+ * Test AmIpFilter. Requests to a no declared hosts should has way through
+ * proxy. Another requests can be filtered with (without) user name.
  * 
  */
 public class TestAmFilter {
@@ -117,9 +115,10 @@ public class TestAmFilter {
     assertTrue(invoked.get());
     filter.destroy();
   }
-/**
- * Test AmIpFilter
- */
+
+  /**
+   * Test AmIpFilter
+   */
   @Test(timeout = 1000)
   public void testFilter() throws Exception {
     Map<String, String> params = new HashMap<String, String>();
@@ -142,28 +141,30 @@ public class TestAmFilter {
     AmIpFilter testFilter = new AmIpFilter();
     testFilter.init(config);
 
-    MyHttpServletResponse response = new MyHttpServletResponse();
+    HttpServletResponseForTest response = new HttpServletResponseForTest();
     // Test request should implements HttpServletRequest
+
+    ServletRequest failRequest = Mockito.mock(ServletRequest.class);
     try {
-      testFilter.doFilter(new MyServletRequest(), response, chain);
+      testFilter.doFilter(failRequest, response, chain);
       fail();
     } catch (ServletException e) {
       assertEquals("This filter only works for HTTP/HTTPS", e.getMessage());
     }
-    
+
     // request with HttpServletRequest
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getRemoteAddr()).thenReturn("redirect");
     Mockito.when(request.getRequestURI()).thenReturn("/redirect");
     testFilter.doFilter(request, response, chain);
-    // address "redirect" is not in host list 
+    // address "redirect" is not in host list
     assertEquals("http://bogus/redirect", response.getRedirect());
-    // "127.0.0.1" contains in host list.   Without cookie 
+    // "127.0.0.1" contains in host list. Without cookie
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     testFilter.doFilter(request, response, chain);
 
     assertTrue(doFilterRequest
-            .contains("javax.servlet.http.HttpServletRequest"));
+        .contains("javax.servlet.http.HttpServletRequest"));
     // cookie added
     Cookie[] cookies = new Cookie[1];
     cookies[0] = new Cookie(WebAppProxyServlet.PROXY_USER_COOKIE_NAME, "user");
@@ -173,7 +174,7 @@ public class TestAmFilter {
 
     assertEquals(
         "org.apache.hadoop.yarn.server.webproxy.amfilter.AmIpServletRequestWrapper",
-            doFilterRequest);
+        doFilterRequest);
     // request contains principal from cookie
     assertEquals("user", servletWrapper.getUserPrincipal().getName());
     assertEquals("user", servletWrapper.getRemoteUser());
@@ -181,126 +182,8 @@ public class TestAmFilter {
 
   }
 
-  private class MyHttpServletResponse implements HttpServletResponse {
+  private class HttpServletResponseForTest extends HttpServletResponseImpl {
     String redirectLocation = "";
-    public Collection<String> getHeaderNames(){
-      return null;
-    }
-
-    @Override
-    public String getCharacterEncoding() {
-      return null;
-    }
-
-    @Override
-    public String getContentType() {
-      return null;
-    }
-
-    @Override
-    public ServletOutputStream getOutputStream() throws IOException {
-      return null;
-    }
-
-    @Override
-    public PrintWriter getWriter() throws IOException {
-      return null;
-    }
-
-    @Override
-    public void setCharacterEncoding(String charset) {
-
-    }
-
-    @Override
-    public void setContentLength(int len) {
-
-    }
-
-    @Override
-    public void setContentType(String type) {
-
-    }
-
-    @Override
-    public void setBufferSize(int size) {
-
-    }
-
-    @Override
-    public int getBufferSize() {
-      return 0;
-    }
-
-    @Override
-    public void flushBuffer() throws IOException {
-
-    }
-
-    @Override
-    public void resetBuffer() {
-
-    }
-
-    @Override
-    public boolean isCommitted() {
-      return false;
-    }
-
-    @Override
-    public void reset() {
-
-    }
-
-    @Override
-    public void setLocale(Locale loc) {
-
-    }
-
-    @Override
-    public Locale getLocale() {
-      return null;
-    }
-
-    @Override
-    public void addCookie(Cookie cookie) {
-
-    }
-
-    @Override
-    public boolean containsHeader(String name) {
-      return false;
-    }
-
-    @Override
-    public String encodeURL(String url) {
-      return null;
-    }
-
-    @Override
-    public String encodeRedirectURL(String url) {
-      return url;
-    }
-
-    @Override
-    public String encodeUrl(String url) {
-      return null;
-    }
-
-    @Override
-    public String encodeRedirectUrl(String url) {
-      return null;
-    }
-
-    @Override
-    public void sendError(int sc, String msg) throws IOException {
-
-    }
-
-    @Override
-    public void sendError(int sc) throws IOException {
-
-    }
 
     public String getRedirect() {
       return redirectLocation;
@@ -312,237 +195,10 @@ public class TestAmFilter {
     }
 
     @Override
-    public void setDateHeader(String name, long date) {
-
-    }
-
-    @Override
-    public void addDateHeader(String name, long date) {
-
-    }
-
-    @Override
-    public void setHeader(String name, String value) {
-
-    }
-
-    @Override
-    public void addHeader(String name, String value) {
-
-    }
-
-    @Override
-    public void setIntHeader(String name, int value) {
-
-    }
-
-    @Override
-    public void addIntHeader(String name, int value) {
-
-    }
-
-    @Override
-    public void setStatus(int sc) {
-
-    }
-
-    @Override
-    public void setStatus(int sc, String sm) {
-
-    }
-
-    public int getStatus() {
-      return 0;
-    }
-
-    public String getHeader(String name) {
-      return null;
-    }
-
-    public Collection<String> getHeaders(String name) {
-      return null;
+    public String encodeRedirectURL(String url) {
+      return url;
     }
 
   }
 
-  private class MyServletRequest implements ServletRequest {
-
-    public AsyncContext startAsync(ServletRequest servletRequest,
-                                   ServletResponse servletResponse)
-            throws IllegalStateException{
-      return null;
-    }
-    public AsyncContext startAsync()
-            throws IllegalStateException{
-      return null;
-    }
-    public boolean isAsyncStarted(){
-      return false;
-    }
-
-    public boolean isAsyncSupported(){
-      return false;
-    }
-
-    public AsyncContext getAsyncContext(){
-      return null;
-    }
-    public DispatcherType getDispatcherType(){
-      return null;
-    }
-
-    public ServletContext getServletContext(){
-      return null;
-    }
-    @Override
-    public Object getAttribute(String name) {
-      return null;
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public Enumeration getAttributeNames() {
-      return null;
-    }
-
-    @Override
-    public String getCharacterEncoding() {
-      return null;
-    }
-
-    @Override
-    public void setCharacterEncoding(String env)
-        throws UnsupportedEncodingException {
-
-    }
-
-    @Override
-    public int getContentLength() {
-      return 0;
-    }
-
-    @Override
-    public String getContentType() {
-      return null;
-    }
-
-    @Override
-    public ServletInputStream getInputStream() throws IOException {
-      return null;
-    }
-
-    @Override
-    public String getParameter(String name) {
-      return null;
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public Enumeration getParameterNames() {
-      return null;
-    }
-
-    @Override
-    public String[] getParameterValues(String name) {
-      return null;
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public Map getParameterMap() {
-      return null;
-    }
-
-    @Override
-    public String getProtocol() {
-      return null;
-    }
-
-    @Override
-    public String getScheme() {
-      return null;
-    }
-
-    @Override
-    public String getServerName() {
-      return null;
-    }
-
-    @Override
-    public int getServerPort() {
-      return 0;
-    }
-
-    @Override
-    public BufferedReader getReader() throws IOException {
-      return null;
-    }
-
-    @Override
-    public String getRemoteAddr() {
-      return null;
-    }
-
-    @Override
-    public String getRemoteHost() {
-      return null;
-    }
-
-    @Override
-    public void setAttribute(String name, Object o) {
-
-    }
-
-    @Override
-    public void removeAttribute(String name) {
-
-    }
-
-    @Override
-    public Locale getLocale() {
-      return null;
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Override
-    public Enumeration getLocales() {
-      return null;
-    }
-
-    @Override
-    public boolean isSecure() {
-      return false;
-    }
-
-    @Override
-    public RequestDispatcher getRequestDispatcher(String path) {
-      return null;
-    }
-
-    @Override
-    public String getRealPath(String path) {
-      return null;
-    }
-
-    @Override
-    public int getRemotePort() {
-      return 0;
-    }
-
-    @Override
-    public String getLocalName() {
-      return null;
-    }
-
-    @Override
-    public String getLocalAddr() {
-      return null;
-    }
-
-    @Override
-    public int getLocalPort() {
-      return 0;
-    }
-
-  }
 }
