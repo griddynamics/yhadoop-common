@@ -610,7 +610,7 @@ public class TestFileUtil {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testUnTar() throws IOException {
     setupDirs();
     
@@ -648,7 +648,7 @@ public class TestFileUtil {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testReplaceFile() throws IOException {
     setupDirs();
     final File srcFile = new File(tmp, "src");
@@ -690,7 +690,7 @@ public class TestFileUtil {
     assertTrue(obstacle.exists());
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testCreateLocalTempFile() throws IOException {
     setupDirs();
     final File baseFile = new File(tmp, "base");
@@ -706,7 +706,7 @@ public class TestFileUtil {
     assertTrue(!tmp1.exists() && !tmp2.exists());
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testUnZip() throws IOException {
     // make sa simple zip
     setupDirs();
@@ -745,7 +745,7 @@ public class TestFileUtil {
     }
   }  
   
-  @Test
+  @Test (timeout = 30000)
   /*
    * Test method copy(FileSystem srcFS, Path src, File dst, boolean deleteSource, Configuration conf)
    */
@@ -795,7 +795,7 @@ public class TestFileUtil {
     assertTrue(!partitioned.exists()); // should be deleted
   }  
 
-  @Test
+  @Test (timeout = 30000)
   public void testStat2Paths1() {
     assertNull(FileUtil.stat2Paths(null));
     
@@ -815,7 +815,7 @@ public class TestFileUtil {
     assertEquals(paths[1], path2);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testStat2Paths2()  {
     Path defaultPath = new Path("file://default");
     Path[] paths = FileUtil.stat2Paths(null, defaultPath);
