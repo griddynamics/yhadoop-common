@@ -23,10 +23,30 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8075. Lower native-hadoop library log from info to debug.
     (Hızır Sefa İrken via eli)
 
+    HADOOP-9336. Allow UGI of current connection to be queried. (Daryn Sharp
+    via kihwal)
+
+    HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
+
+    HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
+    jeagles)
+
+    HADOOP-9374. Add tokens from -tokenCacheFile into UGI (daryn)
+
+    HADOOP-7358. Improve log levels when exceptions caught in RPC handler
+    (Todd Lipcon via shv)
+
+    HADOOP-8711. IPC Server supports adding exceptions for which
+    the message is printed and the stack trace is not printed to avoid chatter.
+    (Brandon Li via Suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.
     (Jonathan Allen via suresh)
+
+    HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
+    jlowe)
 
   BUG FIXES
 
@@ -78,6 +98,18 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
     suresh)
+
+    HADOOP-9302. HDFS docs not linked from top level (Andy Isaacson via 
+    tgraves)
+
+    HADOOP-9303. command manual dfsadmin missing entry for restoreFailedStorage
+    option (Andy Isaacson via tgraves)
+
+    HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
+    the map. (Karthik Kambatla via tgraves)
+
+    HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via
+    kihwal)
 
 Release 0.23.6 - 2013-02-06
 

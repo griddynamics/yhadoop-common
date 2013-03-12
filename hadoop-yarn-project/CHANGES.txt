@@ -13,6 +13,25 @@ Release 0.23.7 - UNRELEASED
 
     YARN-286. Add a YARN ApplicationClassLoader. (tomwhite)
 
+    YARN-249. Capacity Scheduler web page should show list of active users per 
+    queue like it used to (in 1.x) (Ravi Prakash via tgraves)
+
+    YARN-236. RM should point tracking URL to RM web page when app fails to
+    start (Jason Lowe via jeagles)
+
+    YARN-269. Resource Manager not logging the health_check_script result when
+    taking it out (Jason Lowe via kihwal)
+
+    YARN-227. Application expiration difficult to debug for end-users
+    (Jason Lowe via jeagles)
+
+    YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
+    the per-application page are translated to html line breaks. (Omkar Vinit
+    Joshi via vinodkv)
+
+    YARN-443. allow OS scheduling priority of NM to be different than the 
+    containers it launches (tgraves)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
@@ -40,6 +59,21 @@ Release 0.23.7 - UNRELEASED
 
     YARN-362. Unexpected extra results when using webUI table search (Ravi
     Prakash via jlowe)
+
+    YARN-400. RM can return null application resource usage report leading to 
+    NPE in client (Jason Lowe via tgraves)
+
+    YARN-426. Failure to download a public resource prevents further downloads
+    (Jason Lowe via bobby)
+
+    YARN-376. Fixes a bug which would prevent the NM knowing about completed
+    containers and applications. (Jason Lowe via sseth)
+
+    YARN-448. Remove unnecessary hflush from log aggregation (Kihwal Lee via
+    bobby)
+
+    YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
+    in Node Manager (Robert Parker via jlowe)
 
 Release 0.23.6 - 2013-02-06
 
