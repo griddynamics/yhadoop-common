@@ -691,7 +691,7 @@ public class TestUserGroupInformation {
    * System property that should be set in order to use correct Kerberos config file:
    *  "java.security.krb5.conf" - the path to the Kerberos config file.
    */
-  @Test
+  @Test(timeout=30000)
   public void testMain() throws Exception {
     // 0. test #main(String[]) with no args:
     UserGroupInformation.main(new String[0]);
