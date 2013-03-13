@@ -124,6 +124,12 @@ public class MiniDFSCluster {
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
 
+  /**
+   * By default, the same directory is used for each cluster DFS data. 
+   * Alternatively, a dedicated directory may be used for every instance, 
+   * and in this mode deprecated static methods like 
+   * {@link MiniDFSCluster#getStorageDir(int, int)} may not be used.
+   */
   private static boolean MINI_CLUSTER_DEDICATED_DIRS = Boolean.valueOf(System.getProperty("miniClusterDedicatedDirs", "false")); 
   
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
