@@ -60,8 +60,8 @@
 
   <repositories>
     <repository>
-      <id>patched-surefire-and-plexus-utils</id>
-      <name>patched-surefire-repo</name>
+      <id>aws-nexus</id>
+      <name>aws-nexus-repo</name>
       <releases>
         <enabled>true</enabled>
         <updatePolicy>always</updatePolicy>
@@ -72,15 +72,15 @@
         <updatePolicy>always</updatePolicy>
         <checksumPolicy>fail</checksumPolicy>
       </snapshots>
-      <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+      <url>http://ec2-54-235-46-104.compute-1.amazonaws.com:8081/nexus/content/repositories/releases</url>
       <layout>default</layout>
     </repository>
   </repositories>
 
   <pluginRepositories>
     <pluginRepository>
-      <id>patched-surefire-and-plexus-utils</id>
-      <name>foo-plugins</name>
+      <id>aws-nexus</id>
+      <name>aws-nexus-plugins-repo</name>
       <releases>
         <enabled>true</enabled>
         <updatePolicy>always</updatePolicy>
@@ -91,7 +91,7 @@
         <updatePolicy>always</updatePolicy>
         <checksumPolicy>fail</checksumPolicy>
       </snapshots>
-      <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+      <url>http://ec2-54-235-46-104.compute-1.amazonaws.com:8081/nexus/content/repositories/releases</url>
       <layout>default</layout>
     </pluginRepository>
   </pluginRepositories>
