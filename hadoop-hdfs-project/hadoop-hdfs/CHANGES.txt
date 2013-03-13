@@ -306,6 +306,12 @@ Trunk (Unreleased)
     HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
     exists.  (Brandon Li via suresh)
 
+    HDFS-4391. TestDataTransferKeepalive fails when tests are executed in a
+    certain order. (Andrew Wang via atm)
+
+    HDFS-4586. TestDataDirs.testGetDataDirsFromURIs fails with all directories
+    in dfs.datanode.data.dir are invalid. (Ivan Mitic via atm)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
@@ -321,6 +327,10 @@ Trunk (Unreleased)
     Windows. (Arpit Agarwal, Chuan Liu via suresh)
 
     HDFS-4573. Fix TestINodeFile on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4572. Fix TestJournal failures on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4287. HTTPFS tests fail on Windows. (Chris Nauroth via suresh)
 
 Release 2.0.5-beta - UNRELEASED
 
@@ -380,6 +390,17 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4571. WebHDFS should not set the service hostname on the server side. 
     (tucu)
+
+    HDFS-4013. TestHftpURLTimeouts throws NPE. (Chao Shi via suresh)
+
+    HDFS-4592. Default values for access time precision are out of sync between
+    hdfs-default.xml and the code. (atm)
+
+    HDFS-4522. LightWeightGSet expects incrementing a volatile to be atomic.
+    (Colin Patrick McCabe via atm)
+
+    HDFS-4484. libwebhdfs compilation broken with gcc 4.6.2. (Colin Patrick
+    McCabe via atm)
 
 Release 2.0.4-alpha - UNRELEASED
 
