@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -35,7 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.junit.Test;
 
 public class TestHftpURLTimeouts {
-  
+
   @Test
   public void testHftpSocketTimeout() throws Exception {
     Configuration conf = new Configuration();
@@ -110,6 +111,7 @@ public class TestHftpURLTimeouts {
           conns.add(fs.openConnection("/", "", 1));
         } catch (SocketTimeoutException ste) {
           String message = ste.getMessage();
+          assertNotNull(message);
           // https will get a read timeout due to SSL negotiation, but
           // a normal http will not, so need to ignore SSL read timeouts
           // until a connect timeout occurs
