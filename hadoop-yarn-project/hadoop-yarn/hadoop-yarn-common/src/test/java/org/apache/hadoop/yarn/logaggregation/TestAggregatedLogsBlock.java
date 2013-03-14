@@ -52,9 +52,16 @@ import org.junit.Test;
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
+/**
+ * Test AggregatedLogsBlock. AggregatedLogsBlock should check user, aggregate a
+ * logs into one file and show this logs or errors into html code
+ * 
+ */
 public class TestAggregatedLogsBlock {
-
-  @Test
+  /**
+   * Bad user. User 'owner' is trying to read logs without access
+   */
+  @Test(timeout = 10000)
   public void testAccessDenied() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
@@ -62,15 +69,15 @@ public class TestAggregatedLogsBlock {
 
     writeLogs("target/logs/logs/application_0_0001/container_0_0001_01_000001");
 
-    writelog(configuration, "owner");
+    writeLog(configuration, "owner");
 
-    AggregatedLogsBlockForTest taggregatedBlock = getAggregatedLogsBlockForTest(
+    AggregatedLogsBlockForTest aggregatedBlock = getAggregatedLogsBlockForTest(
         configuration, "owner", "container_0_0001_01_000001");
     ByteArrayOutputStream data = new ByteArrayOutputStream();
-    PrintWriter pwriter = new PrintWriter(data);
+    PrintWriter printWriter = new PrintWriter(data);
     HtmlBlock html = new HtmlBlockForTest();
-    HtmlBlock.Block block = new BlockForTest(html, pwriter, 10, false);
-    taggregatedBlock.render(block);
+    HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
+    aggregatedBlock.render(block);
 
     block.getWriter().flush();
     String out = data.toString();
@@ -79,7 +86,12 @@ public class TestAggregatedLogsBlock {
 
   }
 
-  @Test
+  /**
+   * try to read bad logs
+   * 
+   * @throws Exception
+   */
+  @Test(timeout = 10000)
   public void testBadLogs() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
@@ -87,15 +99,15 @@ public class TestAggregatedLogsBlock {
 
     writeLogs("target/logs/logs/application_0_0001/container_0_0001_01_000001");
 
-    writelog(configuration, "owner");
+    writeLog(configuration, "owner");
 
-    AggregatedLogsBlockForTest taggregatedBlock = getAggregatedLogsBlockForTest(
+    AggregatedLogsBlockForTest aggregatedBlock = getAggregatedLogsBlockForTest(
         configuration, "admin", "container_0_0001_01_000001");
     ByteArrayOutputStream data = new ByteArrayOutputStream();
-    PrintWriter pwriter = new PrintWriter(data);
+    PrintWriter printWriter = new PrintWriter(data);
     HtmlBlock html = new HtmlBlockForTest();
-    HtmlBlock.Block block = new BlockForTest(html, pwriter, 10, false);
-    taggregatedBlock.render(block);
+    HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
+    aggregatedBlock.render(block);
 
     block.getWriter().flush();
     String out = data.toString();
@@ -104,7 +116,12 @@ public class TestAggregatedLogsBlock {
 
   }
 
-  @Test
+  /**
+   * All ok and the AggregatedLogsBlockFor should aggregate logs and show it.
+   * 
+   * @throws Exception
+   */
+  @Test(timeout = 10000)
   public void testAggregatedLogsBlock() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
@@ -112,15 +129,15 @@ public class TestAggregatedLogsBlock {
 
     writeLogs("target/logs/logs/application_0_0001/container_0_0001_01_000001");
 
-    writelog(configuration, "admin");
+    writeLog(configuration, "admin");
 
-    AggregatedLogsBlockForTest taggregatedBlock = getAggregatedLogsBlockForTest(
+    AggregatedLogsBlockForTest aggregatedBlock = getAggregatedLogsBlockForTest(
         configuration, "admin", "container_0_0001_01_000001");
     ByteArrayOutputStream data = new ByteArrayOutputStream();
-    PrintWriter pwriter = new PrintWriter(data);
+    PrintWriter printWriter = new PrintWriter(data);
     HtmlBlock html = new HtmlBlockForTest();
-    HtmlBlock.Block block = new BlockForTest(html, pwriter, 10, false);
-    taggregatedBlock.render(block);
+    HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
+    aggregatedBlock.render(block);
 
     block.getWriter().flush();
     String out = data.toString();
@@ -129,11 +146,42 @@ public class TestAggregatedLogsBlock {
     assertTrue(out.contains("test log3"));
 
   }
+  /**
+   * Log files was deleted.
+   * 
+   * @throws Exception
+   */
+  @Test(timeout = 1000000)
+  public void testNoLogs() throws Exception {
 
+    FileUtil.fullyDelete(new File("target/logs"));
+    Configuration configuration = getConfiguration();
+
+    File f = new File("target/logs/logs/application_0_0001/container_0_0001_01_000001");
+    if (!f.exists()) {
+      assertTrue(f.mkdirs());
+    }
+    writeLog(configuration, "admin");
+
+    AggregatedLogsBlockForTest aggregatedBlock = getAggregatedLogsBlockForTest(
+        configuration, "admin", "container_0_0001_01_000001");
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(data);
+    HtmlBlock html = new HtmlBlockForTest();
+    HtmlBlock.Block block = new BlockForTest(html, printWriter, 10, false);
+    aggregatedBlock.render(block);
+
+    block.getWriter().flush();
+    String out = data.toString();
+    assertTrue(out.contains("No logs available for container container_0_0001_01_000001"));
+
+  }
+  
+  
   private Configuration getConfiguration() {
     Configuration configuration = new Configuration();
     configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
-    configuration.set("yarn.nodemanager.remote-app-log-dir", "target/logs");
+    configuration.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, "target/logs");
     configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     configuration.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
     return configuration;
@@ -143,26 +191,26 @@ public class TestAggregatedLogsBlock {
       Configuration configuration, String user, String contaynerId) {
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRemoteUser()).thenReturn(user);
-    AggregatedLogsBlockForTest taggregatedBlock = new AggregatedLogsBlockForTest(
+    AggregatedLogsBlockForTest aggregatedBlock = new AggregatedLogsBlockForTest(
         configuration);
-    taggregatedBlock.setRequest(request);
-    taggregatedBlock.moreParams().put(YarnWebParams.CONTAINER_ID, contaynerId);
-    taggregatedBlock.moreParams().put(YarnWebParams.NM_NODENAME,
+    aggregatedBlock.setRequest(request);
+    aggregatedBlock.moreParams().put(YarnWebParams.CONTAINER_ID, contaynerId);
+    aggregatedBlock.moreParams().put(YarnWebParams.NM_NODENAME,
         "localhost:1234");
-    taggregatedBlock.moreParams().put(YarnWebParams.APP_OWNER, user);
-    taggregatedBlock.moreParams().put("start", "");
-    taggregatedBlock.moreParams().put("end", "");
-    taggregatedBlock.moreParams().put(YarnWebParams.ENTITY_STRING, "entity");
-    return taggregatedBlock;
+    aggregatedBlock.moreParams().put(YarnWebParams.APP_OWNER, user);
+    aggregatedBlock.moreParams().put("start", "");
+    aggregatedBlock.moreParams().put("end", "");
+    aggregatedBlock.moreParams().put(YarnWebParams.ENTITY_STRING, "entity");
+    return aggregatedBlock;
   }
 
-  private void writelog(Configuration configuration, String user)
+  private void writeLog(Configuration configuration, String user)
       throws Exception {
     ContainerId containerId = new ContainerIdPBImpl();
     ApplicationAttemptId appAttemptId = new ApplicationAttemptIdPBImpl();
-    ApplicationId appid = new ApplicationIdPBImpl();
-    appid.setId(1);
-    appAttemptId.setApplicationId(appid);
+    ApplicationId appId = new ApplicationIdPBImpl();
+    appId.setId(1);
+    appAttemptId.setApplicationId(appId);
     appAttemptId.setAttemptId(1);
     containerId.setApplicationAttemptId(appAttemptId);
     containerId.setId(1);
@@ -170,7 +218,7 @@ public class TestAggregatedLogsBlock {
         + "/logs/application_0_0001/localhost_1234";
     File f = new File(path);
     if (!f.getParentFile().exists()) {
-      f.getParentFile().mkdirs();
+     assertTrue( f.getParentFile().mkdirs());
     }
     List<String> rootLogDirs = Arrays.asList("target/logs/logs");
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -191,7 +239,7 @@ public class TestAggregatedLogsBlock {
   private void writeLogs(String dirName) throws Exception {
     File f = new File(dirName + File.separator + "log1");
     if (!f.getParentFile().exists()) {
-      f.getParentFile().mkdirs();
+      assertTrue(f.getParentFile().mkdirs());
     }
 
     writeLog(dirName + File.separator + "log1", "test log1");
