@@ -151,7 +151,7 @@ public class TestAggregatedLogsBlock {
    * 
    * @throws Exception
    */
-  @Test(timeout = 1000000)
+  @Test(timeout = 10000)
   public void testNoLogs() throws Exception {
 
     FileUtil.fullyDelete(new File("target/logs"));
