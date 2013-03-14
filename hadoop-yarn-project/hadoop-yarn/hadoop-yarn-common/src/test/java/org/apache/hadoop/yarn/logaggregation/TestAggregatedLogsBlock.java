@@ -188,13 +188,13 @@ public class TestAggregatedLogsBlock {
   }
 
   private AggregatedLogsBlockForTest getAggregatedLogsBlockForTest(
-      Configuration configuration, String user, String contaynerId) {
+      Configuration configuration, String user, String containerId) {
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRemoteUser()).thenReturn(user);
     AggregatedLogsBlockForTest aggregatedBlock = new AggregatedLogsBlockForTest(
         configuration);
     aggregatedBlock.setRequest(request);
-    aggregatedBlock.moreParams().put(YarnWebParams.CONTAINER_ID, contaynerId);
+    aggregatedBlock.moreParams().put(YarnWebParams.CONTAINER_ID, containerId);
     aggregatedBlock.moreParams().put(YarnWebParams.NM_NODENAME,
         "localhost:1234");
     aggregatedBlock.moreParams().put(YarnWebParams.APP_OWNER, user);
