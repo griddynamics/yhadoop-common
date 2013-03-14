@@ -350,6 +350,9 @@ Trunk (Unreleased)
 
     HADOOP-9397. Incremental dist tar build fails (Chris Nauroth via jlowe)
 
+    HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
+    Wang via atm)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -561,6 +564,9 @@ Release 2.0.5-beta - UNRELEASED
     console. (Arpit Gupta via suresh)
 
     HADOOP-9399. protoc maven plugin doesn't work on mvn 3.0.2 (todd)
+
+    HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
+    build issues. (Sangjin Lee via suresh)
 
 Release 2.0.4-alpha - UNRELEASED
 
