@@ -1,20 +1,20 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
@@ -61,6 +61,11 @@ import org.junit.Test;
 
 import com.google.protobuf.ServiceException;
 
+/**
+ * Test RMAdminProtocolPBServiceImpl. Tested signature and behavior.
+ * 
+ */
+
 public class TestRMAdminProtocolPBServiceImpl {
   private static RMAdminProtocolPBServiceImpl service;
   private static int resultFlag = 0;
@@ -72,6 +77,9 @@ public class TestRMAdminProtocolPBServiceImpl {
 
   }
 
+  /**
+   * Test RefreshQueues method
+   */
   @Test(timeout = 500)
   public void testRefreshQueuesMethod() throws Exception {
     RefreshQueuesRequestProto request = RefreshQueuesRequestProto
@@ -84,10 +92,15 @@ public class TestRMAdminProtocolPBServiceImpl {
       service.refreshQueues(null, request);
       fail();
     } catch (ServiceException e) {
-      assertEquals("org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception", e.getMessage());
+      assertEquals(
+          "org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception",
+          e.getMessage());
     }
   }
 
+  /**
+   * Test RefreshNodes method
+   */
   @Test(timeout = 500)
   public void testRefreshNodesMethod() throws Exception {
     RefreshNodesRequestProto request = RefreshNodesRequestProto
@@ -100,10 +113,15 @@ public class TestRMAdminProtocolPBServiceImpl {
       service.refreshNodes(null, request);
       fail();
     } catch (ServiceException e) {
-      assertEquals("org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception", e.getMessage());
+      assertEquals(
+          "org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception",
+          e.getMessage());
     }
   }
 
+  /**
+   * Test RefreshSuperUserGroupsConfiguration method
+   */
   @Test(timeout = 500)
   public void testRefreshSuperUserGroupsConfigurationMethod() throws Exception {
     RefreshSuperUserGroupsConfigurationRequestProto request = RefreshSuperUserGroupsConfigurationRequestProto
@@ -117,11 +135,15 @@ public class TestRMAdminProtocolPBServiceImpl {
       service.refreshSuperUserGroupsConfiguration(null, request);
       fail();
     } catch (ServiceException e) {
-      assertEquals("org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception", e.getMessage());
+      assertEquals(
+          "org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception",
+          e.getMessage());
     }
   }
-
   
+/**
+ * Test RefreshUserToGroupsMappings method
+ */
   @Test(timeout = 500)
   public void testRefreshUserToGroupsMappingsMethod() throws Exception {
     RefreshUserToGroupsMappingsRequestProto request = RefreshUserToGroupsMappingsRequestProto
@@ -135,45 +157,57 @@ public class TestRMAdminProtocolPBServiceImpl {
       service.refreshUserToGroupsMappings(null, request);
       fail();
     } catch (ServiceException e) {
-      assertEquals("org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception", e.getMessage());
+      assertEquals(
+          "org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception",
+          e.getMessage());
     }
   }
-
+/**
+ * Test RefreshAdminAcls method
+ */
   @Test(timeout = 500)
   public void testRefreshAdminAclsMethod() throws Exception {
     RefreshAdminAclsRequestProto request = RefreshAdminAclsRequestProto
         .getDefaultInstance();
     resultFlag = 0;
-    RefreshAdminAclsResponseProto response = service
-        .refreshAdminAcls(null, request);
+    RefreshAdminAclsResponseProto response = service.refreshAdminAcls(null,
+        request);
     assertNotNull(response);
     resultFlag = 1;
     try {
       service.refreshAdminAcls(null, request);
       fail();
     } catch (ServiceException e) {
-      assertEquals("org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception", e.getMessage());
+      assertEquals(
+          "org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception",
+          e.getMessage());
     }
   }
-
+/**
+ * Test RefreshServiceAcls method
+ */
   @Test(timeout = 500)
   public void testRefreshServiceAclsMethod() throws Exception {
     RefreshServiceAclsRequestProto request = RefreshServiceAclsRequestProto
         .getDefaultInstance();
     resultFlag = 0;
-    RefreshServiceAclsResponseProto response = service
-        .refreshServiceAcls(null, request);
+    RefreshServiceAclsResponseProto response = service.refreshServiceAcls(null,
+        request);
     assertNotNull(response);
     resultFlag = 1;
     try {
       service.refreshServiceAcls(null, request);
       fail();
     } catch (ServiceException e) {
-      assertEquals("org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception", e.getMessage());
+      assertEquals(
+          "org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl: Yarn Exception",
+          e.getMessage());
     }
   }
-  
-  
+  /**
+   * Stub for test  RMAdminProtocolPBServiceImpl
+   *
+   */
   private static class RMAdminProtocolStub implements RMAdminProtocol {
 
     @Override

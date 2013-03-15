@@ -1,20 +1,20 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
@@ -62,6 +62,11 @@ import static org.junit.Assert.*;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
+/**
+ * Test RMAdminProtocolPBClientImpl. Tested signature and behavior.
+ * 
+ */
+
 public class TestRMAdminProtocolPBClientImpl {
 
   private static RMAdminProtocolPBClientImpl client;
@@ -83,6 +88,9 @@ public class TestRMAdminProtocolPBClientImpl {
 
   }
 
+  /**
+   * Test RefreshQueues method
+   */
   @Test(timeout = 500)
   public void testRefreshQueuesMethod() throws Exception {
     RefreshQueuesRequest request = recordFactory
@@ -115,8 +123,11 @@ public class TestRMAdminProtocolPBClientImpl {
 
   }
 
+  /**
+   * Test RefreshNodes method
+   */
   @Test(timeout = 500)
-  public void testRefreshNodes() throws Exception {
+  public void testRefreshNodesMethod() throws Exception {
     RefreshNodesRequest request = recordFactory
         .newRecordInstance(RefreshNodesRequest.class);
     resultFlag = 0;
@@ -147,15 +158,19 @@ public class TestRMAdminProtocolPBClientImpl {
 
   }
 
-  
+  /**
+   * Test RefreshSuperUserGroupsConfiguration method
+   */
+
   @Test(timeout = 500)
-  public void testRefreshSuperUserGroupsConfiguration() throws Exception {
+  public void testRefreshSuperUserGroupsConfigurationMethod() throws Exception {
     RefreshSuperUserGroupsConfigurationRequest request = recordFactory
         .newRecordInstance(RefreshSuperUserGroupsConfigurationRequest.class);
-    
+
     resultFlag = 0;
-    
-    RefreshSuperUserGroupsConfigurationResponse response = client.refreshSuperUserGroupsConfiguration(request);
+
+    RefreshSuperUserGroupsConfigurationResponse response = client
+        .refreshSuperUserGroupsConfiguration(request);
     assertNotNull(response);
     resultFlag = 1;
     try {
@@ -180,14 +195,17 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  
+  /**
+   * Test RefreshUserToGroupsMappings method
+   */
   @Test(timeout = 500)
-  public void testRefreshUserToGroupsMappings() throws Exception {
+  public void testRefreshUserToGroupsMappingsMethod() throws Exception {
     RefreshUserToGroupsMappingsRequest request = recordFactory
         .newRecordInstance(RefreshUserToGroupsMappingsRequest.class);
     resultFlag = 0;
 
-    RefreshUserToGroupsMappingsResponse response = client.refreshUserToGroupsMappings(request);
+    RefreshUserToGroupsMappingsResponse response = client
+        .refreshUserToGroupsMappings(request);
     assertNotNull(response);
     resultFlag = 1;
     try {
@@ -211,9 +229,14 @@ public class TestRMAdminProtocolPBClientImpl {
       assertNull(e.getMessage());
     }
   }
-  
+
+  /**
+   * Test RefreshAdminAcls method
+   * 
+   * @throws Exception
+   */
   @Test(timeout = 500)
-  public void testRefreshAdminAcls() throws Exception {
+  public void testRefreshAdminAclsMethod() throws Exception {
     RefreshAdminAclsRequest request = recordFactory
         .newRecordInstance(RefreshAdminAclsRequest.class);
     resultFlag = 0;
@@ -243,8 +266,10 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  
-  
+  /**
+   * Test RefreshServiceAcls method
+   */
+
   @Test(timeout = 500)
   public void testRefreshServiceAcls() throws Exception {
     RefreshServiceAclsRequest request = recordFactory
@@ -276,7 +301,10 @@ public class TestRMAdminProtocolPBClientImpl {
     }
   }
 
-  
+  /**
+   * Stub for test RMAdminProtocolPBClientImpl
+   * 
+   */
   private static class RMAdminProtocolServiceProxyStub
       implements
       org.apache.hadoop.yarn.proto.RMAdminProtocol.RMAdminProtocolService.BlockingInterface {
@@ -319,7 +347,8 @@ public class TestRMAdminProtocolPBClientImpl {
         RefreshSuperUserGroupsConfigurationRequestProto request)
         throws ServiceException {
       if (resultFlag == 0) {
-        return RefreshSuperUserGroupsConfigurationResponseProto.getDefaultInstance();
+        return RefreshSuperUserGroupsConfigurationResponseProto
+            .getDefaultInstance();
       } else if (resultFlag == 1) {
         YarnRemoteException e = new YarnRemoteExceptionPBImpl("Yarn exception");
         throw new ServiceException("Exception", e);
