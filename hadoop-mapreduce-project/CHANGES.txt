@@ -194,6 +194,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4892. Modify CombineFileInputFormat to not skew input slits'
     allocation on small clusters. (Bikas Saha via vinodkv)
 
+    MAPREDUCE-4990. Construct debug strings conditionally in 
+    ShuffleHandler.Shuffle#sendMapOutput(). (kkambatl via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -234,6 +237,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
     fails with jdk7. (tgraves via tucu)
+
+    MAPREDUCE-5028. Maps fail when io.sort.mb is set to high value. 
+    (kkambatl via tucu)
 
 Release 2.0.4-alpha - UNRELEASED
 
