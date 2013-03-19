@@ -304,6 +304,17 @@ public class YarnConfiguration extends Configuration {
   /** who will execute(launch) the containers.*/
   public static final String NM_CONTAINER_EXECUTOR = 
     NM_PREFIX + "container-executor.class";
+
+  /**  
+   * Adjustment to make to the container os scheduling priority.
+   * The valid values for this could vary depending on the platform.
+   * On Linux, higher values mean run the containers at a less 
+   * favorable priority than the NM. 
+   * The value specified is an int.
+   */
+  public static final String NM_CONTAINER_EXECUTOR_SCHED_PRIORITY = 
+    NM_PREFIX + "container-executor.os.sched.priority.adjustment";
+  public static final int DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY = 0;
   
   /** Number of threads container manager uses.*/
   public static final String NM_CONTAINER_MGR_THREAD_COUNT =
@@ -609,6 +620,20 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "process-kill-wait.ms";
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
+
+  /** Max time to wait to establish a connection to RM when NM starts
+   */
+  public static final String RESOURCEMANAGER_CONNECT_WAIT_SECS =
+      NM_PREFIX + "resourcemanager.connect.wait.secs";
+  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_WAIT_SECS =
+      15*60;
+
+  /** Time interval between each NM attempt to connect to RM
+   */
+  public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS =
+      NM_PREFIX + "resourcemanager.connect.retry_interval.secs";
+  public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
+      = 30;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH

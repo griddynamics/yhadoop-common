@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -19,6 +19,12 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4519. Support overriding jsvc binary and log file locations
     when launching secure datanode. (Chris Nauroth via suresh)
+
+    HDFS-4569. Small image transfer related cleanups.
+    (Andrew Wang via suresh)
+
+    HDFS-4521. Invalid network toploogies should not be cached. (Colin Patrick
+    McCabe via atm)
 
   OPTIMIZATIONS
 
@@ -53,6 +59,49 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4544. Error in deleting blocks should not do check disk, for
     all types of errors. (Arpit Agarwal via suresh)
+
+    HDFS-4565. Use DFSUtil.getSpnegoKeytabKey() to get the spnego keytab key
+    in secondary namenode and namenode http server. (Arpit Gupta via suresh)
+
+    HDFS-4571. WebHDFS should not set the service hostname on the server side. 
+    (tucu)
+
+    HDFS-4013. TestHftpURLTimeouts throws NPE. (Chao Shi via suresh)
+
+    HDFS-4592. Default values for access time precision are out of sync between
+    hdfs-default.xml and the code. (atm)
+
+    HDFS-4522. LightWeightGSet expects incrementing a volatile to be atomic.
+    (Colin Patrick McCabe via atm)
+
+    HDFS-4484. libwebhdfs compilation broken with gcc 4.6.2. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-4595. When short circuit read is fails, DFSClient does not fallback
+    to regular reads. (suresh)
+
+    HDFS-4583. TestNodeCount fails. (Ivan Mitic via suresh)
+
+    HDFS-4591. HA clients can fail to fail over while Standby NN is performing
+    long checkpoint. (atm)
+
+    HDFS-3277. fail over to loading a different FSImage if the first one we
+    try to load is corrupt. (Colin Patrick McCabe and Andrew Wang via atm)
+
+    HDFS-4596. Shutting down namenode during checkpointing can lead to md5sum
+    error. (Andrew Wang via atm)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.3-alpha - 2013-02-06
 
@@ -2115,6 +2164,22 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
     kihwal)
+
+    HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
+    HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
+
+    HDFS-4567. Webhdfs does not need a token for token operations (daryn via
+    kihwal)
+
+    HDFS-4577. Webhdfs operations should declare if authentication is required
+    (daryn via kihwal)
+
+    HDFS-3344. Unreliable corrupt blocks counting in TestProcessCorruptBlocks
+    (kihwal)
+
+    HDFS-3367. WebHDFS doesn't use the logged in user when opening
+    connections (daryn)
 
 Release 0.23.6 - UNRELEASED
 
