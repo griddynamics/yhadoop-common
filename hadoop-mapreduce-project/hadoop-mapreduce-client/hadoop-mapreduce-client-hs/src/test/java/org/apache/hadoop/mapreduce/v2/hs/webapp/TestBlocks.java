@@ -18,10 +18,16 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -41,20 +47,27 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AMParams;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AppForTest;
+import org.apache.hadoop.mapreduce.v2.app.webapp.CountersPage;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.HsTaskPage.AttemptsBlock;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
+import org.apache.hadoop.yarn.webapp.Params;
+import org.apache.hadoop.yarn.webapp.View;
+import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -154,6 +167,136 @@ public class TestBlocks {
   public void testHsJobsBlock() {
     AppContext ctx = mock(AppContext.class);
     Map<JobId, Job> jobs = new HashMap<JobId, Job>();
+    Job job = getJob();
+    jobs.put(job.getID(), job);
+    when(ctx.getAllJobs()).thenReturn(jobs);
+
+    HsJobsBlock block = new HsJobsBlockForTest(ctx);
+    PrintWriter pwriter = new PrintWriter(data);
+    Block html = new BlockForTest(new HtmlBlockForTest(), pwriter, 0, false);
+    block.render(html);
+
+    pwriter.flush();
+    assertTrue(data.toString().contains("JobName"));
+    assertTrue(data.toString().contains("UserName"));
+    assertTrue(data.toString().contains("QueueName"));
+    assertTrue(data.toString().contains("SUCCEEDED"));
+
+  }
+
+  @Test
+  public void testHsController() throws Exception {
+    AppContext ctx = mock(AppContext.class);
+    ApplicationId appId = new ApplicationIdPBImpl();
+    appId.setClusterTimestamp(System.currentTimeMillis());
+    appId.setId(5);
+    when(ctx.getApplicationID()).thenReturn(appId);
+
+    AppForTest app = new AppForTest(ctx);
+    Configuration config = new Configuration();
+    RequestContext requestCtx = mock(RequestContext.class);
+    HsControllerFortest controller = new HsControllerFortest(app, config,
+        requestCtx);
+    controller.index();
+    assertEquals("JobHistory", controller.get(Params.TITLE, ""));
+    assertEquals(HsJobPage.class, controller.jobPage());
+    assertEquals(HsCountersPage.class, controller.countersPage());
+    assertEquals(HsTasksPage.class, controller.tasksPage());
+    assertEquals(HsTaskPage.class, controller.taskPage());
+    assertEquals(HsAttemptsPage.class, controller.attemptsPage());
+
+    controller.set(AMParams.JOB_ID, "job_01_01");
+    controller.set(AMParams.TASK_ID, "task_01_01_m01_01");
+    controller.set(AMParams.TASK_TYPE, "m");
+    controller.set(AMParams.ATTEMPT_STATE, "State");
+
+    Job job = mock(Job.class);
+    Task task = mock(Task.class);
+    when(job.getTask(any(TaskId.class))).thenReturn(task);
+    JobId jobID = MRApps.toJobID("job_01_01");
+    when(ctx.getJob(jobID)).thenReturn(job);
+    when(job.checkAccess(any(UserGroupInformation.class), any(JobACL.class)))
+        .thenReturn(true);
+
+    controller.job();
+    assertEquals(HsJobPage.class, controller.getClazz());
+    controller.jobCounters();
+    assertEquals(HsCountersPage.class, controller.getClazz());
+    controller.taskCounters();
+    assertEquals(HsCountersPage.class, controller.getClazz());
+    controller.tasks();
+    assertEquals(HsTasksPage.class, controller.getClazz());
+    controller.task();
+    assertEquals(HsTaskPage.class, controller.getClazz());
+    controller.attempts();
+    assertEquals(HsAttemptsPage.class, controller.getClazz());
+
+    assertEquals(HsConfPage.class, controller.confPage());
+    assertEquals(HsAboutPage.class, controller.aboutPage());
+    controller.about();
+    assertEquals(HsAboutPage.class, controller.getClazz());
+    controller.logs();
+    assertEquals(HsLogsPage.class, controller.getClazz());
+    controller.nmlogs();
+    assertEquals(AggregatedLogsPage.class, controller.getClazz());
+
+    assertEquals(HsSingleCounterPage.class, controller.singleCounterPage());
+    controller.singleJobCounter();
+    assertEquals(HsSingleCounterPage.class, controller.getClazz());
+    controller.singleTaskCounter();
+    assertEquals(HsSingleCounterPage.class, controller.getClazz());
+    
+    
+    System.out.println("oo");
+  }
+
+  private static class HsControllerFortest extends HsController {
+
+    static private Map<String, String> params = new HashMap<String, String>();
+    private Class<?> clazz;
+    ByteArrayOutputStream  data = new ByteArrayOutputStream();
+    
+    public void set(String name, String value) {
+      params.put(name, value);
+    }
+
+    public String get(String key, String defaultValue) {
+      String value = params.get(key);
+      return value == null ? defaultValue : value;
+    }
+
+    HsControllerFortest(App app, Configuration conf, RequestContext ctx) {
+      super(app, conf, ctx);
+    }
+
+    @Override
+    public HttpServletRequest request() {
+      HttpServletRequest result = mock(HttpServletRequest.class);
+      when(result.getRemoteUser()).thenReturn("User");
+      return result;
+    }
+
+    public HttpServletResponse response() {
+      HttpServletResponse result = mock(HttpServletResponse.class);
+      try {
+        when(result.getWriter()).thenReturn(new PrintWriter(data));
+      } catch (IOException e) {
+       
+      }
+      
+      return result;
+    }
+
+    protected void render(Class<? extends View> cls) {
+      clazz = cls;
+    }
+
+    public Class<?> getClazz() {
+      return clazz;
+    }
+  }
+
+  private Job getJob() {
     Job job = mock(Job.class);
 
     JobId jobId = new JobIdPBImpl();
@@ -178,21 +321,8 @@ public class TestBlocks {
     when(job.getCompletedMaps()).thenReturn(2);
     when(job.getTotalReduces()).thenReturn(2);
     when(job.getCompletedReduces()).thenReturn(1);
-
-    jobs.put(jobId, job);
-    when(ctx.getAllJobs()).thenReturn(jobs);
-
-    HsJobsBlock block = new HsJobsBlockForTest(ctx);
-    PrintWriter pwriter = new PrintWriter(data);
-    Block html = new BlockForTest(new HtmlBlockForTest(), pwriter, 0, false);
-    block.render(html);
-
-    pwriter.flush();
-    assertTrue(data.toString().contains("JobName"));
-    assertTrue(data.toString().contains("UserName"));
-    assertTrue(data.toString().contains("QueueName"));
-    assertTrue(data.toString().contains("SUCCEEDED"));
-
+    when(job.getCompletedReduces()).thenReturn(1);
+    return job;
   }
 
   private Task getTask() {
