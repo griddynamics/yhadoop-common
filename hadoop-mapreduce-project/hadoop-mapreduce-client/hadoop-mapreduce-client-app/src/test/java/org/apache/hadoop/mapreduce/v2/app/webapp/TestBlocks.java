@@ -1,20 +1,20 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
@@ -49,91 +49,96 @@ import static org.junit.Assert.*;
 public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
 
-  @Test (timeout=10000)
+  /**
+   * Test rendering for ConfBlock
+   */
+  @Test(timeout = 10000)
   public void testConfigurationBlock() throws Exception {
     AppContext ctx = mock(AppContext.class);
-    Job job=mock(Job.class); 
-    Path path= new Path("conf");
+    Job job = mock(Job.class);
+    Path path = new Path("conf");
     Configuration configuration = new Configuration();
     configuration.set("Key for test", "Value for test");
     when(job.getConfFile()).thenReturn(path);
     when(job.loadConfFile()).thenReturn(configuration);
-    
+
     when(ctx.getJob(any(JobId.class))).thenReturn(job);
-    
-    
-    ConfBlockForTest confBlock = new ConfBlockForTest(ctx);
-    PrintWriter pwriter = new PrintWriter(data);
-    Block html = new BlockForTest(new HtmlBlockForTest(), pwriter, 0, false);
 
-    confBlock.render(html);
-    pwriter.flush();
+
+    ConfBlockForTest configurationBlock = new ConfBlockForTest(ctx);
+    PrintWriter pWriter = new PrintWriter(data);
+    Block html = new BlockForTest(new HtmlBlockForTest(), pWriter, 0, false);
+
+    configurationBlock.render(html);
+    pWriter.flush();
     assertTrue(data.toString().contains(
-        "Sorry, can't do anything without a JobID"));
+            "Sorry, can't do anything without a JobID"));
 
-    confBlock.addParameter(AMParams.JOB_ID, "job_01_01");
+    configurationBlock.addParameter(AMParams.JOB_ID, "job_01_01");
     data.reset();
-    confBlock.render(html);
-    pwriter.flush();
-    assertTrue(data.toString().contains( "Key for test"));
+    configurationBlock.render(html);
+    pWriter.flush();
+    assertTrue(data.toString().contains("Key for test"));
 
-    assertTrue(data.toString().contains( "Value for test"));
-    
+    assertTrue(data.toString().contains("Value for test"));
+
   }
-  @Test 
+
+  /**
+   * Test rendering for TasksBlock
+   */
+  @Test (timeout=10000)
   public void testTasksBlock() throws Exception {
-    
-    ApplicationId appId=new ApplicationIdPBImpl();
+
+    ApplicationId appId = new ApplicationIdPBImpl();
     appId.setId(1);
-    JobId jobId= new JobIdPBImpl();
+    JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
     jobId.setAppId(appId);
-    
-    TaskId taskId= new TaskIdPBImpl();
+
+    TaskId taskId = new TaskIdPBImpl();
     taskId.setId(0);
     taskId.setTaskType(TaskType.MAP);
     taskId.setJobId(jobId);
     Task task = mock(Task.class);
-    when(task.getID()).thenReturn(taskId );
-    TaskReport report= mock(TaskReport.class);
+    when(task.getID()).thenReturn(taskId);
+    TaskReport report = mock(TaskReport.class);
     when(report.getProgress()).thenReturn(0.7f);
     when(report.getTaskState()).thenReturn(TaskState.SUCCEEDED);
-    when(report.getStartTime()).thenReturn( 100001L);
+    when(report.getStartTime()).thenReturn(100001L);
     when(report.getFinishTime()).thenReturn(100011L);
-    
-    
+
+
     when(task.getReport()).thenReturn(report);
     when(task.getType()).thenReturn(TaskType.MAP);
-    
-    
-    Map<TaskId,Task> tasks= new HashMap<TaskId, Task>();
+
+
+    Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
     tasks.put(taskId, task);
     AppContext ctx = mock(AppContext.class);
-    Job job=mock(Job.class); 
+    Job job = mock(Job.class);
     when(job.getTasks()).thenReturn(tasks);
 
-    
-    
-    App  app = new App(ctx);
+
+    App app = new App(ctx);
     app.setJob(job);
     TasksBlockForTest taskBlock = new TasksBlockForTest(app);
     taskBlock.addParameter(AMParams.TASK_TYPE, "m");
 
-    PrintWriter pwriter = new PrintWriter(data);
-    Block html = new BlockForTest(new HtmlBlockForTest(), pwriter, 0, false);
+    PrintWriter pWriter = new PrintWriter(data);
+    Block html = new BlockForTest(new HtmlBlockForTest(), pWriter, 0, false);
 
     taskBlock.render(html);
-    pwriter.flush();
-    assertTrue(data.toString().contains( "task_0_0001_m_000000"));
-    assertTrue(data.toString().contains( "70.00"));
-    assertTrue(data.toString().contains( "SUCCEEDED"));
-    assertTrue(data.toString().contains( "100001"));
-    assertTrue(data.toString().contains( "100011"));
+    pWriter.flush();
+    assertTrue(data.toString().contains("task_0_0001_m_000000"));
+    assertTrue(data.toString().contains("70.00"));
+    assertTrue(data.toString().contains("SUCCEEDED"));
+    assertTrue(data.toString().contains("100001"));
+    assertTrue(data.toString().contains("100011"));
 
 
-
-    
   }
+
   private class ConfBlockForTest extends ConfBlock {
     private final Map<String, String> params = new HashMap<String, String>();
 
@@ -141,13 +146,14 @@ public class TestBlocks {
       params.put(name, value);
     }
 
-
+    @Override
     public String $(String key, String defaultValue) {
       String value = params.get(key);
       return value == null ? defaultValue : value;
     }
-    ConfBlockForTest(AppContext appctx) {
-      super(appctx);
+
+    ConfBlockForTest(AppContext appCtx) {
+      super(appCtx);
     }
 
   }
@@ -159,5 +165,5 @@ public class TestBlocks {
 
     }
   }
-  
+
 }

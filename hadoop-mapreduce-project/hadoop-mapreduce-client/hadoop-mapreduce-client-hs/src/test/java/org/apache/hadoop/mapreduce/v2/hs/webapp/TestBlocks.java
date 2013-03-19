@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import java.io.ByteArrayOutputStream;
@@ -47,7 +48,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AMParams;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AppForTest;
-import org.apache.hadoop.mapreduce.v2.app.webapp.CountersPage;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.HsTaskPage.AttemptsBlock;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -65,14 +65,22 @@ import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
+/**
+ * Test some HtmlBlock classes
+ */
+
 public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
 
-  @Test
+  /**
+   * test HsTasksBlock's rendering.
+   */
+  @Test (timeout=10000)
   public void testHsTasksBlock() {
 
     Task task = getTask();
@@ -91,11 +99,12 @@ public class TestBlocks {
 
     block.addParameter(AMParams.TASK_TYPE, "r");
 
-    PrintWriter pwriter = new PrintWriter(data);
-    Block html = new BlockForTest(new HtmlBlockForTest(), pwriter, 0, false);
+    PrintWriter pWriter = new PrintWriter(data);
+    Block html = new BlockForTest(new HtmlBlockForTest(), pWriter, 0, false);
 
     block.render(html);
-    pwriter.flush();
+    pWriter.flush();
+    // should be printed information about task
     assertTrue(data.toString().contains("task_0_0001_r_000000"));
     assertTrue(data.toString().contains("SUCCEEDED"));
     assertTrue(data.toString().contains("100001"));
@@ -103,7 +112,10 @@ public class TestBlocks {
     assertTrue(data.toString().contains(""));
   }
 
-  @Test
+  /**
+   * test AttemptsBlock's rendering.
+   */
+  @Test (timeout=10000)
   public void testAttemptsBlock() {
     AppContext ctx = mock(AppContext.class);
     AppForTest app = new AppForTest(ctx);
@@ -129,7 +141,7 @@ public class TestBlocks {
     when(attempt.getAssignedContainerID()).thenReturn(containerId);
 
     when(attempt.getAssignedContainerMgrAddress()).thenReturn(
-        "assignedContainerMgrAddress");
+            "assignedContainerMgrAddress");
     when(attempt.getNodeRackName()).thenReturn("nodeRackName");
     when(attempt.getLaunchTime()).thenReturn(100002L);
     when(attempt.getFinishTime()).thenReturn(100012L);
@@ -148,22 +160,26 @@ public class TestBlocks {
     AttemptsBlockForTest block = new AttemptsBlockForTest(app);
     block.addParameter(AMParams.TASK_TYPE, "r");
 
-    PrintWriter pwriter = new PrintWriter(data);
-    Block html = new BlockForTest(new HtmlBlockForTest(), pwriter, 0, false);
+    PrintWriter pWriter = new PrintWriter(data);
+    Block html = new BlockForTest(new HtmlBlockForTest(), pWriter, 0, false);
 
     block.render(html);
-    pwriter.flush();
+    pWriter.flush();
+    // should be printed information about attempts
     assertTrue(data.toString().contains("0 attempt_0_0001_r_000000_0"));
     assertTrue(data.toString().contains("SUCCEEDED"));
     assertTrue(data.toString().contains(
-        "_0005_01_000001:attempt_0_0001_r_000000_0:User:"));
+            "_0005_01_000001:attempt_0_0001_r_000000_0:User:"));
     assertTrue(data.toString().contains("100002"));
     assertTrue(data.toString().contains("100010"));
     assertTrue(data.toString().contains("100011"));
     assertTrue(data.toString().contains("100012"));
   }
 
-  @Test
+  /**
+   * test HsJobsBlock's rendering.
+   */
+  @Test (timeout=10000)
   public void testHsJobsBlock() {
     AppContext ctx = mock(AppContext.class);
     Map<JobId, Job> jobs = new HashMap<JobId, Job>();
@@ -172,19 +188,21 @@ public class TestBlocks {
     when(ctx.getAllJobs()).thenReturn(jobs);
 
     HsJobsBlock block = new HsJobsBlockForTest(ctx);
-    PrintWriter pwriter = new PrintWriter(data);
-    Block html = new BlockForTest(new HtmlBlockForTest(), pwriter, 0, false);
+    PrintWriter pWriter = new PrintWriter(data);
+    Block html = new BlockForTest(new HtmlBlockForTest(), pWriter, 0, false);
     block.render(html);
 
-    pwriter.flush();
+    pWriter.flush();
     assertTrue(data.toString().contains("JobName"));
     assertTrue(data.toString().contains("UserName"));
     assertTrue(data.toString().contains("QueueName"));
     assertTrue(data.toString().contains("SUCCEEDED"));
-
   }
+  /**
+   * test HsController .
+   */
 
-  @Test
+  @Test (timeout=10000)
   public void testHsController() throws Exception {
     AppContext ctx = mock(AppContext.class);
     ApplicationId appId = new ApplicationIdPBImpl();
@@ -195,8 +213,8 @@ public class TestBlocks {
     AppForTest app = new AppForTest(ctx);
     Configuration config = new Configuration();
     RequestContext requestCtx = mock(RequestContext.class);
-    HsControllerFortest controller = new HsControllerFortest(app, config,
-        requestCtx);
+    HsControllerForTest controller = new HsControllerForTest(app, config,
+            requestCtx);
     controller.index();
     assertEquals("JobHistory", controller.get(Params.TITLE, ""));
     assertEquals(HsJobPage.class, controller.jobPage());
@@ -216,7 +234,7 @@ public class TestBlocks {
     JobId jobID = MRApps.toJobID("job_01_01");
     when(ctx.getJob(jobID)).thenReturn(job);
     when(job.checkAccess(any(UserGroupInformation.class), any(JobACL.class)))
-        .thenReturn(true);
+            .thenReturn(true);
 
     controller.job();
     assertEquals(HsJobPage.class, controller.getClazz());
@@ -245,17 +263,16 @@ public class TestBlocks {
     assertEquals(HsSingleCounterPage.class, controller.getClazz());
     controller.singleTaskCounter();
     assertEquals(HsSingleCounterPage.class, controller.getClazz());
-    
-    
-    System.out.println("oo");
+
+
   }
 
-  private static class HsControllerFortest extends HsController {
+  private static class HsControllerForTest extends HsController {
 
     static private Map<String, String> params = new HashMap<String, String>();
     private Class<?> clazz;
-    ByteArrayOutputStream  data = new ByteArrayOutputStream();
-    
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+
     public void set(String name, String value) {
       params.put(name, value);
     }
@@ -265,8 +282,8 @@ public class TestBlocks {
       return value == null ? defaultValue : value;
     }
 
-    HsControllerFortest(App app, Configuration conf, RequestContext ctx) {
-      super(app, conf, ctx);
+    HsControllerForTest(App app, Configuration configuration, RequestContext ctx) {
+      super(app, configuration, ctx);
     }
 
     @Override
@@ -280,10 +297,10 @@ public class TestBlocks {
       HttpServletResponse result = mock(HttpServletResponse.class);
       try {
         when(result.getWriter()).thenReturn(new PrintWriter(data));
-      } catch (IOException e) {
-       
+      } catch (IOException ignored) {
+
       }
-      
+
       return result;
     }
 
@@ -415,9 +432,7 @@ public class TestBlocks {
 
     public HsTasksBlockForTest(App app) {
       super(app);
-      // TODO Auto-generated constructor stub
     }
-
   }
 
   private class HtmlBlockForTest extends HtmlBlock {

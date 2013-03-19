@@ -20,6 +20,9 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ *    Class TasksBlockForTest overrides some methods for test
+ */
 public class TasksBlockForTest extends TasksBlock{
   private final Map<String, String> params = new HashMap<String, String>();
 
@@ -31,7 +34,7 @@ public class TasksBlockForTest extends TasksBlock{
   public void addParameter(String name, String value) {
     params.put(name, value);
   }
-
+  @Override
   public String $(String key, String defaultValue) {
     String value = params.get(key);
     return value == null ? defaultValue : value;

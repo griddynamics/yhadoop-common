@@ -22,6 +22,9 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 
+/**
+ *   Class AppForTest publishes a methods for test
+ */
 public class AppForTest extends App{
 
   public AppForTest(AppContext ctx) {
