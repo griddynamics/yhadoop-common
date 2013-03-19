@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 
 import static org.mockito.Mockito.*;
-import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.junit.Assert.*;
 
 public class TestBlocks {
@@ -142,14 +141,15 @@ public class TestBlocks {
       params.put(name, value);
     }
 
-    ConfBlockForTest(AppContext appctx) {
-      super(appctx);
-    }
 
     public String $(String key, String defaultValue) {
       String value = params.get(key);
       return value == null ? defaultValue : value;
     }
+    ConfBlockForTest(AppContext appctx) {
+      super(appctx);
+    }
+
   }
 
   private class HtmlBlockForTest extends HtmlBlock {
@@ -160,28 +160,4 @@ public class TestBlocks {
     }
   }
   
-  private class TasksBlockForTest extends TasksBlock{
-    private final Map<String, String> params = new HashMap<String, String>();
-
-
-   public TasksBlockForTest(App app) {
-      super(app);
-    }
-
-   public void addParameter(String name, String value) {
-     params.put(name, value);
-   }
-
-   public String $(String key, String defaultValue) {
-     String value = params.get(key);
-     return value == null ? defaultValue : value;
-   }
-   public String url(String... parts) {
-     String result="url://";
-     for (String string : parts) {
-       result+=string+":";
-    }
-     return result;
-   }
-  }
 }
