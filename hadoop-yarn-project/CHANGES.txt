@@ -24,6 +24,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-237. Refreshing the RM page forgets how many rows I had in my
     Datatables (jian he via bobby)
 
+    YARN-481. Add AM Host and RPC Port to ApplicationCLI Status Output 
+    (Chris Riccomini via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -51,6 +54,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-196. Nodemanager should be more robust in handling connection failure
     to ResourceManager when a cluster is started (Xuan Gong via hitesh)
+
+    YARN-485. TestProcfsProcessTree#testProcessTree() doesn't wait long enough 
+    for the process to die. (kkambatl via tucu)
 
 Release 2.0.4-alpha - UNRELEASED
 
