@@ -93,14 +93,14 @@ public class TestJobHistoryParsing {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testJobInfo() throws Exception {
     JobInfo info = new JobInfo();
     Assert.assertEquals("NORMAL", info.getPriority());
     info.printAll();
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testHistoryParsing() throws Exception {
     LOG.info("STARTING testHistoryParsing()");
     try {
@@ -110,7 +110,7 @@ public class TestJobHistoryParsing {
     }
   }
   
-  @Test
+  @Test (timeout=50000)
   public void testHistoryParsingWithParseErrors() throws Exception {
     LOG.info("STARTING testHistoryParsingWithParseErrors()");
     try {
@@ -364,7 +364,7 @@ public class TestJobHistoryParsing {
     return numFinishedMaps;
   }
   
-  @Test
+  @Test (timeout=50000)
   public void testHistoryParsingForFailedAttempts() throws Exception {
     LOG.info("STARTING testHistoryParsingForFailedAttempts");
     try {
@@ -491,7 +491,7 @@ public class TestJobHistoryParsing {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testScanningOldDirs() throws Exception {
     LOG.info("STARTING testScanningOldDirs");
     try {

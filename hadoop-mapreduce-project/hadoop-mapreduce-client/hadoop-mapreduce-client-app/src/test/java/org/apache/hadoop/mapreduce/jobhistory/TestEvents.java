@@ -40,10 +40,10 @@ public class TestEvents {
 
   /**
    * test a getters of TaskAttemptFinishedEvent and TaskAttemptFinished
-   *
+   * 
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 10000)
   public void testTaskAttemptFinishedEvent() throws Exception {
 
     JobID jid = new JobID("001", 1);
@@ -51,8 +51,8 @@ public class TestEvents {
     TaskAttemptID taskAttemptId = new TaskAttemptID(tid, 3);
     Counters counters = new Counters();
     TaskAttemptFinishedEvent test = new TaskAttemptFinishedEvent(taskAttemptId,
-            TaskType.REDUCE, "TEST", 123L, "RAKNAME", "HOSTNAME", "STATUS",
-            counters);
+        TaskType.REDUCE, "TEST", 123L, "RAKNAME", "HOSTNAME", "STATUS",
+        counters);
     assertEquals(test.getAttemptId().toString(), taskAttemptId.toString());
 
     assertEquals(test.getCounters(), counters);
@@ -67,16 +67,16 @@ public class TestEvents {
   }
 
   /**
-   * simple test  JobPriorityChangeEvent and JobPriorityChange
-   *
+   * simple test JobPriorityChangeEvent and JobPriorityChange
+   * 
    * @throws Exception
    */
 
-  @Test
+  @Test(timeout = 10000)
   public void testJobPriorityChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobPriorityChangeEvent test = new JobPriorityChangeEvent(jid,
-            JobPriority.LOW);
+        JobPriority.LOW);
     assertEquals(test.getJobId().toString(), jid.toString());
     assertEquals(test.getPriority(), JobPriority.LOW);
 
@@ -84,10 +84,10 @@ public class TestEvents {
 
   /**
    * simple test TaskUpdatedEvent and TaskUpdated
-   *
+   * 
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 10000)
   public void testTaskUpdated() throws Exception {
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
@@ -98,14 +98,15 @@ public class TestEvents {
   }
 
   /*
- test EventReader EventReader should read the list of events and  return instance of HistoryEvent
-  Different HistoryEvent should have a different datum.
-  */
-  @Test
+   * test EventReader EventReader should read the list of events and return
+   * instance of HistoryEvent Different HistoryEvent should have a different
+   * datum.
+   */
+  @Test(timeout = 10000)
   public void testEvents() throws Exception {
 
     EventReader reader = new EventReader(new DataInputStream(
-            new ByteArrayInputStream(getEvents())));
+        new ByteArrayInputStream(getEvents())));
     HistoryEvent e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.JOB_PRIORITY_CHANGED));
     assertEquals("ID", ((JobPriorityChange) e.getDatum()).jobid.toString());
@@ -121,63 +122,63 @@ public class TestEvents {
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
+        ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.JOB_KILLED));
     assertEquals("ID",
-            ((JobUnsuccessfulCompletion) e.getDatum()).jobid.toString());
+        ((JobUnsuccessfulCompletion) e.getDatum()).jobid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_STARTED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptStarted) e.getDatum()).taskid.toString());
+        ((TaskAttemptStarted) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_FINISHED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptFinished) e.getDatum()).taskid.toString());
+        ((TaskAttemptFinished) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
+        ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
+        ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_STARTED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptStarted) e.getDatum()).taskid.toString());
+        ((TaskAttemptStarted) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_FINISHED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptFinished) e.getDatum()).taskid.toString());
+        ((TaskAttemptFinished) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
+        ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
     assertEquals("task_1_2_r03_4",
-            ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
+        ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     reader.close();
   }
 
   /*
-     makes array of bytes with History events
-  */
+   * makes array of bytes with History events
+   */
   private byte[] getEvents() throws Exception {
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     FSDataOutputStream fsOutput = new FSDataOutputStream(output,
-            new FileSystem.Statistics("scheme"));
+        new FileSystem.Statistics("scheme"));
     EventWriter writer = new EventWriter(fsOutput);
     writer.write(getJobPriorityChangedEvent());
     writer.write(getJobStatusChangedEvent());
@@ -227,18 +228,24 @@ public class TestEvents {
     datum.port = 1000;
     datum.taskType = "REDUCE";
     datum.status = "STATUS";
+    datum.counters = getCounters();
     datum.vMemKbytes = Arrays.asList(1000, 2000, 3000);
     return datum;
+  }
+
+  private JhCounters getCounters() {
+    JhCounters counters = new JhCounters();
+    counters.groups = new ArrayList<JhCounterGroup>(0);
+    counters.name = "name";
+    return counters;
   }
 
   private FakeEvent getCleanupAttemptFinishedEvent() {
     FakeEvent result = new FakeEvent(EventType.CLEANUP_ATTEMPT_FINISHED);
     TaskAttemptFinished datum = new TaskAttemptFinished();
     datum.attemptId = "attempt_1_2_r3_4_5";
-    JhCounters counters = new JhCounters();
-    counters.groups = new ArrayList<JhCounterGroup>(0);
-    counters.name = "name";
-    datum.counters = counters;
+
+    datum.counters = getCounters();
     datum.finishTime = 2;
     datum.hostname = "hostname";
     datum.rackname = "rackName";
@@ -286,10 +293,7 @@ public class TestEvents {
     TaskAttemptFinished datum = new TaskAttemptFinished();
 
     datum.attemptId = "attempt_1_2_r3_4_5";
-    JhCounters counters = new JhCounters();
-    counters.groups = new ArrayList<JhCounterGroup>(0);
-    counters.name = "name";
-    datum.counters = counters;
+    datum.counters = getCounters();
     datum.finishTime = 2;
     datum.hostname = "hostname";
     datum.rackname = "rackname";
