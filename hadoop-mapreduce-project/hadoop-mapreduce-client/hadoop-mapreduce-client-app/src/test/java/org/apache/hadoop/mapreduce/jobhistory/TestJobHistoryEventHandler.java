@@ -54,7 +54,7 @@ public class TestJobHistoryEventHandler {
   private static final Log LOG = LogFactory
       .getLog(TestJobHistoryEventHandler.class);
 
-  @Test
+  @Test (timeout=50000)
   public void testFirstFlushOnCompletionEvent() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
@@ -97,7 +97,7 @@ public class TestJobHistoryEventHandler {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testMaxUnflushedCompletionEvents() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
@@ -142,7 +142,7 @@ public class TestJobHistoryEventHandler {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testUnflushedTimer() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
@@ -183,7 +183,7 @@ public class TestJobHistoryEventHandler {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testBatchedFlushJobEndMultiplier() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();

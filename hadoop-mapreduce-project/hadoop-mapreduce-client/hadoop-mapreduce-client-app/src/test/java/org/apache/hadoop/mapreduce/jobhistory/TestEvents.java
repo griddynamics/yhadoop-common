@@ -43,7 +43,7 @@ public class TestEvents {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=50000)
   public void testTaskAttemptFinishedEvent() throws Exception {
 
     JobID jid = new JobID("001", 1);
@@ -72,7 +72,7 @@ public class TestEvents {
    * @throws Exception
    */
 
-  @Test
+  @Test (timeout=50000)
   public void testJobPriorityChange() throws Exception {
     org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
     JobPriorityChangeEvent test = new JobPriorityChangeEvent(jid,
@@ -87,7 +87,7 @@ public class TestEvents {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=50000)
   public void testTaskUpdated() throws Exception {
     JobID jid = new JobID("001", 1);
     TaskID tid = new TaskID(jid, TaskType.REDUCE, 2);
@@ -101,7 +101,7 @@ public class TestEvents {
  test EventReader EventReader should read the list of events and  return instance of HistoryEvent
   Different HistoryEvent should have a different datum.
   */
-  @Test
+  @Test (timeout=50000)
   public void testEvents() throws Exception {
 
     EventReader reader = new EventReader(new DataInputStream(
