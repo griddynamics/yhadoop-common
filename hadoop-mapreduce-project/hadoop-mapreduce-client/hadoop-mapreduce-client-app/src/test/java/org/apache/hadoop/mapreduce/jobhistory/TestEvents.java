@@ -36,7 +36,7 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.Test;
 
-public class TestEventes {
+public class TestEvents {
 
   /**
    * test a getters of TaskAttemptFinishedEvent and TaskAttemptFinished
