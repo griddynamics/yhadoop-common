@@ -76,7 +76,17 @@ public class TaskLog {
     }
   }
 
- 
+  static File getRealTaskLogFileLocation(TaskAttemptID taskid,
+      boolean isCleanup, LogName filter) {
+    LogFileDetail l;
+    try {
+      l = getLogFileDetail(taskid, filter, isCleanup);
+    } catch (IOException ie) {
+      LOG.error("getTaskLogFileDetail threw an exception " + ie);
+      return null;
+    }
+    return new File(l.location, filter.toString());
+  }
   private static class LogFileDetail {
     final static String LOCATION = "LOG_DIR:";
     String location;
@@ -138,6 +148,7 @@ public class TaskLog {
   }
   
   
+
   static File getIndexFile(TaskAttemptID taskid, boolean isCleanup) {
     return new File(getAttemptDir(taskid, isCleanup), "log.index");
   }
@@ -162,8 +173,6 @@ public class TaskLog {
     String cleanupSuffix = isCleanup ? ".cleanup" : "";
     return new File(getJobDir(taskid.getJobID()), taskid + cleanupSuffix);
   }
-
-
   
   /**
    * The filter for userlogs.
@@ -288,7 +297,6 @@ public class TaskLog {
     return conf.getLong(JobContext.TASK_USERLOG_LIMIT, 0) * 1024;
   }
 
-  
   
   /**
    * Wrap a command in a shell to capture stdout and stderr to files.
@@ -443,7 +451,7 @@ public class TaskLog {
     return command.toString();
   }
   
- 
+  
   
   /**
    * Method to return the location of user log directory.
