@@ -39,7 +39,7 @@ public class TestTaskLog {
    * 
    * @throws IOException
    */
-  @Test
+  @Test (timeout=50000)
   public void testTaskLog() throws IOException {
     // test TaskLog
     System.setProperty(MRJobConfig.TASK_LOG_DIR, "testString");
@@ -112,7 +112,7 @@ public class TestTaskLog {
    * 
    * @throws IOException
    */
-  @Test
+  @Test (timeout=50000)
   public void testTaskLogWithoutTaskLogDir() throws IOException {
     // TaskLog tasklog= new TaskLog();
     System.clearProperty(MRJobConfig.TASK_LOG_DIR);
