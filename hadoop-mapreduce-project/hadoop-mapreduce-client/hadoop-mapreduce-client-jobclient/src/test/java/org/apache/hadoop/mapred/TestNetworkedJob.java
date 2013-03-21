@@ -57,7 +57,7 @@ public class TestNetworkedJob {
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
-  @Test (timeout=5000)
+  @Test
   public void testGetNullCounters() throws Exception {
     //mock creation
     Job mockJob = mock(Job.class);
@@ -69,7 +69,7 @@ public class TestNetworkedJob {
     verify(mockJob).getCounters();
   }
   
-  @Test (timeout=500000)
+  @Test
   public void testGetJobStatus() throws IOException, InterruptedException,
       ClassNotFoundException {
     MiniMRClientCluster mr = null;
@@ -121,8 +121,8 @@ public class TestNetworkedJob {
  * test JobConf 
  * @throws Exception
  */
-  @SuppressWarnings( "deprecation" )
-  @Test  (timeout=500000)
+  @SuppressWarnings({ "unused", "deprecation" })
+  @Test
   public void testNetworkedJob() throws Exception {
     // mock creation
     MiniMRClientCluster mr = null;
@@ -285,7 +285,7 @@ public class TestNetworkedJob {
    * 
    * @throws IOException
    */
-  @Test (timeout=500000)
+  @Test
   public void testBlackListInfo() throws IOException {
     BlackListInfo info = new BlackListInfo();
     info.setBlackListReport("blackListInfo");
@@ -308,7 +308,7 @@ public class TestNetworkedJob {
  *  test run from command line JobQueueClient
  * @throws Exception
  */
-  @Test (timeout=500000)
+  @Test
   public void testJobQueueClient() throws Exception {
         MiniMRClientCluster mr = null;
     FileSystem fileSys = null;

@@ -66,7 +66,7 @@ public class TestTextInputFormat {
     new Path(new Path(System.getProperty("test.build.data", "/tmp")),
              "TestTextInputFormat").makeQualified(localFs);
 
-  @Test (timeout=500000)
+  @Test
   public void testFormat() throws Exception {
     JobConf job = new JobConf(defaultConf);
     Path file = new Path(workDir, "test.txt");
@@ -146,7 +146,7 @@ public class TestTextInputFormat {
     }
   }
 
-  @Test (timeout=500000)
+  @Test
   public void testSplitableCodecs() throws IOException {
     JobConf conf = new JobConf(defaultConf);
     int seed = new Random().nextInt();
@@ -251,7 +251,7 @@ public class TestTextInputFormat {
                                            bufsz);
   }
 
-  @Test (timeout=5000)
+  @Test
   public void testUTF8() throws Exception {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
@@ -270,7 +270,7 @@ public class TestTextInputFormat {
    *
    * @throws Exception
    */
-  @Test (timeout=5000)
+  @Test
   public void testNewLines() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\r\r\n\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
@@ -310,7 +310,7 @@ public class TestTextInputFormat {
    *
    * @throws Exception
    */
-  @Test (timeout=5000)
+  @Test
   public void testMaxLineLength() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
@@ -335,7 +335,7 @@ public class TestTextInputFormat {
     }
   }
 
-  @Test (timeout=5000)
+  @Test
   public void testMRMaxLine() throws Exception {
     final int MAXPOS = 1024 * 1024;
     final int MAXLINE = 10 * 1024;
@@ -410,7 +410,7 @@ public class TestTextInputFormat {
   /**
    * Test using the gzip codec for reading
    */
-  @Test (timeout=5000)
+  @Test
   public void testGzip() throws IOException {
     JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();
@@ -444,7 +444,7 @@ public class TestTextInputFormat {
   /**
    * Test using the gzip codec and an empty input file
    */
-  @Test (timeout=5000)
+  @Test
   public void testGzipEmpty() throws IOException {
     JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();

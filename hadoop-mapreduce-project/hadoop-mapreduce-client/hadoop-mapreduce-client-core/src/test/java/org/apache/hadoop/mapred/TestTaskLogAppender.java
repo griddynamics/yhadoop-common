@@ -36,7 +36,7 @@ public class TestTaskLogAppender {
  * test TaskLogAppender 
  */
   @SuppressWarnings("deprecation")
-  @Test (timeout=5000)
+  @Test
   public void testTaskLogAppender(){
     TaskLogAppender appender= new TaskLogAppender();
     
