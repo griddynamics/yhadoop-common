@@ -24,8 +24,10 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options;
@@ -39,6 +41,8 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.junit.Test;
 
 public class TestINodeFile {
@@ -180,34 +184,41 @@ public class TestINodeFile {
     long fileLen = 1024;
     replication = 3;
     Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
-        replication).build();
-    cluster.waitActive();
-    FSNamesystem fsn = cluster.getNamesystem();
-    FSDirectory fsdir = fsn.getFSDirectory();
-    DistributedFileSystem dfs = cluster.getFileSystem();
-    
-    // Create a file for test
-    final Path dir = new Path("/dir");
-    final Path file = new Path(dir, "file");
-    DFSTestUtil.createFile(dfs, file, fileLen, replication, 0L);
-    
-    // Check the full path name of the INode associating with the file
-    INode fnode = fsdir.getINode(file.toString());
-    assertEquals(file.toString(), fnode.getFullPathName());
-    
-    // Call FSDirectory#unprotectedSetQuota which calls
-    // INodeDirectory#replaceChild
-    dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
-    final Path newDir = new Path("/newdir");
-    final Path newFile = new Path(newDir, "file");
-    // Also rename dir
-    dfs.rename(dir, newDir, Options.Rename.OVERWRITE);
-    // /dir/file now should be renamed to /newdir/file
-    fnode = fsdir.getINode(newFile.toString());
-    // getFullPathName can return correct result only if the parent field of
-    // child node is set correctly
-    assertEquals(newFile.toString(), fnode.getFullPathName());
+    MiniDFSCluster cluster = null;
+    try {
+      cluster =
+          new MiniDFSCluster.Builder(conf).numDataNodes(replication).build();
+      cluster.waitActive();
+      FSNamesystem fsn = cluster.getNamesystem();
+      FSDirectory fsdir = fsn.getFSDirectory();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+
+      // Create a file for test
+      final Path dir = new Path("/dir");
+      final Path file = new Path(dir, "file");
+      DFSTestUtil.createFile(dfs, file, fileLen, replication, 0L);
+
+      // Check the full path name of the INode associating with the file
+      INode fnode = fsdir.getINode(file.toString());
+      assertEquals(file.toString(), fnode.getFullPathName());
+
+      // Call FSDirectory#unprotectedSetQuota which calls
+      // INodeDirectory#replaceChild
+      dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
+      final Path newDir = new Path("/newdir");
+      final Path newFile = new Path(newDir, "file");
+      // Also rename dir
+      dfs.rename(dir, newDir, Options.Rename.OVERWRITE);
+      // /dir/file now should be renamed to /newdir/file
+      fnode = fsdir.getINode(newFile.toString());
+      // getFullPathName can return correct result only if the parent field of
+      // child node is set correctly
+      assertEquals(newFile.toString(), fnode.getFullPathName());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
   
   @Test
@@ -376,40 +387,91 @@ public class TestINodeFile {
    * @throws IOException
    */
   @Test
-  public void TestInodeId() throws IOException {
+  public void testInodeId() throws IOException {
 
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      FSNamesystem fsn = cluster.getNamesystem();
+      long lastId = fsn.getLastInodeId();
+
+      assertTrue(lastId == 1001);
+
+      // Create one directory and the last inode id should increase to 1002
+      FileSystem fs = cluster.getFileSystem();
+      Path path = new Path("/test1");
+      assertTrue(fs.mkdirs(path));
+      assertTrue(fsn.getLastInodeId() == 1002);
+
+      // Use namenode rpc to create a file
+      NamenodeProtocols nnrpc = cluster.getNameNodeRpc();
+      HdfsFileStatus fileStatus = nnrpc.create("/test1/file", new FsPermission(
+          (short) 0755), "client",
+          new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
+          (short) 1, 128 * 1024 * 1024L);
+      assertTrue(fsn.getLastInodeId() == 1003);
+      assertTrue(fileStatus.getFileId() == 1003);
+
+      // Rename doesn't increase inode id
+      Path renamedPath = new Path("/test2");
+      fs.rename(path, renamedPath);
+      assertTrue(fsn.getLastInodeId() == 1003);
+
+      cluster.restartNameNode();
+      cluster.waitActive();
+      // Make sure empty editlog can be handled
+      cluster.restartNameNode();
+      cluster.waitActive();
+      assertTrue(fsn.getLastInodeId() == 1003);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testWriteToRenamedFile() throws IOException {
+
+    Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .build();
     cluster.waitActive();
-    
-    FSNamesystem fsn = cluster.getNamesystem();
-    long lastId = fsn.getLastInodeId();
-
-    assertTrue(lastId == 1001);
-
-    // Create one directory and the last inode id should increase to 1002
     FileSystem fs = cluster.getFileSystem();
+
     Path path = new Path("/test1");
     assertTrue(fs.mkdirs(path));
-    assertTrue(fsn.getLastInodeId() == 1002);
 
+    int size = conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
+    byte[] data = new byte[size];
+
+    // Create one file
     Path filePath = new Path("/test1/file");
-    fs.create(filePath);
-    assertTrue(fsn.getLastInodeId() == 1003);
+    FSDataOutputStream fos = fs.create(filePath);
 
-    // Rename doesn't increase inode id
+    // Rename /test1 to test2, and recreate /test1/file
     Path renamedPath = new Path("/test2");
     fs.rename(path, renamedPath);
-    assertTrue(fsn.getLastInodeId() == 1003);
+    fs.create(filePath, (short) 1);
 
-    cluster.restartNameNode();
-    cluster.waitActive();
-    // Make sure empty editlog can be handled
-    cluster.restartNameNode();
-    cluster.waitActive();
-    assertTrue(fsn.getLastInodeId() == 1003);
+    // Add new block should fail since /test1/file has a different fileId
+    try {
+      fos.write(data, 0, data.length);
+      // make sure addBlock() request gets to NN immediately
+      fos.hflush();
+
+      fail("Write should fail after rename");
+    } catch (Exception e) {
+      /* Ignore */
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

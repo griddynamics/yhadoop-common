@@ -59,7 +59,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
@@ -67,6 +66,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
@@ -106,6 +106,8 @@ public class Client {
 
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
+
+  private final int connectionTimeout;
   
   final static int PING_CALL_ID = -1;
   
@@ -159,7 +161,16 @@ public class Client {
     }
     return -1;
   }
-  
+  /**
+   * set the connection timeout value in configuration
+   * 
+   * @param conf Configuration
+   * @param timeout the socket connect timeout value
+   */
+  public static final void setConnectTimeout(Configuration conf, int timeout) {
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY, timeout);
+  }
+
   /**
    * Increment this client's reference count
    *
@@ -494,21 +505,20 @@ public class Client {
             }
           }
           
-          // connection time out is 20s
-          NetUtils.connect(this.socket, server, 20000);
+          NetUtils.connect(this.socket, server, connectionTimeout);
           if (rpcTimeout > 0) {
             pingInterval = rpcTimeout;  // rpcTimeout overwrites pingInterval
           }
           this.socket.setSoTimeout(pingInterval);
           return;
-        } catch (SocketTimeoutException toe) {
+        } catch (ConnectTimeoutException toe) {
           /* Check for an address change and update the local reference.
            * Reset the failure counter if the address was changed
            */
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
           }
-          handleConnectionFailure(timeoutFailures++,
+          handleConnectionTimeout(timeoutFailures++,
               maxRetriesOnSocketTimeouts, toe);
         } catch (IOException ie) {
           if (updateAddress()) {
@@ -670,7 +680,7 @@ public class Client {
       socket = null;
     }
 
-    /* Handle connection failures
+    /* Handle connection failures due to timeout on connect
      *
      * If the current number of retries is equal to the max number of retries,
      * stop retrying and throw the exception; Otherwise backoff 1 second and
@@ -684,7 +694,7 @@ public class Client {
      * @param ioe failure reason
      * @throws IOException if max number of retries is reached
      */
-    private void handleConnectionFailure(
+    private void handleConnectionTimeout(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
 
       closeConnection();
@@ -934,31 +944,38 @@ public class Client {
       touch();
       
       try {
-        RpcResponseHeaderProto response = 
+        RpcResponseHeaderProto header = 
             RpcResponseHeaderProto.parseDelimitedFrom(in);
-        if (response == null) {
+        if (header == null) {
           throw new IOException("Response is null.");
         }
 
-        int callId = response.getCallId();
+        int callId = header.getCallId();
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + callId);
 
         Call call = calls.get(callId);
-        RpcStatusProto status = response.getStatus();
+        RpcStatusProto status = header.getStatus();
         if (status == RpcStatusProto.SUCCESS) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setRpcResponse(value);
           calls.remove(callId);
-        } else if (status == RpcStatusProto.ERROR) {
-          call.setException(new RemoteException(WritableUtils.readString(in),
-                                                WritableUtils.readString(in)));
-          calls.remove(callId);
-        } else if (status == RpcStatusProto.FATAL) {
-          // Close the connection
-          markClosed(new RemoteException(WritableUtils.readString(in), 
-                                         WritableUtils.readString(in)));
+        } else { // Rpc Request failed
+            final String exceptionClassName = header.hasExceptionClassName() ?
+                header.getExceptionClassName() : 
+                  "ServerDidNotSetExceptionClassName";
+            final String errorMsg = header.hasErrorMsg() ? 
+                header.getErrorMsg() : "ServerDidNotSetErrorMsg" ;
+          RemoteException re = 
+              new RemoteException(exceptionClassName, errorMsg);
+          if (status == RpcStatusProto.ERROR) {
+            call.setException(re);
+            calls.remove(callId);
+          } else if (status == RpcStatusProto.FATAL) {
+            // Close the connection
+            markClosed(re);
+          }
         }
       } catch (IOException e) {
         markClosed(e);
@@ -1034,6 +1051,8 @@ public class Client {
     this.valueClass = valueClass;
     this.conf = conf;
     this.socketFactory = factory;
+    this.connectionTimeout = conf.getInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
   }
 
   /**

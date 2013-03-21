@@ -98,7 +98,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
@@ -115,6 +114,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -970,29 +970,27 @@ public class DataNode extends Configured
     dnId.setStorageID(createNewStorageId(dnId.getXferPort()));
   }
   
+  /**
+   * @return a unique storage ID of form "DS-randInt-ipaddr-port-timestamp"
+   */
   static String createNewStorageId(int port) {
-    /* Return 
-     * "DS-randInt-ipaddr-currentTimeMillis"
-     * It is considered extermely rare for all these numbers to match
-     * on a different machine accidentally for the following 
-     * a) SecureRandom(INT_MAX) is pretty much random (1 in 2 billion), and
-     * b) Good chance ip address would be different, and
-     * c) Even on the same machine, Datanode is designed to use different ports.
-     * d) Good chance that these are started at different times.
-     * For a confict to occur all the 4 above have to match!.
-     * The format of this string can be changed anytime in future without
-     * affecting its functionality.
-     */
+    // It is unlikely that we will create a non-unique storage ID
+    // for the following reasons:
+    // a) SecureRandom is a cryptographically strong random number generator
+    // b) IP addresses will likely differ on different hosts
+    // c) DataNode xfer ports will differ on the same host
+    // d) StorageIDs will likely be generated at different times (in ms)
+    // A conflict requires that all four conditions are violated.
+    // NB: The format of this string can be changed in the future without
+    // requiring that old SotrageIDs be updated.
     String ip = "unknownIP";
     try {
       ip = DNS.getDefaultIP("default");
     } catch (UnknownHostException ignored) {
-      LOG.warn("Could not find ip address of \"default\" inteface.");
+      LOG.warn("Could not find an IP address for the \"default\" inteface.");
     }
-    
     int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
-    return "DS-" + rand + "-" + ip + "-" + port + "-"
-        + Time.now();
+    return "DS-" + rand + "-" + ip + "-" + port + "-" + Time.now();
   }
   
   /** Ensure the authentication method is kerberos */
@@ -1443,7 +1441,7 @@ public class DataNode extends Configured
             HdfsConstants.SMALL_BUFFER_SIZE));
         in = new DataInputStream(unbufIn);
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
-            false, false, DataNode.this, null);
+            false, false, true, DataNode.this, null);
         DatanodeInfo srcNode = new DatanodeInfo(bpReg);
 
         //
@@ -1468,7 +1466,7 @@ public class DataNode extends Configured
         // read ack
         if (isClient) {
           DNTransferAckProto closeAck = DNTransferAckProto.parseFrom(
-              HdfsProtoUtil.vintPrefixed(in));
+              PBHelper.vintPrefixed(in));
           if (LOG.isDebugEnabled()) {
             LOG.debug(getClass().getSimpleName() + ": close-ack=" + closeAck);
           }
@@ -1619,6 +1617,21 @@ public class DataNode extends Configured
     }
   }
 
+  // Small wrapper around the DiskChecker class that provides means to mock
+  // DiskChecker static methods and unittest DataNode#getDataDirsFromURIs.
+  static class DataNodeDiskChecker {
+    private FsPermission expectedPermission;
+
+    public DataNodeDiskChecker(FsPermission expectedPermission) {
+      this.expectedPermission = expectedPermission;
+    }
+
+    public void checkDir(LocalFileSystem localFS, Path path)
+        throws DiskErrorException, IOException {
+      DiskChecker.checkDir(localFS, path, expectedPermission);
+    }
+  }
+
   /**
    * Make an instance of DataNode after ensuring that at least one of the
    * given data directories (and their parent directories, if necessary)
@@ -1637,7 +1650,10 @@ public class DataNode extends Configured
     FsPermission permission = new FsPermission(
         conf.get(DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
                  DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
-    ArrayList<File> dirs = getDataDirsFromURIs(dataDirs, localFS, permission);
+    DataNodeDiskChecker dataNodeDiskChecker =
+        new DataNodeDiskChecker(permission);
+    ArrayList<File> dirs =
+        getDataDirsFromURIs(dataDirs, localFS, dataNodeDiskChecker);
     DefaultMetricsSystem.initialize("DataNode");
 
     assert dirs.size() > 0 : "number of data directories should be > 0";
@@ -1646,7 +1662,8 @@ public class DataNode extends Configured
 
   // DataNode ctor expects AbstractList instead of List or Collection...
   static ArrayList<File> getDataDirsFromURIs(Collection<URI> dataDirs,
-      LocalFileSystem localFS, FsPermission permission) throws IOException {
+      LocalFileSystem localFS, DataNodeDiskChecker dataNodeDiskChecker)
+          throws IOException {
     ArrayList<File> dirs = new ArrayList<File>();
     StringBuilder invalidDirs = new StringBuilder();
     for (URI dirURI : dataDirs) {
@@ -1658,7 +1675,7 @@ public class DataNode extends Configured
       // drop any (illegal) authority in the URI for backwards compatibility
       File dir = new File(dirURI.getPath());
       try {
-        DiskChecker.checkDir(localFS, new Path(dir.toURI()), permission);
+        dataNodeDiskChecker.checkDir(localFS, new Path(dir.toURI()));
         dirs.add(dir);
       } catch (IOException ioe) {
         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "

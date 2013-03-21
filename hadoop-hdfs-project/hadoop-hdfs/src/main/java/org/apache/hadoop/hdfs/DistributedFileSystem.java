@@ -67,6 +67,8 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -310,10 +312,9 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /**
-   * THIS IS DFS only operations, it is not part of FileSystem
-   * move blocks from srcs to trg
+   * Move blocks from srcs to trg
    * and delete srcs afterwards
-   * all blocks should be the same size
+   * RESTRICTION: all blocks should be the same size
    * @param trg existing file to append to
    * @param psrcs list of files (same block size, same replication)
    * @throws IOException
@@ -565,9 +566,8 @@ public class DistributedFileSystem extends FileSystem {
     return "DFS[" + dfs + "]";
   }
 
-  /** @deprecated DFSClient should not be accessed directly. */
   @InterfaceAudience.Private
-  @Deprecated
+  @VisibleForTesting
   public DFSClient getClient() {
     return dfs;
   }        

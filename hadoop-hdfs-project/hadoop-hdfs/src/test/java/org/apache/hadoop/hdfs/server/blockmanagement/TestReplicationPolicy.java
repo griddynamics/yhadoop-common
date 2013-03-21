@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
@@ -88,9 +88,11 @@ public class TestReplicationPolicy {
         "test.build.data", "build/test/data"), "dfs/");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         new File(baseDir, "name").getPath());
-    // Enable the checking for stale datanodes in the beginning
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY, true);
 
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY, true);
     DFSTestUtil.formatNameNode(conf);
     namenode = new NameNode(conf);
 
@@ -100,6 +102,8 @@ public class TestReplicationPolicy {
     // construct network topology
     for (int i=0; i < NUM_OF_DATANODES; i++) {
       cluster.add(dataNodes[i]);
+      bm.getDatanodeManager().getHeartbeatManager().addDatanode(
+          dataNodes[i]);
     }
     for (int i=0; i < NUM_OF_DATANODES; i++) {
       dataNodes[i].updateHeartbeat(
@@ -393,11 +397,11 @@ public class TestReplicationPolicy {
       throws Exception {
     try {
       namenode.getNamesystem().getBlockManager().getDatanodeManager()
-        .setAvoidStaleDataNodesForWrite(true);
+        .setNumStaleNodes(NUM_OF_DATANODES);
       testChooseTargetWithMoreThanAvailableNodes();
     } finally {
       namenode.getNamesystem().getBlockManager().getDatanodeManager()
-      .setAvoidStaleDataNodesForWrite(false);
+        .setNumStaleNodes(0);
     }
   }
   
@@ -415,7 +419,7 @@ public class TestReplicationPolicy {
           (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
     }
     
-    final TestAppender appender = new TestAppender();
+    final LogVerificationAppender appender = new LogVerificationAppender();
     final Logger logger = Logger.getRootLogger();
     logger.addAppender(appender);
     
@@ -442,28 +446,6 @@ public class TestReplicationPolicy {
           HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
   }
-  
-  class TestAppender extends AppenderSkeleton {
-    private final List<LoggingEvent> log = new ArrayList<LoggingEvent>();
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-
-    @Override
-    protected void append(final LoggingEvent loggingEvent) {
-      log.add(loggingEvent);
-    }
-
-    @Override
-    public void close() {
-    }
-
-    public List<LoggingEvent> getLog() {
-      return new ArrayList<LoggingEvent>(log);
-    }
-  }
 
   private boolean containsWithinRange(DatanodeDescriptor target,
       DatanodeDescriptor[] nodes, int startIndex, int endIndex) {
@@ -479,12 +461,12 @@ public class TestReplicationPolicy {
   
   @Test
   public void testChooseTargetWithStaleNodes() throws Exception {
-    // Enable avoidng writing to stale datanodes
-    namenode.getNamesystem().getBlockManager().getDatanodeManager()
-        .setAvoidStaleDataNodesForWrite(true);
     // Set dataNodes[0] as stale
     dataNodes[0].setLastUpdate(Time.now() - staleInterval - 1);
-
+    namenode.getNamesystem().getBlockManager()
+      .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
+    assertTrue(namenode.getNamesystem().getBlockManager()
+        .getDatanodeManager().shouldAvoidStaleDataNodesForWrite());
     DatanodeDescriptor[] targets;
     // We set the datanode[0] as stale, thus should choose datanode[1] since
     // datanode[1] is on the same rack with datanode[0] (writer)
@@ -503,9 +485,9 @@ public class TestReplicationPolicy {
     assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
     
     // reset
-    namenode.getNamesystem().getBlockManager().getDatanodeManager()
-        .setAvoidStaleDataNodesForWrite(false);
     dataNodes[0].setLastUpdate(Time.now());
+    namenode.getNamesystem().getBlockManager()
+      .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
   }
 
   /**
@@ -518,20 +500,20 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testChooseTargetWithHalfStaleNodes() throws Exception {
-    // Enable stale datanodes checking
-    namenode.getNamesystem().getBlockManager().getDatanodeManager()
-        .setAvoidStaleDataNodesForWrite(true);
     // Set dataNodes[0], dataNodes[1], and dataNodes[2] as stale
     for (int i = 0; i < 3; i++) {
       dataNodes[i].setLastUpdate(Time.now() - staleInterval - 1);
     }
+    namenode.getNamesystem().getBlockManager()
+      .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
 
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(filename, 0, dataNodes[0],
         new ArrayList<DatanodeDescriptor>(), BLOCK_SIZE);
     assertEquals(targets.length, 0);
 
-    // We set the datanode[0] as stale, thus should choose datanode[1]
+    // Since we have 6 datanodes total, stale nodes should
+    // not be returned until we ask for more than 3 targets
     targets = replicator.chooseTarget(filename, 1, dataNodes[0],
         new ArrayList<DatanodeDescriptor>(), BLOCK_SIZE);
     assertEquals(targets.length, 1);
@@ -557,18 +539,16 @@ public class TestReplicationPolicy {
     assertTrue(containsWithinRange(dataNodes[4], targets, 0, 3));
     assertTrue(containsWithinRange(dataNodes[5], targets, 0, 3));
 
-    // reset
-    namenode.getNamesystem().getBlockManager().getDatanodeManager()
-        .setAvoidStaleDataNodesForWrite(false);
     for (int i = 0; i < dataNodes.length; i++) {
       dataNodes[i].setLastUpdate(Time.now());
     }
+    namenode.getNamesystem().getBlockManager()
+      .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
   }
 
   @Test
   public void testChooseTargetWithMoreThanHalfStaleNodes() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY, true);
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY, true);
     String[] hosts = new String[]{"host1", "host2", "host3", 
@@ -598,7 +578,7 @@ public class TestReplicationPolicy {
           .getBlockManager().getDatanodeManager().getNumStaleNodes();
       assertEquals(numStaleNodes, 2);
       assertTrue(miniCluster.getNameNode().getNamesystem().getBlockManager()
-          .getDatanodeManager().isAvoidingStaleDataNodesForWrite());
+          .getDatanodeManager().shouldAvoidStaleDataNodesForWrite());
       // Call chooseTarget
       DatanodeDescriptor staleNodeInfo = miniCluster.getNameNode()
           .getNamesystem().getBlockManager().getDatanodeManager()
@@ -627,7 +607,7 @@ public class TestReplicationPolicy {
       // According to our strategy, stale datanodes will be included for writing
       // to avoid hotspots
       assertFalse(miniCluster.getNameNode().getNamesystem().getBlockManager()
-          .getDatanodeManager().isAvoidingStaleDataNodesForWrite());     
+          .getDatanodeManager().shouldAvoidStaleDataNodesForWrite());
       // Call chooseTarget
       targets = replicator.chooseTarget(filename, 3,
           staleNodeInfo, new ArrayList<DatanodeDescriptor>(), BLOCK_SIZE);
@@ -650,7 +630,7 @@ public class TestReplicationPolicy {
           .getBlockManager().getDatanodeManager().getNumStaleNodes();
       assertEquals(numStaleNodes, 2);
       assertTrue(miniCluster.getNameNode().getNamesystem().getBlockManager()
-          .getDatanodeManager().isAvoidingStaleDataNodesForWrite());
+          .getDatanodeManager().shouldAvoidStaleDataNodesForWrite());
       // Call chooseTarget
       targets = replicator.chooseTarget(filename, 3,
           staleNodeInfo, new ArrayList<DatanodeDescriptor>(), BLOCK_SIZE);
