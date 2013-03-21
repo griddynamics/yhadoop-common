@@ -146,7 +146,7 @@ public class TestTextInputFormat {
     }
   }
 
-  @Test (timeout=500000)
+  @Test (timeout=900000)
   public void testSplitableCodecs() throws IOException {
     JobConf conf = new JobConf(defaultConf);
     int seed = new Random().nextInt();
