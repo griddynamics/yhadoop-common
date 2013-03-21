@@ -46,7 +46,7 @@ public class TestQueue {
    * 
    * @throws IOException
    */
-  @Test
+  @Test (timeout=5000)
   public void testQueue() throws IOException {
     File f = null;
     try {
@@ -120,16 +120,6 @@ public class TestQueue {
       // test getJobQueueInfoMapping
       assertEquals(
           manager.getJobQueueInfoMapping().get("first").getQueueName(), "first");
-      // test getRootQueues
-      assertEquals(manager.getRootQueues()[0].getQueueName(), "first");
-      // test getChildQueues
-      assertEquals(manager.getChildQueues("second").length, 0);
-      // getQueue
-      assertEquals(manager.getQueue("first").getName(), "first");
-      // test getQueueACL
-      assertEquals(manager.getQueueACL("first", QueueACL.SUBMIT_JOB)
-          .getAclString(), "user1,user2 group1,group2");
-
       // test dumpConfiguration
       Writer writer = new StringWriter();
 
@@ -171,11 +161,9 @@ public class TestQueue {
     return conf;
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testDefaultConfig() {
     QueueManager manager = new QueueManager(true);
-    assertNotNull(manager.getChildQueues("q1"));
-    assertNotNull(manager.getQueue("default"));
     assertEquals(manager.getRoot().getChildren().size(), 2);
   }
 
@@ -185,7 +173,7 @@ public class TestQueue {
    * @throws IOException
    */
 
-  @Test
+  @Test (timeout=5000)
   public void test2Queue() throws IOException {
     Configuration conf = getConfiguration();
 
@@ -219,16 +207,7 @@ public class TestQueue {
     template.add("first");
     template.add("second");
     assertEquals(manager.getLeafQueueNames(), template);
-    conf.set(QueueManager.QUEUE_CONF_PROPERTY_NAME_PREFIX + "first.state",
-        "stopped");
 
-    manager.setSchedulerInfo("first", "queueInfo");
-    Set<Queue> children=manager.getRoot().getChildren();
-    
-    Queue [] queues= children.toArray( new Queue[0]  );
-    manager.setQueues(queues);
-    
-    assertEquals(manager.getRoot().getChildren().size(), 2);
     
   }
 /**
