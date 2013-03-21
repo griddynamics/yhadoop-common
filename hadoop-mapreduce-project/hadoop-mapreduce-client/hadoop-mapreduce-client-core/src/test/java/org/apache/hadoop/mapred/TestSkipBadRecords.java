@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
  * 
  */
 public class TestSkipBadRecords {
-  @Test
+  @Test (timeout=5000)
   public void testSkipBadRecords() {
     // test default values
     Configuration conf = new Configuration();
