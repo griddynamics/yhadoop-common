@@ -40,8 +40,8 @@ public class TestQueueConfigurationParser {
  * test xml generation 
  * @throws ParserConfigurationException
  * @throws Exception 
- */
-  @Test
+ */ 
+  @Test (timeout=5000)
   public void testQueueConfigurationParser()
       throws ParserConfigurationException, Exception {
     JobQueueInfo info = new JobQueueInfo("root", "rootInfo");
