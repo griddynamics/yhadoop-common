@@ -80,7 +80,7 @@ public class TestTaskAttemptListenerImpl {
     }
   }
   
-  @Test
+  @Test  (timeout=5000)
   public void testGetTask() throws IOException {
     AppContext appCtx = mock(AppContext.class);
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class); 
@@ -152,7 +152,7 @@ public class TestTaskAttemptListenerImpl {
 
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testJVMId() {
 
     JVMId jvmid = new JVMId("test", 1, true, 2);
@@ -161,7 +161,7 @@ public class TestTaskAttemptListenerImpl {
     assertEquals(0, jvmid.compareTo(jvmid1));
   }
 
-  @Test
+  @Test (timeout=10000)
   public void testGetMapCompletionEvents() throws IOException {
     TaskAttemptCompletionEvent[] empty = {};
     TaskAttemptCompletionEvent[] taskEvents = {
@@ -228,7 +228,7 @@ public class TestTaskAttemptListenerImpl {
     return tce;
   }
 
-  @Test
+  @Test (timeout=1000)
   public void testCommitWindow() throws IOException {
     SystemClock clock = new SystemClock();
 
