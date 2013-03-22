@@ -191,9 +191,12 @@ public class ContainerLauncherImpl extends AbstractService implements
     @SuppressWarnings("unchecked")
     public synchronized void kill() {
 
+      if(isCompletelyDone()) { 
+        return;
+      }
       if(this.state == ContainerState.PREP) {
         this.state = ContainerState.KILLED_BEFORE_LAUNCH;
-      } else if (!isCompletelyDone()) {
+      } else {
         LOG.info("KILLING " + taskAttemptID);
 
         ContainerManager proxy = null;
@@ -229,7 +232,6 @@ public class ContainerLauncherImpl extends AbstractService implements
               TaskAttemptEventType.TA_CONTAINER_CLEANED));
     }
   }
-
 
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
@@ -271,7 +273,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         ContainerLauncherEvent event = null;
         Set<String> allNodes = new HashSet<String>();
 
-          while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
+        while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
@@ -281,6 +283,7 @@ public class ContainerLauncherImpl extends AbstractService implements
             return;
           }
           allNodes.add(event.getContainerMgrAddress());
+
           int poolSize = launcherPool.getCorePoolSize();
 
           // See if we need up the pool size only if haven't reached the
