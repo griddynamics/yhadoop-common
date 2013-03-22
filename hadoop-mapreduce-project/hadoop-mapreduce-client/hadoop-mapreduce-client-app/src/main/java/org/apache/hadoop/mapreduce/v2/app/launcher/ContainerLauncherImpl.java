@@ -230,7 +230,6 @@ public class ContainerLauncherImpl extends AbstractService implements
     }
   }
 
-
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
     this.context = context;
@@ -271,7 +270,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         ContainerLauncherEvent event = null;
         Set<String> allNodes = new HashSet<String>();
 
-          while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
+        while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
@@ -281,6 +280,7 @@ public class ContainerLauncherImpl extends AbstractService implements
             return;
           }
           allNodes.add(event.getContainerMgrAddress());
+
           int poolSize = launcherPool.getCorePoolSize();
 
           // See if we need up the pool size only if haven't reached the
