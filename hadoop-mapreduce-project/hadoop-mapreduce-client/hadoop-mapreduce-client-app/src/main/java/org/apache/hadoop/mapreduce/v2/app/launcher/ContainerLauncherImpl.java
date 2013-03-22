@@ -233,9 +233,6 @@ public class ContainerLauncherImpl extends AbstractService implements
     }
   }
 
-  // To track numNodes.
-  Set<String> allNodes = new HashSet<String>();
-
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
     this.context = context;
@@ -274,6 +271,8 @@ public class ContainerLauncherImpl extends AbstractService implements
       @Override
       public void run() {
         ContainerLauncherEvent event = null;
+        Set<String> allNodes = new HashSet<String>();
+
         while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
@@ -283,6 +282,8 @@ public class ContainerLauncherImpl extends AbstractService implements
             }
             return;
           }
+          allNodes.add(event.getContainerMgrAddress());
+
           int poolSize = launcherPool.getCorePoolSize();
 
           // See if we need up the pool size only if haven't reached the
@@ -422,7 +423,6 @@ public class ContainerLauncherImpl extends AbstractService implements
   public void handle(ContainerLauncherEvent event) {
     try {
       eventQueue.put(event);
-      this.allNodes.add(event.getContainerMgrAddress());
     } catch (InterruptedException e) {
       throw new YarnException(e);
     }
