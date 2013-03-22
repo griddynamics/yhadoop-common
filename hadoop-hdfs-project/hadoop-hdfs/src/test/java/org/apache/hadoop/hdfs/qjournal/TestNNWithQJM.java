@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.qjournal;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +44,7 @@ import org.junit.Test;
 
 public class TestNNWithQJM {
   Configuration conf = new HdfsConfiguration();
-  private MiniJournalCluster mjc;
+  private MiniJournalCluster mjc = null;
   private Path TEST_PATH = new Path("/test-dir");
   private Path TEST_PATH_2 = new Path("/test-dir");
 
@@ -61,10 +62,11 @@ public class TestNNWithQJM {
   public void stopJNs() throws Exception {
     if (mjc != null) {
       mjc.shutdown();
+      mjc = null;
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testLogAndRestart() throws IOException {
     String baseDir = MiniDFSCluster.newDfsBaseDir();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
@@ -95,9 +97,12 @@ public class TestNNWithQJM {
       cluster.shutdown();
     }
   }
-  
-  @Test
+
+  @Test (timeout = 30000)
   public void testNewNamenodeTakesOverWriter() throws Exception {
+    // Skip the test on Windows. See HDFS-4584.
+    assumeTrue(!Path.WINDOWS);
+
     String baseDir = MiniDFSCluster.newDfsBaseDir();
     File nn1Dir = new File(
         baseDir + "/TestNNWithQJM/image-nn1");
@@ -159,7 +164,7 @@ public class TestNNWithQJM {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testMismatchedNNIsRejected() throws Exception {
     String baseDir = MiniDFSCluster.newDfsBaseDir();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
@@ -198,8 +203,8 @@ public class TestNNWithQJM {
           "Unable to start log segment 1: too few journals", ioe);
     }
   }
-  
-  @Test
+
+  @Test (timeout = 30000)
   public void testWebPageHasQjmInfo() throws Exception {
     String baseDir = MiniDFSCluster.newDfsBaseDir();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
