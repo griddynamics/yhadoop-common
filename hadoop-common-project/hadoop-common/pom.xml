@@ -590,7 +590,9 @@
     <profile>
       <id>native-win</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <os>
+          <family>Windows</family>
+        </os>
       </activation>
       <build>
         <plugins>
