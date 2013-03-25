@@ -43,7 +43,7 @@ public class Path implements Comparable {
   
   public static final String CUR_DIR = ".";
   
-  static final boolean WINDOWS
+  public static final boolean WINDOWS
     = System.getProperty("os.name").startsWith("Windows");
 
   private URI uri;                                // a hierarchical uri
