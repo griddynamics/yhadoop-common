@@ -18,12 +18,7 @@
 package org.apache.hadoop.mapred.lib.db;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.DriverManager;
-import java.sql.DriverPropertyInfo;
-import java.sql.SQLException;
-import java.util.Properties;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.RawLocalFileSystem;
@@ -31,8 +26,8 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.lib.db.ConnectionForTest;
 import org.apache.hadoop.mapreduce.lib.db.DBConfiguration;
+import org.apache.hadoop.mapreduce.lib.db.DriverForTest;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Test;
 
