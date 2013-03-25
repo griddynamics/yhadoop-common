@@ -18,104 +18,142 @@
 
 package org.apache.hadoop.mapred.lib.db;
 
-
 import java.lang.reflect.Field;
 import java.sql.Connection;
+import java.sql.SQLException;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat;
+import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBInputSplit;
+import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBRecordReader;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.db.ConnectionForTest;
-import org.apache.hadoop.mapreduce.lib.db.DBConfiguration;
+import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-
 public class TestDBInputFormat {
 
   @Test
-  public void testDBInputFormat() throws Exception{
-    
-    JobConf configuration= new JobConfForTest(); 
+  public void testDBInputFormat() throws Exception {
+
+    JobConf configuration = new JobConfForTest();
     DBInputFormat<NullDBWritable> format = new DBInputFormatForTest();
     format.setConf(configuration);
-    DBInputFormat.DBInputSplit splitter= new DBInputFormat.DBInputSplit(1,11);
+    DBInputFormat.DBInputSplit splitter = new DBInputFormat.DBInputSplit(1, 11);
     Reporter reporter = mock(Reporter.class);
-    RecordReader<LongWritable,NullDBWritable> reader  =format.getRecordReader(splitter,configuration,reporter);
-    
-    assertEquals("org.apache.hadoop.mapred.lib.db.DBInputFormat$DBRecordReaderWrapper",reader.getClass().getName() );
-    
-    configuration.setInt(MRJobConfig.NUM_MAPS, 3);
-    InputSplit[]  lSplits=format.getSplits(configuration, 3);
-    assertEquals(5,lSplits[0].getLength());
-    assertEquals(3,lSplits.length);
-    
-    // test reader
-    
-    assertEquals(LongWritable.class, reader.createKey().getClass());
-    assertEquals(0,reader.getPos());
-    assertEquals(0,reader.getProgress(),0.001);
-    
-    
-    
-  }
-  @Test
-  public void testSetInput(){
-    JobConf configuration= new JobConfForTest(); 
+    RecordReader<LongWritable, NullDBWritable> reader = format.getRecordReader(
+        splitter, configuration, reporter);
 
-    String[] fieldNames= {"field1","field2"};
-    DBInputFormatForTest.setInput(configuration, NullDBWritable.class,
-        "table","conditions","orderBy",  fieldNames) ;
-    assertEquals("org.apache.hadoop.mapred.lib.db.DBInputFormat$NullDBWritable", configuration.getClass(DBConfiguration.INPUT_CLASS_PROPERTY, null).getName());
-    assertEquals("table", configuration.get(DBConfiguration.INPUT_TABLE_NAME_PROPERTY, null));
-    
-    String[] fields=configuration.getStrings(DBConfiguration.INPUT_FIELD_NAMES_PROPERTY);
+    assertEquals(
+        "org.apache.hadoop.mapred.lib.db.DBInputFormat$DBRecordReaderWrapper",
+        reader.getClass().getName());
+
+    configuration.setInt(MRJobConfig.NUM_MAPS, 3);
+    InputSplit[] lSplits = format.getSplits(configuration, 3);
+    assertEquals(5, lSplits[0].getLength());
+    assertEquals(3, lSplits.length);
+
+    // test reader
+
+    assertEquals(LongWritable.class, reader.createKey().getClass());
+    assertEquals(0, reader.getPos());
+    assertEquals(0, reader.getProgress(), 0.001);
+    reader.createValue();
+    reader.close();
+  }
+
+  @Test
+  public void testSetInput() {
+    JobConf configuration = new JobConfForTest();
+
+    String[] fieldNames = { "field1", "field2" };
+    DBInputFormatForTest.setInput(configuration, NullDBWritable.class, "table",
+        "conditions", "orderBy", fieldNames);
+    assertEquals(
+        "org.apache.hadoop.mapred.lib.db.DBInputFormat$NullDBWritable",
+        configuration.getClass(DBConfiguration.INPUT_CLASS_PROPERTY, null)
+            .getName());
+    assertEquals("table",
+        configuration.get(DBConfiguration.INPUT_TABLE_NAME_PROPERTY, null));
+
+    String[] fields = configuration
+        .getStrings(DBConfiguration.INPUT_FIELD_NAMES_PROPERTY);
     assertEquals("field1", fields[0]);
     assertEquals("field2", fields[1]);
-    
-    assertEquals("conditions", configuration.get(DBConfiguration.INPUT_CONDITIONS_PROPERTY, null));
-    assertEquals("orderBy", configuration.get(DBConfiguration.INPUT_ORDER_BY_PROPERTY, null));
-    
-     configuration= new JobConfForTest(); 
-    
-    
-     DBInputFormatForTest.setInput(configuration, NullDBWritable.class,
-        "query", "countQuery") ;
-     assertEquals("query", configuration.get(DBConfiguration.INPUT_QUERY, null));
-     assertEquals("countQuery", configuration.get(DBConfiguration.INPUT_COUNT_QUERY, null));
-    
-  } 
-  private class DBInputFormatForTest extends DBInputFormat<NullDBWritable>{
+
+    assertEquals("conditions",
+        configuration.get(DBConfiguration.INPUT_CONDITIONS_PROPERTY, null));
+    assertEquals("orderBy",
+        configuration.get(DBConfiguration.INPUT_ORDER_BY_PROPERTY, null));
+
+    configuration = new JobConfForTest();
+
+    DBInputFormatForTest.setInput(configuration, NullDBWritable.class, "query",
+        "countQuery");
+    assertEquals("query", configuration.get(DBConfiguration.INPUT_QUERY, null));
+    assertEquals("countQuery",
+        configuration.get(DBConfiguration.INPUT_COUNT_QUERY, null));
+
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testDBRecordReader() throws Exception {
+
+    DBInputSplit splitter = new DBInputSplit(1, 10);
+    JobConf job = mock(JobConf.class);
+    DBConfiguration dbConfig = mock(DBConfiguration.class);
+    String[] fields = { "field1", "filed2" };
+    Class<? extends DBWritable> inputClass = NullDBWritable.class;
+
+    @SuppressWarnings("rawtypes")
+    DBRecordReader reader = new DBInputFormat<NullDBWritable>().new DBRecordReader(
+        splitter, (Class<NullDBWritable>) inputClass, job,
+        new ConnectionForTest(), dbConfig, "condition", fields, "table");
+    LongWritable key = reader.createKey();
+    assertEquals(0, key.get());
+    DBWritable value = reader.createValue();
+    assertEquals(
+        "org.apache.hadoop.mapred.lib.db.DBInputFormat$NullDBWritable", value
+            .getClass().getName());
+    assertEquals(0, reader.getPos());
+    assertFalse(reader.next(key, value));
+
+  }
+
+  private class DBInputFormatForTest extends DBInputFormat<NullDBWritable> {
 
     @Override
     public Connection getConnection() {
-      Connection result= new ConnectionForTest();
-     try {
-      Field field= org.apache.hadoop.mapreduce.lib.db.DBInputFormat.class.getDeclaredField("connection");
-      field.setAccessible(true);
-      field.set(this , result);
-    } catch (SecurityException e) {
-      e.printStackTrace();
-    } catch (NoSuchFieldException e) {
-      e.printStackTrace();
-    } catch (IllegalArgumentException e) {
-      e.printStackTrace();
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
-    }
-      
+      Connection result = new ConnectionForTest();
+      try {
+        Field field = org.apache.hadoop.mapreduce.lib.db.DBInputFormat.class
+            .getDeclaredField("connection");
+        field.setAccessible(true);
+        field.set(this, result);
+      } catch (SecurityException e) {
+        e.printStackTrace();
+      } catch (NoSuchFieldException e) {
+        e.printStackTrace();
+      } catch (IllegalArgumentException e) {
+        e.printStackTrace();
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+      }
+
       return result;
     }
-    
+
   }
-  
-  private class JobConfForTest extends JobConf{
-    
+
+  private class JobConfForTest extends JobConf {
+
   }
 }

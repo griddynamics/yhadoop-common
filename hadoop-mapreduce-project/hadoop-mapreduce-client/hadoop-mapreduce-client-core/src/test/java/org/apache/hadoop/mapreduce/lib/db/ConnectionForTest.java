@@ -223,7 +223,11 @@ public class ConnectionForTest implements Connection {
   @Override
   public PreparedStatement prepareStatement(String sql, int resultSetType,
       int resultSetConcurrency) throws SQLException {
-    return null;
+    PreparedStatement result= mock(PreparedStatement.class);
+    ResultSet resultSet = mock(ResultSet.class);
+    when( resultSet.next()).thenReturn(false);
+    when(result.executeQuery()).thenReturn(resultSet);
+    return result;
   }
 
   @Override

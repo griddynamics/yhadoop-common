@@ -20,13 +20,19 @@ package org.apache.hadoop.mapreduce.lib.db;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.Types;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit;
+import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.NullDBWritable;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
@@ -186,5 +192,37 @@ public class TestSplitters {
     data.reset();
     split.write(new DataOutputStream(data));
     assertEquals("column1 >= 'result1'column1 <= 'result2'", data.toString());
+  }
+  
+  @Test
+  public void testDBSplitter() throws Exception{
+    OracleDataDrivenDBInputFormat<NullDBWritable> format = new OracleDataDrivenDBInputFormatForTest();
+    assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP).getClass()); 
+    assertEquals(IntegerSplitter.class, format.getSplitter(Types.INTEGER).getClass()); 
+    
+    Configuration configuration= new Configuration();
+    DBInputSplit inputSplit= new DBInputSplit(1,10);
+    RecordReader<LongWritable, NullDBWritable> recorder= format.createDBRecordReader(inputSplit, configuration);
+    assertEquals(OracleDataDrivenDBRecordReader.class, recorder.getClass());
+    
+  }
+  private class OracleDataDrivenDBInputFormatForTest extends OracleDataDrivenDBInputFormat<NullDBWritable>{
+
+    @Override
+    public DBConfiguration getDBConf() {
+     
+      DBConfiguration result = new DBConfiguration(new Configuration());
+      result.setInputClass(NullDBWritable.class);
+      return result;
+    }
+
+    @Override
+    public Connection getConnection() {
+      
+      return new ConnectionForTest();
+    }
+
+   
+    
   }
 }

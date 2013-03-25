@@ -50,6 +50,7 @@ public class TestDbClasses {
     assertNull(jConfiguration.get(DBConfiguration.PASSWORD_PROPERTY));
   }
 
+  /*
   @Test
   public void testDBOutputFormat() throws Exception {
     JobConf jConfiguration = new JobConf();
@@ -61,4 +62,5 @@ public class TestDbClasses {
         filesystem, jConfiguration, "name", progress);
     System.out.println("OK");
   }
+  */
 }
