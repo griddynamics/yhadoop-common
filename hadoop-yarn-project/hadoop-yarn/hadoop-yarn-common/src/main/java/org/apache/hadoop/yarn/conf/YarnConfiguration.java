@@ -304,6 +304,17 @@ public class YarnConfiguration extends Configuration {
   /** who will execute(launch) the containers.*/
   public static final String NM_CONTAINER_EXECUTOR = 
     NM_PREFIX + "container-executor.class";
+
+  /**  
+   * Adjustment to make to the container os scheduling priority.
+   * The valid values for this could vary depending on the platform.
+   * On Linux, higher values mean run the containers at a less 
+   * favorable priority than the NM. 
+   * The value specified is an int.
+   */
+  public static final String NM_CONTAINER_EXECUTOR_SCHED_PRIORITY = 
+    NM_PREFIX + "container-executor.os.sched.priority.adjustment";
+  public static final int DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY = 0;
   
   /** Number of threads container manager uses.*/
   public static final String NM_CONTAINER_MGR_THREAD_COUNT =
@@ -425,6 +436,16 @@ public class YarnConfiguration extends Configuration {
   /** Amount of memory in GB that can be allocated for containers.*/
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
   public static final int DEFAULT_NM_PMEM_MB = 8 * 1024;
+
+  /** Specifies whether physical memory check is enabled. */
+  public static final String NM_PMEM_CHECK_ENABLED = NM_PREFIX
+      + "pmem-check-enabled";
+  public static final boolean DEFAULT_NM_PMEM_CHECK_ENABLED = true;
+
+  /** Specifies whether physical memory check is enabled. */
+  public static final String NM_VMEM_CHECK_ENABLED = NM_PREFIX
+      + "vmem-check-enabled";
+  public static final boolean DEFAULT_NM_VMEM_CHECK_ENABLED = true;
 
   /** Conversion ratio for physical memory to virtual memory. */
   public static final String NM_VMEM_PMEM_RATIO =
@@ -609,6 +630,20 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "process-kill-wait.ms";
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
+
+  /** Max time to wait to establish a connection to RM when NM starts
+   */
+  public static final String RESOURCEMANAGER_CONNECT_WAIT_SECS =
+      NM_PREFIX + "resourcemanager.connect.wait.secs";
+  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_WAIT_SECS =
+      15*60;
+
+  /** Time interval between each NM attempt to connect to RM
+   */
+  public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS =
+      NM_PREFIX + "resourcemanager.connect.retry_interval.secs";
+  public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
+      = 30;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
