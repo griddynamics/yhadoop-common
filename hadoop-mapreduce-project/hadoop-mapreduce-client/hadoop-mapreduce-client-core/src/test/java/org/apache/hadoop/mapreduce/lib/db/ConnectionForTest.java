@@ -199,7 +199,8 @@ public class ConnectionForTest implements Connection {
 
   @Override
   public PreparedStatement prepareStatement(String sql) throws SQLException {
-    return null;
+    PreparedStatement result = mock(PreparedStatement.class);
+    return result;
   }
 
   @Override
