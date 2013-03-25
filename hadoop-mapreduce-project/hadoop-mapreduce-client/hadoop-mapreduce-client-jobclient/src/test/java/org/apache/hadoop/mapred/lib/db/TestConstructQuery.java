@@ -42,7 +42,7 @@ public class TestConstructQuery {
 
   private DBOutputFormat<DBWritable, NullWritable> format = new DBOutputFormat<DBWritable, NullWritable>();
 
-  @Test (timeout=2000)
+  @Test(timeout = 2000)
   public void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);
     assertEquals(expected, actual);
@@ -51,14 +51,14 @@ public class TestConstructQuery {
     assertEquals(nullExpected, actual);
   }
 
-  @Test (timeout=2000)
+  @Test(timeout = 2000)
   public void testSetOutput() throws IOException {
     JobConf job = new JobConf();
     DBOutputFormat.setOutput(job, "hadoop_output", fieldNames);
 
     DBConfiguration dbConfiguration = new DBConfiguration(job);
     String actual = format.constructQuery(dbConfiguration.getOutputTableName(),
-            dbConfiguration.getOutputFieldNames());
+        dbConfiguration.getOutputFieldNames());
 
     assertEquals(expected, actual);
 
@@ -73,10 +73,11 @@ public class TestConstructQuery {
 
     assertEquals(nullExpected, actual);
   }
-/**
- *  test DBOutputFormat. Should works with DBRecordWriter. 
- */
-  @Test (timeout=2000)
+
+  /**
+   * test DBOutputFormat. Should works with DBRecordWriter.
+   */
+  @Test(timeout = 2000)
   public void testGetRecordWriter() throws Exception {
     FileSystem fs = new RawLocalFileSystem();
     JobConf jobConf = new JobConf();
@@ -89,7 +90,9 @@ public class TestConstructQuery {
         "org.apache.hadoop.mapred.lib.db.DriverForTest");
     RecordWriter<DBWritable, NullWritable> recorder = format.getRecordWriter(
         fs, jobConf, "name", progress);
-    assertEquals("org.apache.hadoop.mapred.lib.db.DBOutputFormat$DBRecordWriter", recorder.getClass().getName());
+    assertEquals(
+        "org.apache.hadoop.mapred.lib.db.DBOutputFormat$DBRecordWriter",
+        recorder.getClass().getName());
     recorder.close(null);
   }
 
