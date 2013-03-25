@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred.lib.db;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
-import java.sql.SQLException;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapred.JobConf;
@@ -46,7 +45,7 @@ public class TestDBInputFormat {
     JobConf configuration = new JobConfForTest();
     DBInputFormat<NullDBWritable> format = new DBInputFormatForTest();
     format.setConf(configuration);
-    DBInputFormat.DBInputSplit splitter = new DBInputFormat.DBInputSplit(1, 11);
+    DBInputFormat.DBInputSplit splitter = new DBInputFormat.DBInputSplit(1,10);
     Reporter reporter = mock(Reporter.class);
     RecordReader<LongWritable, NullDBWritable> reader = format.getRecordReader(
         splitter, configuration, reporter);
@@ -65,7 +64,6 @@ public class TestDBInputFormat {
     assertEquals(LongWritable.class, reader.createKey().getClass());
     assertEquals(0, reader.getPos());
     assertEquals(0, reader.getProgress(), 0.001);
-    reader.createValue();
     reader.close();
   }
 
@@ -107,7 +105,7 @@ public class TestDBInputFormat {
   @Test
   public void testDBRecordReader() throws Exception {
 
-    DBInputSplit splitter = new DBInputSplit(1, 10);
+    DBInputSplit splitter = new DBInputSplit();
     JobConf job = mock(JobConf.class);
     DBConfiguration dbConfig = mock(DBConfiguration.class);
     String[] fields = { "field1", "filed2" };
