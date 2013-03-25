@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.lib.db;
+package org.apache.hadoop.mapred.lib.db;
 
 import java.sql.Connection;
 import java.sql.Driver;
