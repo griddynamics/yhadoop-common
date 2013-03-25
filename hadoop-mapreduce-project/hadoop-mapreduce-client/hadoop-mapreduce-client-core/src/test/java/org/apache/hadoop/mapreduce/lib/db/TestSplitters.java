@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.lib.db;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -38,9 +37,15 @@ import org.junit.Test;
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
+/**
+ * Test Splitters. Splitters should build parts of sql sentences for split result. 
+ *
+ */
 public class TestSplitters {
-
-  @Test
+/**
+ * test  BooleanSplitter . 
+ */
+  @Test (timeout=2000)
   public void testBooleanSplitter() throws Exception{
     BooleanSplitter splitter = new BooleanSplitter();
     Configuration configuration= new Configuration();
@@ -85,7 +90,11 @@ public class TestSplitters {
     assertTrue(data.toString().contains("column = TRUE"));
 
   }
-  @Test 
+  
+  /**
+   * test FloatSplitter. 
+   */
+  @Test  (timeout=2000)
   public void testFloatSplitter() throws Exception{
     Configuration configuration= new Configuration();
     ResultSet result= mock(ResultSet.class);
@@ -113,7 +122,11 @@ public class TestSplitters {
     assertEquals("column1 >= 7.0column1 <= 7.0", data.toString());
 
   }
-  @Test
+
+  /**
+   * test BigDecimalSplitter. 
+   */
+  @Test (timeout=2000)
   public void testBigDecimalSplitter() throws Exception{
     
     BigDecimalSplitter  splitter=new BigDecimalSplitter ();
@@ -142,8 +155,10 @@ public class TestSplitters {
 
 
   } 
-  
-  @Test 
+  /**
+   * test IntegerSplitter
+   */
+  @Test  (timeout=2000)
   public void testIntegerSplitter() throws Exception{
     IntegerSplitter  splitter=new IntegerSplitter ();
     Configuration configuration= new Configuration();
@@ -169,8 +184,10 @@ public class TestSplitters {
     assertTrue(data.toString().contains("column1 >= 8"));
     assertTrue(data.toString().contains("column1 <= 9"));
   }
-  
-  @Test 
+  /**
+   * test TextSplitter
+   */
+  @Test (timeout=2000)
   public void testTextSplitter() throws Exception{
     TextSplitter  splitter=new TextSplitter ();
     Configuration configuration= new Configuration();
@@ -193,8 +210,11 @@ public class TestSplitters {
     split.write(new DataOutputStream(data));
     assertEquals("column1 >= 'result1'column1 <= 'result2'", data.toString());
   }
-  
-  @Test
+
+  /**
+   * test OracleDateSplitter. 
+   */
+  @Test (timeout=2000)
   public void testDBSplitter() throws Exception{
     OracleDataDrivenDBInputFormat<NullDBWritable> format = new OracleDataDrivenDBInputFormatForTest();
     assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP).getClass()); 
@@ -222,7 +242,6 @@ public class TestSplitters {
       return new ConnectionForTest();
     }
 
-   
-    
+
   }
 }

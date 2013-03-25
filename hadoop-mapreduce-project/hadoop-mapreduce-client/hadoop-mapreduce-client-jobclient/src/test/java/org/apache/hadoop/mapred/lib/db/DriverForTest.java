@@ -22,7 +22,10 @@ import java.sql.Driver;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Properties;
-
+/**
+ * class emulates a connection to database
+ *
+ */
 public class DriverForTest implements Driver {
 
   @Override

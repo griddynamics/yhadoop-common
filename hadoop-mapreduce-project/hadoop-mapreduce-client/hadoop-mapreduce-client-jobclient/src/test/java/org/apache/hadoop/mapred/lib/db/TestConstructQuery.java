@@ -42,7 +42,7 @@ public class TestConstructQuery {
 
   private DBOutputFormat<DBWritable, NullWritable> format = new DBOutputFormat<DBWritable, NullWritable>();
 
-  @Test
+  @Test (timeout=2000)
   public void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);
     assertEquals(expected, actual);
@@ -51,31 +51,33 @@ public class TestConstructQuery {
     assertEquals(nullExpected, actual);
   }
 
-  @Test
+  @Test (timeout=2000)
   public void testSetOutput() throws IOException {
     JobConf job = new JobConf();
     DBOutputFormat.setOutput(job, "hadoop_output", fieldNames);
 
-    DBConfiguration dbConf = new DBConfiguration(job);
-    String actual = format.constructQuery(dbConf.getOutputTableName(),
-        dbConf.getOutputFieldNames());
+    DBConfiguration dbConfiguration = new DBConfiguration(job);
+    String actual = format.constructQuery(dbConfiguration.getOutputTableName(),
+            dbConfiguration.getOutputFieldNames());
 
     assertEquals(expected, actual);
 
     job = new JobConf();
-    dbConf = new DBConfiguration(job);
+    dbConfiguration = new DBConfiguration(job);
     DBOutputFormat.setOutput(job, "hadoop_output", nullFieldNames.length);
-    assertNull(dbConf.getOutputFieldNames());
-    assertEquals(nullFieldNames.length, dbConf.getOutputFieldCount());
+    assertNull(dbConfiguration.getOutputFieldNames());
+    assertEquals(nullFieldNames.length, dbConfiguration.getOutputFieldCount());
 
-    actual = format.constructQuery(dbConf.getOutputTableName(),
-        new String[dbConf.getOutputFieldCount()]);
+    actual = format.constructQuery(dbConfiguration.getOutputTableName(),
+        new String[dbConfiguration.getOutputFieldCount()]);
 
     assertEquals(nullExpected, actual);
   }
-
-  @Test
-  public void getgetRecordWriter() throws Exception {
+/**
+ *  test DBOutputFormat. Should works with DBRecordWriter. 
+ */
+  @Test (timeout=2000)
+  public void testGetRecordWriter() throws Exception {
     FileSystem fs = new RawLocalFileSystem();
     JobConf jobConf = new JobConf();
     Progressable progress = mock(Progressable.class);

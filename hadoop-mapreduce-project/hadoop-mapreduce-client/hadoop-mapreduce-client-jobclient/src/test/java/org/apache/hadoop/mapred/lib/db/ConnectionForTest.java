@@ -1,6 +1,26 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.mapred.lib.db;
 
+
 import java.sql.Array;
+
 import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
@@ -20,16 +40,13 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.mockito.Mockito.*;
+
+
+/**
+ * class emulation a connect to database 
+ *
+ */
 public class ConnectionForTest implements Connection {
-  String sessionTimeZone;
-
-  public String getSessionTimeZone() {
-    return sessionTimeZone;
-  }
-
-  public void setSessionTimeZone(String input) {
-    sessionTimeZone = input;
-  }
 
   @Override
   public boolean isWrapperFor(Class<?> arg0) throws SQLException {
@@ -139,9 +156,9 @@ public class ConnectionForTest implements Connection {
   @Override
   public DatabaseMetaData getMetaData() throws SQLException {
     
-    DatabaseMetaData resut =mock(DatabaseMetaData.class);
-    when(resut.getDatabaseProductName()).thenReturn("Test");
-    return resut;
+    DatabaseMetaData result =mock(DatabaseMetaData.class);
+    when(result.getDatabaseProductName()).thenReturn("Test");
+    return result;
   }
 
   @Override
@@ -156,7 +173,6 @@ public class ConnectionForTest implements Connection {
 
   @Override
   public SQLWarning getWarnings() throws SQLException {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -199,8 +215,7 @@ public class ConnectionForTest implements Connection {
 
   @Override
   public PreparedStatement prepareStatement(String sql) throws SQLException {
-    PreparedStatement result = mock(PreparedStatement.class);
-    return result;
+    return  mock(PreparedStatement.class);
   }
 
   @Override
@@ -255,7 +270,6 @@ public class ConnectionForTest implements Connection {
 
   @Override
   public void setCatalog(String catalog) throws SQLException {
-    // TODO Auto-generated method stub
 
   }
 

@@ -25,27 +25,28 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.lib.db.DBInputFormat;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBInputSplit;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBRecordReader;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.db.ConnectionForTest;
-import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class TestDBInputFormat {
-
-  @Test
+/**
+ * test DBInputFormat class. Class should split result for chunks
+ * @throws Exception
+ */
+  @Test(timeout = 10000)
   public void testDBInputFormat() throws Exception {
 
-    JobConf configuration = new JobConfForTest();
+    JobConf configuration = new JobConf();
     DBInputFormat<NullDBWritable> format = new DBInputFormatForTest();
     format.setConf(configuration);
-    DBInputFormat.DBInputSplit splitter = new DBInputFormat.DBInputSplit(1,10);
+    DBInputFormat.DBInputSplit splitter = new DBInputFormat.DBInputSplit(1, 10);
     Reporter reporter = mock(Reporter.class);
     RecordReader<LongWritable, NullDBWritable> reader = format.getRecordReader(
         splitter, configuration, reporter);
@@ -54,22 +55,25 @@ public class TestDBInputFormat {
         "org.apache.hadoop.mapred.lib.db.DBInputFormat$DBRecordReaderWrapper",
         reader.getClass().getName());
 
+    //
     configuration.setInt(MRJobConfig.NUM_MAPS, 3);
+    // there  is  issue: second parameter does not work.
     InputSplit[] lSplits = format.getSplits(configuration, 3);
     assertEquals(5, lSplits[0].getLength());
     assertEquals(3, lSplits.length);
 
-    // test reader
-
+    // test reader .Some simple tests
     assertEquals(LongWritable.class, reader.createKey().getClass());
     assertEquals(0, reader.getPos());
     assertEquals(0, reader.getProgress(), 0.001);
     reader.close();
   }
-
-  @Test
+/** 
+ * test configuration for db. should works DBConfiguration.* parameters. 
+ */
+  @Test (timeout = 5000)
   public void testSetInput() {
-    JobConf configuration = new JobConfForTest();
+    JobConf configuration = new JobConf();
 
     String[] fieldNames = { "field1", "field2" };
     DBInputFormatForTest.setInput(configuration, NullDBWritable.class, "table",
@@ -91,29 +95,48 @@ public class TestDBInputFormat {
     assertEquals("orderBy",
         configuration.get(DBConfiguration.INPUT_ORDER_BY_PROPERTY, null));
 
-    configuration = new JobConfForTest();
+    configuration = new JobConf();
 
     DBInputFormatForTest.setInput(configuration, NullDBWritable.class, "query",
         "countQuery");
     assertEquals("query", configuration.get(DBConfiguration.INPUT_QUERY, null));
     assertEquals("countQuery",
         configuration.get(DBConfiguration.INPUT_COUNT_QUERY, null));
+    
+    JobConf jConfiguration = new JobConf();
+    DBConfiguration.configureDB(jConfiguration, "driverClass", "dbUrl", "user",
+        "password");
+    assertEquals("driverClass",
+        jConfiguration.get(DBConfiguration.DRIVER_CLASS_PROPERTY));
+    assertEquals("dbUrl", jConfiguration.get(DBConfiguration.URL_PROPERTY));
+    assertEquals("user", jConfiguration.get(DBConfiguration.USERNAME_PROPERTY));
+    assertEquals("password",
+        jConfiguration.get(DBConfiguration.PASSWORD_PROPERTY));
+    jConfiguration = new JobConf();
+    DBConfiguration.configureDB(jConfiguration, "driverClass", "dbUrl");
+    assertEquals("driverClass",
+        jConfiguration.get(DBConfiguration.DRIVER_CLASS_PROPERTY));
+    assertEquals("dbUrl", jConfiguration.get(DBConfiguration.URL_PROPERTY));
+    assertNull(jConfiguration.get(DBConfiguration.USERNAME_PROPERTY));
+    assertNull(jConfiguration.get(DBConfiguration.PASSWORD_PROPERTY));
 
   }
 
+  /**
+   * 
+   * test DBRecordReader. This reader should creates keys, values, know about position.. 
+   */
   @SuppressWarnings("unchecked")
-  @Test
+  @Test (timeout = 5000)
   public void testDBRecordReader() throws Exception {
 
-    DBInputSplit splitter = new DBInputSplit();
     JobConf job = mock(JobConf.class);
     DBConfiguration dbConfig = mock(DBConfiguration.class);
     String[] fields = { "field1", "filed2" };
-    Class<? extends DBWritable> inputClass = NullDBWritable.class;
 
     @SuppressWarnings("rawtypes")
     DBRecordReader reader = new DBInputFormat<NullDBWritable>().new DBRecordReader(
-        splitter, (Class<NullDBWritable>) inputClass, job,
+        new DBInputSplit(),  NullDBWritable.class, job,
         new ConnectionForTest(), dbConfig, "condition", fields, "table");
     LongWritable key = reader.createKey();
     assertEquals(0, key.get());
@@ -125,6 +148,7 @@ public class TestDBInputFormat {
     assertFalse(reader.next(key, value));
 
   }
+
 
   private class DBInputFormatForTest extends DBInputFormat<NullDBWritable> {
 
@@ -151,7 +175,5 @@ public class TestDBInputFormat {
 
   }
 
-  private class JobConfForTest extends JobConf {
-
-  }
+ 
 }
