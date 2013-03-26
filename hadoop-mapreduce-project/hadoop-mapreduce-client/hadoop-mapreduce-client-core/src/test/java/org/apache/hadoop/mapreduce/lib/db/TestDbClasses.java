@@ -82,7 +82,7 @@ public class TestDbClasses {
    * test DataDrivenDBInputFormat and his splitters.
    */
 
-  @Test(timeout = 1000000)
+  @Test(timeout = 10000)
   public void testDataDrivenDBInputFormat() throws Exception {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
