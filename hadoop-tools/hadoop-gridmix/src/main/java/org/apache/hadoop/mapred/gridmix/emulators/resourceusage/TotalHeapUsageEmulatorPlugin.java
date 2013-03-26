@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.gridmix.Progressive;
-import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 /**
  * <p>A {@link ResourceUsageEmulatorPlugin} that emulates the total heap 
@@ -187,6 +187,13 @@ implements ResourceUsageEmulatorPlugin {
   }
   
   @Override
+  public float getProgress() {
+    return enabled 
+           ? Math.min(1f, ((float)getTotalHeapUsageInMB())/targetHeapUsageInMB)
+           : 1.0f;
+  }
+  
+  @Override
   public void emulate() throws IOException, InterruptedException {
     if (enabled) {
       float currentProgress = progress.getProgress();
@@ -232,6 +239,8 @@ implements ResourceUsageEmulatorPlugin {
   public void initialize(Configuration conf, ResourceUsageMetrics metrics,
                          ResourceCalculatorPlugin monitor,
                          Progressive progress) {
+    this.progress = progress;
+    
     // get the target heap usage
     targetHeapUsageInMB = metrics.getHeapUsage() / ONE_MB;
     if (targetHeapUsageInMB <= 0 ) {
@@ -243,7 +252,6 @@ implements ResourceUsageEmulatorPlugin {
       enabled = true;
     }
     
-    this.progress = progress;
     emulationInterval = 
       conf.getFloat(HEAP_EMULATION_PROGRESS_INTERVAL, 
                     DEFAULT_EMULATION_PROGRESS_INTERVAL);
