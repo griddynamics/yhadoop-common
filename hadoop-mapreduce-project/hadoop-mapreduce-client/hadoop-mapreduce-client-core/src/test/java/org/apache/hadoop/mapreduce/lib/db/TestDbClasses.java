@@ -91,9 +91,9 @@ public class TestDbClasses {
 
     when(jobContext.getConfiguration()).thenReturn(configuration);
     DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<NullDBWritable>();
-    List<InputSplit> stplits = format.getSplits(jobContext);
-    assertEquals(1, stplits.size());
-    DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) stplits.get(0);
+    List<InputSplit> splits = format.getSplits(jobContext);
+    assertEquals(1, splits.size());
+    DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) splits.get(0);
     split.write(new DataOutputStream(data));
     assertEquals("1=11=1", data.toString());
 
