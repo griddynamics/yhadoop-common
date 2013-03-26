@@ -322,10 +322,9 @@ public class TestCompressionEmulationUtils {
   public void testOutputCompressionRatioConfiguration() throws Exception {
     Configuration conf = new Configuration();
     float ratio = 0.567F;
-    CompressionEmulationUtil.setReduceOutputCompressionEmulationRatio(conf, 
-                                                                      ratio);
+    CompressionEmulationUtil.setJobOutputCompressionEmulationRatio(conf, ratio);
     assertEquals(ratio, 
-        CompressionEmulationUtil.getReduceOutputCompressionEmulationRatio(conf),
+        CompressionEmulationUtil.getJobOutputCompressionEmulationRatio(conf),
         0.0D);
   }
   
@@ -557,5 +556,31 @@ public class TestCompressionEmulationUtils {
     queue.close();
     String readLine = new String(bytes);
     assertEquals("Compression/Decompression error", inputLine, readLine);
+  }
+
+  /**
+   * Tests the computation logic of uncompressed input bytes by
+   * {@link LoadJob#getUncompressedInputBytes(long, Configuration)}
+   */
+  @Test
+  public void testComputeUncompressedInputBytes() {
+    long possiblyCompressedInputBytes = 100000;
+    float compressionRatio = 0.45F;
+    Configuration conf = new Configuration();
+    CompressionEmulationUtil.setMapInputCompressionEmulationRatio(conf,
+        compressionRatio);
+
+    // By default, input compression emulation is diabled. Verify the
+    // computation of uncompressed input bytes.
+    long result = CompressionEmulationUtil.getUncompressedInputBytes(
+        possiblyCompressedInputBytes, conf);
+    assertEquals(possiblyCompressedInputBytes, result);
+
+    // Enable input compression emulation and verify uncompressed
+    // input bytes computation logic
+    CompressionEmulationUtil.setInputCompressionEmulationEnabled(conf, true);
+    result = CompressionEmulationUtil.getUncompressedInputBytes(
+        possiblyCompressedInputBytes, conf);
+    assertEquals((long)(possiblyCompressedInputBytes/compressionRatio), result);
   }
 }
