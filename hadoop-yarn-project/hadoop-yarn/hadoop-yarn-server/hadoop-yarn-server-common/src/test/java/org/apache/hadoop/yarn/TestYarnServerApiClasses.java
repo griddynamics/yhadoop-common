@@ -30,15 +30,12 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRequestPBImpl;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerResponsePBImpl;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
-import org.apache.hadoop.yarn.server.api.records.impl.pb.HeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.NodeStatusPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.RegistrationResponsePBImpl;
@@ -92,27 +89,7 @@ public class TestYarnServerApiClasses {
     assertEquals("localhost", copy.getNodeStatus().getNodeId().getHost());
   }
 
-  /**
-   * Test NodeHeartbeatResponsePBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
-   */
-
-  @Test(timeout = 500)
-  public void testNodeHeartbeatResponsePBImpl() {
-    NodeHeartbeatResponsePBImpl original = new NodeHeartbeatResponsePBImpl();
-
-    HeartbeatResponse response = recordFactory
-        .newRecordInstance(HeartbeatResponse.class);
-    response.setMasterKey(getMasterKey());
-    response.setNodeAction(NodeAction.REBOOT);
-    response.setResponseId(1);
-    original.setHeartbeatResponse(response);
-
-    NodeHeartbeatResponsePBImpl copy = new NodeHeartbeatResponsePBImpl(
-        original.getProto());
-    assertEquals(NodeAction.REBOOT, copy.getHeartbeatResponse().getNodeAction());
-  }
+ 
 
   /**
    * Test RegisterNodeManagerRequestPBImpl. test getters and setters. The
@@ -182,50 +159,7 @@ public class TestYarnServerApiClasses {
 
   }
 
-  /**
-   * Test HeartbeatResponsePBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
-   */
-
-  @Test(timeout = 500)
-  public void testHeartbeatResponsePBImpl() {
-    HeartbeatResponsePBImpl original = new HeartbeatResponsePBImpl();
-    original.setMasterKey(getMasterKey());
-    original.setNodeAction(NodeAction.NORMAL);
-    original.setResponseId(30);
-    original.addApplicationToCleanup(getApplicationId(1));
-    original.addApplicationToCleanup(getApplicationId(2));
-    original.addAllContainersToCleanup(Arrays.asList(getContainerId(0, 0),
-        getContainerId(1, 1), getContainerId(2, 2)));
-    original.addContainerToCleanup( getContainerId(3, 3));
-    
-    assertEquals(2, original.getApplicationsToCleanupCount());
-    assertEquals(2, original.getContainerToCleanup(2).getId());
-
-    HeartbeatResponsePBImpl middle = new HeartbeatResponsePBImpl(
-        original.getProto());
-    HeartbeatResponsePBImpl copy = new HeartbeatResponsePBImpl(
-        middle.getProto());
-
-    assertEquals(30, copy.getResponseId());
-    assertEquals(NodeAction.NORMAL, copy.getNodeAction());
-    assertEquals(1, copy.getMasterKey().getKeyId());
-    assertEquals(2, copy.getApplicationsToCleanupCount());
-    assertEquals(2, copy.getApplicationsToCleanup(1).getId());
-    copy.removeApplicationToCleanup(1);
-    assertEquals(1, copy.getApplicationsToCleanupList().size());
-    copy.clearApplicationsToCleanup();
-    assertEquals(0, copy.getApplicationsToCleanupCount());
-
-    assertEquals(1, copy.getContainerToCleanup(1).getId());
-    assertEquals(4, copy.getContainersToCleanupCount());
-    copy.removeContainerToCleanup(2);
-    assertEquals(3, copy.getContainersToCleanupCount());
-    copy.clearContainersToCleanup();
-    assertEquals(0, copy.getContainersToCleanupCount());
-  }
-
+ 
   /**
    * Test RegistrationResponsePBImpl. test getters and setters. The
    * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
