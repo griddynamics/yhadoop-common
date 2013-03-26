@@ -30,6 +30,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -37,6 +38,8 @@ import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Map;
 import java.util.Properties;
 
@@ -108,6 +111,12 @@ public class ConnectionForTest implements Connection {
   public Statement createStatement() throws SQLException {
     Statement result= mock(Statement.class);
     ResultSet results =mock(ResultSet.class);
+    ResultSetMetaData metadata=mock(ResultSetMetaData.class);
+    when(results.getMetaData()).thenReturn(metadata);
+    when(metadata.getColumnType(1)).thenReturn(Types.TIMESTAMP);
+    when(results.getTimestamp(1)).thenReturn(new Timestamp(150));
+    when(results.getTimestamp(2)).thenReturn(new Timestamp(250));
+    
     when(results.getLong(1)).thenReturn(15L);
     when(result.executeQuery(any(String.class))).thenReturn(results);
     

@@ -22,13 +22,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.NullDBWritable;
@@ -225,6 +231,67 @@ public class TestSplitters {
     RecordReader<LongWritable, NullDBWritable> recorder= format.createDBRecordReader(inputSplit, configuration);
     assertEquals(OracleDataDrivenDBRecordReader.class, recorder.getClass());
     
+  }
+  @Test (timeout=2000)
+  public void testDateSplitter() throws Exception{
+    ByteArrayOutputStream data= new ByteArrayOutputStream();
+
+    DateSplitter splitter= new DateSplitter();
+    Configuration configuration = new Configuration();
+    configuration.setInt(MRJobConfig.NUM_MAPS, 3);
+    
+    ResultSet results = mock(ResultSet.class);
+    ResultSetMetaData metadata=mock(ResultSetMetaData.class);
+    when(metadata.getColumnType(1)).thenReturn(Types.TIMESTAMP);
+
+    when(results.getMetaData()).thenReturn(metadata);
+    when (results.getTimestamp(1)).thenReturn(new Timestamp(Long.MIN_VALUE));
+    when (results.getTimestamp(2)).thenReturn(new Timestamp(Long.MIN_VALUE));
+    
+    List<InputSplit> splitters= splitter.split(configuration, results, "colname");
+    
+    assertEquals(1,splitters.size());
+    DBInputSplit split=(DBInputSplit)splitters.get(0);
+    split.write(new DataOutputStream(data));
+
+    assertTrue(data.toString().contains("colname IS NULL"));
+    
+    data.reset();
+    when (results.getTimestamp(1)).thenReturn(new Timestamp(100));
+    when (results.getTimestamp(2)).thenReturn(new Timestamp(200));
+
+    splitters= splitter.split(configuration, results, "colname");
+    assertEquals(4,splitters.size());
+    split=(DBInputSplit)splitters.get(0);
+    split.write(new DataOutputStream(data));
+    assertEquals("\"colname >= '1970-01-01 03:00:00.1'#colname < '1970-01-01 03:00:00.133'", data.toString());
+    
+
+    when(metadata.getColumnType(1)).thenReturn(Types.DATE);
+
+    when (results.getDate(1)).thenReturn(new Date(100));
+    when (results.getDate(2)).thenReturn(new Date(200));
+    
+    
+    splitters= splitter.split(configuration, results, "colname");
+    assertEquals(4,splitters.size());
+    split=(DBInputSplit)splitters.get(0);
+    split.write(new DataOutputStream(data));
+    assertEquals("\"colname >= '1970-01-01 03:00:00.1'#colname < '1970-01-01 03:00:00.133'colname >= '1970-01-01'colname < '1970-01-01'", data.toString());
+    
+    when(metadata.getColumnType(1)).thenReturn(Types.TIME);
+
+    when (results.getTime(1)).thenReturn(new Time(100));
+    when (results.getTime(2)).thenReturn(new Time(200));
+    
+    
+    splitters= splitter.split(configuration, results, "colname");
+    assertEquals(4,splitters.size());
+    split=(DBInputSplit)splitters.get(0);
+    split.write(new DataOutputStream(data));
+    assertEquals("\"colname >= '1970-01-01 03:00:00.1'#colname < '1970-01-01 03:00:00.133'colname >= '1970-01-01'colname < '1970-01-01'colname >= '03:00:00'colname < '03:00:00'", data.toString());
+    
+
   }
   private class OracleDataDrivenDBInputFormatForTest extends OracleDataDrivenDBInputFormat<NullDBWritable>{
 

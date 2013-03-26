@@ -82,7 +82,7 @@ public class TestDbClasses {
    * test DataDrivenDBInputFormat and his splitters.
    */
 
-  @Test(timeout = 1000)
+  @Test(timeout = 1000000)
   public void testDataDrivenDBInputFormat() throws Exception {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
@@ -90,7 +90,7 @@ public class TestDbClasses {
     Configuration configuration = new Configuration();
 
     when(jobContext.getConfiguration()).thenReturn(configuration);
-    DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<NullDBWritable>();
+    DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormatForTest();
     List<InputSplit> stplits = format.getSplits(jobContext);
     assertEquals(1, stplits.size());
     DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) stplits.get(0);
@@ -111,6 +111,17 @@ public class TestDbClasses {
 
     assertEquals("Bounding Query",
         configuration.get(DBConfiguration.INPUT_BOUNDING_QUERY));
+    
+    
+    stplits= format.getSplits(jobContext);
+    assertEquals(2, stplits.size());
+    data.reset();
+    split = (DataDrivenDBInputSplit) stplits.get(0);
+    split.write(new DataOutputStream(data));
+    assertEquals("column1 >= '1970-01-01 03:00:00.15'",split.getLowerClause() );
+    assertEquals("column1 < '1970-01-01 03:00:00.2'",split.getUpperClause() );
+
+    
   }
 
   /**
@@ -156,7 +167,24 @@ public class TestDbClasses {
     assertEquals("GMT", connect.getSessionTimeZone());
 
   }
+private class DataDrivenDBInputFormatForTest extends DataDrivenDBInputFormat<NullDBWritable>{
 
+  
+  @Override
+  public DBConfiguration getDBConf() {
+    DBConfiguration result= new DBConfiguration(new Configuration());
+    result.setInputBoundingQuery("InputBoundingQuery");
+    result.setInputOrderBy("column1");
+    return result;
+  }
+
+  @Override
+  public Connection getConnection() {
+    return new ConnectionForTest();
+  }
+  
+}
+ 
   private class OracleDataDrivenDBInputFormatForTest extends
       OracleDataDrivenDBInputFormat<NullDBWritable> {
 
