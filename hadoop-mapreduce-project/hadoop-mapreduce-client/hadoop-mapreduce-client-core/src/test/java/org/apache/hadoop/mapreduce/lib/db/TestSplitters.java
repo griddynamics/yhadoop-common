@@ -252,13 +252,13 @@ public class TestSplitters {
     when(results.getTimestamp(2)).thenReturn(new Timestamp(Long.MIN_VALUE));
 
     List<InputSplit> splitters = splitter.split(configuration, results,
-        "colname");
+        "columnName");
 
     assertEquals(1, splitters.size());
     DBInputSplit split = (DBInputSplit) splitters.get(0);
     split.write(new DataOutputStream(data));
 
-    assertTrue(data.toString().contains("colname IS NULL"));
+    assertTrue(data.toString().contains("columnName IS NULL"));
 
     data.reset();
     when(results.getTimestamp(1)).thenReturn(new Timestamp(100));
