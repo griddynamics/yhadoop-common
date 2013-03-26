@@ -91,9 +91,9 @@ public class TestDbClasses {
 
     when(jobContext.getConfiguration()).thenReturn(configuration);
     DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormatForTest();
-    List<InputSplit> stplits = format.getSplits(jobContext);
-    assertEquals(1, stplits.size());
-    DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) stplits.get(0);
+    List<InputSplit> splits = format.getSplits(jobContext);
+    assertEquals(1, splits.size());
+    DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) splits.get(0);
     split.write(new DataOutputStream(data));
     assertEquals("1=11=1", data.toString());
 
@@ -102,21 +102,21 @@ public class TestDbClasses {
 
     DataDrivenDBInputFormat.setBoundingQuery(configuration, "query");
     assertEquals("query",
-        configuration.get(DBConfiguration.INPUT_BOUNDING_QUERY));
+            configuration.get(DBConfiguration.INPUT_BOUNDING_QUERY));
 
     Job job = mock(Job.class);
     when(job.getConfiguration()).thenReturn(configuration);
     DataDrivenDBInputFormat.setInput(job, NullDBWritable.class, "query",
-        "Bounding Query");
+            "Bounding Query");
 
     assertEquals("Bounding Query",
         configuration.get(DBConfiguration.INPUT_BOUNDING_QUERY));
     
     
-    stplits= format.getSplits(jobContext);
-    assertEquals(2, stplits.size());
+    splits= format.getSplits(jobContext);
+    assertEquals(2, splits.size());
     data.reset();
-    split = (DataDrivenDBInputSplit) stplits.get(0);
+    split = (DataDrivenDBInputSplit) splits.get(0);
     split.write(new DataOutputStream(data));
     assertEquals("column1 >= '1970-01-01 03:00:00.15'",split.getLowerClause() );
     assertEquals("column1 < '1970-01-01 03:00:00.2'",split.getUpperClause() );
