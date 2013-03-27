@@ -34,7 +34,7 @@ public class TestJobConf {
    * test getters and setters of JobConf
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test  (timeout=5000)
   public void testJobConf() {
     JobConf conf = new JobConf();
     // test default value

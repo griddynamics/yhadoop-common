@@ -40,7 +40,7 @@ public class TestOldMethodsJobID {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test  (timeout=1000)
   public void testDepricatedMethods() throws IOException {
     JobID jid = new JobID();
     TaskID test = new TaskID(jid, true, 1);
@@ -72,7 +72,7 @@ public class TestOldMethodsJobID {
    * @throws IOException 
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test (timeout=1000)
   public void testJobID() throws IOException{
     JobID jid = new JobID("001",2);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -84,7 +84,7 @@ public class TestOldMethodsJobID {
    * test deprecated methods of TaskCompletionEvent
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test (timeout=1000)
   public void testTaskCompletionEvent() {
     TaskAttemptID taid = new TaskAttemptID("001", 1, TaskType.REDUCE, 2, 3);
     TaskCompletionEvent template = new TaskCompletionEvent(12, taid, 13, true,
@@ -111,7 +111,7 @@ public class TestOldMethodsJobID {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test  (timeout=1000)
   public void testJobProfile() throws IOException {
 
     JobProfile profile = new JobProfile("user", "job_001_03", "jobFile", "uri",
@@ -136,7 +136,7 @@ public class TestOldMethodsJobID {
    * test TaskAttemptID 
    */
   @SuppressWarnings( "deprecation" )
-  @Test
+  @Test  (timeout=1000)
   public void testTaskAttemptID (){
     TaskAttemptID task  = new TaskAttemptID("001",2,true,3,4);
     assertEquals("attempt_001_0002_m_000003_4", TaskAttemptID.getTaskAttemptIDsPattern("001", 2, true, 3, 4));
@@ -151,7 +151,7 @@ public class TestOldMethodsJobID {
    * 
    */
   
-  @Test
+  @Test  (timeout=1000)
   public void testReporter(){
     Reporter nullReporter=Reporter.NULL;
     assertNull(nullReporter.getCounter(null));

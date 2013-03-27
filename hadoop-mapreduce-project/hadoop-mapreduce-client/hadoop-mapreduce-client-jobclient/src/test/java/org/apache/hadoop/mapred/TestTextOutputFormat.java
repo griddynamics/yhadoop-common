@@ -19,12 +19,14 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.junit.Test;
 
-public class TestTextOutputFormat extends TestCase {
+import static org.junit.Assert.*;
+
+public class TestTextOutputFormat  {
   private static JobConf defaultConf = new JobConf();
 
   private static FileSystem localFs = null;
@@ -43,7 +45,7 @@ public class TestTextOutputFormat extends TestCase {
                       new Path(System.getProperty("test.build.data", "."), 
                                "data"), 
                       FileOutputCommitter.TEMP_DIR_NAME), "_" + attempt);
-
+ @Test  (timeout=10000)
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
     job.set(JobContext.TASK_ATTEMPT_ID, attempt);
@@ -94,6 +96,7 @@ public class TestTextOutputFormat extends TestCase {
 
   }
 
+ @Test  (timeout=10000)
   public void testFormatWithCustomSeparator() throws Exception {
     JobConf job = new JobConf();
     String separator = "\u0001";
@@ -149,6 +152,8 @@ public class TestTextOutputFormat extends TestCase {
    * test compressed file
    * @throws IOException
    */
+ 
+ @Test  (timeout=10000)
  public void testCompress() throws IOException{
    JobConf job = new JobConf();
    String separator = "\u0001";

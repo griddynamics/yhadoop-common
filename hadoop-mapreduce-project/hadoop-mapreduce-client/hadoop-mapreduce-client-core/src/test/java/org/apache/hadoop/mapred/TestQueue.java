@@ -44,7 +44,7 @@ public class TestQueue {
    * 
    * @throws IOException
    */
-  @Test
+  @Test  (timeout=10000)
   public void testQueue() throws IOException {
     File f = null;
     try {
@@ -123,7 +123,7 @@ public class TestQueue {
    * @throws IOException
    */
 
-  @Test
+  @Test  (timeout=1000)
   public void test2Queue() throws IOException {
     Configuration conf = getConfiguration();
 

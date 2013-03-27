@@ -35,7 +35,7 @@ import static org.junit.Assert.*;
  * 
  */
 public class TestJobInfo {
-  @Test
+  @Test  (timeout=1000)
   public void testJobInfo() throws IOException {
     JobID jid = new JobID("001", 1);
     Text user = new Text("User");

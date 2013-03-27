@@ -29,11 +29,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 public class TestIFile {
 
-  @Test
   /**
    * Create an IFile.Writer using GzipCodec since this codec does not
    * have a compressor when run via the tests (ie no native libraries).
    */
+  @Test (timeout=10000)
   public void testIFileWriterWithCodec() throws Exception {
     Configuration conf = new Configuration();
     FileSystem localFs = FileSystem.getLocal(conf);
@@ -47,7 +47,7 @@ public class TestIFile {
     writer.close();
   }
 
-  @Test
+  @Test (timeout=10000)
   /** Same as above but create a reader. */
   public void testIFileReaderWithCodec() throws Exception {
     Configuration conf = new Configuration();

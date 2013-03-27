@@ -37,7 +37,7 @@ public class TestTaskLog {
  * test TaskAttemptID 
  * @throws IOException
  */
-  @Test
+  @Test (timeout=20000)
   public void testTaskLog() throws IOException {
     // test TaskLog
     System.setProperty(MRJobConfig.TASK_LOG_DIR, "testString");
@@ -72,8 +72,6 @@ public class TestTaskLog {
    }
    // test obtainLogDirOwner
    assertTrue(TaskLog.obtainLogDirOwner(taid).length()>0);
-   // test TaskLog.Reader
-   assertTrue(readTaskLog(TaskLog.LogName.DEBUGOUT,taid, true ).length()>0);
 
   }
   
@@ -109,9 +107,8 @@ public class TestTaskLog {
    * test without TASK_LOG_DIR
    * @throws IOException
    */
-  @Test
+  @Test  (timeout=20000)
   public void testTaskLogWithoutTaskLogDir() throws IOException {
-//    TaskLog tasklog= new TaskLog();
     System.clearProperty(MRJobConfig.TASK_LOG_DIR);
 
     // test TaskLog

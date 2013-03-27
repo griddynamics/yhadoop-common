@@ -41,7 +41,7 @@ public class TestQueueConfigurationParser {
    * @throws ParserConfigurationException
    * @throws Exception 
    */
-  @Test
+  @Test (timeout=10000)
   public void testQueueConfigurationParser()
       throws  Exception {
     JobQueueInfo info = new JobQueueInfo("root", "rootInfo");
