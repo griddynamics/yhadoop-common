@@ -90,7 +90,7 @@ public class TestGridMixClasses {
   /*
    * simple test LoadSplit (getters,copy, write, read...)
    */
-  @Test
+  @Test (timeout=1000)
   public void testLoadSplit() throws Exception {
 
     LoadSplit test = getLoadSplit();
@@ -121,14 +121,14 @@ public class TestGridMixClasses {
   /*
    * simple test GridmixSplit (copy, getters, write, read..)
    */
-  @Test
+  @Test (timeout=1000)
   public void testGridmixSplit() throws Exception {
     Path[] files = {new Path("one"), new Path("two")};
     long[] start = {1, 2};
     long[] lengths = {100, 200};
     String[] locations = {"locOne", "loctwo"};
 
-    CombineFileSplit cfsplit = new CombineFileSplit(files, start, lengths,
+    CombineFileSplit cfSplit = new CombineFileSplit(files, start, lengths,
             locations);
     ResourceUsageMetrics metrics = new ResourceUsageMetrics();
     metrics.setCumulativeCpuUsage(200);
@@ -138,7 +138,7 @@ public class TestGridMixClasses {
     long[] reduceOutputBytes = {101L, 102L};
     long[] reduceOutputRecords = {111L, 112L};
 
-    GridmixSplit test = new GridmixSplit(cfsplit, 2, 3, 4L, 5L, 6L, 7L,
+    GridmixSplit test = new GridmixSplit(cfSplit, 2, 3, 4L, 5L, 6L, 7L,
             reduceBytes, reduceRecords, reduceOutputBytes, reduceOutputRecords);
 
     ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -164,7 +164,7 @@ public class TestGridMixClasses {
    * test LoadMapper loadMapper should write to writer record for each reduce
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
-  @Test
+  @Test (timeout=10000)
   public void testLoadMapper() throws Exception {
 
     Configuration conf = new Configuration();
@@ -173,7 +173,7 @@ public class TestGridMixClasses {
     CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
     conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
 
-    TaskAttemptID taskid = new TaskAttemptID();
+    TaskAttemptID taskId = new TaskAttemptID();
     RecordReader<NullWritable, GridmixRecord> reader = new FakeRecordReader();
 
     LoadRecordGkGrWriter writer = new LoadRecordGkGrWriter();
@@ -182,20 +182,20 @@ public class TestGridMixClasses {
     StatusReporter reporter = new TaskAttemptContextImpl.DummyReporter();
     LoadSplit split = getLoadSplit();
 
-    MapContext<NullWritable, GridmixRecord, GridmixKey, GridmixRecord> mapcontext = new MapContextImpl<NullWritable, GridmixRecord, GridmixKey, GridmixRecord>(
-            conf, taskid, reader, writer, committer, reporter, split);
+    MapContext<NullWritable, GridmixRecord, GridmixKey, GridmixRecord> mapContext = new MapContextImpl<NullWritable, GridmixRecord, GridmixKey, GridmixRecord>(
+            conf, taskId, reader, writer, committer, reporter, split);
     // context
-    Context ctxt = new WrappedMapper<NullWritable, GridmixRecord, GridmixKey, GridmixRecord>()
-            .getMapContext(mapcontext);
+    Context ctx = new WrappedMapper<NullWritable, GridmixRecord, GridmixKey, GridmixRecord>()
+            .getMapContext(mapContext);
 
-    reader.initialize(split, ctxt);
-    ctxt.getConfiguration().setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
+    reader.initialize(split, ctx);
+    ctx.getConfiguration().setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
     CompressionEmulationUtil.setCompressionEmulationEnabled(
-            ctxt.getConfiguration(), true);
+            ctx.getConfiguration(), true);
 
     LoadJob.LoadMapper mapper = new LoadJob.LoadMapper();
     // setup, map, clean
-    mapper.run(ctxt);
+    mapper.run(ctx);
 
     Map<GridmixKey, GridmixRecord> data = writer.getData();
     // check result
@@ -210,7 +210,7 @@ public class TestGridMixClasses {
     long[] lengths = {100, 200};
     String[] locations = {"locOne", "loctwo"};
 
-    CombineFileSplit cfsplit = new CombineFileSplit(files, start, lengths,
+    CombineFileSplit cfSplit = new CombineFileSplit(files, start, lengths,
             locations);
     ResourceUsageMetrics metrics = new ResourceUsageMetrics();
     metrics.setCumulativeCpuUsage(200);
@@ -221,7 +221,7 @@ public class TestGridMixClasses {
     long[] reduceOutputBytes = {101L, 102L};
     long[] reduceOutputRecords = {111L, 112L};
 
-    return new LoadSplit(cfsplit, 2, 1, 4L, 5L, 6L, 7L,
+    return new LoadSplit(cfSplit, 2, 1, 4L, 5L, 6L, 7L,
             reduceBytes, reduceRecords, reduceOutputBytes, reduceOutputRecords,
             metrics, rMetrics);
   }
@@ -376,7 +376,7 @@ public class TestGridMixClasses {
   /*
    * test LoadSortComparator
    */
-  @Test
+  @Test (timeout=1000)
   public void testLoadJobLoadSortComparator() throws Exception {
     LoadJob.LoadSortComparator test = new LoadJob.LoadSortComparator();
 
@@ -409,7 +409,7 @@ public class TestGridMixClasses {
   /*
    * test SpecGroupingComparator
    */
-  @Test
+  @Test (timeout=1000)
   public void testGridmixJobSpecGroupingComparator() throws Exception {
     GridmixJob.SpecGroupingComparator test = new GridmixJob.SpecGroupingComparator();
 
@@ -452,18 +452,18 @@ public class TestGridMixClasses {
   /*
    * test CompareGridmixJob only equals and compare
    */
-  @Test
+  @Test (timeout=1000)
   public void testCompareGridmixJob() throws Exception {
     Configuration conf = new Configuration();
     Path outRoot = new Path("target");
-    JobStory jobdesc = mock(JobStory.class);
-    when(jobdesc.getName()).thenReturn("JobName");
-    when(jobdesc.getJobConf()).thenReturn(new JobConf(conf));
+    JobStory jobDesc = mock(JobStory.class);
+    when(jobDesc.getName()).thenReturn("JobName");
+    when(jobDesc.getJobConf()).thenReturn(new JobConf(conf));
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    GridmixJob j1 = new LoadJob(conf, 1000L, jobdesc, outRoot, ugi, 0);
-    GridmixJob j2 = new LoadJob(conf, 1000L, jobdesc, outRoot, ugi, 0);
-    GridmixJob j3 = new LoadJob(conf, 1000L, jobdesc, outRoot, ugi, 1);
-    GridmixJob j4 = new LoadJob(conf, 1000L, jobdesc, outRoot, ugi, 1);
+    GridmixJob j1 = new LoadJob(conf, 1000L, jobDesc, outRoot, ugi, 0);
+    GridmixJob j2 = new LoadJob(conf, 1000L, jobDesc, outRoot, ugi, 0);
+    GridmixJob j3 = new LoadJob(conf, 1000L, jobDesc, outRoot, ugi, 1);
+    GridmixJob j4 = new LoadJob(conf, 1000L, jobDesc, outRoot, ugi, 1);
 
     assertTrue(j1.equals(j2));
     assertEquals(0, j1.compareTo(j2));
@@ -478,7 +478,7 @@ public class TestGridMixClasses {
   /*
    * test ReadRecordFactory. should read all data from inputstream
    */
-  @Test
+  @Test (timeout=1000)
   public void testReadRecordFactory() throws Exception {
 
     // RecordFactory factory, InputStream src, Configuration conf
@@ -589,7 +589,7 @@ public class TestGridMixClasses {
   /*
    * test LoadRecordReader. It class reads data from some files.
    */
-  @Test
+  @Test (timeout=1000)
   public void testLoadJobLoadRecordReader() throws Exception {
     LoadJob.LoadRecordReader test = new LoadJob.LoadRecordReader();
     Configuration conf = new Configuration();
@@ -624,8 +624,8 @@ public class TestGridMixClasses {
             reduceBytes, reduceRecords, reduceOutputBytes, reduceOutputRecords,
             metrics, rMetrics);
     TaskAttemptID taskId = new TaskAttemptID();
-    TaskAttemptContext ctxt = new TaskAttemptContextImpl(conf, taskId);
-    test.initialize(input, ctxt);
+    TaskAttemptContext ctx = new TaskAttemptContextImpl(conf, taskId);
+    test.initialize(input, ctx);
     GridmixRecord gr = test.getCurrentValue();
     int counter = 0;
     while (test.nextKeyValue()) {
@@ -652,7 +652,7 @@ public class TestGridMixClasses {
    * test LoadReducer
    */
 
-  @Test
+  @Test (timeout=1000)
   public void testLoadJobLoadReducer() throws Exception {
     LoadJob.LoadReducer test = new LoadJob.LoadReducer();
 
@@ -676,13 +676,13 @@ public class TestGridMixClasses {
     StatusReporter reporter = new DummyReporter();
     RawComparator<GridmixKey> comparator = new FakeRawComparator();
 
-    ReduceContext<GridmixKey, GridmixRecord, NullWritable, GridmixRecord> reducecontext = new ReduceContextImpl<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>(
+    ReduceContext<GridmixKey, GridmixRecord, NullWritable, GridmixRecord> reduceContext = new ReduceContextImpl<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>(
             conf, taskid, input, counter, inputValueCounter, output, committer,
             reporter, comparator, GridmixKey.class, GridmixRecord.class);
     // read for previous data
-    reducecontext.nextKeyValue();
+    reduceContext.nextKeyValue();
     org.apache.hadoop.mapreduce.Reducer<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>.Context context = new WrappedReducer<GridmixKey, GridmixRecord, NullWritable, GridmixRecord>()
-            .getReducerContext(reducecontext);
+            .getReducerContext(reduceContext);
 
     // test.setup(context);
     test.run(context);
@@ -772,7 +772,7 @@ public class TestGridMixClasses {
   /*
    * test SerialJobFactory
    */
-  @Test
+  @Test (timeout=1000)
   public void testSerialReaderThread() throws Exception {
 
     Configuration conf = new Configuration();
@@ -832,9 +832,8 @@ public class TestGridMixClasses {
   /*
    * test SleepMapper
    */
-  // @SuppressWarnings({ "rawtypes", "unchecked" })
   @SuppressWarnings({"unchecked", "rawtypes"})
-  @Test
+  @Test (timeout=1000)
   public void testSleepMapper() throws Exception {
     SleepJob.SleepMapper test = new SleepJob.SleepMapper();
 
@@ -843,14 +842,14 @@ public class TestGridMixClasses {
 
     CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
     conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
-    TaskAttemptID taskid = new TaskAttemptID();
+    TaskAttemptID taskId = new TaskAttemptID();
     FakeRecordLLReader reader = new FakeRecordLLReader();
     LoadRecordGkNullWriter writer = new LoadRecordGkNullWriter();
     OutputCommitter committer = new CustomOutputCommitter();
     StatusReporter reporter = new TaskAttemptContextImpl.DummyReporter();
     SleepSplit split = getSleepSplit();
     MapContext<LongWritable, LongWritable, GridmixKey, NullWritable> mapcontext = new MapContextImpl<LongWritable, LongWritable, GridmixKey, NullWritable>(
-            conf, taskid, reader, writer, committer, reporter, split);
+            conf, taskId, reader, writer, committer, reporter, split);
     Context context = new WrappedMapper<LongWritable, LongWritable, GridmixKey, NullWritable>()
             .getMapContext(mapcontext);
 
@@ -879,7 +878,7 @@ public class TestGridMixClasses {
   /*
    * test SleepReducer
    */
-  @Test
+  @Test (timeout=1000)
   public void testSleepReducer() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(JobContext.NUM_REDUCES, 2);
@@ -888,7 +887,7 @@ public class TestGridMixClasses {
 
     CompressionEmulationUtil.setCompressionEmulationEnabled(conf, true);
     conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);
-    TaskAttemptID taskid = new TaskAttemptID();
+    TaskAttemptID taskId = new TaskAttemptID();
 
     RawKeyValueIterator input = new FakeRawKeyValueReducerIterator();
 
@@ -902,7 +901,7 @@ public class TestGridMixClasses {
     RawComparator<GridmixKey> comparator = new FakeRawComparator();
 
     ReduceContext<GridmixKey, NullWritable, NullWritable, NullWritable> reducecontext = new ReduceContextImpl<GridmixKey, NullWritable, NullWritable, NullWritable>(
-            conf, taskid, input, counter, inputValueCounter, output, committer,
+            conf, taskId, input, counter, inputValueCounter, output, committer,
             reporter, comparator, GridmixKey.class, NullWritable.class);
     org.apache.hadoop.mapreduce.Reducer<GridmixKey, NullWritable, NullWritable, NullWritable>.Context context = new WrappedReducer<GridmixKey, NullWritable, NullWritable, NullWritable>()
             .getReducerContext(reducecontext);
@@ -910,16 +909,16 @@ public class TestGridMixClasses {
     SleepReducer test = new SleepReducer();
     long start = System.currentTimeMillis();
     test.setup(context);
-    long sleeped = context.getCurrentKey().getReduceOutputBytes();
+    long sleeper = context.getCurrentKey().getReduceOutputBytes();
     // status has been changed
-    assertEquals("Sleeping... " + sleeped + " ms left", context.getStatus());
+    assertEquals("Sleeping... " + sleeper + " ms left", context.getStatus());
     // should sleep 0.9 sec
 
-    assertTrue(System.currentTimeMillis() >= (start + sleeped));
+    assertTrue(System.currentTimeMillis() >= (start + sleeper));
     test.cleanup(context);
     // status has been changed again
 
-    assertEquals("Slept for " + sleeped, context.getStatus());
+    assertEquals("Slept for " + sleeper, context.getStatus());
 
   }
 

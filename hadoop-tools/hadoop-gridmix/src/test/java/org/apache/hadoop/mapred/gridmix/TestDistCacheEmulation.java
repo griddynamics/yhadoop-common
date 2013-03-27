@@ -61,6 +61,11 @@ public class TestDistCacheEmulation {
   @BeforeClass
   public static void init() throws IOException {
     GridmixTestUtils.initCluster(TestDistCacheEmulation.class);
+    File target=new File("target"+File.separator+TestDistCacheEmulation.class.getName());
+    if(!target.exists()){
+      assertTrue(target.mkdirs());
+    }
+    
   }
 
   @AfterClass
@@ -242,7 +247,7 @@ public class TestDistCacheEmulation {
    * 
    * @throws Exception
    */
-  @Test
+  @Test (timeout=200000)
   public void testGenerateDistCacheData() throws Exception {
     long[] sortedFileSizes = new long[5];
     Configuration jobConf = runSetupGenerateDistCacheData(true, sortedFileSizes);
@@ -347,7 +352,7 @@ public class TestDistCacheEmulation {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test
+  @Test  (timeout=2000)
   public void testSetupGenerateDistCacheData() throws IOException,
       InterruptedException {
     long[] sortedFileSizes = new long[5];
@@ -376,9 +381,8 @@ public class TestDistCacheEmulation {
    * Test the configuration property for disabling/enabling emulation of
    * distributed cache load.
    */
-  @Test
+  @Test  (timeout=2000)
   public void testDistCacheEmulationConfigurability() throws IOException {
-    // Configuration conf = new Configuration();
     Configuration jobConf = GridmixTestUtils.mrvl.getConfig();
     Path ioPath = new Path("testDistCacheEmulationConfigurability")
         .makeQualified(GridmixTestUtils.dfs.getUri(),GridmixTestUtils.dfs.getWorkingDirectory());
@@ -403,7 +407,7 @@ public class TestDistCacheEmulation {
  * test method configureDistCacheFiles
  * 
  */
-  @Test
+  @Test  (timeout=2000)
   public void testDistCacheEmulator() throws Exception {
 
     Configuration conf = new Configuration();

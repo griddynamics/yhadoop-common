@@ -134,7 +134,7 @@ public class CommonJobTest {
           final Path in = new Path("foo").makeQualified(
                   GridmixTestUtils.dfs.getUri(),
                   GridmixTestUtils.dfs.getWorkingDirectory());
-          // adat was compressed. All files = compressed test size+ logs= 1000000/2 + logs
+          // data was compressed. All files = compressed test size+ logs= 1000000/2 + logs
           final ContentSummary generated = GridmixTestUtils.dfs
                   .getContentSummary(in);
           assertEquals(550000, generated.getLength(), 10000);
@@ -324,7 +324,6 @@ public class CommonJobTest {
     final Path in = new Path("foo").makeQualified(
             GridmixTestUtils.dfs.getUri(),
             GridmixTestUtils.dfs.getWorkingDirectory());
-    // final Path in = new Path("foo");
     final Path out = GridmixTestUtils.DEST.makeQualified(
             GridmixTestUtils.dfs.getUri(),
             GridmixTestUtils.dfs.getWorkingDirectory());
@@ -354,7 +353,6 @@ public class CommonJobTest {
       argsList.add(String.valueOf(GENDATA) + "m");
       argsList.add(in.toString());
       argsList.add("-"); // ignored by DebugGridmix
-      // argsList.add(in.toString());
 
       String[] argv = argsList.toArray(new String[argsList.size()]);
 

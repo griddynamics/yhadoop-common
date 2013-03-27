@@ -37,7 +37,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.security.Permission;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.Assert.*;
@@ -52,8 +51,6 @@ public class TestGridmixSubmission extends CommonJobTest {
             .getLogger().setLevel(Level.DEBUG);
   }
 
-//  private static final int NJOBS = 1;
-//  private static final long GENDATA = 3; // in megabytes
 
   @BeforeClass
   public static void init() throws IOException {
@@ -95,13 +92,13 @@ public class TestGridmixSubmission extends CommonJobTest {
           throws Exception {
     byte[] buff = new byte[4096];
     GZIPInputStream gis = new GZIPInputStream(fs.open(in));
-    FSDataOutputStream fsdos = fs.create(out);
+    FSDataOutputStream fsdOs = fs.create(out);
     int numRead;
     while ((numRead = gis.read(buff, 0, buff.length)) != -1) {
-      fsdos.write(buff, 0, numRead);
+      fsdOs.write(buff, 0, numRead);
     }
     gis.close();
-    fsdos.close();
+    fsdOs.close();
   }
 
   /**
@@ -112,7 +109,7 @@ public class TestGridmixSubmission extends CommonJobTest {
    *
    * @throws Exception if there was an error.
    */
-  @Test
+  @Test (timeout=20000)
   public void testTraceReader() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
@@ -155,7 +152,7 @@ public class TestGridmixSubmission extends CommonJobTest {
     }
   }
 
-  @Test
+  @Test (timeout=500000)
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
@@ -164,7 +161,7 @@ public class TestGridmixSubmission extends CommonJobTest {
 
   }
 
-  @Test
+  @Test (timeout=500000)
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     LOG.info(" Stress started at " + System.currentTimeMillis());
@@ -173,7 +170,7 @@ public class TestGridmixSubmission extends CommonJobTest {
   }
 
   // test empty request should be hint message
-  @Test
+  @Test (timeout=100000)
   public void testMain() throws Exception {
 
     SecurityManager securityManager = System.getSecurityManager();
