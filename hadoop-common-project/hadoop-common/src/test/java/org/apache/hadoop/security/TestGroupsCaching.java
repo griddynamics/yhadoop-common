@@ -99,7 +99,7 @@ public class TestGroupsCaching {
     }
   }
 
-  @Test
+  @Test(timeout=3000)
   public void testGroupsCaching() throws Exception {
     final Groups groups = new Groups(conf);
     groups.cacheGroupsAdd(Arrays.asList(myGroups));
