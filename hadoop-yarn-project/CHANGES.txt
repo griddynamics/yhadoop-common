@@ -1,8 +1,15 @@
 Hadoop YARN Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+    YARN-396. Rationalize AllocateResponse in RM Scheduler API. (Zhijie Shen
+    via hitesh)
+
+    YARN-439. Flatten NodeHeartbeatResponse. (Xuan Gong via sseth)
+
+    YARN-440. Flatten RegisterNodeManagerResponse. (Xuan Gong via sseth)
 
   NEW FEATURES
 
@@ -17,6 +24,26 @@ Release 2.0.4-beta - UNRELEASED
     YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
     the per-application page are translated to html line breaks. (Omkar Vinit
     Joshi via vinodkv)
+
+    YARN-198. Added a link to RM pages from the NodeManager web app. (Jian He
+    via vinodkv)
+
+    YARN-237. Refreshing the RM page forgets how many rows I had in my
+    Datatables (jian he via bobby)
+
+    YARN-481. Add AM Host and RPC Port to ApplicationCLI Status Output 
+    (Chris Riccomini via bikas)
+
+    YARN-297. Improve hashCode implementations for PB records. (Xuan Gong via
+    hitesh)
+
+    YARN-417. Create AMRMClient wrapper that provides asynchronous callbacks.
+    (Sandy Ryza via bikas)
+
+    YARN-497. Yarn unmanaged-am launcher jar does not define a main class in
+    its manifest (Hitesh Shah via bikas)
+
+    YARN-469. Make scheduling mode in FS pluggable. (kkambatl via tucu)
 
   OPTIMIZATIONS
 
@@ -42,6 +69,39 @@ Release 2.0.4-beta - UNRELEASED
 
     YARN-376. Fixes a bug which would prevent the NM knowing about completed
     containers and applications. (Jason Lowe via sseth)
+
+    YARN-196. Nodemanager should be more robust in handling connection failure
+    to ResourceManager when a cluster is started (Xuan Gong via hitesh)
+
+    YARN-485. TestProcfsProcessTree#testProcessTree() doesn't wait long enough 
+    for the process to die. (kkambatl via tucu)
+ 
+    YARN-470. Support a way to disable resource monitoring on the NodeManager.
+    (Siddharth Seth via hitesh)
+    
+    YARN-71. Fix the NodeManager to clean up local-dirs on restart.
+    (Xuan Gong via sseth)
+
+    YARN-378. Fix RM to make the AM max attempts/retries to be configurable
+    per application by clients. (Zhijie Shen via vinodkv)
+
+    YARN-498. Unmanaged AM launcher does not set various constants in env for
+    an AM, also does not handle failed AMs properly. (Hitesh Shah via bikas)
+
+    YARN-474. Fix CapacityScheduler to trigger application-activation when
+    am-resource-percent configuration is refreshed. (Zhijie Shen via vinodkv)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
     YARN-429. capacity-scheduler config missing from yarn-test artifact.
     (sseth via hitesh)
@@ -329,6 +389,15 @@ Release 0.23.7 - UNRELEASED
     YARN-227. Application expiration difficult to debug for end-users
     (Jason Lowe via jeagles)
 
+    YARN-443. allow OS scheduling priority of NM to be different than the 
+    containers it launches (tgraves)
+
+    YARN-468. coverage fix for org.apache.hadoop.yarn.server.webproxy.amfilter
+    (Aleksey Gorshkov via bobby)
+
+    YARN-200. yarn log does not output all needed information, and is in a
+    binary format (Ravi Prakash via jlowe)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
@@ -355,6 +424,9 @@ Release 0.23.7 - UNRELEASED
 
     YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
     in Node Manager (Robert Parker via jlowe)
+
+    YARN-109. .tmp file is not deleted for localized archives (Mayank Bansal 
+    via bobby)
 
 Release 0.23.6 - UNRELEASED
 

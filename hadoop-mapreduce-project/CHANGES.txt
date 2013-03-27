@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -13,6 +13,15 @@ Release 2.0.4-beta - UNRELEASED
 
     MAPREDUCE-4892. Modify CombineFileInputFormat to not skew input slits'
     allocation on small clusters. (Bikas Saha via vinodkv)
+
+    MAPREDUCE-4990. Construct debug strings conditionally in 
+    ShuffleHandler.Shuffle#sendMapOutput(). (kkambatl via tucu)
+
+    MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred 
+    (Aleksey Gorshkov via bobby)
+
+    MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
+    faster job submission. (amarrk via tgraves)
 
   OPTIMIZATIONS
 
@@ -49,6 +58,72 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-3685. Fix bugs in MergeManager to ensure compression codec is
     appropriately used and that on-disk segments are correctly sorted on
     file-size. (Anty Rao and Ravi Prakash via acmurthy) 
+
+    MAPREDUCE-4571. TestHsWebServicesJobs fails on jdk7. (tgraves via tucu)
+
+    MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
+    fails with jdk7. (tgraves via tucu)
+
+    MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
+    does not close the wrapped InputStream.  (Chris Nauroth via szetszwo)
+
+    MAPREDUCE-3872. Fix an event handling races in ContainerLauncherImpl.
+    (Robert Kanter via sseth)
+
+    MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
+    actual cluster (Siddharth Seth via hitesh)
+
+    MAPREDUCE-5062. Fix MR AM to read max-retries from the RM. (Zhijie Shen via
+    vinodkv)
+
+    MAPREDUCE-3829. [Gridmix] Gridmix should give better error message when
+    input data directory already exists and -generate opton is
+    given.(ravigummadi via tgraves)
+
+    MAPREDUCE-2722. [Gridmix] Gridmix simulated job's map's hdfsBytesRead
+    counter is wrong when compressed input is used.(ravigummadi via tgraves)
+
+    MAPREDUCE-3953. [Gridmix] Gridmix throws NPE and does not simulate a
+    job if the trace contains null taskStatus for a task.  (ravigummadi via 
+    tgraves)
+
+    MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
+    become slow in some cases (ravigummadi via tgraves).
+
+    MAPREDUCE-5077. Remove mapreduce.util.ResourceCalculatorPlugin and related
+    code. (Karthik Kambatla via sseth)
+
+    MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
+    tasks in Gridmix. (amarrk via tgraves)
+
+    MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk via tgraves)
+
+    MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
+    map only jobs. (amarrk via tgraves)
+
+    MAPREDUCE-4356. [Rumen] Provide access to the method
+    ParsedTask.obtainTaskAttempts(). (ravigummadi via tgraves)
+
+    MAPREDUCE-4149. [Rumen] Rumen fails to parse certain counter
+    strings. (ravigummadi via tgraves) 
+
+    MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
+    sortFinished times when needed. (Ravi Gummadi via tgraves)
+
+    MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
+    (Sandy Ryza via tomwhite)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -589,6 +664,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5027. Shuffle does not limit number of outstanding connections
     (Robert Parker via jeagles)
 
+    MAPREDUCE-4972. Coverage fixing for org.apache.hadoop.mapreduce.jobhistory
+    (Aleksey Gorshkov via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
@@ -617,6 +695,18 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-5043. Fetch failure processing can cause AM event queue to
     backup and eventually OOM (Jason Lowe via bobby)
+
+    MAPREDUCE-5023. History Server Web Services missing Job Counters (Ravi
+    Prakash via tgraves)
+
+    MAPREDUCE-5060. Fetch failures that time out only count against the first
+    map task (Robert Joseph Evans via jlowe)
+
+    MAPREDUCE-5042. Reducer unable to fetch for a map task that was recovered
+    (Jason Lowe via bobby)
+
+    MAPREDUCE-5053. java.lang.InternalError from decompression codec cause
+    reducer to fail (Robert Parker via jeagles)
 
 Release 0.23.6 - UNRELEASED
 

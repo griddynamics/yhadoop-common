@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -24,6 +24,9 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
 
     HADOOP-9343. Allow additional exceptions through the RPC layer. (sseth)
+
+    HADOOP-9318. When exiting on a signal, print the signal name first. (Colin
+    Patrick McCabe via atm)
 
   OPTIMIZATIONS
 
@@ -70,6 +73,45 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9337. org.apache.hadoop.fs.DF.getMount() does not work on Mac OS.
     (Ivan A. Veselovsky via atm)
+
+    HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
+    end. (Karthik Kambatla via atm)
+
+    HADOOP-9379. capture the ulimit info after printing the log to the 
+    console. (Arpit Gupta via suresh)
+
+    HADOOP-9399. protoc maven plugin doesn't work on mvn 3.0.2 (todd)
+
+    HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
+    build issues. (Sangjin Lee via suresh)
+
+    HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
+    Wang via atm)
+
+    HADOOP-9430. TestSSLFactory fails on IBM JVM. (Amir Sanjar via suresh)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
+
+    HADOOP-9301. hadoop client servlet/jsp/jetty/tomcat JARs creating
+    conflicts in Oozie & HttpFS. (tucu)
+
+    HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
+    is not configured (daryn)
+
+    HADOOP-9408. misleading description for net.topology.table.file.name
+    property in core-default.xml. (rajeshbabu via suresh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -1074,6 +1116,8 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
     jeagles)
+
+    HADOOP-9374. Add tokens from -tokenCacheFile into UGI (daryn)
 
   OPTIMIZATIONS
 
@@ -2324,6 +2368,9 @@ Release 0.23.0 - 2011-11-01
     HADOOP-7797. Fix top-level pom.xml to refer to correct staging maven
     repository. (omalley via acmurthy) 
 
+    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
+    non-Hadoop JAAS context. (todd)
+
 Release 0.22.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -2780,9 +2827,6 @@ Release 0.22.0 - 2011-11-29
     todd)
 
     HADOOP-7093. Servlets should default to text/plain (todd)
-
-    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
-    non-Hadoop JAAS context. (todd)
 
     HADOOP-7089. Fix link resolution logic in hadoop-config.sh. (eli)
 

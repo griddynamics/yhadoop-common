@@ -310,8 +310,7 @@ public class MiniYARNCluster extends CompositeService {
               NodeHeartbeatResponse response = recordFactory.newRecordInstance(
                   NodeHeartbeatResponse.class);
               try {
-                response.setHeartbeatResponse(rt.nodeHeartbeat(request)
-                    .getHeartbeatResponse());
+                response = rt.nodeHeartbeat(request);
               } catch (IOException ioe) {
                 LOG.info("Exception in heartbeat from node " + 
                     request.getNodeStatus().getNodeId(), ioe);
@@ -327,9 +326,7 @@ public class MiniYARNCluster extends CompositeService {
               RegisterNodeManagerResponse response = recordFactory.
                   newRecordInstance(RegisterNodeManagerResponse.class);
               try {
-                response.setRegistrationResponse(rt
-                    .registerNodeManager(request)
-                    .getRegistrationResponse());
+                response = rt.registerNodeManager(request);
               } catch (IOException ioe) {
                 LOG.info("Exception in node registration from "
                     + request.getNodeId().toString(), ioe);
