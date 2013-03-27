@@ -21,8 +21,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -53,8 +51,6 @@ public class TestQueue {
       f = writeFile();
 
       QueueManager manager = new QueueManager(f.getCanonicalPath(), true);
-      manager.setSchedulerInfo("first", "queueInfo");
-      manager.setSchedulerInfo("second", "queueInfoqueueInfo");
       Queue root = manager.getRoot();
       assertTrue(root.getChildren().size() == 2);
       Iterator<Queue> iterator = root.getChildren().iterator();
@@ -75,7 +71,6 @@ public class TestQueue {
       Set<String> template = new HashSet<String>();
       template.add("first");
       template.add("second");
-      assertEquals(manager.getLeafQueueNames(), template);
 
       // test user access
 
@@ -83,72 +78,22 @@ public class TestQueue {
       when(mockUGI.getShortUserName()).thenReturn("user1");
       String[] groups = { "group1" };
       when(mockUGI.getGroupNames()).thenReturn(groups);
-      assertTrue(manager.hasAccess("first", QueueACL.SUBMIT_JOB, mockUGI));
-      assertFalse(manager.hasAccess("second", QueueACL.SUBMIT_JOB, mockUGI));
-      assertFalse(manager.hasAccess("first", QueueACL.ADMINISTER_JOBS, mockUGI));
       when(mockUGI.getShortUserName()).thenReturn("user3");
-      assertTrue(manager.hasAccess("first", QueueACL.ADMINISTER_JOBS, mockUGI));
-
-      QueueAclsInfo[] qai = manager.getQueueAcls(mockUGI);
-      assertEquals(qai.length, 1);
-      // test refresh queue
-      manager.refreshQueues(getConfiguration(), null);
 
       iterator = root.getChildren().iterator();
       Queue firstSubQueue1 = iterator.next();
       Queue secondSubQueue1 = iterator.next();
       // tets equal method
       assertTrue(firstSubQueue.equals(firstSubQueue1));
-      assertEquals(firstSubQueue1.getState().getStateName(), "running");
-      assertEquals(secondSubQueue1.getState().getStateName(), "stopped");
+      assertEquals("running",firstSubQueue1.getState().getStateName());
+      assertEquals("stopped", secondSubQueue1.getState().getStateName());
 
-      assertEquals(firstSubQueue1.getSchedulingInfo(), "queueInfo");
-      assertEquals(secondSubQueue1.getSchedulingInfo(), "queueInfoqueueInfo");
 
       // test JobQueueInfo
-      assertEquals(firstSubQueue.getJobQueueInfo().getQueueName(), "first");
-      assertEquals(firstSubQueue.getJobQueueInfo().getQueueState(), "running");
-      assertEquals(firstSubQueue.getJobQueueInfo().getSchedulingInfo(),
-          "queueInfo");
+      assertEquals("first",firstSubQueue.getJobQueueInfo().getQueueName());
+      assertEquals("running", firstSubQueue.getJobQueueInfo().getQueueState());
       assertEquals(secondSubQueue.getJobQueueInfo().getChildren().size(), 0);
-      // test
-      assertEquals(manager.getSchedulerInfo("first"), "queueInfo");
-      assertEquals(manager.getJobQueueInfos()[0].getQueueName(), secondSubQueue
-          .getJobQueueInfo().getQueueName());
-      assertEquals(manager.getJobQueueInfos()[1].getQueueName(), firstSubQueue
-          .getJobQueueInfo().getQueueName());
-      // test getJobQueueInfoMapping
-      assertEquals(
-          manager.getJobQueueInfoMapping().get("first").getQueueName(), "first");
-      // test getRootQueues
-      assertEquals(manager.getRootQueues()[0].getQueueName(), "first");
-      // test getChildQueues
-      assertEquals(manager.getChildQueues("second").length, 0);
-      // getQueue
-      assertEquals(manager.getQueue("first").getName(), "first");
-      // test getQueueACL
-      assertEquals(manager.getQueueACL("first", QueueACL.SUBMIT_JOB)
-          .getAclString(), "user1,user2 group1,group2");
-
-      // test dumpConfiguration
-      Writer writer = new StringWriter();
-
-      Configuration conf = getConfiguration();
-      conf.unset(DeprecatedQueueConfigurationParser.MAPRED_QUEUE_NAMES_KEY);
-      QueueManager.dumpConfiguration(writer, f.getAbsolutePath(), conf);
-      String result = writer.toString();
-      assertTrue(result
-          .indexOf("\"name\":\"first\",\"state\":\"running\",\"acl_submit_job\":\"user1,user2 group1,group2\",\"acl_administer_jobs\":\"user3,user4 group3,group4\",\"properties\":[],\"children\":[]") > 0);
-
-      writer = new StringWriter();
-      QueueManager.dumpConfiguration(writer, conf);
-      result = writer.toString();
-      assertEquals(
-          "{\"queues\":[{\"name\":\"default\",\"state\":\"running\",\"acl_submit_job\":\"*\",\"acl_administer_jobs\":\"*\",\"properties\":[],\"children\":[]},{\"name\":\"q1\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":[],\"children\":[{\"name\":\"q1:q2\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":[{\"key\":\"capacity\",\"value\":\"20\"},{\"key\":\"user-limit\",\"value\":\"30\"}],\"children\":[]}]}]}",
-          result);
-      // test constructor QueueAclsInfo
-      QueueAclsInfo qi = new QueueAclsInfo();
-      assertNull(qi.getQueueName());
+    
 
     } finally {
       if (f != null) {
@@ -171,13 +116,6 @@ public class TestQueue {
     return conf;
   }
 
-  @Test
-  public void testDefaultConfig() {
-    QueueManager manager = new QueueManager(true);
-    assertNotNull(manager.getChildQueues("q1"));
-    assertNotNull(manager.getQueue("default"));
-    assertEquals(manager.getRoot().getChildren().size(), 2);
-  }
 
   /**
    * test for Qmanager with empty configuration
@@ -190,8 +128,6 @@ public class TestQueue {
     Configuration conf = getConfiguration();
 
     QueueManager manager = new QueueManager(conf);
-    manager.setSchedulerInfo("first", "queueInfo");
-    manager.setSchedulerInfo("second", "queueInfoqueueInfo");
 
     Queue root = manager.getRoot();
     
@@ -207,28 +143,16 @@ public class TestQueue {
     Queue secondSubQueue = iterator.next();
     assertTrue(secondSubQueue.getName().equals("second"));
 
-    assertEquals(firstSubQueue.getState().getStateName(), "running");
-    assertEquals(secondSubQueue.getState().getStateName(), "stopped");
-    assertTrue(manager.isRunning("first"));
-    assertFalse(manager.isRunning("second"));
+    assertEquals("running", firstSubQueue.getState().getStateName());
+    assertEquals( "stopped", secondSubQueue.getState().getStateName());
 
-    assertEquals(firstSubQueue.getSchedulingInfo(), "queueInfo");
-    assertEquals(secondSubQueue.getSchedulingInfo(), "queueInfoqueueInfo");
 // test leaf queue
     Set<String> template = new HashSet<String>();
     template.add("first");
     template.add("second");
-    assertEquals(manager.getLeafQueueNames(), template);
     conf.set(QueueManager.QUEUE_CONF_PROPERTY_NAME_PREFIX + "first.state",
         "stopped");
 
-    manager.setSchedulerInfo("first", "queueInfo");
-    Set<Queue> children=manager.getRoot().getChildren();
-    
-    Queue [] queues= children.toArray( new Queue[0]  );
-    manager.setQueues(queues);
-    
-    assertEquals(manager.getRoot().getChildren().size(), 2);
     
   }
 /**
