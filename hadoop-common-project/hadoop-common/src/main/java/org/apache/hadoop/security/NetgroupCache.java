@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.security;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Class that caches the netgroups and inverts group-to-user map
@@ -40,40 +41,62 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceStability.Unstable
 public class NetgroupCache {
 
-  private static final Log LOG = LogFactory.getLog(NetgroupCache.class);
+  private static final ConcurrentMap<String, Set<String>> netgroupToUsersMap 
+    = new ConcurrentHashMap<String, Set<String>>(32);
 
-  private static boolean netgroupToUsersMapUpdated = true;
-  private static final Map<String, Set<String>> netgroupToUsersMap =
-    new ConcurrentHashMap<String, Set<String>>();
-
-  private static final Map<String, Set<String>> userToNetgroupsMap =
-    new ConcurrentHashMap<String, Set<String>>();
+  private static final AtomicReference<Map<String, Set<String>>> userToNetgroupMapReference 
+    = new AtomicReference<Map<String, Set<String>>>(null); 
 
 
   /**
    * Get netgroups for a given user
    *
    * @param user get groups for this user
-   * @param groups put groups into this List
+   * @param groupsContainer put groups into this List
    */
   public static void getNetgroups(final String user,
-      List<String> groups) {
-    if(netgroupToUsersMapUpdated) {
-      netgroupToUsersMapUpdated = false; // at the beginning to avoid race
-      //update userToNetgroupsMap
-      for(String netgroup : netgroupToUsersMap.keySet()) {
-        for(String netuser : netgroupToUsersMap.get(netgroup)) {
-          // add to userToNetgroupsMap
-          if(!userToNetgroupsMap.containsKey(netuser)) {
-            userToNetgroupsMap.put(netuser, new HashSet<String>());
+      List<String> groupsContainer) {
+    // get existing or rebuild the user-to-netgroups mapping:
+    final Map<String,Set<String>> userToNetgroupsMap = getUserToNetgroupMapImpl();
+    assert (userToNetgroupsMap != null);
+    final Set<String> groupSet = userToNetgroupsMap.get(user);
+    if (groupSet != null) {
+      groupsContainer.addAll(groupSet);
+    }
+  }
+  
+  /*
+   * Gets or rebuilds the reverse user-to-netgroup mapping.
+   * If an existing map is present, it is returned.
+   * If not, it is rebuilt and saved in "userToNetgroupMapReference".  
+   */
+  private static Map<String,Set<String>> getUserToNetgroupMapImpl() {
+    Map<String,Set<String>> newUserToNgMap = null;
+    while (true) {
+      final Map<String,Set<String>> existingU2NgMap = userToNetgroupMapReference.get();
+      if (existingU2NgMap != null) {
+        return existingU2NgMap; // return existing map
+      }
+      if (newUserToNgMap == null) {
+        newUserToNgMap = new HashMap<String,Set<String>>(32);
+      } else {
+        newUserToNgMap.clear(); // reuse the same local instance in loop
+      }
+      // try to build a new map:
+      for (Entry<String,Set<String>> e: netgroupToUsersMap.entrySet()) {
+        String netgroup = e.getKey();
+        for (String netuser: e.getValue()) {
+          Set<String> groupSet = newUserToNgMap.get(netuser);
+          if (groupSet == null) {
+            groupSet = new HashSet<String>();
+            newUserToNgMap.put(netuser, groupSet);
           }
-          userToNetgroupsMap.get(netuser).add(netgroup);
+          groupSet.add(netgroup);
         }
       }
-    }
-    if(userToNetgroupsMap.containsKey(user)) {
-      for(String netgroup : userToNetgroupsMap.get(user)) {
-        groups.add(netgroup);
+      if (userToNetgroupMapReference.compareAndSet(null, newUserToNgMap)) {
+        // ok, we set the new map, so return the new value:
+        return newUserToNgMap;
       }
     }
   }
@@ -102,8 +125,7 @@ public class NetgroupCache {
    */
   public static void clear() {
     netgroupToUsersMap.clear();
-    netgroupToUsersMapUpdated = true;
-    userToNetgroupsMap.clear();
+    userToNetgroupMapReference.set(null);
   }
 
   /**
@@ -112,13 +134,17 @@ public class NetgroupCache {
    * @param group name of the group to add to cache
    * @param users list of users for a given group
    */
-  public static void add(String group, List<String> users) {
-    if(!isCached(group)) {
-      netgroupToUsersMap.put(group, new HashSet<String>());
-      for(String user: users) {
-        netgroupToUsersMap.get(group).add(user);
-      }
+  public static void add(final String group, List<String> users) {
+    final Set<String> newSet = new HashSet<String>(users);
+    // Preserve the existing contract of the method:
+    // if the group was already cached, do not change it.
+    final Set<String> previousUserSet = netgroupToUsersMap.putIfAbsent(group,
+        newSet);
+    // Update only in case the group was not previously cached:
+    if (previousUserSet == null) {
+      // clear the reference to indicate that the user-to-netgroup map
+      // needs to be rebuilt:
+      userToNetgroupMapReference.set(null);
     }
-    netgroupToUsersMapUpdated = true; // at the end to avoid race
   }
 }

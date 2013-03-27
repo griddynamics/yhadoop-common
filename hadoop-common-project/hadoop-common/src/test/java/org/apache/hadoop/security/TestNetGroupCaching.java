@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.security;
 
 import java.io.ByteArrayOutputStream;
@@ -22,7 +39,7 @@ import static org.junit.Assume.*;
 /**
  * This test checks netgroup information fetching and caching.  
  * Real OS netgroup configuration is used. If the netgroup config is not found 
- * or does not appear to contain expected data expected by tests (see below), the 
+ * or does not appear to contain data expected by tests (see below), the 
  * tests get skipped.
  *  
  * This test better to be run with "-Pnative" profile to check also the native
@@ -125,7 +142,7 @@ public class TestNetGroupCaching {
   /*
    * This test must unconditionally pass.
    */
-  @Test
+  @Test(timeout=24000)
   public void testShellBasedUnixGroupsMappingWithCaching() throws Exception {
     testUnixGroupsMappingWithCachingImpl(ShellBasedUnixGroupsMapping.class);
   }
@@ -133,7 +150,7 @@ public class TestNetGroupCaching {
   /*
    * This test is skipped in the native code is not loaded. 
    */
-  @Test
+  @Test(timeout=24000)
   public void testJniBasedUnixGroupsMappingWithCaching() throws Exception {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
     testUnixGroupsMappingWithCachingImpl(JniBasedUnixGroupsMapping.class);
@@ -142,7 +159,7 @@ public class TestNetGroupCaching {
   /*
    * This test must also always pass since it uses the fallback implementation. 
    */
-  @Test
+  @Test(timeout=24000)
   public void testJniBasedUnixGroupsMappingWithFallbackWithCaching() throws Exception {
     testUnixGroupsMappingWithCachingImpl(JniBasedUnixGroupsMappingWithFallback.class);
   }
@@ -178,7 +195,7 @@ public class TestNetGroupCaching {
   /*
    * This test must unconditionally pass.
    */
-  @Test
+  @Test(timeout=24000)
   public void testShellBasedUnixGroupsNetgroupMappingWithCaching() throws Exception {
     testGroupsNetgroupMappingWithCachingImpl(ShellBasedUnixGroupsNetgroupMapping.class);
   }
@@ -186,7 +203,7 @@ public class TestNetGroupCaching {
   /*
    * This test is skipped in the native code is not loaded. 
    */
-  @Test
+  @Test(timeout=24000)
   public void testJniBasedUnixGroupsNetgroupMappingWithCaching() throws Exception {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
     testGroupsNetgroupMappingWithCachingImpl(JniBasedUnixGroupsNetgroupMapping.class);
@@ -195,7 +212,7 @@ public class TestNetGroupCaching {
   /*
    * This test must also always pass since it uses the fallback implementation. 
    */
-  @Test
+  @Test(timeout=24000)
   public void testJniBasedUnixGroupsNetgroupMappingWithFallbackWithCaching() throws Exception {
     testGroupsNetgroupMappingWithCachingImpl(JniBasedUnixGroupsNetgroupMappingWithFallback.class);
   }
