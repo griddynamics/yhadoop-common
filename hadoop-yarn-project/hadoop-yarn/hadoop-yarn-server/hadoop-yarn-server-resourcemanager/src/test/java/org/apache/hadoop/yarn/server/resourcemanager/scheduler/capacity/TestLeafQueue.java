@@ -1607,7 +1607,7 @@ public class TestLeafQueue {
     assertEquals(2, e.activeApplications.size());
     assertEquals(1, e.pendingApplications.size());
 
-    csConf.setDouble(CapacitySchedulerConfiguration
+    csConf.setFloat(CapacitySchedulerConfiguration
         .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         CapacitySchedulerConfiguration
         .DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT * 2);
