@@ -8,6 +8,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
 
+    HADOOP-8415. Add getDouble() and setDouble() in 
+    org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
+
   IMPROVEMENTS
 
     HADOOP-9253. Capture ulimit info in the logs at service start time.
@@ -27,6 +30,8 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9318. When exiting on a signal, print the signal name first. (Colin
     Patrick McCabe via atm)
+
+    HADOOP-9358. "Auth failed" log should include exception string (todd)
 
   OPTIMIZATIONS
 
