@@ -111,7 +111,7 @@ public class TestGridmixSubmission extends CommonJobTest {
    *
    * @throws Exception if there was an error.
    */
-  @Test  (timeout=500)
+  @Test  (timeout=50000)
   public void testTraceReader() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);

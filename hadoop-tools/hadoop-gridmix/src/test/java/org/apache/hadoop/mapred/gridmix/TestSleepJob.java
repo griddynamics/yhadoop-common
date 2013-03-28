@@ -69,7 +69,7 @@ public class TestSleepJob extends CommonJobTest {
     testRandomLocation(2, 10, ugi);
   }
 
-  @Test (timeout=50000)
+  @Test (timeout=500000)
   public void testMapTasksOnlySleepJobs() throws Exception {
     Configuration configuration = GridmixTestUtils.mrvl.getConfig();
 
