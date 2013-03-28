@@ -90,7 +90,7 @@ public class TestGridMixClasses {
   /*
    * simple test LoadSplit (getters,copy, write, read...)
    */
-  @Test
+  @Test (timeout=5000)
   public void testLoadSplit() throws Exception {
 
     LoadSplit test = getLoadSplit();
@@ -121,7 +121,7 @@ public class TestGridMixClasses {
   /*
    * simple test GridmixSplit (copy, getters, write, read..)
    */
-  @Test
+  @Test  (timeout=5000)
   public void testGridmixSplit() throws Exception {
     Path[] files = {new Path("one"), new Path("two")};
     long[] start = {1, 2};
@@ -164,7 +164,7 @@ public class TestGridMixClasses {
    * test LoadMapper loadMapper should write to writer record for each reduce
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
-  @Test
+  @Test  (timeout=5000)
   public void testLoadMapper() throws Exception {
 
     Configuration conf = new Configuration();
@@ -378,7 +378,7 @@ public class TestGridMixClasses {
   /*
    * test SpecGroupingComparator
    */
-  @Test
+  @Test  (timeout=5000)
   public void testGridmixJobSpecGroupingComparator() throws Exception {
     GridmixJob.SpecGroupingComparator test = new GridmixJob.SpecGroupingComparator();
 
@@ -421,7 +421,7 @@ public class TestGridMixClasses {
   /*
    * test CompareGridmixJob only equals and compare
    */
-  @Test
+  @Test  (timeout=5000)
   public void testCompareGridmixJob() throws Exception {
     Configuration conf = new Configuration();
     Path outRoot = new Path("target");
@@ -447,7 +447,7 @@ public class TestGridMixClasses {
   /*
    * test ReadRecordFactory. should read all data from inputstream
    */
-  @Test
+  @Test  (timeout=5000)
   public void testReadRecordFactory() throws Exception {
 
     // RecordFactory factory, InputStream src, Configuration conf
@@ -558,7 +558,7 @@ public class TestGridMixClasses {
   /*
    * test LoadRecordReader. It class reads data from some files.
    */
-  @Test
+  @Test  (timeout=5000)
   public void testLoadJobLoadRecordReader() throws Exception {
     LoadJob.LoadRecordReader test = new LoadJob.LoadRecordReader();
     Configuration conf = new Configuration();
@@ -621,7 +621,7 @@ public class TestGridMixClasses {
    * test LoadReducer
    */
 
-  @Test
+  @Test  (timeout=5000)
   public void testLoadJobLoadReducer() throws Exception {
     LoadJob.LoadReducer test = new LoadJob.LoadReducer();
 
@@ -741,7 +741,7 @@ public class TestGridMixClasses {
   /*
    * test SerialJobFactory
    */
-  @Test
+  @Test  (timeout=5000)
   public void testSerialReaderThread() throws Exception {
 
     Configuration conf = new Configuration();
@@ -801,9 +801,8 @@ public class TestGridMixClasses {
   /*
    * test SleepMapper
    */
-  // @SuppressWarnings({ "rawtypes", "unchecked" })
   @SuppressWarnings({"unchecked", "rawtypes"})
-  @Test
+  @Test  (timeout=5000)
   public void testSleepMapper() throws Exception {
     SleepJob.SleepMapper test = new SleepJob.SleepMapper();
 
@@ -848,7 +847,7 @@ public class TestGridMixClasses {
   /*
    * test SleepReducer
    */
-  @Test
+  @Test  (timeout=5000)
   public void testSleepReducer() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(JobContext.NUM_REDUCES, 2);

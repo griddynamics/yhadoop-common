@@ -37,7 +37,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.security.Permission;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.Assert.*;
@@ -112,7 +111,7 @@ public class TestGridmixSubmission extends CommonJobTest {
    *
    * @throws Exception if there was an error.
    */
-  @Test
+  @Test  (timeout=500)
   public void testTraceReader() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
@@ -155,7 +154,7 @@ public class TestGridmixSubmission extends CommonJobTest {
     }
   }
 
-  @Test
+  @Test  (timeout=5000)
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
@@ -164,7 +163,7 @@ public class TestGridmixSubmission extends CommonJobTest {
 
   }
 
-  @Test
+  @Test  (timeout=5000)
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     LOG.info(" Stress started at " + System.currentTimeMillis());
@@ -173,7 +172,7 @@ public class TestGridmixSubmission extends CommonJobTest {
   }
 
   // test empty request should be hint message
-  @Test
+  @Test  (timeout=5000)
   public void testMain() throws Exception {
 
     SecurityManager securityManager = System.getSecurityManager();
