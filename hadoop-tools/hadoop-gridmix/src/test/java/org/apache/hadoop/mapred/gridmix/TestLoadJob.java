@@ -56,7 +56,7 @@ public class TestLoadJob extends CommonJobTest {
   /*
   * test serial policy  with LoadJob. Task should execute without exceptions
   */
-  @Test  (timeout=50000)
+  @Test  (timeout=500000)
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
     LOG.info("Serial started at " + System.currentTimeMillis());
@@ -68,7 +68,7 @@ public class TestLoadJob extends CommonJobTest {
   /*
    * test reply policy with LoadJob
    */
-  @Test  (timeout=5000)
+  @Test  (timeout=500000)
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());

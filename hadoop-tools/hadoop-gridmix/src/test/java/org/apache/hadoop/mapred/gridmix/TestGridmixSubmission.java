@@ -154,7 +154,7 @@ public class TestGridmixSubmission extends CommonJobTest {
     }
   }
 
-  @Test  (timeout=5000)
+  @Test  (timeout=500000)
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
@@ -163,7 +163,7 @@ public class TestGridmixSubmission extends CommonJobTest {
 
   }
 
-  @Test  (timeout=5000)
+  @Test  (timeout=500000)
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     LOG.info(" Stress started at " + System.currentTimeMillis());

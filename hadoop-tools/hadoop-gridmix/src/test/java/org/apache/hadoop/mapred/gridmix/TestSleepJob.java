@@ -100,7 +100,7 @@ public class TestSleepJob extends CommonJobTest {
     LOG.info("Serial ended at " + System.currentTimeMillis());
   }
 
-  @Test (timeout=50000)
+  @Test (timeout=500000)
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     LOG.info(" Replay started at " + System.currentTimeMillis());
