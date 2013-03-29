@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mapreduce.TaskCounter;
@@ -36,23 +38,20 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.JobIdPBImpl;
-import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.TaskIdPBImpl;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryParsing.MyResolver;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.apache.hadoop.yarn.util.RackResolver;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -64,54 +63,36 @@ public class TestJobHistoryServer {
   private static RecordFactory recordFactory = RecordFactoryProvider
           .getRecordFactory(null);
 
-  /*
-  simple test init/start/stop   JobHistoryServer. Status should changes.
-   */
-  @Test
+
+  
+  JobHistoryServer historyServer=null;
+  // simple test init/start/stop   JobHistoryServer. Status should changes.
+  
+  @Test (timeout= 50000 )
   public void testStartStopServer() throws Exception {
 
-    JobHistoryServer server = new JobHistoryServer();
-    Configuration configuration = new Configuration();
-    server.init(configuration);
-    assertEquals(STATE.INITED, server.getServiceState());
-    assertEquals(3, server.getServices().size());
-    server.start();
-    assertEquals(STATE.STARTED, server.getServiceState());
-    server.stop();
-    assertEquals(STATE.STOPPED, server.getServiceState());
-    assertNotNull(server.getClientService());
-    HistoryClientService historyService = server.getClientService();
+    historyServer = new JobHistoryServer();
+    Configuration config = new Configuration();
+    historyServer.init(config);
+    assertEquals(STATE.INITED, historyServer.getServiceState());
+    assertEquals(3, historyServer.getServices().size());
+    historyServer.start();
+    assertEquals(STATE.STARTED, historyServer.getServiceState());
+    historyServer.stop();
+    assertEquals(STATE.STOPPED, historyServer.getServiceState());
+    assertNotNull(historyServer.getClientService());
+    HistoryClientService historyService = historyServer.getClientService();
     assertNotNull(historyService.getClientHandler().getConnectAddress());
 
+    
+    
   }
 
-  /*
-     Simple test PartialJob
-  */
-  @Test
-  public void testPartialJob() throws Exception {
-    JobId jobId = new JobIdPBImpl();
-    jobId.setId(0);
-    JobIndexInfo jii = new JobIndexInfo(0L, System.currentTimeMillis(), "user",
-            "jobName", jobId, 3, 2, "JobStatus");
-    PartialJob test = new PartialJob(jii, jobId);
-    assertEquals(1.0f, test.getProgress(), 0.001);
-    assertNull(test.getAllCounters());
-    assertNull(test.getTasks());
-    assertNull(test.getTasks(TaskType.MAP));
-    assertNull(test.getTask(new TaskIdPBImpl()));
 
-    assertNull(test.getTaskAttemptCompletionEvents(0, 100));
-    assertNull(test.getMapAttemptCompletionEvents(0, 100));
-    assertTrue(test.checkAccess(UserGroupInformation.getCurrentUser(), null));
-    assertNull(test.getAMInfos());
 
-  }
-
-  /*
- Test reports of  JobHistoryServer. History server should gets log files from  MRApp and read them
-  */
-  @Test
+  //Test reports of  JobHistoryServer. History server should gets log files from  MRApp and read them
+  
+  @Test (timeout= 50000 )
   public void testReports() throws Exception {
     Configuration config = new Configuration();
     config
@@ -126,14 +107,25 @@ public class TestJobHistoryServer {
     Job job = app.getContext().getAllJobs().values().iterator().next();
     app.waitForState(job, JobState.SUCCEEDED);
 
-    JobHistoryServer historyServer = new JobHistoryServer();
+    historyServer = new JobHistoryServer();
 
     historyServer.init(config);
     historyServer.start();
-    JobHistory jobHistory = (JobHistory) historyServer.getServices().iterator()
-            .next();
-    jobHistory.getAllJobs();
-
+    
+    // search JobHistory  service
+    JobHistory jobHistory= null;
+    for (Service service : historyServer.getServices() ) {
+      if (service instanceof JobHistory) {
+        jobHistory = (JobHistory) service;
+      }
+    };
+    
+    Map<JobId, Job> jobs= jobHistory.getAllJobs();
+    
+    assertEquals(1, jobs.size());
+    assertEquals("job_0_0000",jobs.keySet().iterator().next().toString());
+    
+    
     Task task = job.getTasks().values().iterator().next();
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
 
@@ -192,12 +184,9 @@ public class TestJobHistoryServer {
     assertEquals(1, diagnosticResponse.getDiagnosticsCount());
     assertEquals("", diagnosticResponse.getDiagnostics(0));
 
-    historyServer.stop();
   }
-  /*
-  test main method should return 0
-   */
-  @Test
+ // test main method
+  @Test (timeout =60000)
   public void testMainMethod() throws Exception {
 
     ExitUtil.disableSystemExit();
@@ -208,6 +197,13 @@ public class TestJobHistoryServer {
       assertEquals(0,e.status);
       ExitUtil.resetFirstExitException();
       fail();
+    }
+  }
+  
+  @After
+  public void stop(){
+    if(historyServer !=null && !STATE.STOPPED.equals(historyServer.getServiceState())){
+      historyServer.stop();
     }
   }
 }
