@@ -28,10 +28,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -127,7 +127,7 @@ public class TestNetworkedJob {
 
     try {
       Configuration conf = new Configuration();
-      mr = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
+      mr = new MiniMRClientClusterBuilder(getClass(), conf).noOfNMs(2).build();
 
       JobConf job = new JobConf(mr.getConfig());
 
@@ -312,7 +312,7 @@ public class TestNetworkedJob {
     PrintStream oldOut = System.out;
     try {
       Configuration conf = new Configuration();
-      mr = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
+      mr = new MiniMRClientClusterBuilder(getClass(), conf).noOfNMs(2).build();
 
       JobConf job = new JobConf(mr.getConfig());
 
