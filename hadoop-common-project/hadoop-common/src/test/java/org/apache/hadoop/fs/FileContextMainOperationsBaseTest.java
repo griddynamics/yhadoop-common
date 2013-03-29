@@ -1189,7 +1189,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   @Test(timeout=30000)
   public void testRelativePathSchemeNoAuthority() throws IOException,
       URISyntaxException {
-    Path workDir = new Path(getAbsoluteTestRootPath(fc), new Path("test"));
+    Path workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
     fc.setWorkingDirectory(workDir);
     Path file = new Path(workDir, "file");
     createFile(file);
