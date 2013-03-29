@@ -82,11 +82,7 @@ public class TestJobHistoryEntities {
   }
 
   /* Verify some expected values based on the history file */
-<<<<<<< HEAD
-  @Test (timeout=50000)
-=======
   @Test (timeout=100000)
->>>>>>> fix
   public void testCompletedJob() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -111,11 +107,7 @@ public class TestJobHistoryEntities {
     assertEquals(JobState.SUCCEEDED, jobReport.getJobState());
   }
   
-<<<<<<< HEAD
   @Test (timeout=50000)
-=======
-  @Test (timeout=10000)
->>>>>>> fix
   public void testCompletedTask() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -144,11 +136,7 @@ public class TestJobHistoryEntities {
     assertEquals(rt1Id, rt1Report.getTaskId());
   }
   
-<<<<<<< HEAD
   @Test (timeout=50000)
-=======
-  @Test (timeout=10000)
->>>>>>> fix
   public void testCompletedTaskAttempt() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
