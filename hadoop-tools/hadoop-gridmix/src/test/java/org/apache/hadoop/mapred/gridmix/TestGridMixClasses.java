@@ -452,7 +452,11 @@ public class TestGridMixClasses {
   /*
    * test CompareGridmixJob only equals and compare
    */
+<<<<<<< HEAD
   @Test (timeout=1000)
+=======
+  @Test (timeout=10000)
+>>>>>>> Revert "add tests"
   public void testCompareGridmixJob() throws Exception {
     Configuration conf = new Configuration();
     Path outRoot = new Path("target");
@@ -772,7 +776,11 @@ public class TestGridMixClasses {
   /*
    * test SerialJobFactory
    */
+<<<<<<< HEAD
   @Test (timeout=1000)
+=======
+  @Test (timeout=40000)
+>>>>>>> Revert "add tests"
   public void testSerialReaderThread() throws Exception {
 
     Configuration conf = new Configuration();
@@ -833,7 +841,11 @@ public class TestGridMixClasses {
    * test SleepMapper
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
+<<<<<<< HEAD
   @Test (timeout=1000)
+=======
+  @Test (timeout=10000)
+>>>>>>> Revert "add tests"
   public void testSleepMapper() throws Exception {
     SleepJob.SleepMapper test = new SleepJob.SleepMapper();
 

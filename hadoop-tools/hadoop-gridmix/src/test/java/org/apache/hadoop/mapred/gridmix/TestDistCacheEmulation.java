@@ -352,7 +352,11 @@ public class TestDistCacheEmulation {
    * @throws IOException
    * @throws InterruptedException
    */
+<<<<<<< HEAD
   @Test  (timeout=2000)
+=======
+  @Test  (timeout=20000)
+>>>>>>> Revert "add tests"
   public void testSetupGenerateDistCacheData() throws IOException,
       InterruptedException {
     long[] sortedFileSizes = new long[5];
