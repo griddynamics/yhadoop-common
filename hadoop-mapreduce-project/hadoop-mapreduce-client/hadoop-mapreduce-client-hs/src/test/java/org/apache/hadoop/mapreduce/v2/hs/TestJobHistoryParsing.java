@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
-<<<<<<< HEAD
-import java.io.ByteArrayOutputStream;
-=======
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
->>>>>>> fixtests
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -112,11 +109,7 @@ public class TestJobHistoryParsing {
     info.printAll();
   }
 
-<<<<<<< HEAD
-  @Test (timeout=50000)
-=======
   @Test (timeout=300000)
->>>>>>> fixtests
   public void testHistoryParsing() throws Exception {
     LOG.info("STARTING testHistoryParsing()");
     try {
@@ -380,11 +373,7 @@ public class TestJobHistoryParsing {
     return numFinishedMaps;
   }
   
-<<<<<<< HEAD
-  @Test (timeout=50000)
-=======
   @Test (timeout=30000)
->>>>>>> fixtests
   public void testHistoryParsingForFailedAttempts() throws Exception {
     LOG.info("STARTING testHistoryParsingForFailedAttempts");
     try {
@@ -451,11 +440,7 @@ public class TestJobHistoryParsing {
     }
   }
   
-<<<<<<< HEAD
-  @Test (timeout=5000)
-=======
   @Test (timeout=60000)
->>>>>>> fixtests
   public void testCountersForFailedTask() throws Exception {
     LOG.info("STARTING testCountersForFailedTask");
     try {

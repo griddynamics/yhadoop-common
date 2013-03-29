@@ -81,11 +81,7 @@ public class TestJobHistoryEntities {
   }
 
   /* Verify some expected values based on the history file */
-<<<<<<< HEAD
-  @Test (timeout=10000)
-=======
   @Test (timeout=100000)
->>>>>>> fixtests
   public void testCompletedJob() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
