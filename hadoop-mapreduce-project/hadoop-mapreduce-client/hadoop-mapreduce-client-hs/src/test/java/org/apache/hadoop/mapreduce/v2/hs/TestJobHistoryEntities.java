@@ -82,7 +82,11 @@ public class TestJobHistoryEntities {
   }
 
   /* Verify some expected values based on the history file */
+<<<<<<< HEAD
   @Test (timeout=50000)
+=======
+  @Test (timeout=100000)
+>>>>>>> fix
   public void testCompletedJob() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -107,7 +111,11 @@ public class TestJobHistoryEntities {
     assertEquals(JobState.SUCCEEDED, jobReport.getJobState());
   }
   
+<<<<<<< HEAD
   @Test (timeout=50000)
+=======
+  @Test (timeout=10000)
+>>>>>>> fix
   public void testCompletedTask() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -136,7 +144,11 @@ public class TestJobHistoryEntities {
     assertEquals(rt1Id, rt1Report.getTaskId());
   }
   
+<<<<<<< HEAD
   @Test (timeout=50000)
+=======
+  @Test (timeout=10000)
+>>>>>>> fix
   public void testCompletedTaskAttempt() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -171,12 +183,11 @@ public class TestJobHistoryEntities {
     assertEquals(45454, rta1Report.getNodeManagerPort());
     assertEquals(9999, rta1Report.getNodeManagerHttpPort());
   }
-
   /**
-   * simple test of methods of CompletedJob
+   * Simple test of some methods of CompletedJob
    * @throws Exception
    */
-  @Test
+  @Test (timeout=30000)
   public void testGetTaskAttemptCompletionEvent() throws Exception{
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -212,4 +223,5 @@ public class TestJobHistoryEntities {
     assertEquals(0, completedJob.getJobACLs().size());
 
   }
+
 }

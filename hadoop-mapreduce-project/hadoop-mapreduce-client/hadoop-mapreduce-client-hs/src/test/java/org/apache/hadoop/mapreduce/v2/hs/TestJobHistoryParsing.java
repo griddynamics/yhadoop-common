@@ -18,7 +18,14 @@
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
+<<<<<<< HEAD
 import java.io.ByteArrayOutputStream;
+=======
+import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+>>>>>>> fix
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -54,6 +61,9 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.JobIdPBImpl;
+import org.apache.hadoop.mapreduce.v2.api.records.impl.pb.TaskIdPBImpl;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
@@ -67,6 +77,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -97,7 +108,11 @@ public class TestJobHistoryParsing {
     info.printAll();
   }
 
+<<<<<<< HEAD
   @Test (timeout=50000)
+=======
+  @Test (timeout=300000)
+>>>>>>> fix
   public void testHistoryParsing() throws Exception {
     LOG.info("STARTING testHistoryParsing()");
     try {
@@ -361,7 +376,11 @@ public class TestJobHistoryParsing {
     return numFinishedMaps;
   }
   
+<<<<<<< HEAD
   @Test (timeout=50000)
+=======
+  @Test (timeout=30000)
+>>>>>>> fix
   public void testHistoryParsingForFailedAttempts() throws Exception {
     LOG.info("STARTING testHistoryParsingForFailedAttempts");
     try {
@@ -428,7 +447,11 @@ public class TestJobHistoryParsing {
     }
   }
   
+<<<<<<< HEAD
   @Test (timeout=50000)
+=======
+  @Test (timeout=60000)
+>>>>>>> fix
   public void testCountersForFailedTask() throws Exception {
     LOG.info("STARTING testCountersForFailedTask");
     try {
@@ -584,7 +607,7 @@ public class TestJobHistoryParsing {
     /*
     test clean old history files.  Files should be deleted after 1 week by default.
      */
-  @Test
+  @Test (timeout=15000)
   public void testDeleteFileInfo() throws Exception {
     LOG.info("STARTING testDeleteFileInfo");
     try {
@@ -629,7 +652,7 @@ public class TestJobHistoryParsing {
   /*
   simple test some methods of JobHistory
    */
-  @Test
+  @Test (timeout=20000)
   public void testJobHistoryMethods() throws Exception {
     LOG.info("STARTING testJobHistoryMethods");
     try {
@@ -677,44 +700,25 @@ public class TestJobHistoryParsing {
     }
   }
   
-  /*
-  test clean old history files. 
-   */
-@Test
-public void testCleanFileInfo() throws Exception {
-  LOG.info("STARTING testDeleteFileInfo");
-  try {
-    Configuration configuration = new Configuration();
-    // JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE;
-    configuration.setInt("mapreduce.jobhistory.joblist.cache.size", 0);
-    
-    //JHAdminConfig.MR_HISTORY_MAX_AGE_MS
-    configuration.setLong("mapreduce.jobhistory.max-age-ms", 0);
-    
-    configuration.setClass(
-            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-            MyResolver.class, DNSToSwitchMapping.class);
+ //   Simple test PartialJob
+  
+  @Test (timeout=1000)
+  public void testPartialJob() throws Exception {
+    JobId jobId = new JobIdPBImpl();
+    jobId.setId(0);
+    JobIndexInfo jii = new JobIndexInfo(0L, System.currentTimeMillis(), "user",
+            "jobName", jobId, 3, 2, "JobStatus");
+    PartialJob test = new PartialJob(jii, jobId);
+    assertEquals(1.0f, test.getProgress(), 0.001);
+    assertNull(test.getAllCounters());
+    assertNull(test.getTasks());
+    assertNull(test.getTasks(TaskType.MAP));
+    assertNull(test.getTask(new TaskIdPBImpl()));
 
-    RackResolver.init(configuration);
-    MRApp app = new MRAppWithHistory(2, 3, true, this.getClass().getName(),
-        true);
-    app.submit(configuration);
-    Job job = app.getContext().getAllJobs().values().iterator().next();
+    assertNull(test.getTaskAttemptCompletionEvents(0, 100));
+    assertNull(test.getMapAttemptCompletionEvents(0, 100));
+    assertTrue(test.checkAccess(UserGroupInformation.getCurrentUser(), null));
+    assertNull(test.getAMInfos());
 
-    app.waitForState(job, JobState.SUCCEEDED);
-
-    // make sure all events are flushed
-    app.waitForState(Service.STATE.STOPPED);
-    HistoryFileManager hfm = new HistoryFileManager();
-    hfm.init(configuration);
-    hfm.initExisting();
-    hfm.setMaxHistoryAge(0);
-    Assert.assertEquals(1,hfm.getAllFileInfo().size());
-    Assert.assertTrue(hfm.getAllFileInfo().iterator().next().isDeleted());
-    
-
-  } finally {
-    LOG.info("FINISHED testDeleteFileInfo");
   }
-}
 }
