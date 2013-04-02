@@ -8,11 +8,86 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-133 Update web services docs for RM clusterMetrics (Ravi Prakash via
+    kihwal)
+
+    YARN-286. Add a YARN ApplicationClassLoader. (tomwhite)
+
+    YARN-249. Capacity Scheduler web page should show list of active users per 
+    queue like it used to (in 1.x) (Ravi Prakash via tgraves)
+
+    YARN-236. RM should point tracking URL to RM web page when app fails to
+    start (Jason Lowe via jeagles)
+
+    YARN-269. Resource Manager not logging the health_check_script result when
+    taking it out (Jason Lowe via kihwal)
+
+    YARN-227. Application expiration difficult to debug for end-users
+    (Jason Lowe via jeagles)
+
+    YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
+    the per-application page are translated to html line breaks. (Omkar Vinit
+    Joshi via vinodkv)
+
+    YARN-443. allow OS scheduling priority of NM to be different than the 
+    containers it launches (tgraves)
+
+    YARN-468. coverage fix for org.apache.hadoop.yarn.server.webproxy.amfilter
+    (Aleksey Gorshkov via bobby)
+
+    YARN-200. yarn log does not output all needed information, and is in a
+    binary format (Ravi Prakash via jlowe)
+
   OPTIMIZATIONS
+
+    YARN-357. App submission should not be synchronized (daryn)
 
   BUG FIXES
 
-Release 0.23.6 - UNRELEASED
+    YARN-343. Capacity Scheduler maximum-capacity value -1 is invalid (Xuan
+    Gong via tgraves)
+
+    YARN-364. AggregatedLogDeletionService can take too long to delete logs
+    (jlowe)
+
+    YARN-29. Add a yarn-client module (Vinod Kumar Vavilapalli via tgraves)
+
+    YARN-83. Change package of YarnClient to include apache (Bikas Saha via
+    tgraves)
+
+    YARN-40. Provide support for missing yarn commands (Devaraj K via tgraves)
+
+    YARN-355. Fixes a bug where RM app submission could jam under load.
+    (Daryn Sharp via sseth)
+
+    YARN-150. AppRejectedTransition does not unregister app from master service
+    and scheduler (Bikas Shah via tgraves)
+
+    YARN-362. Unexpected extra results when using webUI table search (Ravi
+    Prakash via jlowe)
+
+    YARN-400. RM can return null application resource usage report leading to 
+    NPE in client (Jason Lowe via tgraves)
+
+    YARN-426. Failure to download a public resource prevents further downloads
+    (Jason Lowe via bobby)
+
+    YARN-376. Fixes a bug which would prevent the NM knowing about completed
+    containers and applications. (Jason Lowe via sseth)
+
+    YARN-448. Remove unnecessary hflush from log aggregation (Kihwal Lee via
+    bobby)
+
+    YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
+    in Node Manager (Robert Parker via jlowe)
+
+    YARN-109. .tmp file is not deleted for localized archives (Mayank Bansal 
+    via bobby)
+
+    YARN-460. CS user left in list of active users for the queue even when
+    application finished (tgraves)
+
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
@@ -68,6 +143,9 @@ Release 0.23.6 - UNRELEASED
 
     YARN-170. NodeManager stop() gets called twice on shutdown (Sandy Ryza
     via tgraves)
+
+    YARN-354. WebAppProxyServer exits immediately after startup (Liang Xie via
+    jlowe)
 
 Release 0.23.5 - 2012-11-28
 
