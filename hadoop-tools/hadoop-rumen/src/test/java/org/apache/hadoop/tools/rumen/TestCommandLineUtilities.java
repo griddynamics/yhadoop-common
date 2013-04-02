@@ -134,7 +134,7 @@ public class TestCommandLineUtilities {
     ClusterTopologyReader ctp = new ClusterTopologyReader(new FileInputStream(
         new File(args[5])));
     LoggedNetworkTopology lnt = ctp.get();
-    assertEquals(7, lnt.getChildren().size());
+    assertEquals(14, lnt.getChildren().size());
     assertEquals("<root>", lnt.getName().getValue());
 
     JobTraceReader reader = new JobTraceReader(new FileInputStream(new File(

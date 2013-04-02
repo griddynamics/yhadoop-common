@@ -36,7 +36,7 @@ import static org.junit.Assert.*;
 
 public class TestZombieJob {
   private static File workSpace = new File("src" + File.separator + "test"
-      + File.separator + "  resources" + File.separator + "data");
+      + File.separator + "resources" + File.separator + "data");
 
   // test ZombieJobProducer
   @Test  (timeout=10000)
