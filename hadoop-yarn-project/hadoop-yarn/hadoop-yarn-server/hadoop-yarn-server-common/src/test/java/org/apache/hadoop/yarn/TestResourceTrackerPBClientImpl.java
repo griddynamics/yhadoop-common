@@ -39,7 +39,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Test ResourceTrackerPBClientImpl. this class should has methods
+ * Test ResourceTrackerPBClientImpl. this class should have methods
  * registerNodeManager and newRecordInstance.
  */
 public class TestResourceTrackerPBClientImpl {
