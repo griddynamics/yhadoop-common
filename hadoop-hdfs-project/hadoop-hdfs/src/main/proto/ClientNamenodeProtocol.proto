@@ -67,7 +67,8 @@ message CreateRequestProto {
   required uint64 blockSize = 7;
 }
 
-message CreateResponseProto { // void response
+message CreateResponseProto {
+  optional HdfsFileStatusProto fs = 1;
 }
 
 message AppendRequestProto {
@@ -119,6 +120,7 @@ message AddBlockRequestProto {
   required string clientName = 2;
   optional ExtendedBlockProto previous = 3;
   repeated DatanodeInfoProto excludeNodes = 4;
+  optional uint64 fileId = 5 [default = 0];  // default as a bogus id
 }
 
 message AddBlockResponseProto {
@@ -168,7 +170,7 @@ message RenameRequestProto {
   required string dst = 2;
 }
 
-message RenameResponseProto { // void response
+message RenameResponseProto {
   required bool result = 1;
 }
 
@@ -387,7 +389,7 @@ message GetLinkTargetRequestProto {
   required string path = 1;
 }
 message GetLinkTargetResponseProto {
-  required string targetPath = 1;
+  optional string targetPath = 1;
 }
 
 message UpdateBlockForPipelineRequestProto {
@@ -407,29 +409,6 @@ message UpdatePipelineRequestProto {
 }
 
 message UpdatePipelineResponseProto { // void response
-}
-
-message GetDelegationTokenRequestProto {
-  required string renewer = 1;
-}
-
-message GetDelegationTokenResponseProto {
-  optional hadoop.common.TokenProto token = 1;
-}
-
-message RenewDelegationTokenRequestProto {
-  required hadoop.common.TokenProto token = 1;
-}
-
-message RenewDelegationTokenResponseProto {
-  required uint64 newExireTime = 1;
-}
-
-message CancelDelegationTokenRequestProto {
-  required hadoop.common.TokenProto token = 1;
-}
-
-message CancelDelegationTokenResponseProto { // void response
 }
 
 message SetBalancerBandwidthRequestProto {
@@ -509,12 +488,12 @@ service ClientNamenodeProtocol {
       returns(UpdateBlockForPipelineResponseProto);
   rpc updatePipeline(UpdatePipelineRequestProto)
       returns(UpdatePipelineResponseProto);
-  rpc getDelegationToken(GetDelegationTokenRequestProto)
-      returns(GetDelegationTokenResponseProto);
-  rpc renewDelegationToken(RenewDelegationTokenRequestProto)
-      returns(RenewDelegationTokenResponseProto);
-  rpc cancelDelegationToken(CancelDelegationTokenRequestProto)
-      returns(CancelDelegationTokenResponseProto);
+  rpc getDelegationToken(hadoop.common.GetDelegationTokenRequestProto)
+      returns(hadoop.common.GetDelegationTokenResponseProto);
+  rpc renewDelegationToken(hadoop.common.RenewDelegationTokenRequestProto)
+      returns(hadoop.common.RenewDelegationTokenResponseProto);
+  rpc cancelDelegationToken(hadoop.common.CancelDelegationTokenRequestProto)
+      returns(hadoop.common.CancelDelegationTokenResponseProto);
   rpc setBalancerBandwidth(SetBalancerBandwidthRequestProto)
       returns(SetBalancerBandwidthResponseProto);
   rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
