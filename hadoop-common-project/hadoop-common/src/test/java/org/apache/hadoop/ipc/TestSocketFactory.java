@@ -45,7 +45,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-/*
+/**
  * test StandardSocketFactory and SocksSocketFactory NetUtils
  * 
  */
@@ -71,7 +71,7 @@ public class TestSocketFactory {
     serverThread.stop();
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testSocketFactoryAsKeyInMap() throws Exception {
     Map<SocketFactory, Integer> dummyCache = new HashMap<SocketFactory, Integer>();
     int toBeCached1 = 1;
@@ -107,10 +107,10 @@ public class TestSocketFactory {
 
   }
 
-  /*
+  /**
    * Test SocksSocketFactory. test different constructors
    */
-  @Test
+  @Test (timeout=5000)
   public void testSocksSocketFactory() throws Exception {
 
     testSocketFactory(new SocksSocketFactory());
@@ -120,15 +120,15 @@ public class TestSocketFactory {
    * Test SocksSocketFactory. Test different constructors
    */
 
-  @Test
+  @Test (timeout=5000)
   public void testStandardSocketFactory() throws Exception {
 
     testSocketFactory(new StandardSocketFactory());
 
   }
 
-  /*
-   * common test. Socket should works
+  /**
+   * common test. Socket should work
    */
   private void testSocketFactory(SocketFactory socketFactory) throws Exception {
     InetAddress address = InetAddress.getLocalHost();
@@ -152,10 +152,10 @@ public class TestSocketFactory {
 
   }
 
-  /*
+  /**
    * test proxy methods
    */
-  @Test
+  @Test (timeout=5000)
   public void testProxy() throws Exception {
     SocksSocketFactory templateWithoutProxy = new SocksSocketFactory();
     Proxy proxy = new Proxy(Type.SOCKS, InetSocketAddress.createUnresolved(
@@ -182,9 +182,9 @@ public class TestSocketFactory {
 
   }
 
-  /*
+  /**
    * simple tcp server. Server gets a string transforms to upper case and return
-   * this.
+   * it .
    */
   private class ServerThread implements Runnable {
 
