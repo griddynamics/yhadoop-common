@@ -36,7 +36,7 @@ public class TestPiecewiseLinearInterpolation {
     return result;
   }
 
-  @Test
+  @Test  (timeout=5000)
   public void testOneRun() {
     LoggedDiscreteCDF input = new LoggedDiscreteCDF();
 

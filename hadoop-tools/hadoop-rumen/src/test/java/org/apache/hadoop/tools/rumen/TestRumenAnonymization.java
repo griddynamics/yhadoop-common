@@ -59,24 +59,24 @@ public class TestRumenAnonymization {
   /**
    * Test {@link UserName}, serialization and anonymization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testUserNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
     JsonSerializer<?> anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
         new StatePool(), new Configuration());
-    // test username
-    UserName uname = new UserName("bob");
-    assertEquals("bob", uname.getValue());
+    // test user name
+    UserName userName = new UserName("bob");
+    assertEquals("bob", userName.getValue());
 
-    // test username serialization
+    // test user name serialization
     // test with no anonymization
     // test bob
     testSerializer(new UserName("bob"), "bob", defaultSerializer);
     // test alice
     testSerializer(new UserName("alice"), "alice", defaultSerializer);
 
-    // test user-name serialization
+    // test user name serialization
     // test with anonymization
     // test bob
     testSerializer(new UserName("bob"), "user0", anonymizingSerializer);
@@ -87,7 +87,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobName}, serialization and anonymization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testJobNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
@@ -98,7 +98,7 @@ public class TestRumenAnonymization {
     JobName jname = new JobName("job-secret");
     assertEquals("Jobname error!", "job-secret", jname.getValue());
 
-    // test job-name serialization
+    // test job name serialization
     // test with no anonymization
     // test job1
     testSerializer(new JobName("job-myjob"), "job-myjob", defaultSerializer);
@@ -116,18 +116,18 @@ public class TestRumenAnonymization {
   /**
    * Test {@link QueueName}, serialization and anonymization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testQueueNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
     JsonSerializer<?> anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
         new StatePool(), new Configuration());
 
-    // test queuename
-    QueueName qname = new QueueName("queue-secret");
-    assertEquals("Queuename error!", "queue-secret", qname.getValue());
+    // test queue name
+    QueueName queueName = new QueueName("queue-secret");
+    assertEquals("Queuename error!", "queue-secret", queueName.getValue());
 
-    // test queuename serialization
+    // test queue name serialization
     // test with no anonymization
     // test queue1
     testSerializer(new QueueName("project1-queue"), "project1-queue",
@@ -136,7 +136,7 @@ public class TestRumenAnonymization {
     testSerializer(new QueueName("project2-queue"), "project2-queue",
         defaultSerializer);
 
-    // test queue-name serialization
+    // test queue name serialization
     // test with anonymization
     // test queue1
     testSerializer(new QueueName("project1-queue"), "queue0",
@@ -149,44 +149,44 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName}.
    */
-  @Test
+  @Test (timeout=5000)
   public void testNodeNameDataType() throws IOException {
-    // test hostname
-    // test only hostname
-    NodeName hname = new NodeName("host1.myorg.com");
-    assertNull(hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("host1.myorg.com", hname.getValue());
+    // test host name
+    // test only host name
+    NodeName nodeName = new NodeName("host1.myorg.com");
+    assertNull(nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("host1.myorg.com", nodeName.getValue());
 
-    // test rack/hostname
-    hname = new NodeName("/rack1.myorg.com/host1.myorg.com");
-    assertEquals("rack1.myorg.com", hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("/rack1.myorg.com/host1.myorg.com", hname.getValue());
+    // test rack/host name
+    nodeName = new NodeName("/rack1.myorg.com/host1.myorg.com");
+    assertEquals("rack1.myorg.com", nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("/rack1.myorg.com/host1.myorg.com", nodeName.getValue());
 
-    // test hostname and rackname separately
-    hname = new NodeName("rack1.myorg.com", "host1.myorg.com");
-    assertEquals("rack1.myorg.com", hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("/rack1.myorg.com/host1.myorg.com", hname.getValue());
+      // test hostname and rack name separately
+    nodeName = new NodeName("rack1.myorg.com", "host1.myorg.com");
+    assertEquals("rack1.myorg.com", nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("/rack1.myorg.com/host1.myorg.com", nodeName.getValue());
 
-    // test hostname with no rackname
-    hname = new NodeName(null, "host1.myorg.com");
-    assertNull(hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("host1.myorg.com", hname.getValue());
+    // test hostname with no rack name
+    nodeName = new NodeName(null, "host1.myorg.com");
+    assertNull(nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("host1.myorg.com", nodeName.getValue());
 
-    // test rackname with no hostname
-    hname = new NodeName("rack1.myorg.com", null);
-    assertEquals("rack1.myorg.com", hname.getRackName());
-    assertNull(hname.getHostName());
-    assertEquals("rack1.myorg.com", hname.getValue());
+    // test rack name with no hostname
+    nodeName = new NodeName("rack1.myorg.com", null);
+    assertEquals("rack1.myorg.com", nodeName.getRackName());
+    assertNull(nodeName.getHostName());
+    assertEquals("rack1.myorg.com", nodeName.getValue());
   }
 
   /**
    * Test {@link NodeName} serialization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testNodeNameDefaultSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
@@ -212,51 +212,51 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName} anonymization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testNodeNameAnonymization() throws IOException {
     JsonSerializer<?> anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
         new StatePool(), new Configuration());
 
     // test hostname serializer
     // test with anonymization
-    // test hostname
+    // test host name
     testSerializer(new NodeName("hostname.myorg.com"), "host0",
         anonymizingSerializer);
     // test hostname reuse
     testSerializer(new NodeName("hostname213.myorg.com"), "host1",
         anonymizingSerializer);
-    // test rack/hostname
+    // test rack/host name
     testSerializer(new NodeName("/rackname.myorg.com/hostname.myorg.com"),
         "/rack0/host0", anonymizingSerializer);
-    // test rack/hostname (hostname reuse)
+    // test rack/hostname (host name reuse)
     testSerializer(new NodeName("/rackname654.myorg.com/hostname.myorg.com"),
         "/rack1/host0", anonymizingSerializer);
-    // test rack/hostname (rack reuse)
+    // test rack/host name (rack reuse)
     testSerializer(
         new NodeName("/rackname654.myorg.com/hostname765.myorg.com"),
         "/rack1/host2", anonymizingSerializer);
-    // test rack,hostname (rack & hostname reuse)
+    // test rack,host name (rack & host name reuse)
     testSerializer(new NodeName("rackname.myorg.com", "hostname.myorg.com"),
         "/rack0/host0", anonymizingSerializer);
-    // test rack,hostname (rack reuse)
+    // test rack,host name (rack reuse)
     testSerializer(new NodeName("rackname.myorg.com", "hostname543.myorg.com"),
         "/rack0/host3", anonymizingSerializer);
-    // test rack,hostname (hostname reuse)
+    // test rack,host name (host name reuse)
     testSerializer(new NodeName("rackname987.myorg.com", "hostname.myorg.com"),
         "/rack2/host0", anonymizingSerializer);
-    // test rack,hostname (rack reuse)
+    // test rack,host name (rack reuse)
     testSerializer(new NodeName("rackname.myorg.com", "hostname654.myorg.com"),
         "/rack0/host4", anonymizingSerializer);
-    // test rack,hostname (host reuse)
+    // test rack,host name (host reuse)
     testSerializer(new NodeName("rackname876.myorg.com", "hostname.myorg.com"),
         "/rack3/host0", anonymizingSerializer);
-    // test rack,hostname (rack & hostname reuse)
+    // test rack,host name (rack & host name reuse)
     testSerializer(new NodeName("rackname987.myorg.com",
         "hostname543.myorg.com"), "/rack2/host3", anonymizingSerializer);
-    // test -,hostname (hostname reuse)
+    // test -,host name (host name reuse)
     testSerializer(new NodeName(null, "hostname.myorg.com"), "host0",
         anonymizingSerializer);
-    // test -,hostname
+    // test -,host name
     testSerializer(new NodeName(null, "hostname15.myorg.com"), "host5",
         anonymizingSerializer);
     // test rack,- (rack reuse)
@@ -270,7 +270,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobProperties}.
    */
-  @Test
+  @Test (timeout=5000)
   public void testJobPropertiesDataType() throws IOException {
     // test job properties
     Properties properties = new Properties();
@@ -293,7 +293,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobProperties} serialization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testJobPropertiesSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
@@ -311,7 +311,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobProperties} anonymization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testJobPropertiesAnonymization() throws IOException {
     // test job properties
     Properties properties = new Properties();
@@ -343,7 +343,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link ClassName}, serialization and anonymization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testClassNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
@@ -389,7 +389,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName}.
    */
-  @Test
+  @Test (timeout=5000)
   public void testFileName() throws IOException {
     // test file on hdfs
     FileName hFile = new FileName("hdfs://testnn:123/user/test.json");
@@ -430,8 +430,8 @@ public class TestRumenAnonymization {
     hFile = new FileName("../tmp/");
     assertEquals("../tmp/", hFile.getValue());
 
-    // test comma separated filenames
-    // test hdfs filenames, absolute and local-fs filenames
+    // test comma separated file names
+    // test hdfs file names, absolute and local-fs file names
     hFile = new FileName("hdfs://testnn:123/user/test1,"
         + "file:///user/test2,/user/test3");
     assertEquals("hdfs://testnn:123/user/test1,file:///user/test2,/user/test3",
@@ -441,7 +441,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName} serialization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testFileNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
@@ -483,8 +483,8 @@ public class TestRumenAnonymization {
     testSerializer(new FileName("./tmp/"), "./tmp/", defaultSerializer);
     testSerializer(new FileName("../tmp"), "../tmp", defaultSerializer);
 
-    // test comma separated filenames
-    // test hdfs filenames, absolute and local-fs filenames
+    // test comma separated file names
+    // test hdfs file names, absolute and local-fs file names
     FileName fileName = new FileName(
         "hdfs://testnn:123/user/test1,file:///user/test2,/user/test3");
     testSerializer(fileName,
@@ -495,7 +495,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName} anonymization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testFileNameAnonymization() throws IOException {
     JsonSerializer<?> anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
         new StatePool(), new Configuration());
@@ -567,15 +567,15 @@ public class TestRumenAnonymization {
   /**
    * Test {@link DefaultDataType} serialization.
    */
-  @Test
+  @Test (timeout=5000)
   public void testDefaultDataTypeSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
 
-    // test default data-type
+    // test default data type
     DefaultDataType dt = new DefaultDataType("test");
     assertEquals("test", dt.getValue());
 
-    // test default data-type
+    // test default data type
     // test with no anonymization
     // test data
     testSerializer(new DefaultDataType("test"), "test", defaultSerializer);
@@ -645,7 +645,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link DefaultRumenSerializer}.
    */
-  @Test
+  @Test (timeout=5000)
   public void testDefaultDataSerializers() throws Exception {
     JsonSerializer<?> defaultSer = new DefaultRumenSerializer();
     // test default data-type
@@ -654,7 +654,7 @@ public class TestRumenAnonymization {
     testSerializer(new DefaultDataType("test"), "test", defaultSer);
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testBlockingDataSerializers() throws Exception {
     JsonSerializer<?> blockingSerializer = new BlockingSerializer();
 
@@ -662,7 +662,7 @@ public class TestRumenAnonymization {
     testSerializer("username:password", "null", blockingSerializer);
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testObjectStringDataSerializers() throws Exception {
     JsonSerializer<?> objectStringSerializer = new ObjectStringSerializer<ID>();
     // test job/task/attempt id serializer
@@ -677,7 +677,7 @@ public class TestRumenAnonymization {
     testSerializer(aid, aid.toString(), objectStringSerializer);
   }
 
-  @Test
+  @Test  (timeout=30000)
   public void testCLI() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
@@ -759,7 +759,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link StatePool}'s reload and persistence feature.
    */
-  @Test
+  @Test (timeout=5000)
   public void testStatePool() throws Exception {
     Configuration conf = new Configuration();
     FileSystem lfs = FileSystem.getLocal(conf);
@@ -895,7 +895,7 @@ public class TestRumenAnonymization {
     return dt.getValue();
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testJobPropertiesParser() {
     // test default parser
     Properties properties = new Properties();
@@ -956,7 +956,7 @@ public class TestRumenAnonymization {
    * Test {@link WordListAnonymizerUtility}. Test various features like - test
    * known words - test known suffix
    */
-  @Test
+  @Test (timeout=5000)
   public void testWordListBasedAnonymizer() {
     String[] knownSuffixes = new String[] { ".1", ".2", ".3", ".4" };
 
@@ -983,7 +983,7 @@ public class TestRumenAnonymization {
 
     boolean failed = false;
     try {
-      split = WordListAnonymizerUtility.extractSuffix("a.b", knownSuffixes);
+      WordListAnonymizerUtility.extractSuffix("a.b", knownSuffixes);
     } catch (Exception e) {
       failed = true;
     }
@@ -1022,7 +1022,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link WordList} features like - add words - index - contains
    */
-  @Test
+  @Test (timeout=5000)
   public void testWordList() throws Exception {
     // test features with fresh state
     WordList wordList = new WordList();
@@ -1058,7 +1058,7 @@ public class TestRumenAnonymization {
     tempDir = lfs.makeQualified(tempDir);
     lfs.delete(tempDir, true);
 
-    // define a state pool to help persist the wordlist
+    // define a state pool to help persist the word list
     StatePool pool = new StatePool();
 
     try {
@@ -1069,7 +1069,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), wordList);
 
       pool.persist();
@@ -1079,7 +1079,7 @@ public class TestRumenAnonymization {
 
       // set reload to true
       conf.setBoolean(StatePool.RELOAD_CONFIG, true);
-      // initialize the state-pool
+      // initialize the state pool
       pool.initialize(conf);
 
       State state = pool.getState(getClass());
@@ -1116,7 +1116,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName#FileNameState} persistence with directories only.
    */
-  @Test
+  @Test (timeout=5000)
   public void testFileNameStateWithDir() throws Exception {
     // test persistence
     Configuration conf = new Configuration();
@@ -1149,10 +1149,10 @@ public class TestRumenAnonymization {
     fState.setDirectoryState(dirState);
 
     try {
-      // initialize the state-pool
+      // initialize the state pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), fState);
 
       // persist the state
@@ -1164,7 +1164,7 @@ public class TestRumenAnonymization {
       // set reload to true
       conf.setBoolean(StatePool.RELOAD_CONFIG, true);
 
-      // initialize the state-pool
+      // initialize the state pool
       pool.initialize(conf);
 
       State state = pool.getState(getClass());
@@ -1192,7 +1192,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName#FileNameState} persistence with files only.
    */
-  @Test
+  @Test (timeout=5000)
   public void testFileNameStateWithFiles() throws Exception {
     // test persistence
     Configuration conf = new Configuration();
@@ -1216,7 +1216,7 @@ public class TestRumenAnonymization {
     String test1 = "part-00.bzip";
     String test2 = "file1.txt";
 
-    // test filenames only
+    // test file names only
     WordList fileNameState = new WordList("files");
     fileNameState.add(test1);
     fileNameState.add(test2);
@@ -1228,7 +1228,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), fState);
 
       // persist the state
@@ -1240,7 +1240,7 @@ public class TestRumenAnonymization {
       // set reload to true
       conf.setBoolean(StatePool.RELOAD_CONFIG, true);
 
-      // initialize the state-pool
+      // initialize the state pool
       pool.initialize(conf);
 
       State state = pool.getState(getClass());
@@ -1266,7 +1266,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName#FileNameState} persistence with files and directories.
    */
-  @Test
+  @Test (timeout=5000)
   public void testFileNameState() throws Exception {
     // test persistence
     Configuration conf = new Configuration();
@@ -1302,13 +1302,13 @@ public class TestRumenAnonymization {
     String testF2 = "file1.txt";
     String testF3 = "tmp";
 
-    // test filenames only
+    // test file names only
     WordList fileNameState = new WordList("files");
     fileNameState.add(testF1);
     fileNameState.add(testF2);
     fileNameState.add(testF3);
 
-    // set the filename state
+    // set the file name state
     fState.setFileNameState(fileNameState);
     // set the directory state
     fState.setDirectoryState(dirState);
@@ -1317,7 +1317,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), fState);
 
       // persist the state
@@ -1329,7 +1329,7 @@ public class TestRumenAnonymization {
       // set reload to true
       conf.setBoolean(StatePool.RELOAD_CONFIG, true);
 
-      // initialize the state-pool
+      // initialize the state pool
       pool.initialize(conf);
 
       State state = pool.getState(getClass());
@@ -1338,7 +1338,7 @@ public class TestRumenAnonymization {
           state.getClass());
       FileNameState newFState = (FileNameState) state;
 
-      // test filenames
+      // test file names
       WordList newStateWordList = newFState.getFileNameState();
       assertTrue("File state failed on reload",
           newStateWordList.contains(testF1));
@@ -1375,7 +1375,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName#NodeName} persistence with hostnames only.
    */
-  @Test
+  @Test (timeout=5000)
   public void testNodeNameStateWithHostNameOnly() throws Exception {
     // test persistence
     Configuration conf = new Configuration();
@@ -1390,7 +1390,7 @@ public class TestRumenAnonymization {
     conf.set(StatePool.DIR_CONFIG, tempDir.toString());
     conf.setBoolean(StatePool.PERSIST_CONFIG, true);
 
-    // define a state pool to help persist the hostnames
+    // define a state pool to help persist the host names
     StatePool pool = new StatePool();
 
     NodeNameState nState = new NodeNameState();
@@ -1408,10 +1408,10 @@ public class TestRumenAnonymization {
     nState.setHostNameState(hostNameState);
 
     try {
-      // initialize the state-pool
+      // initialize the state pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), nState);
 
       // persist the state
@@ -1423,7 +1423,7 @@ public class TestRumenAnonymization {
       // set reload to true
       conf.setBoolean(StatePool.RELOAD_CONFIG, true);
 
-      // initialize the state-pool
+      // initialize the state pool
       pool.initialize(conf);
 
       State state = pool.getState(getClass());
@@ -1449,9 +1449,9 @@ public class TestRumenAnonymization {
   }
 
   /**
-   * Test {@link NodeName#NodeNameState} persistence with racknames only.
+   * Test {@link NodeName#NodeNameState} persistence with rack names only.
    */
-  @Test
+  @Test (timeout=5000)
   public void testNodeNameWithRackNamesOnly() throws Exception {
     // test persistence
     Configuration conf = new Configuration();
@@ -1475,19 +1475,19 @@ public class TestRumenAnonymization {
     String test1 = "rack1";
     String test2 = "rack2";
 
-    // test filenames only
+    // test file names only
     WordList rackNameState = new WordList("racknames");
     rackNameState.add(test1);
     rackNameState.add(test2);
 
-    // set the rackname state
+    // set the rack name state
     nState.setRackNameState(rackNameState);
 
     try {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), nState);
 
       // persist the state
@@ -1525,7 +1525,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName#NodeNameState} persistence with hosts and racks.
    */
-  @Test
+  @Test (timeout=5000)
   public void testNodeNameState() throws Exception {
     // test persistence
     Configuration conf = new Configuration();
@@ -1572,7 +1572,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), nState);
 
       // persist the state
@@ -1593,7 +1593,7 @@ public class TestRumenAnonymization {
           state.getClass());
       NodeNameState newNState = (NodeNameState) state;
 
-      // test nodenames
+      // test node names
       WordList newHostWordList = newNState.getHostNameState();
       assertTrue("File state failed on reload",
           newHostWordList.contains(testH1));
@@ -1610,7 +1610,7 @@ public class TestRumenAnonymization {
       assertEquals("File state indexing on reload failed", 2,
           newHostWordList.indexOf(testH3));
 
-      // test racknames
+      // test rack names
       WordList newRackWordList = newNState.getRackNameState();
       assertTrue("File state failed on reload",
           newRackWordList.contains(testR1));

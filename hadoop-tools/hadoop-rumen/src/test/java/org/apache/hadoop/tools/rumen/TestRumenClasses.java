@@ -47,7 +47,7 @@ public class TestRumenClasses {
   /**
    * test TreePath class
    */
-  @Test
+  @Test (timeout=5000)
   public void testTreePath() {
     TreePath root = new TreePath(null, "Root");
     TreePath testTreePath = new TreePath(root, "Test", 10);
@@ -56,9 +56,9 @@ public class TestRumenClasses {
 
   /**
    * test ResourceUsageMetrics
-   * 
+   *
    */
-  @Test
+  @Test (timeout=5000)
   public void testResourceUsageMetrics() throws Exception {
 
     // create object for test
@@ -69,11 +69,11 @@ public class TestRumenClasses {
     m1.setVirtualMemoryUsage(4L);
 
     // create copy of test object
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutput doutput = new DataOutputStream(baos);
-    m1.write(doutput);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    DataOutput dataOutput = new DataOutputStream(data);
+    m1.write(dataOutput);
     ResourceUsageMetrics m2 = new ResourceUsageMetrics();
-    m2.readFields(new DataInputStream(new ByteArrayInputStream(baos
+    m2.readFields(new DataInputStream(new ByteArrayInputStream(data
         .toByteArray())));
     // objects should be equals
     m1.deepCompare(m2, null);
@@ -97,7 +97,7 @@ public class TestRumenClasses {
   /**
    * test ZombieCluster
    */
-  @Test
+  @Test (timeout=5000)
   public void testZombieCluster() throws Exception {
     File cluster = new File(workSpace.getAbsolutePath() + File.separator
         + "19-jobs.topology");
@@ -130,7 +130,7 @@ public class TestRumenClasses {
    * test MachineNode
    */
 
-  @Test
+  @Test (timeout=5000)
   public void testMachineNode() {
     // test builder
     MachineNode mn = new MachineNode.Builder("node", 1).setMapSlots(2)
@@ -174,7 +174,7 @@ public class TestRumenClasses {
   /**
    * test CurrentJHParser
    */
-  @Test
+  @Test (timeout=5000)
   public void testCurrentJHParser() throws Exception {
 
     File trace = new File(
@@ -197,8 +197,10 @@ public class TestRumenClasses {
     // parser works!
   }
 
-  // test ParsedJob, ParsedTask , ParsedTaskAttempt
-  @Test
+  /**
+   * test ParsedJob, ParsedTask , ParsedTaskAttempt
+   */
+  @Test (timeout=5000)
   public void testParsedJob() {
     ParsedJob job = new ParsedJob();
     Map<String, Long> totalCounters = new HashMap<String, Long>();
@@ -220,8 +222,8 @@ public class TestRumenClasses {
     job.putJobConfPath("JobConfPath");
     assertEquals("JobConfPath", job.obtainJobConfpath());
 
-    Map<JobACL, AccessControlList> acls = new HashMap<JobACL, AccessControlList>();
-    acls.put(JobACL.VIEW_JOB, new AccessControlList());
+    Map<JobACL, AccessControlList> acl = new HashMap<JobACL, AccessControlList>();
+    acl.put(JobACL.VIEW_JOB, new AccessControlList());
 
     List<LoggedTask> tasks = new ArrayList<LoggedTask>();
     tasks.add(getParsedTask("dianostic info for first task"));

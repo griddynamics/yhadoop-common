@@ -31,10 +31,10 @@ public class TestHadoopLogsAnalyzer {
   private static File workSpace = new File("src" + File.separator + "test"
       + File.separator + "resources" + File.separator + "log");
   // target path
-  private static File outspace = new File("target" + File.separator + "out");
+  private static File outSpace = new File("target" + File.separator + "out");
 
   @SuppressWarnings("deprecation")
-  @Test
+  @Test  (timeout=20000)
   public void testTestHadoopLogsAnalyzer() throws Exception {
 
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -44,16 +44,16 @@ public class TestHadoopLogsAnalyzer {
     try {
   
 
-      if (!outspace.exists()) {
-        outspace.mkdirs();
+      if (!outSpace.exists()) {
+        outSpace.mkdirs();
       }
       String[] args = new String[14];
       // for jobs trace output
       args[0] = "-write-job-trace";
-      args[1] = outspace.getAbsolutePath() + File.separator + "job-trace";
+      args[1] = outSpace.getAbsolutePath() + File.separator + "job-trace";
       // for topology
       args[2] = "-write-topology";
-      args[3] = outspace.getAbsolutePath() + File.separator + "topology";
+      args[3] = outSpace.getAbsolutePath() + File.separator + "topology";
       args[4] = "-single-line-job-traces";
 
       args[5] = "-v1";
@@ -73,13 +73,13 @@ public class TestHadoopLogsAnalyzer {
       assertTrue(bytes.toString().indexOf("40%") >= 0);
 
       // trace file exists and not empty
-      File trace = new File(outspace.getAbsolutePath() + File.separator
+      File trace = new File(outSpace.getAbsolutePath() + File.separator
           + "job-trace");
       assertTrue(trace.exists());
       assertTrue(trace.length() > 0);
 
       // topology file exists and not empty
-      File topology = new File(outspace.getAbsolutePath() + File.separator
+      File topology = new File(outSpace.getAbsolutePath() + File.separator
           + "topology");
       assertTrue(topology.exists());
       assertTrue(topology.length() > 0);

@@ -25,6 +25,7 @@ package org.apache.hadoop.tools.rumen;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.mapreduce.TaskType;
@@ -37,7 +38,7 @@ public class TestZombieJob {
   private static File workSpace = new File("src" + File.separator + "test"
       + File.separator + "resources" + File.separator + "data");
 
-  @Test
+  @Test (timeout=30000)
   public void testZombieProducer() throws Exception {
     File cluster = new File(workSpace.getAbsolutePath() + File.separator
         + "19-jobs.topology");
@@ -77,8 +78,8 @@ public class TestZombieJob {
     assertEquals(getList(1, 2),
         tai.getSplitVector(LoggedTaskAttempt.SplitVectorKind.WALLCLOCK_TIME));
 
-    TaskAttemptInfo rrtai = zj.getTaskAttemptInfo(TaskType.REDUCE, 10, 0);
-    assertEquals(State.SUCCEEDED, rrtai.getRunState());
+    TaskAttemptInfo taskAttemptInfo = zj.getTaskAttemptInfo(TaskType.REDUCE, 10, 0);
+    assertEquals(State.SUCCEEDED, taskAttemptInfo.getRunState());
     // test REDUCE record
     TaskInfo ti = zj.getTaskInfo(TaskType.REDUCE, 0);
     assertEquals(106300, ti.getInputRecords());
@@ -105,21 +106,19 @@ public class TestZombieJob {
     assertEquals(26425, tai.getTaskInfo().getOutputRecords());
     assertEquals(640, tai.getTaskInfo().getTaskMemory());
 
-    ReduceTaskAttemptInfo rtai = (ReduceTaskAttemptInfo) zj.getTaskAttemptInfo(
+    ReduceTaskAttemptInfo reduceTaskAttemptInfo = (ReduceTaskAttemptInfo) zj.getTaskAttemptInfo(
         TaskType.REDUCE, 100, 30);
-    assertEquals(83784, rtai.getRuntime());
-    // rtai.getRuntime() should be = rtai.getReduceRuntime() +
-    // rtai.getMergeRuntime() + rtai.getShuffleRuntime()
+    assertEquals(83784, reduceTaskAttemptInfo.getRuntime());
     assertEquals(
         83784,
-        rtai.getReduceRuntime() + rtai.getMergeRuntime()
-            + rtai.getShuffleRuntime());
+        reduceTaskAttemptInfo.getReduceRuntime() + reduceTaskAttemptInfo.getMergeRuntime()
+            + reduceTaskAttemptInfo.getShuffleRuntime());
 
-    assertEquals(0, rtai.getTaskInfo().getInputBytes());
-    assertEquals(0, rtai.getTaskInfo().getInputRecords());
-    assertEquals(0, rtai.getTaskInfo().getOutputBytes());
-    assertEquals(0, rtai.getTaskInfo().getOutputRecords());
-    assertEquals(0, rtai.getTaskInfo().getTaskMemory());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getInputBytes());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getInputRecords());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getOutputBytes());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getOutputRecords());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getTaskMemory());
     // test Task attempt info for MAP record
     tai = zj.getTaskAttemptInfo(TaskType.MAP, 100, 30);
     assertEquals(0, tai.getTaskInfo().getInputBytes());
@@ -133,11 +132,11 @@ public class TestZombieJob {
     assertEquals(26425, tai.getTaskInfo().getOutputRecords());
 
     LoggedJob lg = zj.getLoggedJob();
-    zj = zjp.getNextJob();
+    zjp.getNextJob();
     lg.deepCompare(lg, null);
 
     int counter = 2;
-    while ((zj = zjp.getNextJob()) != null) {
+    while (zjp.getNextJob() != null) {
       counter++;
     }
     // only 12 jobs
@@ -148,9 +147,7 @@ public class TestZombieJob {
 
   private List<Integer> getList(Integer... params) {
     List<Integer> result = new ArrayList<Integer>(params.length);
-    for (Integer param : params) {
-      result.add(param);
-    }
+    Collections.addAll(result, params);
     return result;
   }
 }
