@@ -36,10 +36,10 @@ import static org.junit.Assert.*;
 
 public class TestZombieJob {
   private static File workSpace = new File("src" + File.separator + "test"
-      + File.separator + "resources" + File.separator + "data");
+      + File.separator + "  resources" + File.separator + "data");
 
   // test ZombieJobProducer
-  @Test
+  @Test  (timeout=10000)
   public void testZombieProducer() throws Exception {
     File cluster = new File(workSpace.getAbsolutePath() + File.separator
         + "19-jobs.topology");
@@ -107,19 +107,19 @@ public class TestZombieJob {
     assertEquals(26425, tai.getTaskInfo().getOutputRecords());
     assertEquals(640, tai.getTaskInfo().getTaskMemory());
 
-    ReduceTaskAttemptInfo rtai = (ReduceTaskAttemptInfo) zj.getTaskAttemptInfo(
+    ReduceTaskAttemptInfo reduceTaskAttemptInfo = (ReduceTaskAttemptInfo) zj.getTaskAttemptInfo(
         TaskType.REDUCE, 100, 30);
-    assertEquals(83784, rtai.getRuntime());
+    assertEquals(83784, reduceTaskAttemptInfo.getRuntime());
     assertEquals(
         83784,
-        rtai.getReduceRuntime() + rtai.getMergeRuntime()
-            + rtai.getShuffleRuntime());
+        reduceTaskAttemptInfo.getReduceRuntime() + reduceTaskAttemptInfo.getMergeRuntime()
+            + reduceTaskAttemptInfo.getShuffleRuntime());
 
-    assertEquals(0, rtai.getTaskInfo().getInputBytes());
-    assertEquals(0, rtai.getTaskInfo().getInputRecords());
-    assertEquals(0, rtai.getTaskInfo().getOutputBytes());
-    assertEquals(0, rtai.getTaskInfo().getOutputRecords());
-    assertEquals(0, rtai.getTaskInfo().getTaskMemory());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getInputBytes());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getInputRecords());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getOutputBytes());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getOutputRecords());
+    assertEquals(0, reduceTaskAttemptInfo.getTaskInfo().getTaskMemory());
     // test Task attempt info for MAP record
     tai = zj.getTaskAttemptInfo(TaskType.MAP, 100, 30);
     assertEquals(0, tai.getTaskInfo().getInputBytes());
