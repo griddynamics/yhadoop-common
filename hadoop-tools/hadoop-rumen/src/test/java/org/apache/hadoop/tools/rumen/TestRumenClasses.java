@@ -67,11 +67,11 @@ public class TestRumenClasses {
     m1.setVirtualMemoryUsage(4L);
 
     // create copy of test object
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutput doutput = new DataOutputStream(baos);
-    m1.write(doutput);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    DataOutput dataOutput = new DataOutputStream(data);
+    m1.write(dataOutput);
     ResourceUsageMetrics m2 = new ResourceUsageMetrics();
-    m2.readFields(new DataInputStream(new ByteArrayInputStream(baos
+    m2.readFields(new DataInputStream(new ByteArrayInputStream(data
         .toByteArray())));
     // objects should be equals
     m1.deepCompare(m2, null);
@@ -100,7 +100,7 @@ public class TestRumenClasses {
     File cluster = new File(workSpace.getAbsolutePath() + File.separator
         + "19-jobs.topology");
 
-    // read topology data topology
+    // read topology data
 
     ZombieCluster zcl = new ZombieCluster(new FileInputStream(cluster), null);
     // check data

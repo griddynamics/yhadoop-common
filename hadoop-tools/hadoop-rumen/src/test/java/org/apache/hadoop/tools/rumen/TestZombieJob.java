@@ -20,7 +20,7 @@ package org.apache.hadoop.tools.rumen;
 
 /**
  *  test ZombieJob class. 
- *  Test data read from json dump  file src/test/resources/data/19-jobs.topology
+ *  Test data read from the json dump file src/test/resources/data/19-jobs.topology
  */
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,6 +38,7 @@ public class TestZombieJob {
   private static File workSpace = new File("src" + File.separator + "test"
       + File.separator + "resources" + File.separator + "data");
 
+  // test ZombieJobProducer
   @Test
   public void testZombieProducer() throws Exception {
     File cluster = new File(workSpace.getAbsolutePath() + File.separator
@@ -78,8 +79,8 @@ public class TestZombieJob {
     assertEquals(getList(1, 2),
         tai.getSplitVector(LoggedTaskAttempt.SplitVectorKind.WALLCLOCK_TIME));
 
-    TaskAttemptInfo rrtai = zj.getTaskAttemptInfo(TaskType.REDUCE, 10, 0);
-    assertEquals(State.SUCCEEDED, rrtai.getRunState());
+    TaskAttemptInfo taskAttempt = zj.getTaskAttemptInfo(TaskType.REDUCE, 10, 0);
+    assertEquals(State.SUCCEEDED, taskAttempt.getRunState());
     // test REDUCE record
     TaskInfo ti = zj.getTaskInfo(TaskType.REDUCE, 0);
     assertEquals(106300, ti.getInputRecords());
@@ -109,8 +110,6 @@ public class TestZombieJob {
     ReduceTaskAttemptInfo rtai = (ReduceTaskAttemptInfo) zj.getTaskAttemptInfo(
         TaskType.REDUCE, 100, 30);
     assertEquals(83784, rtai.getRuntime());
-    // rtai.getRuntime() should be = rtai.getReduceRuntime() +
-    // rtai.getMergeRuntime() + rtai.getShuffleRuntime()
     assertEquals(
         83784,
         rtai.getReduceRuntime() + rtai.getMergeRuntime()

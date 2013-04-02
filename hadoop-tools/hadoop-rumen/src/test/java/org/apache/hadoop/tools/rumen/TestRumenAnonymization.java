@@ -67,8 +67,8 @@ public class TestRumenAnonymization {
     JsonSerializer<?> anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
         new StatePool(), new Configuration());
     // test username
-    UserName uname = new UserName("bob");
-    assertEquals("bob", uname.getValue());
+    UserName userName = new UserName("bob");
+    assertEquals("bob", userName.getValue());
 
     // test username serialization
     // test with no anonymization
@@ -95,7 +95,7 @@ public class TestRumenAnonymization {
     JsonSerializer<?> anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
         new StatePool(), new Configuration());
 
-    // test jobname
+    // test job name
     JobName jname = new JobName("job-secret");
     assertEquals("Jobname error!", "job-secret", jname.getValue());
 
@@ -124,11 +124,11 @@ public class TestRumenAnonymization {
     JsonSerializer<?> anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
         new StatePool(), new Configuration());
 
-    // test queuename
-    QueueName qname = new QueueName("queue-secret");
-    assertEquals("Queuename error!", "queue-secret", qname.getValue());
+    // test queue name
+    QueueName queueName = new QueueName("queue-secret");
+    assertEquals("Queuename error!", "queue-secret", queueName.getValue());
 
-    // test queuename serialization
+    // test queue name serialization
     // test with no anonymization
     // test queue1
     testSerializer(new QueueName("project1-queue"), "project1-queue",
@@ -153,35 +153,35 @@ public class TestRumenAnonymization {
   @Test
   public void testNodeNameDataType() throws IOException {
     // test hostname
-    // test only hostname
-    NodeName hname = new NodeName("host1.myorg.com");
-    assertNull(hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("host1.myorg.com", hname.getValue());
+    // test only host name
+    NodeName nodeName = new NodeName("host1.myorg.com");
+    assertNull(nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("host1.myorg.com", nodeName.getValue());
 
-    // test rack/hostname
-    hname = new NodeName("/rack1.myorg.com/host1.myorg.com");
-    assertEquals("rack1.myorg.com", hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("/rack1.myorg.com/host1.myorg.com", hname.getValue());
+    // test rack/host name
+    nodeName = new NodeName("/rack1.myorg.com/host1.myorg.com");
+    assertEquals("rack1.myorg.com", nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("/rack1.myorg.com/host1.myorg.com", nodeName.getValue());
 
-    // test hostname and rackname separately
-    hname = new NodeName("rack1.myorg.com", "host1.myorg.com");
-    assertEquals("rack1.myorg.com", hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("/rack1.myorg.com/host1.myorg.com", hname.getValue());
+    // test hostname and rack name separately
+    nodeName = new NodeName("rack1.myorg.com", "host1.myorg.com");
+    assertEquals("rack1.myorg.com", nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("/rack1.myorg.com/host1.myorg.com", nodeName.getValue());
 
-    // test hostname with no rackname
-    hname = new NodeName(null, "host1.myorg.com");
-    assertNull(hname.getRackName());
-    assertEquals("host1.myorg.com", hname.getHostName());
-    assertEquals("host1.myorg.com", hname.getValue());
+    // test hostname with no rack name
+    nodeName = new NodeName(null, "host1.myorg.com");
+    assertNull(nodeName.getRackName());
+    assertEquals("host1.myorg.com", nodeName.getHostName());
+    assertEquals("host1.myorg.com", nodeName.getValue());
 
-    // test rackname with no hostname
-    hname = new NodeName("rack1.myorg.com", null);
-    assertEquals("rack1.myorg.com", hname.getRackName());
-    assertNull(hname.getHostName());
-    assertEquals("rack1.myorg.com", hname.getValue());
+    // test rack name with no host name
+    nodeName = new NodeName("rack1.myorg.com", null);
+    assertEquals("rack1.myorg.com", nodeName.getRackName());
+    assertNull(nodeName.getHostName());
+    assertEquals("rack1.myorg.com", nodeName.getValue());
   }
 
   /**
@@ -373,7 +373,7 @@ public class TestRumenAnonymization {
     testSerializer(new ClassName("org.apache.hadoop.Test2"), "class1",
         anonymizingSerializer);
 
-    // test classnames with preserves
+    // test class names with preserves
     Configuration conf = new Configuration();
     conf.set(ClassName.CLASSNAME_PRESERVE_CONFIG, "org.apache.hadoop.");
     anonymizingSerializer = new DefaultAnonymizingRumenSerializer(
@@ -430,8 +430,8 @@ public class TestRumenAnonymization {
     hFile = new FileName("../tmp/");
     assertEquals("../tmp/", hFile.getValue());
 
-    // test comma separated filenames
-    // test hdfs filenames, absolute and local-fs filenames
+    // test comma separated file names
+    // test hdfs file names, absolute and local-fs file names
     hFile = new FileName("hdfs://testnn:123/user/test1,"
         + "file:///user/test2,/user/test3");
     assertEquals("hdfs://testnn:123/user/test1,file:///user/test2,/user/test3",
@@ -483,8 +483,8 @@ public class TestRumenAnonymization {
     testSerializer(new FileName("./tmp/"), "./tmp/", defaultSerializer);
     testSerializer(new FileName("../tmp"), "../tmp", defaultSerializer);
 
-    // test comma separated filenames
-    // test hdfs filenames, absolute and local-fs filenames
+    // test comma separated file names
+    // test hdfs file names, absolute and local-fs file names
     FileName fileName = new FileName(
         "hdfs://testnn:123/user/test1,file:///user/test2,/user/test3");
     testSerializer(fileName,
@@ -514,42 +514,42 @@ public class TestRumenAnonymization {
     // test local-fs dir
     testSerializer(new FileName("file:///home/user/secret/more-secret/"),
         "file:///home/user/dir2/dir3/", anonymizingSerializer);
-    // test absolute filenames
+    // test absolute file names
     testSerializer(new FileName("/home/user/top-secret.txt"),
         "/home/user/file0.txt", anonymizingSerializer);
-    // test relative filenames
+    // test relative file names
     testSerializer(new FileName("home/user/top-top-secret.zip"),
         "home/user/file1.zip", anonymizingSerializer);
-    // test absolute dirnames
+    // test absolute dir names
     testSerializer(new FileName("/home/user/project1/"), "/home/user/dir4/",
         anonymizingSerializer);
-    // test relative filenames
+    // test relative file names
     testSerializer(new FileName("home/user/project1"), "home/user/file2",
         anonymizingSerializer);
-    // test absolute dirnames (re-use)
+    // test absolute dir names (re-use)
     testSerializer(new FileName("more-secret/"), "dir3/", anonymizingSerializer);
-    // test relative filenames (re-use)
+    // test relative file names (re-use)
     testSerializer(new FileName("secret/project1"), "dir2/file2",
         anonymizingSerializer);
-    // test absolute filenames (re-use)
+    // test absolute file names (re-use)
     testSerializer(new FileName("/top-secret.txt"), "/file0.txt",
         anonymizingSerializer);
-    // test relative filenames (re-use)
+    // test relative file names (re-use)
     testSerializer(new FileName("top-top-secret.tar"), "file1.tar",
         anonymizingSerializer);
-    // test absolute dirname
+    // test absolute dir name
     testSerializer(new FileName("sensitive-projectname/"), "dir5/",
         anonymizingSerializer);
-    // test relative filenames
+    // test relative file names
     testSerializer(new FileName("/real-sensitive-projectname/"), "/dir6/",
         anonymizingSerializer);
-    // test absolute filenames
+    // test absolute file names
     testSerializer(new FileName("/usernames.xml"), "/file3.xml",
         anonymizingSerializer);
-    // test relative filenames
+    // test relative file names
     testSerializer(new FileName("passwords.zip"), "file4.zip",
         anonymizingSerializer);
-    // test relative filenames
+    // test relative file names
     testSerializer(new FileName("./tmp"), "./tmp", anonymizingSerializer);
     testSerializer(new FileName("./tmp/"), "./tmp/", anonymizingSerializer);
     testSerializer(new FileName("../tmp"), "../tmp", anonymizingSerializer);
@@ -720,29 +720,29 @@ public class TestRumenAnonymization {
         testTraceOutputFilename.toString() };
     testAnonymizerCLI(args, 0);
 
-    Path testToplogyInputFilename = new Path(tempDir, "topology-in.json");
-    args = new String[] { "-topology", testToplogyInputFilename.toString() };
+    Path testTopologyInputFilename = new Path(tempDir, "topology-in.json");
+    args = new String[] { "-topology", testTopologyInputFilename.toString() };
     testAnonymizerCLI(args, -1);
 
     Path testTopologyOutputFilename = new Path(tempDir, "topology-out.json");
-    args = new String[] { "-topology", testToplogyInputFilename.toString(),
+    args = new String[] { "-topology", testTopologyInputFilename.toString(),
         testTopologyOutputFilename.toString() };
     testAnonymizerCLI(args, -1);
 
-    out = lfs.create(testToplogyInputFilename);
+    out = lfs.create(testTopologyInputFilename);
     out.write("{\n}".getBytes());
     out.close();
-    args = new String[] { "-topology", testToplogyInputFilename.toString(),
+    args = new String[] { "-topology", testTopologyInputFilename.toString(),
         testTopologyOutputFilename.toString() };
     testAnonymizerCLI(args, 0);
 
     args = new String[] { "-trace", testTraceInputFilename.toString(),
-        "-topology", testToplogyInputFilename.toString() };
+        "-topology", testTopologyInputFilename.toString() };
     testAnonymizerCLI(args, -1);
 
     args = new String[] { "-trace", testTraceInputFilename.toString(),
         testTraceOutputFilename.toString(), "-topology",
-        testToplogyInputFilename.toString(),
+        testTopologyInputFilename.toString(),
         testTopologyOutputFilename.toString() };
     testAnonymizerCLI(args, 0);
   }
@@ -1058,7 +1058,7 @@ public class TestRumenAnonymization {
     tempDir = lfs.makeQualified(tempDir);
     lfs.delete(tempDir, true);
 
-    // define a state pool to help persist the wordlist
+    // define a state pool to help persist the word list
     StatePool pool = new StatePool();
 
     try {
@@ -1069,7 +1069,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), wordList);
 
       pool.persist();
@@ -1152,7 +1152,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), fState);
 
       // persist the state
@@ -1216,7 +1216,7 @@ public class TestRumenAnonymization {
     String test1 = "part-00.bzip";
     String test2 = "file1.txt";
 
-    // test filenames only
+    // test file names only
     WordList fileNameState = new WordList("files");
     fileNameState.add(test1);
     fileNameState.add(test2);
@@ -1228,7 +1228,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), fState);
 
       // persist the state
@@ -1302,7 +1302,7 @@ public class TestRumenAnonymization {
     String testF2 = "file1.txt";
     String testF3 = "tmp";
 
-    // test filenames only
+    // test file names only
     WordList fileNameState = new WordList("files");
     fileNameState.add(testF1);
     fileNameState.add(testF2);
@@ -1317,7 +1317,7 @@ public class TestRumenAnonymization {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), fState);
 
       // persist the state
@@ -1338,7 +1338,7 @@ public class TestRumenAnonymization {
           state.getClass());
       FileNameState newFState = (FileNameState) state;
 
-      // test filenames
+      // test file names
       WordList newStateWordList = newFState.getFileNameState();
       assertTrue("File state failed on reload",
           newStateWordList.contains(testF1));
@@ -1390,7 +1390,7 @@ public class TestRumenAnonymization {
     conf.set(StatePool.DIR_CONFIG, tempDir.toString());
     conf.setBoolean(StatePool.PERSIST_CONFIG, true);
 
-    // define a state pool to help persist the hostnames
+    // define a state pool to help persist the host names
     StatePool pool = new StatePool();
 
     NodeNameState nState = new NodeNameState();
@@ -1449,7 +1449,7 @@ public class TestRumenAnonymization {
   }
 
   /**
-   * Test  persistence with racknames only.
+   * Test  persistence with rack names only.
    */
   @Test
   public void testNodeNameWithRackNamesOnly() throws Exception {
@@ -1475,19 +1475,19 @@ public class TestRumenAnonymization {
     String test1 = "rack1";
     String test2 = "rack2";
 
-    // test filenames only
+    // test file names only
     WordList rackNameState = new WordList("racknames");
     rackNameState.add(test1);
     rackNameState.add(test2);
 
-    // set the rackname state
+    // set the rack name state
     nState.setRackNameState(rackNameState);
 
     try {
       // initialize the state-pool
       pool.initialize(conf);
 
-      // add the wordlist to the pool
+      // add the word list to the pool
       pool.addState(getClass(), nState);
 
       // persist the state
@@ -1593,7 +1593,7 @@ public class TestRumenAnonymization {
           state.getClass());
       NodeNameState newNState = (NodeNameState) state;
 
-      // test nodenames
+      // test node names
       WordList newHostWordList = newNState.getHostNameState();
       assertTrue("File state failed on reload",
           newHostWordList.contains(testH1));
@@ -1610,7 +1610,7 @@ public class TestRumenAnonymization {
       assertEquals("File state indexing on reload failed", 2,
           newHostWordList.indexOf(testH3));
 
-      // test racknames
+      // test rack names
       WordList newRackWordList = newNState.getRackNameState();
       assertTrue("File state failed on reload",
           newRackWordList.contains(testR1));

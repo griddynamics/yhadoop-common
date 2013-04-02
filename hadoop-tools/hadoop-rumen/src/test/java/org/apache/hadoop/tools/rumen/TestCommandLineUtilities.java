@@ -109,10 +109,8 @@ public class TestCommandLineUtilities {
     args[2] = "file://" + workSpace.getAbsolutePath();
     File topologyFile = new File(workSpace.getAbsolutePath() + File.separator
         + "out" + File.separator + "topology.output");
-    // topologyFile.deleteOnExit();
     File jsonFile = new File(workSpace.getAbsolutePath() + File.separator
         + "out" + File.separator + "job-trace.json");
-    // jsonFile.deleteOnExit();
 
     TraceBuilder.main(args);
 
