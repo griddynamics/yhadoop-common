@@ -485,10 +485,10 @@ public class DFSClient implements java.io.Closeable {
       } catch (IOException e) {
         // Abort if the lease has already expired. 
         final long elapsed = System.currentTimeMillis() - getLastLeaseRenewal();
-        if (elapsed > HdfsConstants.LEASE_SOFTLIMIT_PERIOD) {
+        if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
               + (elapsed/1000) + " seconds (>= soft-limit ="
-              + (HdfsConstants.LEASE_SOFTLIMIT_PERIOD/1000) + " seconds.) "
+              + (HdfsConstants.LEASE_HARDLIMIT_PERIOD/1000) + " seconds.) "
               + "Closing all files being written ...", e);
           closeAllFilesBeingWritten(true);
         } else {
@@ -931,7 +931,7 @@ public class DFSClient implements java.io.Closeable {
   /**
    * Call {@link #create(String, FsPermission, EnumSet, short, long, 
    * Progressable, int)} with default <code>permission</code>
-   * {@link FsPermission#getDefault()}.
+   * {@link FsPermission#getFileDefault()}.
    * 
    * @param src File name
    * @param overwrite overwrite an existing file if true
@@ -949,7 +949,7 @@ public class DFSClient implements java.io.Closeable {
                              Progressable progress,
                              int buffersize)
       throws IOException {
-    return create(src, FsPermission.getDefault(),
+    return create(src, FsPermission.getFileDefault(),
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
             : EnumSet.of(CreateFlag.CREATE), replication, blockSize, progress,
         buffersize, null);
@@ -980,7 +980,7 @@ public class DFSClient implements java.io.Closeable {
    * 
    * @param src File name
    * @param permission The permission of the directory being created.
-   *          If null, use default permission {@link FsPermission#getDefault()}
+   *          If null, use default permission {@link FsPermission#getFileDefault()}
    * @param flag indicates create a new file or create/overwrite an
    *          existing file or append to an existing file
    * @param createParent create missing parent directory if true
@@ -1006,7 +1006,7 @@ public class DFSClient implements java.io.Closeable {
                              ChecksumOpt checksumOpt) throws IOException {
     checkOpen();
     if (permission == null) {
-      permission = FsPermission.getDefault();
+      permission = FsPermission.getFileDefault();
     }
     FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
     if(LOG.isDebugEnabled()) {

@@ -219,6 +219,7 @@ public class HttpServer implements FilterContainer {
     // default value (currently 250).
     QueuedThreadPool threadPool = maxThreads == -1 ?
         new QueuedThreadPool() : new QueuedThreadPool(maxThreads);
+    threadPool.setDaemon(true);
     webServer.setThreadPool(threadPool);
 
     final String appDir = getWebAppsPath(name);
@@ -273,6 +274,7 @@ public class HttpServer implements FilterContainer {
     ret.setAcceptQueueSize(128);
     ret.setResolveNames(false);
     ret.setUseDirectBuffers(false);
+    ret.setHeaderBufferSize(1024*64);
     return ret;
   }
 

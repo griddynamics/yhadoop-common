@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -28,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -36,10 +38,12 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -92,6 +96,7 @@ public class TestBlockManager {
       dn.updateHeartbeat(
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+      bm.getDatanodeManager().checkIfClusterIsNowMultiRack(dn);
     }
   }
 
@@ -310,6 +315,32 @@ public class TestBlockManager {
         rackB.contains(pipeline[1]));
   }
   
+  @Test
+  public void testBlocksAreNotUnderreplicatedInSingleRack() throws Exception {
+    List<DatanodeDescriptor> nodes = ImmutableList.of( 
+        new DatanodeDescriptor(new DatanodeID("h1:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h2:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h3:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h4:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h5:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h6:5020"), "/rackA")
+      );
+    addNodes(nodes);
+    List<DatanodeDescriptor> origNodes = nodes.subList(0, 3);;
+    for (int i = 0; i < NUM_TEST_ITERS; i++) {
+      doTestSingleRackClusterIsSufficientlyReplicated(i, origNodes);
+    }
+  }
+  
+  private void doTestSingleRackClusterIsSufficientlyReplicated(int testIndex,
+      List<DatanodeDescriptor> origNodes)
+      throws Exception {
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    addBlockOnNodes((long)testIndex, origNodes);
+    bm.processMisReplicatedBlocks();
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
+  }
+  
   
   /**
    * Tell the block manager that replication is completed for the given
@@ -356,25 +387,35 @@ public class TestBlockManager {
     bm.blocksMap.addINode(blockInfo, iNode);
     return blockInfo;
   }
-  
+
   private DatanodeDescriptor[] scheduleSingleReplication(Block block) {
-    assertEquals("Block not initially pending replication",
-        0, bm.pendingReplications.getNumReplicas(block));
-    assertTrue("computeReplicationWork should indicate replication is needed",
-        bm.computeReplicationWorkForBlock(block, 1));
+    // list for priority 1
+    List<Block> list_p1 = new ArrayList<Block>();
+    list_p1.add(block);
+
+    // list of lists for each priority
+    List<List<Block>> list_all = new ArrayList<List<Block>>();
+    list_all.add(new ArrayList<Block>()); // for priority 0
+    list_all.add(list_p1); // for priority 1
+
+    assertEquals("Block not initially pending replication", 0,
+        bm.pendingReplications.getNumReplicas(block));
+    assertEquals(
+        "computeReplicationWork should indicate replication is needed", 1,
+        bm.computeReplicationWorkForBlocks(list_all));
     assertTrue("replication is pending after work is computed",
         bm.pendingReplications.getNumReplicas(block) > 0);
-    
-    LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> repls =
-      getAllPendingReplications();
+
+    LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> repls = getAllPendingReplications();
     assertEquals(1, repls.size());
-    Entry<DatanodeDescriptor, BlockTargetPair> repl = repls.entries().iterator().next();
+    Entry<DatanodeDescriptor, BlockTargetPair> repl = repls.entries()
+        .iterator().next();
     DatanodeDescriptor[] targets = repl.getValue().targets;
-    
+
     DatanodeDescriptor[] pipeline = new DatanodeDescriptor[1 + targets.length];
     pipeline[0] = repl.getKey();
     System.arraycopy(targets, 0, pipeline, 1, targets.length);
-    
+
     return pipeline;
   }
 
@@ -441,5 +482,70 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY));
+  }
+
+  @Test
+  public void testSafeModeIBR() throws Exception {
+    DatanodeDescriptor node = spy(nodes.get(0));
+    node.setStorageID("dummy-storage");
+    node.isAlive = true;
+
+    DatanodeRegistration nodeReg = new DatanodeRegistration(node);
+
+    // pretend to be in safemode
+    doReturn(true).when(fsn).isInStartupSafeMode();
+    
+    // register new node
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    bm.getDatanodeManager().addDatanode(node); // swap in spy    
+    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
+    assertTrue(node.isFirstBlockReport());
+    // send block report, should be processed
+    reset(node);
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
+    // send block report again, should NOT be processed
+    reset(node);
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node, never()).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
+
+    // re-register as if node restarted, should update existing node
+    bm.getDatanodeManager().removeDatanode(node);
+    reset(node);
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    verify(node).updateRegInfo(nodeReg);
+    assertTrue(node.isFirstBlockReport()); // ready for report again
+    // send block report, should be processed after restart
+    reset(node);
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
+  }
+  
+  @Test
+  public void testSafeModeIBRAfterIncremental() throws Exception {
+    DatanodeDescriptor node = spy(nodes.get(0));
+    node.setStorageID("dummy-storage");
+    node.isAlive = true;
+
+    DatanodeRegistration nodeReg = new DatanodeRegistration(node);
+    BlockListAsLongs blockReport = new BlockListAsLongs(null, null);
+
+    // pretend to be in safemode
+    doReturn(true).when(fsn).isInStartupSafeMode();
+
+    // register new node
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    bm.getDatanodeManager().addDatanode(node); // swap in spy    
+    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
+    assertTrue(node.isFirstBlockReport());
+    // send block report while pretending to already have blocks
+    reset(node);
+    doReturn(1).when(node).numBlocks();
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
   }
 }

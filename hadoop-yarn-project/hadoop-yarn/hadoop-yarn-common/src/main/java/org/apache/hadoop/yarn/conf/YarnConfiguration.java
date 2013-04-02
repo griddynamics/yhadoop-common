@@ -294,6 +294,17 @@ public class YarnConfiguration extends Configuration {
   /** who will execute(launch) the containers.*/
   public static final String NM_CONTAINER_EXECUTOR = 
     NM_PREFIX + "container-executor.class";
+
+  /**
+   * Adjustment to make to the container os scheduling priority.
+   * The valid values for this could vary depending on the platform.
+   * On Linux, higher values mean run the containers at a less 
+   * favorable priority than the NM.
+   * The value specified is an int.
+   */
+  public static final String NM_CONTAINER_EXECUTOR_SCHED_PRIORITY =
+    NM_PREFIX + "container-executor.os.sched.priority.adjustment";
+  public static final int DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY = 0;
   
   /** Number of threads container manager uses.*/
   public static final String NM_CONTAINER_MGR_THREAD_COUNT =
@@ -369,6 +380,15 @@ public class YarnConfiguration extends Configuration {
       + "log-aggregation.retain-seconds";
   public static final long DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS = -1;
   
+  /**
+   * How long to wait between aggregated log retention checks. If set to
+   * a value <= 0 then the value is computed as one-tenth of the log retention
+   * setting. Be careful set this too small and you will spam the name node.
+   */
+  public static final String LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS =
+      YARN_PREFIX + "log-aggregation.retain-check-interval-seconds";
+  public static final long DEFAULT_LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS = -1;
+
   /**
    * Number of seconds to retain logs on the NodeManager. Only applicable if Log
    * aggregation is disabled

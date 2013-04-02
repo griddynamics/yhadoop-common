@@ -1,6 +1,96 @@
 Hadoop HDFS Change Log
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+    HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+               via hairong)
+
+  IMPROVEMENTS
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
+
+    HDFS-3817. Avoid printing SafeModeException stack trace.
+    (Brandon Li via suresh)
+
+  OPTIMIZATIONS
+    HDFS-2477. Optimize computing the diff between a block report and the
+               namenode state. (Tomasz Nykiel via hairong)
+
+    HDFS-2495. Increase granularity of write operations in ReplicationMonitor
+    thus reducing contention for write lock. (Tomasz Nykiel via hairong)
+
+    HDFS-2476. More CPU efficient data structure for under-replicated,
+               over-replicated, and invalidated blocks.
+               (Tomasz Nykiel via todd)
+
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
+
+  BUG FIXES
+    HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
+
+    HDFS-1765. Block Replication should respect under-replication
+    block priority. (Uma Maheswara Rao G via eli)
+
+    HDFS-4444. Add space between total transaction time and number of
+    transactions in FSEditLog#printStatistics. (Stephen Chu via tgraves)
+
+    HDFS-3119. Overreplicated block is not deleted even after the replication
+    factor is reduced after sync follwed by closing that file. (Ashish Singhi
+    via umamahesh)
+
+    HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
+    pre-federation version of HDFS. (atm)
+
+    HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
+    (kihwal)
+
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
+
+    HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
+    kihwal)
+
+    HDFS-4553. Webhdfs will NPE on some unexpected response codes (Daryn Sharp
+    via kihwal)
+
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
+
+    HDFS-3266. DFSTestUtil#waitCorruptReplicas doesn't sleep between checks.
+    (Madhukara Phatak via atm)
+
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
+
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
+
+    HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
+    HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
+
+    HDFS-4567. Webhdfs does not need a token for token operations. (daryn via
+    kihwal)
+
+    HDFS-4577. Webhdfs operations should declare if authentication is required
+    (daryn via kihwal)
+
+    HDFS-3256. HDFS considers blocks under-replicated if topology script is
+    configured with only 1 rack. (atm)
+
+    HDFS-3344. Unreliable corrupt blocks counting in TestProcessCorruptBlocks
+    (kihwal)
+
+    HDFS-3367. WebHDFS doesn't use the logged in user when opening
+    connections (daryn)
+
+    HDFS-4581. checkDiskError should not be called on network errors (Rohit
+    Kochar via kihwal)
+
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
@@ -36,7 +126,14 @@ Release 0.23.6 - UNRELEASED
     HDFS-2757. Cannot read a local block that's being written to when
     using the local read short circuit. (Jean-Daniel Cryans via eli)
 
-Release 0.23.5 - UNRELEASED
+    HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
+
+    HDFS-4399. precommit release audit warnings (tgraves)
+
+    HDFS-4426. Secondary namenode shuts down immediately after startup.
+    (Arpit Agarwal via suresh)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 
@@ -124,45 +221,6 @@ Release 0.23.4
 
 Release 0.23.3
 
-<<<<<<< .working
-=======
-    HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
-    (Vinay via umamahesh)
-
-    HDFS-1490. TransferFSImage should timeout (Dmytro Molkov and Vinay via todd)
-
-    HDFS-3828. Block Scanner rescans blocks too frequently.
-    (Andy Isaacson via eli)
-
-    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
-
-    HDFS-3895. hadoop-client must include commons-cli (tucu)
-
-    HDFS-2757. Cannot read a local block that's being written to when
-    using the local read short circuit. (Jean-Daniel Cryans via eli)
-    
-  BREAKDOWN OF HDFS-3042 SUBTASKS
-
-    HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
-    
-    HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
-    
-    HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
-    
-    HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
-    
-    HDFS-3159. Document NN auto-failover setup and configuration (todd)
-    
-    HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
-    
-    HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
-
-    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
-    read/write. (Brandon Li via suresh)
-
-Release 2.0.0-alpha - 05-23-2012
-
->>>>>>> .merge-right.r1382409
   INCOMPATIBLE CHANGES
 
   NEW FEATURES

@@ -19,7 +19,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>0.23.6-SNAPSHOT</version>
+  <version>0.23.7-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -36,12 +36,12 @@
 
   <distributionManagement>
     <repository>
-      <id>apache.staging.https</id>
-      <name>Apache Release Distribution Repository</name>
-      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
+      <id>${distMgmtStagingId}</id>
+      <name>${distMgmtStagingName}</name>
+      <url>${distMgmtStagingUrl}</url>
     </repository>
     <snapshotRepository>
-      <id>apache.snapshots.https</id>
+      <id>${distMgmtSnapshotsId}</id>
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
     </snapshotRepository>
@@ -53,7 +53,7 @@
 
   <repositories>
     <repository>
-      <id>apache.snapshots.https</id>
+      <id>${distMgmtSnapshotsId}</id>
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
     </repository>
@@ -79,8 +79,12 @@
   </organization>
 
   <properties>
+    <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
+    <distMgmtStagingId>apache.staging.https</distMgmtStagingId>
+    <distMgmtStagingName>Apache Release Distribution Repository</distMgmtStagingName>
+    <distMgmtStagingUrl>https://repository.apache.org/service/local/staging/deploy/maven2</distMgmtStagingUrl>
   </properties>
 
   <modules>
@@ -187,12 +191,13 @@
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>dev-support/*</include>
-            <include>pom.xml</include>
-          </includes>
-        </configuration>
+       <configuration>
+          <excludes>
+            <exclude>.gitignore</exclude>
+            <exclude>.git/**</exclude>
+            <exclude>.idea/**</exclude>
+         </excludes>
+       </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
@@ -391,6 +396,18 @@
       <properties>
         <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
         <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
+        <!-- NB: This additional parametrization is made in order 
+             to be able to re-define these properties with "-Dk=v" maven options.
+             By some reason the expressions declared in clover 
+             docs like "${maven.clover.generateHtml}" do not work in that way. 
+             However, the below properties are confirmed to work: e.g. 
+             -DcloverGenHtml=false switches off the Html generation.  
+             The default values provided here exactly correspond to Clover defaults, so
+             the behavior is 100% backwards compatible. -->
+        <cloverAlwaysReport>true</cloverAlwaysReport>
+        <cloverGenHtml>true</cloverGenHtml>
+        <cloverGenXml>true</cloverGenXml>
+        <cloverGenHistorical>false</cloverGenHistorical>
       </properties>
       <build>
         <plugins>
@@ -404,8 +421,10 @@
               <cloverDatabase>${cloverDatabase}</cloverDatabase>
               <targetPercentage>50%</targetPercentage>
               <outputDirectory>${project.build.directory}/clover</outputDirectory>
-              <generateHtml>true</generateHtml>
-              <generateXml>true</generateXml>
+              <alwaysReport>${cloverAlwaysReport}</alwaysReport>
+              <generateHtml>${cloverGenHtml}</generateHtml>
+              <generateXml>${cloverGenXml}</generateXml>
+              <generateHistorical>${cloverGenHistorical}</generateHistorical>
               <excludes>
                 <exclude>**/examples/**/*.java</exclude>
                 <exclude>**/hamlet/*.java</exclude>
