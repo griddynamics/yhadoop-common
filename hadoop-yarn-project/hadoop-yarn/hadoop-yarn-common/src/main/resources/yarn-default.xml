@@ -135,8 +135,12 @@
   </property>
 
   <property>
-    <description>The maximum number of application master retries.</description>
-    <name>yarn.resourcemanager.am.max-retries</name>
+    <description>The maximum number of application attempts. It's a global
+    setting for all application masters. Each application master can specify
+    its individual maximum number of application attempts via the API, but the
+    individual number cannot be more than the global upper bound. If it is,
+    the resourcemanager will override it.</description>
+    <name>yarn.resourcemanager.am.max-attempts</name>
     <value>1</value>
   </property>
 
@@ -274,6 +278,12 @@
     <value>86400</value>
   </property>
 
+  <property>
+    <description>The heart-beat interval in milliseconds for every NodeManager in the cluster.</description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-ms</name>
+    <value>1000</value>
+  </property>
+
   <!-- Node Manager Configs -->
   <property>
     <description>The address of the container manager in the NM.</description>
@@ -330,12 +340,6 @@
     </description>
     <name>yarn.nodemanager.delete.debug-delay-sec</name>
     <value>0</value>
-  </property>
-
-  <property>
-    <description>Heartbeat interval to RM</description>
-    <name>yarn.nodemanager.heartbeat.interval-ms</name>
-    <value>1000</value>
   </property>
 
   <property>
@@ -411,6 +415,15 @@
   </property> 
   
   <property>
+    <description>How long to wait between aggregated log retention checks.
+    If set to 0 or a negative value then the value is computed as one-tenth
+    of the aggregated log retention time. Be careful set this too small and
+    you will spam the name node.</description>
+    <name>yarn.log-aggregation.retain-check-interval-seconds</name>
+    <value>-1</value>
+  </property>
+
+  <property>
     <description>Time in seconds to retain user logs. Only applicable if
     log aggregation is disabled
     </description>
@@ -436,6 +449,20 @@
     for containers.</description>
     <name>yarn.nodemanager.resource.memory-mb</name>
     <value>8192</value>
+  </property>
+
+  <property>
+    <description>Whether physical memory limits will be enforced for
+    containers.</description>
+    <name>yarn.nodemanager.pmem-check-enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>Whether virtual memory limits will be enforced for
+    containers.</description>
+    <name>yarn.nodemanager.vmem-check-enabled</name>
+    <value>true</value>
   </property>
 
   <property>
@@ -586,6 +613,20 @@
     <description>Max time to wait for a process to come up when trying to cleanup a container</description>
     <name>yarn.nodemanager.process-kill-wait.ms</name>
     <value>2000</value>
+  </property>
+
+  <property>
+    <description>Max time, in seconds, to wait to establish a connection to RM when NM starts.
+    The NM will shutdown if it cannot connect to RM within the specified max time period.
+    If the value is set as -1, then NM will retry forever.</description>
+    <name>yarn.nodemanager.resourcemanager.connect.wait.secs</name>
+    <value>900</value>
+  </property>
+
+  <property>
+    <description>Time interval, in seconds, between each NM attempt to connect to RM.</description>
+    <name>yarn.nodemanager.resourcemanager.connect.retry_interval.secs</name>
+    <value>30</value>
   </property>
 
   <!--Map Reduce configuration-->

@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -1192,6 +1193,39 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
   */
+  /**
+    * Get the workflow adjacencies from the job conf
+    * The string returned is of the form "key"="value" "key"="value" ...
+    */
+  private static String getWorkflowAdjacencies(Configuration conf) {
+    int prefixLen = MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_STRING.length();
+    Map<String,String> adjacencies = 
+        conf.getValByRegex(MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_PATTERN);
+    if (adjacencies.isEmpty()) {
+      return "";
+    }
+    int size = 0;
+    for (Entry<String,String> entry : adjacencies.entrySet()) {
+      int keyLen = entry.getKey().length();
+      size += keyLen - prefixLen;
+      size += entry.getValue().length() + 6;
+    }
+    StringBuilder sb = new StringBuilder(size);
+    for (Entry<String,String> entry : adjacencies.entrySet()) {
+      int keyLen = entry.getKey().length();
+      sb.append("\"");
+      sb.append(escapeString(entry.getKey().substring(prefixLen, keyLen)));
+      sb.append("\"=\"");
+      sb.append(escapeString(entry.getValue()));
+      sb.append("\" ");
+    }
+    return sb.toString();
+  }
+  
+  public static String escapeString(String data) {
+    return StringUtils.escapeString(data, StringUtils.ESCAPE_CHAR,
+        new char[] {'"', '=', '.'});
+  }
 
   public static class InitTransition 
       implements MultipleArcTransition<JobImpl, JobEvent, JobStateInternal> {
@@ -1217,7 +1251,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             job.conf.get(MRJobConfig.USER_NAME, "mapred"),
             job.appSubmitTime,
             job.remoteJobConfFile.toString(),
-            job.jobACLs, job.queueName);
+            job.jobACLs, job.queueName,
+            job.conf.get(MRJobConfig.WORKFLOW_ID, ""),
+            job.conf.get(MRJobConfig.WORKFLOW_NAME, ""),
+            job.conf.get(MRJobConfig.WORKFLOW_NODE_NAME, ""),
+            getWorkflowAdjacencies(job.conf));
         job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
         //TODO JH Verify jobACLs, UserName via UGI?
 
@@ -1312,13 +1350,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       LOG.info("Adding job token for " + oldJobIDString
           + " to jobTokenSecretManager");
 
-      // Upload the jobTokens onto the remote FS so that ContainerManager can
-      // localize it to be used by the Containers(tasks)
-      Credentials tokenStorage = new Credentials();
-      TokenCache.setJobToken(job.jobToken, tokenStorage);
-
-      if (UserGroupInformation.isSecurityEnabled()) {
-        tokenStorage.addAll(job.fsTokens);
+      // If the job client did not setup the shuffle secret then reuse
+      // the job token secret for the shuffle.
+      if (TokenCache.getShuffleSecretKey(job.fsTokens) == null) {
+        LOG.warn("Shuffle secret key missing from job credentials."
+            + " Using job token secret as shuffle secret.");
+        TokenCache.setShuffleSecretKey(job.jobToken.getPassword(),
+            job.fsTokens);
       }
     }
 
@@ -1634,6 +1672,20 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       SingleArcTransition<JobImpl, JobEvent> {
     @Override
     public void transition(JobImpl job, JobEvent event) {
+      //get number of shuffling reduces
+      int shufflingReduceTasks = 0;
+      for (TaskId taskId : job.reduceTasks) {
+        Task task = job.tasks.get(taskId);
+        if (TaskState.RUNNING.equals(task.getState())) {
+          for(TaskAttempt attempt : task.getAttempts().values()) {
+            if(attempt.getPhase() == Phase.SHUFFLE) {
+              shufflingReduceTasks++;
+              break;
+            }
+          }
+        }
+      }
+
       JobTaskAttemptFetchFailureEvent fetchfailureEvent = 
         (JobTaskAttemptFetchFailureEvent) event;
       for (org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId mapId : 
@@ -1641,20 +1693,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         Integer fetchFailures = job.fetchFailuresMapping.get(mapId);
         fetchFailures = (fetchFailures == null) ? 1 : (fetchFailures+1);
         job.fetchFailuresMapping.put(mapId, fetchFailures);
-        
-        //get number of shuffling reduces
-        int shufflingReduceTasks = 0;
-        for (TaskId taskId : job.reduceTasks) {
-          Task task = job.tasks.get(taskId);
-          if (TaskState.RUNNING.equals(task.getState())) {
-            for(TaskAttempt attempt : task.getAttempts().values()) {
-              if(attempt.getReport().getPhase() == Phase.SHUFFLE) {
-                shufflingReduceTasks++;
-                break;
-              }
-            }
-          }
-        }
         
         float failureRate = shufflingReduceTasks == 0 ? 1.0f : 
           (float) fetchFailures / shufflingReduceTasks;
