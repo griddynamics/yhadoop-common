@@ -83,10 +83,7 @@ public class TestBloomFilters {
       return start;
     }
   }
-
-  /**
-   *  
-   */
+  
   @Test
   public void testDynamicBloomFilter() {
     int hashId = Hash.JENKINS_HASH;    
@@ -104,9 +101,6 @@ public class TestBloomFilters {
     assertNotNull("testDynamicBloomFilter error ", filter.toString());
   }
 
-  /**
-   * 
-   */
   @Test
   public void testCountingBloomFilter() {
     int hashId = Hash.JENKINS_HASH;
@@ -147,10 +141,6 @@ public class TestBloomFilters {
                 BloomFilterTestStrategy.FILTER_XOR_STRATEGY)).test();
   }
 
-  /**
-   * 
-   * 
-   */
   @Test
   public void testRetouchedBloomFilterSpecific() {
     int numInsertions = 1000;
@@ -214,10 +204,6 @@ public class TestBloomFilters {
     }
   }
 
-  /**
-   * 
-   * 
-   */
   @Test
   public void testFiltersWithJenkinsHash() {
     int hashId = Hash.JENKINS_HASH;
@@ -235,10 +221,6 @@ public class TestBloomFilters {
                 BloomFilterTestStrategy.FILTER_XOR_STRATEGY)).test();
   }
 
-  /**
-   * 
-   * 
-   */
   @Test
   public void testFiltersWithMurmurHash() {
     int hashId = Hash.MURMUR_HASH;

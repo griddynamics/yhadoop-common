@@ -27,7 +27,7 @@ public class TestHash {
   @Test
   public void testHash() {
     int iterations = 30;
-    assertTrue("testHash jenkin error !!!",
+    assertTrue("testHash jenkins error !!!",
         Hash.JENKINS_HASH == Hash.parseHashType("jenkins"));
     assertTrue("testHash murmur error !!!",
         Hash.MURMUR_HASH == Hash.parseHashType("murmur"));
