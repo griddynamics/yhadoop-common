@@ -82,7 +82,7 @@ public class TestJobHistoryServer {
 
   
   JobHistoryServer historyServer=null;
-  // simple test init/start/stop   JobHistoryServer. Status should changes.
+  // simple test init/start/stop   JobHistoryServer. Status should change.
   
   @Test (timeout= 50000 )
   public void testStartStopServer() throws Exception {
@@ -125,7 +125,7 @@ public class TestJobHistoryServer {
 
   }
 
-  //Test reports of  JobHistoryServer. History server should gets log files from  MRApp and read them
+  //Test reports of  JobHistoryServer. History server should get log files from  MRApp and read them
   
   @Test (timeout= 50000 )
   public void testReports() throws Exception {
