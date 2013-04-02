@@ -37,7 +37,6 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final String  USER_AS_DEFAULT_QUEUE = CONF_PREFIX + "user-as-default-queue";
   protected static final boolean DEFAULT_USER_AS_DEFAULT_QUEUE = true;
 
-  protected static final String LOCALITY_THRESHOLD = CONF_PREFIX + "locality.threshold";
   protected static final float  DEFAULT_LOCALITY_THRESHOLD = -1.0f;
 
   /** Cluster threshold for node locality. */
@@ -56,7 +55,7 @@ public class FairSchedulerConfiguration extends Configuration {
 
   /** Whether to assign multiple containers in one check-in. */
   protected static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
-  protected static final boolean DEFAULT_ASSIGN_MULTIPLE = true;
+  protected static final boolean DEFAULT_ASSIGN_MULTIPLE = false;
 
   /** Whether to give more weight to apps requiring many resources. */
   protected static final String  SIZE_BASED_WEIGHT = CONF_PREFIX + "sizebasedweight";
@@ -87,10 +86,6 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public boolean getUserAsDefaultQueue() {
     return getBoolean(USER_AS_DEFAULT_QUEUE, DEFAULT_USER_AS_DEFAULT_QUEUE);
-  }
-
-  public float getLocalityThreshold() {
-    return getFloat(LOCALITY_THRESHOLD, DEFAULT_LOCALITY_THRESHOLD);
   }
 
   public float getLocalityThresholdNode() {

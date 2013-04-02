@@ -20,6 +20,7 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -52,19 +53,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * User and group information for Hadoop.
@@ -189,8 +190,6 @@ public class UserGroupInformation {
 
   /** Metrics to track UGI activity */
   static UgiMetrics metrics = UgiMetrics.create();
-  /** Are the static variables that depend on configuration initialized? */
-  private static boolean isInitialized = false;
   /** The auth method to use */
   private static AuthenticationMethod authenticationMethod;
   /** Server-side groups fetching service */
@@ -210,8 +209,8 @@ public class UserGroupInformation {
    * Must be called before useKerberos or groups is used.
    */
   private static synchronized void ensureInitialized() {
-    if (!isInitialized) {
-        initialize(new Configuration(), KerberosName.hasRulesBeenSet());
+    if (conf == null) {
+      initialize(new Configuration(), false);
     }
   }
 
@@ -219,25 +218,17 @@ public class UserGroupInformation {
    * Initialize UGI and related classes.
    * @param conf the configuration to use
    */
-  private static synchronized void initialize(Configuration conf, boolean skipRulesSetting) {
-    initUGI(conf);
-    // give the configuration on how to translate Kerberos names
-    try {
-      if (!skipRulesSetting) {
-        HadoopKerberosName.setConfiguration(conf);
-      }
-    } catch (IOException ioe) {
-      throw new RuntimeException("Problem with Kerberos auth_to_local name " +
-          "configuration", ioe);
-    }
-  }
-  
-  /**
-   * Set the configuration values for UGI.
-   * @param conf the configuration to use
-   */
-  private static synchronized void initUGI(Configuration conf) {
+  private static synchronized void initialize(Configuration conf,
+                                              boolean overrideNameRules) {
     authenticationMethod = SecurityUtil.getAuthenticationMethod(conf);
+    if (overrideNameRules || !HadoopKerberosName.hasRulesBeenSet()) {
+      try {
+        HadoopKerberosName.setConfiguration(conf);
+      } catch (IOException ioe) {
+        throw new RuntimeException(
+            "Problem with Kerberos auth_to_local name configuration", ioe);
+      }
+    }
     try {
         kerberosMinSecondsBeforeRelogin = 1000L * conf.getLong(
                 HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN,
@@ -252,7 +243,6 @@ public class UserGroupInformation {
     if (!(groups instanceof TestingGroups)) {
       groups = Groups.getUserToGroupsMappingService(conf);
     }
-    isInitialized = true;
     UserGroupInformation.conf = conf;
   }
 
@@ -265,7 +255,18 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static void setConfiguration(Configuration conf) {
-    initialize(conf, false);
+    initialize(conf, true);
+  }
+  
+  @InterfaceAudience.Private
+  @VisibleForTesting
+  static void reset() {
+    authenticationMethod = null;
+    conf = null;
+    groups = null;
+    kerberosMinSecondsBeforeRelogin = 0;
+    setLoginUser(null);
+    HadoopKerberosName.setRules(null);
   }
   
   /**
@@ -300,17 +301,26 @@ public class UserGroupInformation {
   
   private static String OS_LOGIN_MODULE_NAME;
   private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
+  
   private static final boolean windows =
       System.getProperty("os.name").startsWith("Windows");
   private static final boolean is64Bit =
       System.getProperty("os.arch").contains("64");
+  private static final boolean ibmJava = System.getProperty("java.vendor").contains("IBM");
+  private static final boolean aix = System.getProperty("os.name").equals("AIX");
+
   /* Return the OS login module class name */
   private static String getOSLoginModuleName() {
-    if (System.getProperty("java.vendor").contains("IBM")) {
-      return windows ? (is64Bit
-          ? "com.ibm.security.auth.module.Win64LoginModule"
-          : "com.ibm.security.auth.module.NTLoginModule")
-        : "com.ibm.security.auth.module.LinuxLoginModule";
+    if (ibmJava) {
+      if (windows) {
+        return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
+            : "com.ibm.security.auth.module.NTLoginModule";
+      } else if (aix) {
+        return is64Bit ? "com.ibm.security.auth.module.AIX64LoginModule"
+            : "com.ibm.security.auth.module.AIXLoginModule";
+      } else {
+        return "com.ibm.security.auth.module.LinuxLoginModule";
+      }
     } else {
       return windows ? "com.sun.security.auth.module.NTLoginModule"
         : "com.sun.security.auth.module.UnixLoginModule";
@@ -322,21 +332,24 @@ public class UserGroupInformation {
   private static Class<? extends Principal> getOsPrincipalClass() {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
-      if (System.getProperty("java.vendor").contains("IBM")) {
-        if (windows) {
-          return (Class<? extends Principal>) (is64Bit
-            ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
-            : cl.loadClass("com.ibm.security.auth.NTUserPrincipal"));
+      String principalClass = null;
+      if (ibmJava) {
+        if (is64Bit) {
+          principalClass = "com.ibm.security.auth.UsernamePrincipal";
         } else {
-          return (Class<? extends Principal>) (is64Bit
-            ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
-            : cl.loadClass("com.ibm.security.auth.LinuxPrincipal"));
+          if (windows) {
+            principalClass = "com.ibm.security.auth.NTUserPrincipal";
+          } else if (aix) {
+            principalClass = "com.ibm.security.auth.AIXPrincipal";
+          } else {
+            principalClass = "com.ibm.security.auth.LinuxPrincipal";
+          }
         }
       } else {
-        return (Class<? extends Principal>) (windows
-           ? cl.loadClass("com.sun.security.auth.NTUserPrincipal")
-           : cl.loadClass("com.sun.security.auth.UnixPrincipal"));
+        principalClass = windows ? "com.sun.security.auth.NTUserPrincipal"
+            : "com.sun.security.auth.UnixPrincipal";
       }
+      return (Class<? extends Principal>) cl.loadClass(principalClass);
     } catch (ClassNotFoundException e) {
       LOG.error("Unable to find JAAS classes:" + e.getMessage());
     }
@@ -417,12 +430,21 @@ public class UserGroupInformation {
     private static final Map<String,String> USER_KERBEROS_OPTIONS = 
       new HashMap<String,String>();
     static {
-      USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-      USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
-      USER_KERBEROS_OPTIONS.put("renewTGT", "true");
+      if (ibmJava) {
+        USER_KERBEROS_OPTIONS.put("useDefaultCcache", "true");
+      } else {
+        USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+        USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
+        USER_KERBEROS_OPTIONS.put("renewTGT", "true");
+      }
       String ticketCache = System.getenv("KRB5CCNAME");
       if (ticketCache != null) {
-        USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+        if (ibmJava) {
+          // The first value searched when "useDefaultCcache" is used.
+          System.setProperty("KRB5CCNAME", ticketCache);
+        } else {
+          USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+        }
       }
       USER_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);
     }
@@ -433,10 +455,14 @@ public class UserGroupInformation {
     private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = 
       new HashMap<String,String>();
     static {
-      KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
+      if (ibmJava) {
+        KEYTAB_KERBEROS_OPTIONS.put("credsType", "both");
+      } else {
+        KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+        KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
+        KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
+        KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
+      }
       KEYTAB_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);      
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
@@ -461,12 +487,22 @@ public class UserGroupInformation {
       } else if (USER_KERBEROS_CONFIG_NAME.equals(appName)) {
         return USER_KERBEROS_CONF;
       } else if (KEYTAB_KERBEROS_CONFIG_NAME.equals(appName)) {
-        KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);
+        if (ibmJava) {
+          KEYTAB_KERBEROS_OPTIONS.put("useKeytab",
+              prependFileAuthority(keytabFile));
+        } else {
+          KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);
+        }
         KEYTAB_KERBEROS_OPTIONS.put("principal", keytabPrincipal);
         return KEYTAB_KERBEROS_CONF;
       }
       return null;
     }
+  }
+
+  private static String prependFileAuthority(String keytabPath) {
+    return keytabPath.startsWith("file://") ? keytabPath
+        : "file://" + keytabPath;
   }
 
   /**
@@ -656,14 +692,16 @@ public class UserGroupInformation {
 
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null) {
-          // load the token storage file and put all of the tokens into the
-          // user.
+          // Load the token storage file and put all of the tokens into the
+          // user. Don't use the FileSystem API for reading since it has a lock
+          // cycle (HADOOP-9212).
           Credentials cred = Credentials.readTokenStorageFile(
-              new Path("file:///" + fileLocation), conf);
+              new File(fileLocation), conf);
           loginUser.addCredentials(cred);
         }
         loginUser.spawnAutoRenewalThreadForUserCreds();
       } catch (LoginException le) {
+        LOG.debug("failure to login", le);
         throw new IOException("failure to login", le);
       }
       if (LOG.isDebugEnabled()) {
@@ -675,7 +713,8 @@ public class UserGroupInformation {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  synchronized static void setLoginUser(UserGroupInformation ugi) {
+  @VisibleForTesting
+  public synchronized static void setLoginUser(UserGroupInformation ugi) {
     // if this is to become stable, should probably logout the currently
     // logged in ugi if it's different
     loginUser = ugi;
@@ -1460,7 +1499,7 @@ public class UserGroupInformation {
       } else if (cause instanceof InterruptedException) {
         throw (InterruptedException) cause;
       } else {
-        throw new UndeclaredThrowableException(pae,"Unknown exception in doAs");
+        throw new UndeclaredThrowableException(cause);
       }
     }
   }

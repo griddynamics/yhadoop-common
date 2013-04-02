@@ -57,70 +57,60 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 
 /**
- * The FileContext class provides an interface to the application writer for
- * using the Hadoop file system.
- * It provides a set of methods for the usual operation: create, open, 
- * list, etc 
+ * The FileContext class provides an interface for users of the Hadoop
+ * file system. It exposes a number of file system operations, e.g. create,
+ * open, list.
  * 
- * <p>
- * <b> *** Path Names *** </b>
- * <p>
+ * <h2>Path Names</h2>
  * 
- * The Hadoop file system supports a URI name space and URI names.
- * It offers a forest of file systems that can be referenced using fully
- * qualified URIs.
- * Two common Hadoop file systems implementations are
+ * The Hadoop file system supports a URI namespace and URI names. This enables
+ * multiple types of file systems to be referenced using fully-qualified URIs.
+ * Two common Hadoop file system implementations are
  * <ul>
- * <li> the local file system: file:///path
- * <li> the hdfs file system hdfs://nnAddress:nnPort/path
+ * <li>the local file system: file:///path
+ * <li>the HDFS file system: hdfs://nnAddress:nnPort/path
  * </ul>
  * 
- * While URI names are very flexible, it requires knowing the name or address
- * of the server. For convenience one often wants to access the default system
- * in one's environment without knowing its name/address. This has an
- * additional benefit that it allows one to change one's default fs
- *  (e.g. admin moves application from cluster1 to cluster2).
+ * The Hadoop file system also supports additional naming schemes besides URIs.
+ * Hadoop has the concept of a <i>default file system</i>, which implies a
+ * default URI scheme and authority. This enables <i>slash-relative names</i>
+ * relative to the default FS, which are more convenient for users and
+ * application writers. The default FS is typically set by the user's
+ * environment, though it can also be manually specified.
  * <p>
  * 
- * To facilitate this, Hadoop supports a notion of a default file system.
- * The user can set his default file system, although this is
- * typically set up for you in your environment via your default config.
- * A default file system implies a default scheme and authority; slash-relative
- * names (such as /for/bar) are resolved relative to that default FS.
- * Similarly a user can also have working-directory-relative names (i.e. names
- * not starting with a slash). While the working directory is generally in the
- * same default FS, the wd can be in a different FS.
+ * Hadoop also supports <i>working-directory-relative</i> names, which are paths
+ * relative to the current working directory (similar to Unix). The working
+ * directory can be in a different file system than the default FS.
  * <p>
- *  Hence Hadoop path names can be one of:
- *  <ul>
- *  <li> fully qualified URI: scheme://authority/path
- *  <li> slash relative names: /path relative to the default file system
- *  <li> wd-relative names: path  relative to the working dir
- *  </ul>   
+ * Thus, Hadoop path names can be specified as one of the following:
+ * <ul>
+ * <li>a fully-qualified URI: scheme://authority/path (e.g.
+ * hdfs://nnAddress:nnPort/foo/bar)
+ * <li>a slash-relative name: path relative to the default file system (e.g.
+ * /foo/bar)
+ * <li>a working-directory-relative name: path relative to the working dir (e.g.
+ * foo/bar)
+ * </ul>
  *  Relative paths with scheme (scheme:foo/bar) are illegal.
  *  
- *  <p>
- *  <b>****The Role of the FileContext and configuration defaults****</b>
- *  <p>
- *  The FileContext provides file namespace context for resolving file names;
- *  it also contains the umask for permissions, In that sense it is like the
- *  per-process file-related state in Unix system.
- *  These two properties
- *  <ul> 
- *  <li> default file system i.e your slash)
- *  <li> umask
- *  </ul>
- *  in general, are obtained from the default configuration file
- *  in your environment,  (@see {@link Configuration}).
- *  
- *  No other configuration parameters are obtained from the default config as 
- *  far as the file context layer is concerned. All file system instances
- *  (i.e. deployments of file systems) have default properties; we call these
- *  server side (SS) defaults. Operation like create allow one to select many 
- *  properties: either pass them in as explicit parameters or use
- *  the SS properties.
- *  <p>
- *  The file system related SS defaults are
+ * <h2>Role of FileContext and Configuration Defaults</h2>
+ *
+ * The FileContext is the analogue of per-process file-related state in Unix. It
+ * contains two properties:
+ * 
+ * <ul>
+ * <li>the default file system (for resolving slash-relative names)
+ * <li>the umask (for file permissions)
+ * </ul>
+ * In general, these properties are obtained from the default configuration file
+ * in the user's environment (see {@link Configuration}).
+ * 
+ * Further file system properties are specified on the server-side. File system
+ * operations default to using these server-side defaults unless otherwise
+ * specified.
+ * <p>
+ * The file system related server-side defaults are:
  *  <ul>
  *  <li> the home directory (default is "/user/userName")
  *  <li> the initial wd (only for local fs)
@@ -131,34 +121,34 @@ import org.apache.hadoop.util.ShutdownHookManager;
  *  <li> checksum option. (checksumType and  bytesPerChecksum)
  *  </ul>
  *
- * <p>
- * <b> *** Usage Model for the FileContext class *** </b>
- * <p>
+ * <h2>Example Usage</h2>
+ *
  * Example 1: use the default config read from the $HADOOP_CONFIG/core.xml.
  *   Unspecified values come from core-defaults.xml in the release jar.
  *  <ul>  
  *  <li> myFContext = FileContext.getFileContext(); // uses the default config
  *                                                // which has your default FS 
  *  <li>  myFContext.create(path, ...);
- *  <li>  myFContext.setWorkingDir(path)
+ *  <li>  myFContext.setWorkingDir(path);
  *  <li>  myFContext.open (path, ...);  
+ *  <li>...
  *  </ul>  
  * Example 2: Get a FileContext with a specific URI as the default FS
  *  <ul>  
- *  <li> myFContext = FileContext.getFileContext(URI)
+ *  <li> myFContext = FileContext.getFileContext(URI);
  *  <li> myFContext.create(path, ...);
- *   ...
- * </ul> 
+ *  <li>...
+ * </ul>
  * Example 3: FileContext with local file system as the default
  *  <ul> 
- *  <li> myFContext = FileContext.getLocalFSFileContext()
+ *  <li> myFContext = FileContext.getLocalFSFileContext();
  *  <li> myFContext.create(path, ...);
  *  <li> ...
  *  </ul> 
  * Example 4: Use a specific config, ignoring $HADOOP_CONFIG
  *  Generally you should not need use a config unless you are doing
  *   <ul> 
- *   <li> configX = someConfigSomeOnePassedToYou.
+ *   <li> configX = someConfigSomeOnePassedToYou;
  *   <li> myFContext = getFileContext(configX); // configX is not changed,
  *                                              // is passed down 
  *   <li> myFContext.create(path, ...);
@@ -254,17 +244,33 @@ public final class FileContext {
   }
  
   /* 
-   * Remove relative part - return "absolute":
-   * If input is relative path ("foo/bar") add wd: ie "/<workingDir>/foo/bar"
-   * A fully qualified uri ("hdfs://nn:p/foo/bar") or a slash-relative path
+   * Resolve a relative path passed from the user.
+   * 
+   * Relative paths are resolved against the current working directory
+   * (e.g. "foo/bar" becomes "/<workingDir>/foo/bar").
+   * Fully-qualified URIs (e.g. "hdfs://nn:p/foo/bar") and slash-relative paths
    * ("/foo/bar") are returned unchanged.
    * 
+   * Additionally, we fix malformed URIs that specify a scheme but not an 
+   * authority (e.g. "hdfs:///foo/bar"). Per RFC 2395, we remove the scheme
+   * if it matches the default FS, and let the default FS add in the default
+   * scheme and authority later (see {@link #AbstractFileSystem#checkPath}).
+   * 
    * Applications that use FileContext should use #makeQualified() since
-   * they really want a fully qualified URI.
+   * they really want a fully-qualified URI.
    * Hence this method is not called makeAbsolute() and 
    * has been deliberately declared private.
    */
   private Path fixRelativePart(Path p) {
+    // Per RFC 2396 5.2, drop schema if there is a scheme but no authority.
+    if (p.hasSchemeAndNoAuthority()) {
+      String scheme = p.toUri().getScheme();
+      if (scheme.equalsIgnoreCase(defaultFS.getUri().getScheme())) {
+        p = new Path(p.toUri().getSchemeSpecificPart());
+      }
+    }
+    // Absolute paths are unchanged. Relative paths are resolved against the
+    // current working directory.
     if (p.isUriPathAbsolute()) {
       return p;
     } else {
@@ -1336,7 +1342,7 @@ public final class FileContext {
    * 
    * 2. Partially qualified URIs (eg scheme but no host)
    * 
-   * fs:///A/B/file  Resolved according to the target file sytem. Eg resolving
+   * fs:///A/B/file  Resolved according to the target file system. Eg resolving
    *                 a symlink to hdfs:///A results in an exception because
    *                 HDFS URIs must be fully qualified, while a symlink to 
    *                 file:///A will not since Hadoop's local file systems 

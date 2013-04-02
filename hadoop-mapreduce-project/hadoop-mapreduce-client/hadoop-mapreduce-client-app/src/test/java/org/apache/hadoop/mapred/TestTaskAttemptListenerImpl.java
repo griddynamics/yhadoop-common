@@ -32,8 +32,11 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Arrays;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
@@ -77,7 +80,7 @@ public class TestTaskAttemptListenerImpl {
     }
   }
   
-  @Test
+  @Test  (timeout=5000)
   public void testGetTask() throws IOException {
     AppContext appCtx = mock(AppContext.class);
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class); 
@@ -135,9 +138,30 @@ public class TestTaskAttemptListenerImpl {
     assertTrue(result.shouldDie);
 
     listener.stop();
+
+    // test JVMID
+    JVMId jvmid = JVMId.forName("jvm_001_002_m_004");
+    assertNotNull(jvmid);
+    try {
+      JVMId.forName("jvm_001_002_m_004_006");
+      Assert.fail();
+    } catch (IllegalArgumentException e) {
+      assertEquals(e.getMessage(),
+          "TaskId string : jvm_001_002_m_004_006 is not properly formed");
+    }
+
   }
 
-  @Test
+  @Test (timeout=5000)
+  public void testJVMId() {
+
+    JVMId jvmid = new JVMId("test", 1, true, 2);
+    JVMId jvmid1 = JVMId.forName("jvm_test_0001_m_000002");
+    // test compare methot should be the same
+    assertEquals(0, jvmid.compareTo(jvmid1));
+  }
+
+  @Test (timeout=10000)
   public void testGetMapCompletionEvents() throws IOException {
     TaskAttemptCompletionEvent[] empty = {};
     TaskAttemptCompletionEvent[] taskEvents = {
@@ -153,9 +177,12 @@ public class TestTaskAttemptListenerImpl {
       .thenReturn(Arrays.copyOfRange(taskEvents, 0, 2));
     when(mockJob.getTaskAttemptCompletionEvents(2, 100))
       .thenReturn(Arrays.copyOfRange(taskEvents, 2, 4));
-    when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(mapEvents);
-    when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(mapEvents);
-    when(mockJob.getMapAttemptCompletionEvents(2, 100)).thenReturn(empty);
+    when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(
+        TypeConverter.fromYarn(mapEvents));
+    when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(
+        TypeConverter.fromYarn(mapEvents));
+    when(mockJob.getMapAttemptCompletionEvents(2, 100)).thenReturn(
+        TypeConverter.fromYarn(empty));
 
     AppContext appCtx = mock(AppContext.class);
     when(appCtx.getJob(any(JobId.class))).thenReturn(mockJob);
@@ -201,7 +228,7 @@ public class TestTaskAttemptListenerImpl {
     return tce;
   }
 
-  @Test
+  @Test (timeout=1000)
   public void testCommitWindow() throws IOException {
     SystemClock clock = new SystemClock();
 

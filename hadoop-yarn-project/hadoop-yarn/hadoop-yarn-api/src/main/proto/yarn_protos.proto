@@ -102,7 +102,7 @@ message ApplicationMasterProto {
   optional string trackingUrl = 4;
   optional ApplicationStatusProto status = 5;
   optional YarnApplicationStateProto state = 6;
-  optional string client_token = 7;
+  optional hadoop.common.TokenProto client_token = 7;
   optional int32 containerCount = 8;
   optional int32 amFailCount = 9;
   optional string diagnostics = 10 [default = ""];
@@ -151,7 +151,7 @@ message ApplicationReportProto {
   optional string name = 4;
   optional string host = 5;
   optional int32 rpc_port = 6;
-  optional string client_token = 7;
+  optional hadoop.common.TokenProto client_token = 7;
   optional ApplicationStatusProto status = 8;
   optional YarnApplicationStateProto yarn_application_state = 9;
   optional ContainerProto masterContainer = 10;
@@ -207,16 +207,6 @@ message ResourceRequestProto {
   optional int32 num_containers = 4;
 }
 
-message AMResponseProto {
-  optional bool reboot = 1;
-  optional int32 response_id = 2;
-  repeated ContainerProto allocated_containers = 3;
-  repeated ContainerStatusProto completed_container_statuses = 4;
-  optional ResourceProto limit = 5;
-  repeated NodeReportProto updated_nodes = 6;
-}
-
-
 ////////////////////////////////////////////////////////////////////////
 ////// From client_RM_Protocol /////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -229,6 +219,7 @@ message ApplicationSubmissionContextProto {
   optional ContainerLaunchContextProto am_container_spec = 6;
   optional bool cancel_tokens_when_complete = 7 [default = true];
   optional bool unmanaged_am = 8 [default = false];
+  optional int32 maxAppAttempts = 9 [default = 0];
 }
 
 enum ApplicationAccessTypeProto {
