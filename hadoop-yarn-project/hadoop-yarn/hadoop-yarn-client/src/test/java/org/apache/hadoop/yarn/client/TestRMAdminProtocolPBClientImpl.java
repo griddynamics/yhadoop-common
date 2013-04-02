@@ -101,7 +101,7 @@ public class TestRMAdminProtocolPBClientImpl {
   }
 
   /**
-   * Test method refreshQueues. This method present and it works.
+   * Test method refreshQueues. This method is present and it works.
    * 
    */
   @Test(timeout = 1000)
