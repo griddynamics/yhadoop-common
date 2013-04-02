@@ -26,7 +26,7 @@ import org.junit.Test;
 public class TestWritableComparator {
 	
 	@Test
-	public void testShouldThrowsException() {
+	public void testShouldThrowException() {
 	  //1 byte - size, other - body	  
 	  // valid
 	  byte[] bytes1 = new byte[] {0x1, 0x2};
@@ -36,7 +36,9 @@ public class TestWritableComparator {
 	    WritableComparator wCmp = new WritableComparator(Text.class, true);	    
 	    wCmp.compare(bytes1, 0, bytes1.length, bytes2, 0, bytes2.length);
 	    fail("testThrowsException error !!!");
-	  } catch(Exception ex) {}
+	  } catch(Exception ex) {
+	    /* Should be thrown to pass the test */
+	  }
 	}
 	
 	/**
@@ -62,18 +64,18 @@ public class TestWritableComparator {
 	  try {  
 	    int unShort = WritableComparator.readUnsignedShort(new byte[] {0,-128}, 0);
 	    assertEquals("testReadUnsignedShort error", unShort, 128);
-	  
+	    
 	    unShort = WritableComparator.readUnsignedShort(new byte[] {0, 127}, 0);
 	    assertEquals("readUnsignedShort error", unShort, 127);
-	  
+	    
 	    unShort = WritableComparator.readUnsignedShort(new byte[] {0,0,0,0,-128}, 3);
 	    assertEquals("readUnsignedShort error", unShort, 128);
 	  	
 	    int intValue = WritableComparator.readVInt(new byte[] {1,0,0,0,0,0,0,0}, 0);	    
-		assertTrue("readVInt error", intValue == 1);
-		
-		long longValue = WritableComparator.readVLong(new byte[] {1,0,0,0,0,0,0,0}, 0);		
-		assertTrue("readVLong error", longValue == 1);
+		  assertTrue("readVInt error", intValue == 1);
+		  
+		  long longValue = WritableComparator.readVLong(new byte[] {1,0,0,0,0,0,0,0}, 0);		
+		  assertTrue("readVLong error", longValue == 1);
 	  } catch (IOException ex) {
 	    fail("error in testReadTypes");	  
 	  }	  	  	 

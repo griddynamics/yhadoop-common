@@ -330,9 +330,9 @@ public class TestMapFile extends TestCase {
   }
   
   /**
-   * test {@code MapFile.Reader.getClosest() } with wrond class key
+   * test {@code MapFile.Reader.getClosest() } with wrong class key
    */
-  public void testReaderGetClosest() {
+  public void testReaderGetClosest() throws Exception {
     final String TEST_METHOD_KEY = "testReaderWithWrongKeyClass.mapfile";
     try {
       deleteFileIfExists(TEST_METHOD_KEY);
@@ -347,9 +347,7 @@ public class TestMapFile extends TestCase {
       reader.getClosest(new Text("2"), new Text(""));
       fail("no excepted exception in testReaderWithWrongKeyClass !!!");
     } catch (IOException ex) {
-      /* for pass test this should be throw */
-    } catch (Exception ex) {
-      fail("testReaderGetClosest error " + ex);
+      /* Should be thrown to pass the test */
     }
   }
   
@@ -365,7 +363,7 @@ public class TestMapFile extends TestCase {
       writer.append(new IntWritable(0), new IntWritable(0));
       fail("no excepted exception in testReaderWithWrongKeyClass !!!");
     } catch (IOException ex) {
-      /* for pass test this should be throw */
+      /* Should be thrown to pass the test */
     }
   }
   
