@@ -33,7 +33,7 @@ public class TestCommandLineUtilities {
    * test TestTraceBuilder utility
    */
 
-  @Test
+  @Test (timeout=50000)
   public void testTraceBuilder() throws Exception {
     String[] args = new String[5];
     args[0] = "-demuxer";
@@ -99,7 +99,7 @@ public class TestCommandLineUtilities {
    * 
    * test Anonymizer utility
    */
-  @Test
+  @Test (timeout=5000)
   public void testAnonymizer() throws Exception {
     String[] args = new String[3];
     args[0] = "file://" + workSpace.getAbsolutePath() + File.separator + "out"
@@ -134,7 +134,7 @@ public class TestCommandLineUtilities {
     ClusterTopologyReader ctp = new ClusterTopologyReader(new FileInputStream(
         new File(args[5])));
     LoggedNetworkTopology lnt = ctp.get();
-    assertEquals(14, lnt.getChildren().size());
+    assertEquals(7, lnt.getChildren().size());
     assertEquals("<root>", lnt.getName().getValue());
 
     JobTraceReader reader = new JobTraceReader(new FileInputStream(new File(
