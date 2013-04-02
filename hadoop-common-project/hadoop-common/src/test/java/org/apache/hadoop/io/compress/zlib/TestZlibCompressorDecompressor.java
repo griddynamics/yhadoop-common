@@ -59,7 +59,7 @@ public class TestZlibCompressorDecompressor {
 
   // return char 97 - 122
   private static final ByteGenerator TEST_CHAR_TO_BYTE_GENERATOR = new ByteGenerator() {
-    private final Random random = new Random();
+    private final Random random = new Random(12345L);
     private byte[] data;
     int start = 97;
 
