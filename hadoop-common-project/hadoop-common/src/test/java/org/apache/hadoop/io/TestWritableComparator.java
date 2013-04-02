@@ -26,7 +26,7 @@ import org.junit.Test;
 public class TestWritableComparator {
 	
 	@Test
-	public void testShouldThrowsException() {
+	public void testShouldThrowException() {
 	  //1 byte - size, other - body	  
 	  // valid
 	  byte[] bytes1 = new byte[] {0x1, 0x2};
