@@ -487,7 +487,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     exitCode = runTool(conf, createJobClient(), new String[] { "-set-priority",
         jobId, "VERY_LOW" }, new ByteArrayOutputStream());
     assertEquals("Exit code", 0, exitCode);
-    // because it method does not implemented still.
+    // because this method does not implemented still.
     verifyJobPriority(jobId, "NORMAL", conf, createJobClient());
   }
 
