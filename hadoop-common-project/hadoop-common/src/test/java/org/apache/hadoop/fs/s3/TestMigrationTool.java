@@ -33,7 +33,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Test Migration tool test should reads from source bucket and moves to target
+ * Test Migration tool. Test should read from source bucket and move to the target
  * bucket. Source data should be removed
  */
 public class TestMigrationTool {
