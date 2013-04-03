@@ -117,6 +117,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-381. Improve fair scheduler docs. (Sandy Ryza via tomwhite)
 
+    YARN-458. YARN daemon addresses must be placed in many different configs. 
+    (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -184,6 +187,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-101. Fix NodeManager heartbeat processing to not lose track of completed
     containers in case of dropped heartbeats. (Xuan Gong via vinodkv)
+
+    YARN-538. RM address DNS lookup can cause unnecessary slowness on every JHS 
+    page load. (sandyr via tucu)
 
 Release 2.0.4-alpha - UNRELEASED
 
