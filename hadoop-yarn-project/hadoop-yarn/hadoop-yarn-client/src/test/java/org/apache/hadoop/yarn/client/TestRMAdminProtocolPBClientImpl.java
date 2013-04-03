@@ -111,7 +111,7 @@ public class TestRMAdminProtocolPBClientImpl {
   }
 
   /**
-   * Test method refreshNodes. This method present and it works.
+   * Test method refreshNodes. This method is present and it works.
    */
 
   @Test(timeout = 500)
@@ -137,7 +137,7 @@ public class TestRMAdminProtocolPBClientImpl {
   }
 
   /**
-   * Test method refreshUserToGroupsMappings. This method present and it works.
+   * Test method refreshUserToGroupsMappings. This method is present and it works.
    */
   @Test(timeout = 500)
   public void testRefreshUserToGroupsMappings() throws Exception {
@@ -149,7 +149,7 @@ public class TestRMAdminProtocolPBClientImpl {
   }
 
   /**
-   * Test method refreshAdminAcls. This method present and it works.
+   * Test method refreshAdminAcls. This method is present and it works.
    */
 
   @Test(timeout = 500)
