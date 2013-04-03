@@ -42,8 +42,8 @@ import org.jets3t.service.model.S3Owner;
 import org.jets3t.service.security.AWSCredentials;
 
 /**
- * Stub emulates a s3 server an  access to buckets and objects 
- *
+ * Stub emulates a s3 server an access to buckets and objects
+ * 
  */
 public class S3ServerStub extends S3Service {
 
@@ -102,7 +102,7 @@ public class S3ServerStub extends S3Service {
       S3BucketLoggingStatus status) throws S3ServiceException {
     File f = new File(basePath + bucketName);
     if (!f.exists()) {
-      throw new S3ServiceException("Exception message", getErrorMessage());
+      throw new S3ServiceException("Exception message", getErrorMessage("1","File not exist"));
     }
 
   }
@@ -127,7 +127,7 @@ public class S3ServerStub extends S3Service {
   protected S3Object[] listObjectsImpl(String bucketName, String prefix,
       String delimiter, long maxListingLength) throws S3ServiceException {
     if (throwException) {
-      throw new S3ServiceException("Exception", getErrorMessage());
+      throw new S3ServiceException("Exception", getErrorMessage("2","List objects exception"));
     }
     if (prefix == null) {
       prefix = "";
@@ -199,12 +199,10 @@ public class S3ServerStub extends S3Service {
     if (f.exists() && f.isDirectory()) {
       try {
         FileUtils.deleteDirectory(f);
-        return;
       } catch (IOException e) {
-        throw new S3ServiceException("Exception message", getErrorMessage());
+        throw new S3ServiceException("Exception message", getErrorMessage("6","File system error:"+e.getMessage()));
       }
     }
-    throw new S3ServiceException("Exception message", getErrorMessage());
 
   }
 
@@ -212,7 +210,7 @@ public class S3ServerStub extends S3Service {
   protected S3Object putObjectImpl(String bucketName, S3Object object)
       throws S3ServiceException {
     if (throwException) {
-      throw new S3ServiceException("Exception message", getErrorMessage());
+      throw new S3ServiceException("Exception message", getErrorMessage("4","Put object exception"));
 
     }
     try {
@@ -229,24 +227,28 @@ public class S3ServerStub extends S3Service {
           writeFile(f, object.getDataInputStream());
         }
       }
-    } catch (Throwable e) {
-      throw new S3ServiceException("Exception message", getErrorMessage());
+    } catch (IOException e) {
+      throw new S3ServiceException("Exception message", getErrorMessage("6","File system error:"+e.getMessage()));
 
     }
     return object;
   }
 
-  private void writeFile(File result, InputStream in) throws Exception {
+  private void writeFile(File result, InputStream in) throws IOException {
 
     OutputStream out = new FileOutputStream(result);
-    byte[] buffer = new byte[512];
-    int read;
-    while ((read = in.read(buffer)) >= 0) {
-      out.write(buffer, 0, read);
+    try {
+      byte[] buffer = new byte[512];
+      int read;
+      while ((read = in.read(buffer)) >= 0) {
+        out.write(buffer, 0, read);
+      }
+      out.flush();
+    } finally {
+      if (out != null) {
+        out.close();
+      }
     }
-
-    out.flush();
-    out.close();
 
   }
 
@@ -266,7 +268,7 @@ public class S3ServerStub extends S3Service {
     try {
       FileUtils.copyFile(original, copy);
     } catch (IOException e) {
-      throw new S3ServiceException("Exception message", getErrorMessage());
+      throw new S3ServiceException("Exception message", getErrorMessage("6","File system error:"+e.getMessage()));
     }
 
     return new HashMap<Object, Object>();
@@ -276,14 +278,14 @@ public class S3ServerStub extends S3Service {
   protected void deleteObjectImpl(String bucketName, String objectKey)
       throws S3ServiceException {
     if (throwException) {
-      throw new S3ServiceException("exception", getErrorMessage());
+      throw new S3ServiceException("exception", getErrorMessage("7","Delete exception"));
     }
     if (objectKey.startsWith("%2F")) {
       objectKey = objectKey.substring(3);
     }
     File f = new File(basePath + bucketName + File.separator + objectKey);
     if (!f.delete()) {
-      throw new S3ServiceException("Exception message", getErrorMessage());
+      throw new S3ServiceException("Exception message", getErrorMessage("10","Try to delete non exist node"));
     }
 
   }
@@ -303,7 +305,7 @@ public class S3ServerStub extends S3Service {
       String[] ifMatchTags, String[] ifNoneMatchTags, Long byteRangeStart,
       Long byteRangeEnd) throws S3ServiceException {
     if (throwException) {
-      throw new S3ServiceException("exception", getErrorMessage());
+      throw new S3ServiceException("exception", getErrorMessage("8","get object exception"));
     }
     if (objectKey.startsWith("%2F")) { // first /
       objectKey = objectKey.substring(3);
@@ -352,7 +354,7 @@ public class S3ServerStub extends S3Service {
     return aclStorage.get(bucketName);
   }
 
-  private String getErrorMessage() {
-    return "<Error><Code>12345</Code><Message>msg</Message><RequestId>23456</RequestId><HostId>host</HostId></Error>";
+  private String getErrorMessage(String code,String message) {
+    return "<Error><Code>"+code+"</Code><Message>"+message+"</Message><RequestId>23456</RequestId><HostId>localhost</HostId></Error>";
   }
 }
