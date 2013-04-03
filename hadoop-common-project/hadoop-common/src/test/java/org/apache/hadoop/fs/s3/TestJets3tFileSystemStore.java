@@ -372,7 +372,7 @@ public class TestJets3tFileSystemStore {
   /**
    * Test the S3Credentials class
    */
-  @Test(timeout = 500000)
+  @Test(timeout = 500)
   public void testS3Credentials() throws Exception {
     S3Credentials credentials = new S3Credentials();
     Configuration conf = new Configuration();
