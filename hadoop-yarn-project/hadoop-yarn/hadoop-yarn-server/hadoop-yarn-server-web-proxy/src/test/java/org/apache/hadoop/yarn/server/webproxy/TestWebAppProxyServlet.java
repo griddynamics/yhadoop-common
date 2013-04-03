@@ -134,8 +134,6 @@ public class TestWebAppProxyServlet {
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
 
-      // proxyConn.setRequestProperty("Cookie",
-      // "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
           proxyConn.getResponseCode());
@@ -312,7 +310,6 @@ public class TestWebAppProxyServlet {
         LOG.fatal("Could not start proxy web server", e);
         throw new YarnException("Could not start proxy web server", e);
       }
-      // super.start();
     }
 
     private Object getVolumeOfField(String fieldName) throws Exception {
