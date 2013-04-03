@@ -45,7 +45,7 @@ public class TestYarnApiClasses {
   private final org.apache.hadoop.yarn.factories.RecordFactory recordFactory = RecordFactoryProvider
           .getRecordFactory(null);
 
-  /*
+  /**
    * Simple test Resource request.
    * Test hashCode, equals and compare.
    */
@@ -79,7 +79,7 @@ public class TestYarnApiClasses {
 
   }
 
-  /*
+  /**
   * Test CancelDelegationTokenRequestPBImpl.
   * Test a transformation to prototype and back
   */
@@ -99,7 +99,7 @@ public class TestYarnApiClasses {
 
   }
 
-  /*
+  /**
   * Test RenewDelegationTokenRequestPBImpl.
   * Test a transformation to prototype and back
   */
@@ -120,7 +120,7 @@ public class TestYarnApiClasses {
 
   }
 
-  /*
+  /**
   * Test ApplicationMasterPBImpl.
   * Test a transformation to prototype and back
   */
@@ -167,7 +167,7 @@ public class TestYarnApiClasses {
 
   }
 
-  /*
+  /**
   * Test ApplicationStatusPBImpl.
   * Test a transformation to prototype and back
   */
