@@ -39,6 +39,7 @@ import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.security.AWSCredentials;
 
+
 /**
  * <p>
  * This class is a tool for migrating data from an older to a newer version
@@ -61,10 +62,8 @@ public class MigrationTool extends Configured implements Tool {
     System.exit(res);
   }
 
-  /**
-   * For test have to change  FileSystemStore
-   */
-  protected FileSystemStore getFileSystemStore(  URI uri) throws IOException{
+  
+  FileSystemStore getFileSystemStore(  URI uri) throws IOException{
     FileSystemStore newStore = new Jets3tFileSystemStore();
     newStore.initialize(uri, getConf());
     return newStore;

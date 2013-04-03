@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3.INode.FileType;
-import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.security.AWSCredentials;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -81,38 +80,39 @@ public class TestJets3tFileSystemStore {
   @Test(timeout = 500)
   public void testBlock() throws Exception {
 
-    File f = getDummiTextFile("block file");
+    File f = getDummyTextFile("block file");
     Block block = new Block(1, f.length());
     // save block
     store.storeBlock(block, f);
     // test saved block
-    assertTrue(store.blockExists(1));
+    assertTrue("block must be stored",store.blockExists(1));
     File result = new File(workspace.getAbsolutePath() + "hostname"
         + File.separator + "block_" + block.getId());
     assertTrue(result.exists());
     assertEquals(10, result.length());
     // get block
     File newFile = store.retrieveBlock(block, 0);
-    assertNotNull(newFile);
-    assertEquals(f.length(), newFile.length());
+    assertNotNull("Try to get a stored block",newFile);
+    assertEquals("The length of file should be the same",f.length(), newFile.length());
     // test exceptions
     stub.setThrowException(true);
     // get block
     try {
       store.retrieveBlock(block, 0);
-      fail();
+      fail("retrieve no existing block");
     } catch (IOException e) {
-
-      S3ServiceException s3e = (S3ServiceException) e.getCause();
-      assertEquals("12345", s3e.getS3ErrorCode());
+      assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
+      		"exception XML Error Message: <Error><Code>8</Code><Message>get object " +
+      		"exception</Message><RequestId>23456</RequestId><HostId>localhost</HostId></Error>", e.toString());
     }
     // delete block
     try {
       store.deleteBlock(block);
-      fail();
+      fail("Delete non exit block");
     } catch (IOException e) {
-      S3ServiceException s3e = (S3ServiceException) e.getCause();
-      assertEquals("12345", s3e.getS3ErrorCode());
+      assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
+      		"exception XML Error Message: <Error><Code>7</Code><Message>Delete " +
+      		"exception</Message><RequestId>23456</RequestId><HostId>localhost</HostId></Error>",e.toString());
     } finally {
       stub.setThrowException(false);
     }
@@ -131,7 +131,7 @@ public class TestJets3tFileSystemStore {
 
     store.purge();
     stub.setThrowException(false);
-    File f = getDummiTextFile("node file");
+    File f = getDummyTextFile("node file");
     Path path = new Path("/testNode");
     Block[] blocks = new Block[2];
     blocks[0] = new Block(0, f.length());
@@ -141,18 +141,21 @@ public class TestJets3tFileSystemStore {
     // node path should be absolute
     try {
       store.storeINode(new Path("testNode"), node);
-      fail();
+      fail("stored bad path");
     } catch (IllegalArgumentException e) {
-      assertEquals("Path must be absolute: testNode", e.getMessage());
+      assertEquals("java.lang.IllegalArgumentException: Path must be absolute: testNode", e.toString());
     }
     // test exceptions
     try {
       stub.setThrowException(true);
       store.storeINode(path, node);
-      fail();
+      fail(" should be put object exception from stub ");
     } catch (IOException e) {
-      S3ServiceException parent = (S3ServiceException) e.getCause();
-      assertEquals("12345", parent.getS3ErrorCode());
+      assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
+      		"Exception message XML Error Message: <Error><Code>4</Code>" +
+      		"<Message>Put object exception</Message><RequestId>23456</RequestId>" +
+      		"<HostId>localhost</HostId></Error>", e.toString());
+
     } finally {
       stub.setThrowException(false);
     }
@@ -177,27 +180,33 @@ public class TestJets3tFileSystemStore {
 
     try {
       store.deleteINode(path);
+      fail("the non exist node was deleted");
     } catch (IOException e) {
-      S3ServiceException parent = (S3ServiceException) e.getCause();
-      assertEquals("12345", parent.getS3ErrorCode());
+      assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
+      		"Exception message XML Error Message: <Error><Code>10</Code>" +
+      		"<Message>Try to delete non exist node</Message><RequestId>23456</RequestId>" +
+      		"<HostId>localhost</HostId></Error>", e.toString());
     }
     stub.setThrowException(true);
 
     // test exceptions
     try {
       store.inodeExists(path);
-      fail();
+      fail(" test non exist node without exception ");
     } catch (IOException e) {
-      S3ServiceException parent = (S3ServiceException) e.getCause();
-      assertEquals("12345", parent.getS3ErrorCode());
+      assertEquals("org.jets3t.service.S3ServiceException: exception XML Error Message: " +
+      		"<Error><Code>8</Code><Message>get object exception</Message>" +
+      		"<RequestId>23456</RequestId><HostId>localhost</HostId></Error>", e.getMessage());
     }
 
     try {
       store.retrieveINode(path);
-      fail();
+      fail("retrived non exist node");
     } catch (IOException e) {
-      S3ServiceException parent = (S3ServiceException) e.getCause();
-      assertEquals("12345", parent.getS3ErrorCode());
+      assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
+      		"exception XML Error Message: <Error><Code>8</Code>" +
+      		"<Message>get object exception</Message><RequestId>23456</RequestId>" +
+      		"<HostId>localhost</HostId></Error>", e.toString());
     } finally {
       stub.setThrowException(false);
 
@@ -212,7 +221,7 @@ public class TestJets3tFileSystemStore {
     // clean
     store.purge();
 
-    File f = getDummiTextFile("node file");
+    File f = getDummyTextFile("node file");
     Path path = new Path("/testNode");
     Block[] blocks = new Block[2];
     blocks[0] = new Block(0, f.length());
@@ -235,15 +244,18 @@ public class TestJets3tFileSystemStore {
       store.listSubPaths(new Path("/"));
       fail();
     } catch (Exception e) {
-      S3ServiceException ex = (S3ServiceException) e.getCause();
-      assertEquals("12345", ex.getS3ErrorCode());
+      assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
+      		"Exception XML Error Message: <Error><Code>2</Code>" +
+      		"<Message>List objects exception</Message><RequestId>23456</RequestId>" +
+      		"<HostId>localhost</HostId></Error>", e.toString());
     }
     try {
       store.listDeepSubPaths(new Path("/"));
       fail();
     } catch (Exception e) {
-      S3ServiceException ex = (S3ServiceException) e.getCause();
-      assertEquals("12345", ex.getS3ErrorCode());
+      assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
+      		"Exception XML Error Message: <Error><Code>2</Code><Message>List objects exception</Message>" +
+      		"<RequestId>23456</RequestId><HostId>localhost</HostId></Error>", e.toString());
     } finally {
       stub.setThrowException(false);
 
@@ -260,7 +272,7 @@ public class TestJets3tFileSystemStore {
     assertEquals("1", store.getVersion());
   }
 
-  private File getDummiTextFile(String text) throws Exception {
+  private File getDummyTextFile(String text) throws Exception {
     File result = new File(workspace.getParent() + File.separator
         + "tmpFile.txt");
     Writer writer = new FileWriter(result);
@@ -278,7 +290,7 @@ public class TestJets3tFileSystemStore {
    */
   @Test(timeout = 500)
   public void testS3InputStream() throws Exception {
-    File f = getDummiTextFile("node file");
+    File f = getDummyTextFile("node file");
     Path path = new Path("/testNode");
     Block[] blocks = new Block[2];
     blocks[0] = new Block(0, f.length());
@@ -315,7 +327,7 @@ public class TestJets3tFileSystemStore {
   public void testMetaData() throws Exception {
     store.purge();
     stub.setThrowException(false);
-    File f = getDummiTextFile("node file");
+    File f = getDummyTextFile("node file");
     Path path = new Path("/testNode");
     Block[] blocks = new Block[2];
     blocks[0] = new Block(0, f.length());
@@ -328,16 +340,18 @@ public class TestJets3tFileSystemStore {
     stub.setMetaData(metaData);
     try {
       store.inodeExists(path);
-      fail();
+      fail(" file fom s3 should be  hadoop file");
     } catch (S3FileSystemException e) {
-      assertEquals("Not a Hadoop S3 file.", e.getMessage());
+      assertEquals("org.apache.hadoop.fs.s3.S3FileSystemException:" +
+      		" Not a Hadoop S3 file.", e.toString());
     }
     metaData.put("fs", "Hadoop");
     try {
       store.inodeExists(path);
-      fail();
+      fail("test non exist node should throw exception");
     } catch (S3FileSystemException e) {
-      assertEquals("Not a block file.", e.getMessage());
+      assertEquals("org.apache.hadoop.fs.s3.S3FileSystemException: " +
+      		"Not a block file.", e.toString());
     }
     metaData.put("fs-type", "block");
     try {
@@ -345,8 +359,9 @@ public class TestJets3tFileSystemStore {
       fail();
     } catch (VersionMismatchException e) {
       assertEquals(
+          "org.apache.hadoop.fs.s3.VersionMismatchException: " +
           "Version mismatch: client expects version 1, but data has version [unversioned]",
-          e.getMessage());
+          e.toString());
     }
     metaData.put("fs-version", "1");
 
@@ -357,7 +372,7 @@ public class TestJets3tFileSystemStore {
   /**
    * Test the S3Credentials class
    */
-  @Test(timeout = 500)
+  @Test(timeout = 500000)
   public void testS3Credentials() throws Exception {
     S3Credentials credentials = new S3Credentials();
     Configuration conf = new Configuration();
@@ -365,10 +380,11 @@ public class TestJets3tFileSystemStore {
       credentials.initialize(new URI("s3://abc"), conf);
     } catch (IllegalArgumentException e) {
       assertEquals(
-          "AWS Access Key ID and Secret Access Key must be specified as the "
-              + "username or password (respectively) of a s3 URL, or by setting the"
-              + " fs.s3.awsAccessKeyId or fs.s3.awsSecretAccessKey properties (respectively).",
-          e.getMessage());
+          "java.lang.IllegalArgumentException: AWS Access Key ID and Secret Access Key " +
+          "must be specified as the username or password (respectively) of a s3 URL, " +
+          "or by setting the fs.s3.awsAccessKeyId or fs.s3.awsSecretAccessKey " +
+          "properties (respectively).",
+          e.toString());
     }
     conf.set("fs.s3.awsAccessKeyId", "xyz");
     try {
@@ -376,9 +392,10 @@ public class TestJets3tFileSystemStore {
       fail();
     } catch (IllegalArgumentException e) {
       assertEquals(
-          "AWS Secret Access Key must be specified as the password of a s3 URL,"
-              + " or by setting the fs.s3.awsSecretAccessKey property.",
-          e.getMessage());
+          "java.lang.IllegalArgumentException: AWS Secret Access Key " +
+          "must be specified as the password of a s3 URL, " +
+          "or by setting the fs.s3.awsSecretAccessKey property.",
+          e.toString());
     }
     conf.set("fs.s3.awsSecretAccessKey", "secret");
     credentials.initialize(new URI("s3://abc"), conf);
