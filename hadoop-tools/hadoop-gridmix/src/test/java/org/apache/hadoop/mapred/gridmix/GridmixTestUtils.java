@@ -7,7 +7,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.MiniMRClientCluster;
-import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
+import org.apache.hadoop.mapred.MiniMRClientClusterBuilder;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +57,7 @@ public class GridmixTestUtils {
         .build();// MiniDFSCluster(conf, 3, true, null);
     dfs = dfsCluster.getFileSystem();
     conf.set(JTConfig.JT_RETIREJOBS, "false");
-    mrvl = MiniMRClientClusterFactory.create(caller, 2, conf);
+    mrvl = new MiniMRClientClusterBuilder(caller, conf).noOfNMs(2).build();
     
     conf = mrvl.getConfig();
     String[] files = conf.getStrings(MRJobConfig.CACHE_FILES);
