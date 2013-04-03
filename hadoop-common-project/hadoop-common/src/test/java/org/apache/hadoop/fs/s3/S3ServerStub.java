@@ -41,6 +41,10 @@ import org.jets3t.service.model.S3Object;
 import org.jets3t.service.model.S3Owner;
 import org.jets3t.service.security.AWSCredentials;
 
+/**
+ * Stub emulates a s3 server an  access to buckets and objects 
+ *
+ */
 public class S3ServerStub extends S3Service {
 
   private static final long serialVersionUID = 4845644480879625579L;
@@ -246,6 +250,7 @@ public class S3ServerStub extends S3Service {
 
   }
 
+  @SuppressWarnings("rawtypes")
   @Override
   protected Map copyObjectImpl(String sourceBucketName, String sourceObjectKey,
       String destinationBucketName, String destinationObjectKey,

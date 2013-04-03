@@ -76,7 +76,7 @@ public class TestJets3tFileSystemStore {
   }
 
   /**
-   * test operations with Block
+   * test an operations with Block
    */
   @Test(timeout = 500)
   public void testBlock() throws Exception {
@@ -124,7 +124,7 @@ public class TestJets3tFileSystemStore {
   }
 
   /**
-   * Test operations with node
+   * Test an operations with node
    */
   @Test(timeout = 500)
   public void testNode() throws Exception {
@@ -205,7 +205,7 @@ public class TestJets3tFileSystemStore {
   }
 
   /**
-   * Test List operations
+   * Test a List operations
    */
   @Test(timeout = 500)
   public void testListSubPaths() throws Exception {
@@ -252,7 +252,7 @@ public class TestJets3tFileSystemStore {
   }
 
   /**
-   * test versions
+   * test a versions
    */
 
   @Test(timeout = 500)
@@ -272,9 +272,8 @@ public class TestJets3tFileSystemStore {
   }
 
   /**
-   * Test operations with S3InputStream
+   * Test an operations with S3InputStream
    * 
-   * @throws Exception
    */
   @Test(timeout = 500)
   public void testS3InputStream() throws Exception {
@@ -309,7 +308,7 @@ public class TestJets3tFileSystemStore {
   }
 
   /**
-   * Test Meta data
+   * Test a meta data
    */
   @Test(timeout = 500)
   public void testMetaData() throws Exception {
@@ -355,7 +354,7 @@ public class TestJets3tFileSystemStore {
   }
 
   /**
-   * Test S3Credentials class
+   * Test the S3Credentials class
    */
   @Test(timeout = 500)
   public void testS3Credentials() throws Exception {
