@@ -79,7 +79,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -594,15 +593,15 @@ public class TestJobHistoryParsing {
     t.testHistoryParsing();
     t.testHistoryParsingForFailedAttempts();
   }
-    /*
-    test clean old history files.  Files should be deleted after 1 week by default.
+    /**
+    *  Test clean old history files.  Files should be deleted after 1 week by default.
      */
-  @Ignore
-//  @Test (timeout=150000)
+  @Test (timeout=15000)
   public void testDeleteFileInfo() throws Exception {
     LOG.info("STARTING testDeleteFileInfo");
     try {
       Configuration conf = new Configuration();
+          
       conf.setClass(
           CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
           MyResolver.class, DNSToSwitchMapping.class);
@@ -615,7 +614,7 @@ public class TestJobHistoryParsing {
       JobId jobId = job.getID();
 
       app.waitForState(job, JobState.SUCCEEDED);
-
+      
       // make sure all events are flushed
        app.waitForState(Service.STATE.STOPPED);
       
@@ -623,6 +622,10 @@ public class TestJobHistoryParsing {
       hfm.init(conf);
       HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
       hfm.initExisting();
+      // wait for move files form the done_intermediate directory to the gone directory 
+      while(fileInfo.isMovePending()){
+        Thread.sleep(300);
+      }
 
       Assert.assertNotNull(hfm.jobListCache.values());
 
@@ -631,17 +634,17 @@ public class TestJobHistoryParsing {
       // check that  fileInfo does not deleted
       Assert.assertFalse(fileInfo.isDeleted());
       // correct live time
- //     hfm.setMaxHistoryAge(-1);
-//      hfm.clean();
+      hfm.setMaxHistoryAge(-1);
+      hfm.clean();
       // should be deleted !
-  //    Assert.assertTrue(fileInfo.isDeleted());
+     Assert.assertTrue("file should be deleted ",fileInfo.isDeleted());
 
     } finally {
       LOG.info("FINISHED testDeleteFileInfo");
     }
   }
-  /*
-  simple test some methods of JobHistory
+  /**
+  * Simple test some methods of JobHistory
    */
   @Test (timeout=20000)
   public void testJobHistoryMethods() throws Exception {
@@ -691,8 +694,9 @@ public class TestJobHistoryParsing {
     }
   }
   
- //   Simple test PartialJob
-  
+  /**
+ *   Simple test PartialJob
+  */
   @Test (timeout=1000)
   public void testPartialJob() throws Exception {
     JobId jobId = new JobIdPBImpl();
