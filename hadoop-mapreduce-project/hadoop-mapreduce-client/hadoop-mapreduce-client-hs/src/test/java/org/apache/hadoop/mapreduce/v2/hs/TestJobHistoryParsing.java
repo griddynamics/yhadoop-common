@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.ByteArrayOutputStream;
-import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -709,7 +708,8 @@ public class TestJobHistoryParsing {
     JobIndexInfo jii = new JobIndexInfo(0L, System.currentTimeMillis(), "user",
         "jobName", jobId, 3, 2, "JobStatus");
     PartialJob test = new PartialJob(jii, jobId);
-    assertEquals(1.0f, test.getProgress(), 0.001);
+    
+    Assert.assertEquals(1.0f, test.getProgress(), 0.001f);
     assertNull(test.getAllCounters());
     assertNull(test.getTasks());
     assertNull(test.getTasks(TaskType.MAP));
