@@ -1192,7 +1192,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertEquals("Source exists", srcExists, exists(fc, src));
     Assert.assertEquals("Destination exists", dstExists, exists(fc, dst));
   }
-  
+
   private boolean containsPath(Path path, FileStatus[] filteredPaths)
     throws IOException {
     for(int i = 0; i < filteredPaths.length; i ++) { 
@@ -1202,14 +1202,14 @@ public abstract class FileContextMainOperationsBaseTest  {
       }
     return false;
  }
-  
+
   @Test
   public void testOpen2() throws IOException {
     final Path rootPath = getTestRootPath(fc, "test");
     //final Path rootPath = getAbsoluteTestRootPath(fc);
     final Path path = new Path(rootPath, "zoo");
     createFile(path);
-    final long length = fc.getFileStatus(path).getLen(); 
+    final long length = fc.getFileStatus(path).getLen();
     FSDataInputStream fsdis = fc.open(path, 2048);
     try {
       byte[] bb = new byte[(int)length];
@@ -1219,12 +1219,12 @@ public abstract class FileContextMainOperationsBaseTest  {
       fsdis.close();
     }
   }
-  
+
   @Test
   public void testSetVerifyChecksum() throws IOException {
     final Path rootPath = getTestRootPath(fc, "test");
     final Path path = new Path(rootPath, "zoo");
-    
+
     FSDataOutputStream out = fc.create(path, EnumSet.of(CREATE),
         Options.CreateOpts.createParent());
     try {
@@ -1241,7 +1241,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     FileStatus fileStatus = fc.getFileStatus(path);
     final long len = fileStatus.getLen();
     assertTrue(len == data.length);
-    byte[] bb = new byte[(int)len]; 
+    byte[] bb = new byte[(int)len];
     FSDataInputStream fsdis = fc.open(path);
     try {
       fsdis.read(bb);
@@ -1250,7 +1250,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     }
     assertArrayEquals(data, bb);
   }
-  
+
   @Test
   public void testListCorruptFileBlocks() throws IOException {
     final Path rootPath = getTestRootPath(fc, "test");
@@ -1283,9 +1283,9 @@ public abstract class FileContextMainOperationsBaseTest  {
       }
     }
   }
-  
+
   protected abstract boolean listCorruptedBlocksSupported();
-  
+
   @Test
   public void testDeleteOnExitUnexisting() throws IOException {
     final Path rootPath = getTestRootPath(fc, "test");
@@ -1298,11 +1298,11 @@ public abstract class FileContextMainOperationsBaseTest  {
   @Test
   public void testFileContextStatistics() throws IOException {
     FileContext.clearStatistics();
-    
+
     final Path rootPath = getTestRootPath(fc, "test");
     final Path path = new Path(rootPath, "zoo");
     createFile(path);
-    byte[] bb = new byte[data.length]; 
+    byte[] bb = new byte[data.length];
     FSDataInputStream fsdis = fc.open(path);
     try {
       fsdis.read(bb);
@@ -1310,13 +1310,13 @@ public abstract class FileContextMainOperationsBaseTest  {
       fsdis.close();
     }
     assertArrayEquals(data, bb);
-    
+
     FileContext.printStatistics();
   }
-  
+
   @Test
   /*
-   * Test method 
+   * Test method
    *  org.apache.hadoop.fs.FileContext.getFileContext(AbstractFileSystem)
    */
   public void testGetFileContext1() throws IOException {
@@ -1332,5 +1332,5 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path pathResolved = fc2.resolvePath(path);
     assertEquals(pathResolved.toUri().getPath(), path.toUri().getPath());
   }
-  
+
 }
