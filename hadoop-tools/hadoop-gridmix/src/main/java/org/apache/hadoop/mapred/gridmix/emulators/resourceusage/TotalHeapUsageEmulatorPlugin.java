@@ -129,7 +129,8 @@ implements ResourceUsageEmulatorPlugin {
   public static class DefaultHeapUsageEmulator 
   implements HeapUsageEmulatorCore {
     // store the unit loads in a list
-    protected static final ArrayList<Object> heapSpace = new ArrayList<Object>();
+    protected static final ArrayList<Object> heapSpace =
+        new ArrayList<Object>();
     
     /**
      * Increase heap usage by current process by the given amount.
