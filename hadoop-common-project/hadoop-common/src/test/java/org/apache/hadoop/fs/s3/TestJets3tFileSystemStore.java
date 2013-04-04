@@ -242,7 +242,7 @@ public class TestJets3tFileSystemStore {
     stub.setThrowException(true);
     try {
       store.listSubPaths(new Path("/"));
-      fail();
+      fail("Patch can not start with '/' ");
     } catch (Exception e) {
       assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
       		"Exception XML Error Message: <Error><Code>2</Code>" +
@@ -251,7 +251,7 @@ public class TestJets3tFileSystemStore {
     }
     try {
       store.listDeepSubPaths(new Path("/"));
-      fail();
+      fail("Patch can not start with '/' ");
     } catch (Exception e) {
       assertEquals("org.apache.hadoop.fs.s3.S3Exception: org.jets3t.service.S3ServiceException: " +
       		"Exception XML Error Message: <Error><Code>2</Code><Message>List objects exception</Message>" +
@@ -340,7 +340,7 @@ public class TestJets3tFileSystemStore {
     stub.setMetaData(metaData);
     try {
       store.inodeExists(path);
-      fail(" file fom s3 should be  hadoop file");
+      fail("file fom s3 should be  hadoop file");
     } catch (S3FileSystemException e) {
       assertEquals("org.apache.hadoop.fs.s3.S3FileSystemException:" +
       		" Not a Hadoop S3 file.", e.toString());
@@ -348,7 +348,7 @@ public class TestJets3tFileSystemStore {
     metaData.put("fs", "Hadoop");
     try {
       store.inodeExists(path);
-      fail("test non exist node should throw exception");
+      fail("test non exist node should throw an exception");
     } catch (S3FileSystemException e) {
       assertEquals("org.apache.hadoop.fs.s3.S3FileSystemException: " +
       		"Not a block file.", e.toString());
@@ -356,7 +356,7 @@ public class TestJets3tFileSystemStore {
     metaData.put("fs-type", "block");
     try {
       store.inodeExists(path);
-      fail();
+      fail("metadata should have the property 'fs-version' and this property should have value 1");
     } catch (VersionMismatchException e) {
       assertEquals(
           "org.apache.hadoop.fs.s3.VersionMismatchException: " +
@@ -378,6 +378,7 @@ public class TestJets3tFileSystemStore {
     Configuration conf = new Configuration();
     try {
       credentials.initialize(new URI("s3://abc"), conf);
+      fail("cinitialize should throw an exception if configuration does not have the  property 'fs.s3.awsSecretAccessKey'");
     } catch (IllegalArgumentException e) {
       assertEquals(
           "java.lang.IllegalArgumentException: AWS Access Key ID and Secret Access Key " +
@@ -389,7 +390,7 @@ public class TestJets3tFileSystemStore {
     conf.set("fs.s3.awsAccessKeyId", "xyz");
     try {
       credentials.initialize(new URI("s3://abc"), conf);
-      fail();
+      fail("initialize should throw an exception if configuration does not have the property 'fs.s3.awsSecretAccessKey'");
     } catch (IllegalArgumentException e) {
       assertEquals(
           "java.lang.IllegalArgumentException: AWS Secret Access Key " +
