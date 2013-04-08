@@ -21,29 +21,18 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.Random;
-import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
-import java.util.zip.GZIPOutputStream;
-import java.util.zip.Inflater;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DecompressorStream;
-import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestZlibCompressorDecompressor {
@@ -93,7 +82,7 @@ public class TestZlibCompressorDecompressor {
         fail("testZlibCompressorDecompressorWithConfiguration ex error " + ex);
       }
     } else {
-      assertFalse("ZlibFactory is using native libs against request",
+      assertTrue("ZlibFactory is using native libs against request",
           ZlibFactory.isNativeZlibLoaded(conf));
     }
   }
@@ -129,7 +118,7 @@ public class TestZlibCompressorDecompressor {
       compressor.reset();
       decompressor.reset();
     } catch (IOException ex) {
-      fail("testZlibCompressDecompress ex !!!");
+      fail("testZlibCompressDecompress ex !!!" + ex);
     }
   }
 
@@ -147,7 +136,7 @@ public class TestZlibCompressorDecompressor {
       checkSetDictionaryArrayIndexOutOfBoundsException(zlibDecompressor);
       checkSetDictionaryArrayIndexOutOfBoundsException(zlibCompressor);
     } else {
-      assertFalse("ZlibFactory is using native libs against request",
+      assertTrue("ZlibFactory is using native libs against request",
           ZlibFactory.isNativeZlibLoaded(conf));
     }
   }

@@ -18,8 +18,6 @@
 package org.apache.hadoop.io.compress;
 
 import static org.junit.Assert.fail;
-import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.Random;
 import org.apache.hadoop.io.compress.CompressDecompressTester.CompressionTestStrategy;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
@@ -31,11 +29,8 @@ import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibDecompressor;
-import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteProcessor;
 
 public class TestCompressorDecompressor {
 
@@ -97,19 +92,17 @@ public class TestCompressorDecompressor {
       fail("testCompressorDecompressorWithExeedBufferLimit error !!!" + ex);
     }
   }
-
+  
   static final class BytesGenerator {
+    private static final Random rnd = new Random(12345L);
+    
     private BytesGenerator() {
     }
 
-    private static final byte[] CACHE = new byte[] { 0x0, 0x1, 0x2, 0x3, 0x4,
-        0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
-    private static final Random rnd = new Random(12345L);
-
     public static byte[] get(int size) {
-      byte[] array = (byte[]) Array.newInstance(byte.class, size);
+      byte[] array = new byte[size];
       for (int i = 0; i < size; i++)
-        array[i] = CACHE[rnd.nextInt(CACHE.length - 1)];
+        array[i] = (byte) rnd.nextInt(16);
       return array;
     }
   }

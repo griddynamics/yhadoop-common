@@ -59,26 +59,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
   private ImmutableSet<CompressionTestStrategy> stateges = ImmutableSet.of();
 
   private PreAssertionTester<T, E> assertionDelegate;
-
-  private static final Visitor ASSERTION_VISITOR = new Visitor() {
-
-    public boolean visit(SnappyCompressor compressor) {
-      return (isNativeSnappyLoadable());
-    }
-
-    public boolean visit(ZlibCompressor compressor) {
-      return NativeCodeLoader.isNativeCodeLoaded();
-    }
-
-    public boolean visit(Lz4Compressor compressor) {
-      return NativeCodeLoader.isNativeCodeLoaded();
-    }
-
-    public boolean visit(BuiltInZlibDeflater compressor) {
-      return NativeCodeLoader.isNativeCodeLoaded();
-    }
-  };
-
+  
   public CompressDecompressTester(byte[] originalRawData) {
     this.originalRawData = Arrays.copyOf(originalRawData,
         originalRawData.length);
@@ -91,7 +72,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
             .builder();
 
         for (TesterPair<T, E> pair : pairs) {
-          if (pair.accept(ASSERTION_VISITOR))
+          if (isAvailable(pair))
             builder.add(pair);
         }
         return builder.build();
@@ -509,32 +490,33 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     public String getName() {
       return name;
     }
-
-    public boolean accept(Visitor visitor) {
-      if (compressor.getClass().isAssignableFrom(Lz4Compressor.class))
-        return visitor.visit((Lz4Compressor) getCompressor());
-      else if (compressor.getClass()
-          .isAssignableFrom(BuiltInZlibDeflater.class))
-        return visitor.visit((BuiltInZlibDeflater) getCompressor());
-      else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class))
-        return visitor.visit((ZlibCompressor) getCompressor());
-      else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class))
-        return visitor.visit((SnappyCompressor) getCompressor());
-      else
-        return false;
-    }
   }
+  
+  /**
+   * Method for compressor availability check
+   */
+  private static <T extends Compressor, E extends Decompressor> boolean isAvailable(TesterPair<T, E> pair) {
+    Compressor compressor = pair.compressor;
 
-  interface Visitor {
-    boolean visit(ZlibCompressor compressor);
+    if (compressor.getClass().isAssignableFrom(Lz4Compressor.class)
+            && (NativeCodeLoader.isNativeCodeLoaded()))
+      return true;
 
-    boolean visit(Lz4Compressor compressor);
+    else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class)
+            && NativeCodeLoader.isNativeCodeLoaded())
+      return true;
 
-    boolean visit(BuiltInZlibDeflater compressor);
+    else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)
+            && NativeCodeLoader.isNativeCodeLoaded())
+      return true;
 
-    boolean visit(SnappyCompressor compressor);
+    else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)
+            && isNativeSnappyLoadable())
+      return true;
+    
+    return false;      
   }
-
+  
   abstract static class TesterCompressionStrategy {
 
     protected final Logger logger = Logger.getLogger(getClass());
@@ -542,5 +524,4 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     abstract void assertCompression(String name, Compressor compressor,
         Decompressor decompressor, byte[] originalRawData);
   }
-
 }
