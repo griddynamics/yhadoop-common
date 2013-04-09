@@ -33,6 +33,7 @@ import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
@@ -41,10 +42,12 @@ import org.junit.Test;
 import static org.junit.Assume.*;
 
 public class TestLz4CompressorDecompressor {
+  
+  private static final Random rnd = new Random(12345l);
 
   @Before
   public void before() {
-    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    assumeTrue(Lz4Codec.isNativeCodeLoaded());
   }
 
   //test on NullPointerException in {@code compressor.setInput()} 
@@ -108,7 +111,7 @@ public class TestLz4CompressorDecompressor {
   public void testCompressorCompressNullPointerException() {
     try {
       Lz4Compressor compressor = new Lz4Compressor();
-      byte[] bytes = BytesGenerator.get(1024 * 6);
+      byte[] bytes = generate(1024 * 6);
       compressor.setInput(bytes, 0, bytes.length);
       compressor.compress(null, 0, 0);
       fail("testCompressorCompressNullPointerException error !!!");
@@ -124,7 +127,7 @@ public class TestLz4CompressorDecompressor {
   public void testDecompressorCompressNullPointerException() {
     try {
       Lz4Decompressor decompressor = new Lz4Decompressor();
-      byte[] bytes = BytesGenerator.get(1024 * 6);
+      byte[] bytes = generate(1024 * 6);
       decompressor.setInput(bytes, 0, bytes.length);
       decompressor.decompress(null, 0, 0);
       fail("testDecompressorCompressNullPointerException error !!!");
@@ -140,7 +143,7 @@ public class TestLz4CompressorDecompressor {
   public void testCompressorCompressAIOBException() {
     try {
       Lz4Compressor compressor = new Lz4Compressor();
-      byte[] bytes = BytesGenerator.get(1024 * 6);
+      byte[] bytes = generate(1024 * 6);
       compressor.setInput(bytes, 0, bytes.length);
       compressor.compress(new byte[] {}, 0, -1);
       fail("testCompressorCompressAIOBException error !!!");
@@ -156,7 +159,7 @@ public class TestLz4CompressorDecompressor {
   public void testDecompressorCompressAIOBException() {
     try {
       Lz4Decompressor decompressor = new Lz4Decompressor();
-      byte[] bytes = BytesGenerator.get(1024 * 6);
+      byte[] bytes = generate(1024 * 6);
       decompressor.setInput(bytes, 0, bytes.length);
       decompressor.decompress(new byte[] {}, 0, -1);
       fail("testDecompressorCompressAIOBException error !!!");
@@ -173,7 +176,7 @@ public class TestLz4CompressorDecompressor {
     int BYTES_SIZE = 1024 * 64 + 1;
     try {
       Lz4Compressor compressor = new Lz4Compressor();
-      byte[] bytes = BytesGenerator.get(BYTES_SIZE);
+      byte[] bytes = generate(BYTES_SIZE);
       assertTrue("needsInput error !!!", compressor.needsInput());
       compressor.setInput(bytes, 0, bytes.length);
       byte[] emptyBytes = new byte[BYTES_SIZE];
@@ -190,7 +193,7 @@ public class TestLz4CompressorDecompressor {
   @Test
   public void testCompressDecompress() {
     int BYTE_SIZE = 1024 * 54;
-    byte[] bytes = BytesGenerator.get(BYTE_SIZE);
+    byte[] bytes = generate(BYTE_SIZE);
     Lz4Compressor compressor = new Lz4Compressor();
     try {
       compressor.setInput(bytes, 0, bytes.length);
@@ -265,7 +268,7 @@ public class TestLz4CompressorDecompressor {
     DataOutputStream deflateOut = null;
     DataInputStream inflateIn = null;
     int BYTE_SIZE = 1024 * 100;
-    byte[] bytes = BytesGenerator.get(BYTE_SIZE);
+    byte[] bytes = generate(BYTE_SIZE);
     int bufferSize = 262144;
     int compressionOverhead = (bufferSize / 6) + 32;
     try {
@@ -305,19 +308,10 @@ public class TestLz4CompressorDecompressor {
     }
   }  
 
-  static final class BytesGenerator {
-    private BytesGenerator() {
-    }
-
-    private static final byte[] CACHE = new byte[] { 0x0, 0x1, 0x2, 0x3, 0x4,
-        0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
-    private static final Random rnd = new Random(12345l);
-
-    public static byte[] get(int size) {
-      byte[] array = (byte[]) Array.newInstance(byte.class, size);
-      for (int i = 0; i < size; i++)
-        array[i] = CACHE[rnd.nextInt(CACHE.length - 1)];
-      return array;
-    }
+  public static byte[] generate(int size) {
+    byte[] array = new byte[size];
+    for (int i = 0; i < size; i++)
+      array[i] = (byte)rnd.nextInt(16);
+    return array;
   }
 }
