@@ -23,10 +23,11 @@ import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -35,7 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 /**
  * Interface to an Application Attempt in the Resource Manager.
  * A {@link RMApp} can have multiple app attempts based on
- * {@link YarnConfiguration#RM_AM_MAX_RETRIES}. For specific
+ * {@link YarnConfiguration#RM_AM_MAX_ATTEMPTS}. For specific
  * implementation take a look at {@link RMAppAttemptImpl}.
  */
 public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
@@ -91,7 +92,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * The token required by the clients to talk to the application attempt
    * @return the token required by the clients to talk to the application attempt
    */
-  String getClientToken();
+  ClientToken getClientToken();
 
   /**
    * Diagnostics information for the application attempt.

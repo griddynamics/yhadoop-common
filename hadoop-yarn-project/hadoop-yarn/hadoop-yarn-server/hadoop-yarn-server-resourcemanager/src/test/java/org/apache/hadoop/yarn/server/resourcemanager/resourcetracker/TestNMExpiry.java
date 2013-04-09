@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
@@ -108,7 +109,7 @@ public class TestNMExpiry {
               .newRecordInstance(NodeHeartbeatRequest.class);
           request.setNodeStatus(nodeStatus);
           lastResponseID = resourceTrackerService.nodeHeartbeat(request)
-              .getHeartbeatResponse().getResponseId();
+              .getResponseId();
 
           Thread.sleep(1000);
         } catch(Exception e) {
@@ -165,7 +166,7 @@ public class TestNMExpiry {
     request3.setHttpPort(0);
     request3.setResource(capability);
     resourceTrackerService
-        .registerNodeManager(request3).getRegistrationResponse();
+        .registerNodeManager(request3);
 
     /* test to see if hostanme 3 does not expire */
     stopT = false;

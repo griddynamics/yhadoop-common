@@ -50,7 +50,10 @@ public class TestHostnameFilter extends HTestCase {
       @Override
       public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse)
         throws IOException, ServletException {
-        assertTrue(HostnameFilter.get().contains("localhost"));
+        // Hostname was set to "localhost", but may get resolved automatically to
+        // "127.0.0.1" depending on OS.
+        assertTrue(HostnameFilter.get().contains("localhost") ||
+          HostnameFilter.get().contains("127.0.0.1"));
         invoked.set(true);
       }
     };
@@ -64,4 +67,30 @@ public class TestHostnameFilter extends HTestCase {
     filter.destroy();
   }
 
+  @Test
+  public void testMissingHostname() throws Exception {
+    ServletRequest request = Mockito.mock(ServletRequest.class);
+    Mockito.when(request.getRemoteAddr()).thenReturn(null);
+
+    ServletResponse response = Mockito.mock(ServletResponse.class);
+
+    final AtomicBoolean invoked = new AtomicBoolean();
+
+    FilterChain chain = new FilterChain() {
+      @Override
+      public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse)
+        throws IOException, ServletException {
+        assertTrue(HostnameFilter.get().contains("???"));
+        invoked.set(true);
+      }
+    };
+
+    Filter filter = new HostnameFilter();
+    filter.init(null);
+    assertNull(HostnameFilter.get());
+    filter.doFilter(request, response, chain);
+    assertTrue(invoked.get());
+    assertNull(HostnameFilter.get());
+    filter.destroy();
+  }
 }

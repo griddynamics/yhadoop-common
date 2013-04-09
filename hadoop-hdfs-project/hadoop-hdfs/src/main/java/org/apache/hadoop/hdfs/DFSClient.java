@@ -41,6 +41,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPAC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
@@ -150,6 +152,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 
@@ -211,6 +214,7 @@ public class DFSClient implements java.io.Closeable {
     final int socketTimeout;
     final int socketCacheCapacity;
     final long socketCacheExpiry;
+    final long excludedNodesCacheExpiry;
     /** Wait time window (in msec) if BlockMissingException is caught */
     final int timeWindow;
     final int nCachedConnRetry;
@@ -261,6 +265,9 @@ public class DFSClient implements java.io.Closeable {
           DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT);
       socketCacheExpiry = conf.getLong(DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
           DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT);
+      excludedNodesCacheExpiry = conf.getLong(
+          DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL,
+          DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT);
       prefetchSize = conf.getLong(DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
           10 * defaultBlockSize);
       timeWindow = conf
@@ -411,6 +418,7 @@ public class DFSClient implements java.io.Closeable {
           "null URI");
       NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo =
         NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class);
+      
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }
@@ -619,10 +627,10 @@ public class DFSClient implements java.io.Closeable {
       } catch (IOException e) {
         // Abort if the lease has already expired. 
         final long elapsed = Time.now() - getLastLeaseRenewal();
-        if (elapsed > HdfsConstants.LEASE_SOFTLIMIT_PERIOD) {
+        if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
               + (elapsed/1000) + " seconds (>= soft-limit ="
-              + (HdfsConstants.LEASE_SOFTLIMIT_PERIOD/1000) + " seconds.) "
+              + (HdfsConstants.LEASE_HARDLIMIT_PERIOD/1000) + " seconds.) "
               + "Closing all files being written ...", e);
           closeAllFilesBeingWritten(true);
         } else {
@@ -790,12 +798,13 @@ public class DFSClient implements java.io.Closeable {
   /**
    * Get {@link BlockReader} for short circuited local reads.
    */
-  static BlockReader getLocalBlockReader(Configuration conf,
-      String src, ExtendedBlock blk, Token<BlockTokenIdentifier> accessToken,
-      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock,
-      boolean connectToDnViaHostname) throws InvalidToken, IOException {
+  static BlockReader getLocalBlockReader(UserGroupInformation ugi,
+      Configuration conf, String src, ExtendedBlock blk,
+      Token<BlockTokenIdentifier> accessToken, DatanodeInfo chosenNode,
+      int socketTimeout, long offsetIntoBlock, boolean connectToDnViaHostname)
+      throws InvalidToken, IOException {
     try {
-      return BlockReaderLocal.newBlockReader(conf, src, blk, accessToken,
+      return BlockReaderLocal.newBlockReader(ugi, conf, src, blk, accessToken,
           chosenNode, socketTimeout, offsetIntoBlock, blk.getNumBytes()
               - offsetIntoBlock, connectToDnViaHostname);
     } catch (RemoteException re) {
@@ -1535,7 +1544,22 @@ public class DFSClient implements java.io.Closeable {
                                      UnresolvedPathException.class);
     }
   }
-
+  
+  /**
+   * Close status of a file
+   * @return true if file is already closed
+   */
+  public boolean isFileClosed(String src) throws IOException{
+    checkOpen();
+    try {
+      return namenode.isFileClosed(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+  
   /**
    * Get the file info for a specific file or directory. If src
    * refers to a symlink then the FileStatus of the link is returned.
@@ -1562,7 +1586,7 @@ public class DFSClient implements java.io.Closeable {
    */
   public MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
     checkOpen();
-    return getFileChecksum(src, namenode, socketFactory,
+    return getFileChecksum(src, clientName, namenode, socketFactory,
         dfsClientConf.socketTimeout, getDataEncryptionKey(),
         dfsClientConf.connectToDnViaHostname);
   }
@@ -1605,9 +1629,16 @@ public class DFSClient implements java.io.Closeable {
   /**
    * Get the checksum of a file.
    * @param src The file path
+   * @param clientName the name of the client requesting the checksum.
+   * @param namenode the RPC proxy for the namenode
+   * @param socketFactory to create sockets to connect to DNs
+   * @param socketTimeout timeout to use when connecting and waiting for a response
+   * @param encryptionKey the key needed to communicate with DNs in this cluster
+   * @param connectToDnViaHostname {@link #connectToDnViaHostname()}
    * @return The checksum 
    */
-  public static MD5MD5CRC32FileChecksum getFileChecksum(String src,
+  static MD5MD5CRC32FileChecksum getFileChecksum(String src,
+      String clientName,
       ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout,
       DataEncryptionKey encryptionKey, boolean connectToDnViaHostname)
       throws IOException {
@@ -1642,32 +1673,16 @@ public class DFSClient implements java.io.Closeable {
       final int timeout = 3000 * datanodes.length + socketTimeout;
       boolean done = false;
       for(int j = 0; !done && j < datanodes.length; j++) {
-        Socket sock = null;
         DataOutputStream out = null;
         DataInputStream in = null;
         
         try {
           //connect to a datanode
-          sock = socketFactory.createSocket();
-          String dnAddr = datanodes[j].getXferAddr(connectToDnViaHostname);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Connecting to datanode " + dnAddr);
-          }
-          NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
-          sock.setSoTimeout(timeout);
-
-          OutputStream unbufOut = NetUtils.getOutputStream(sock);
-          InputStream unbufIn = NetUtils.getInputStream(sock);
-          if (encryptionKey != null) {
-            IOStreamPair encryptedStreams =
-                DataTransferEncryptor.getEncryptedStreams(
-                    unbufOut, unbufIn, encryptionKey);
-            unbufOut = encryptedStreams.out;
-            unbufIn = encryptedStreams.in;
-          }
-          out = new DataOutputStream(new BufferedOutputStream(unbufOut,
+          IOStreamPair pair = connectToDN(socketFactory, connectToDnViaHostname,
+              encryptionKey, datanodes[j], timeout);
+          out = new DataOutputStream(new BufferedOutputStream(pair.out,
               HdfsConstants.SMALL_BUFFER_SIZE));
-          in = new DataInputStream(unbufIn);
+          in = new DataInputStream(pair.in);
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("write to " + datanodes[j] + ": "
@@ -1680,19 +1695,8 @@ public class DFSClient implements java.io.Closeable {
             BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
 
           if (reply.getStatus() != Status.SUCCESS) {
-            if (reply.getStatus() == Status.ERROR_ACCESS_TOKEN
-                && i > lastRetriedIndex) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Got access token error in response to OP_BLOCK_CHECKSUM "
-                    + "for file " + src + " for block " + block
-                    + " from datanode " + datanodes[j]
-                    + ". Will retry the block once.");
-              }
-              lastRetriedIndex = i;
-              done = true; // actually it's not done; but we'll retry
-              i--; // repeat at i-th block
-              refetchBlocks = true;
-              break;
+            if (reply.getStatus() == Status.ERROR_ACCESS_TOKEN) {
+              throw new InvalidBlockTokenException();
             } else {
               throw new IOException("Bad response " + reply + " for block "
                   + block + " from datanode " + datanodes[j]);
@@ -1724,8 +1728,18 @@ public class DFSClient implements java.io.Closeable {
           md5.write(md5out);
           
           // read crc-type
-          final DataChecksum.Type ct = PBHelper.convert(checksumData
-              .getCrcType());
+          final DataChecksum.Type ct;
+          if (checksumData.hasCrcType()) {
+            ct = PBHelper.convert(checksumData
+                .getCrcType());
+          } else {
+            LOG.debug("Retrieving checksum from an earlier-version DataNode: " +
+                      "inferring checksum by reading first byte");
+            ct = inferChecksumTypeByReading(
+                clientName, socketFactory, socketTimeout, lb, datanodes[j],
+                encryptionKey, connectToDnViaHostname);
+          }
+
           if (i == 0) { // first block
             crcType = ct;
           } else if (crcType != DataChecksum.Type.MIXED
@@ -1743,12 +1757,25 @@ public class DFSClient implements java.io.Closeable {
             }
             LOG.debug("got reply from " + datanodes[j] + ": md5=" + md5);
           }
+        } catch (InvalidBlockTokenException ibte) {
+          if (i > lastRetriedIndex) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Got access token error in response to OP_BLOCK_CHECKSUM "
+                  + "for file " + src + " for block " + block
+                  + " from datanode " + datanodes[j]
+                  + ". Will retry the block once.");
+            }
+            lastRetriedIndex = i;
+            done = true; // actually it's not done; but we'll retry
+            i--; // repeat at i-th block
+            refetchBlocks = true;
+            break;
+          }
         } catch (IOException ie) {
           LOG.warn("src=" + src + ", datanodes["+j+"]=" + datanodes[j], ie);
         } finally {
           IOUtils.closeStream(in);
           IOUtils.closeStream(out);
-          IOUtils.closeSocket(sock);        
         }
       }
 
@@ -1777,6 +1804,90 @@ public class DFSClient implements java.io.Closeable {
         // we should never get here since the validity was checked
         // when getCrcType() was called above.
         return null;
+    }
+  }
+
+  /**
+   * Connect to the given datanode's datantrasfer port, and return
+   * the resulting IOStreamPair. This includes encryption wrapping, etc.
+   */
+  private static IOStreamPair connectToDN(
+      SocketFactory socketFactory, boolean connectToDnViaHostname,
+      DataEncryptionKey encryptionKey, DatanodeInfo dn, int timeout)
+      throws IOException
+  {
+    boolean success = false;
+    Socket sock = null;
+    try {
+      sock = socketFactory.createSocket();
+      String dnAddr = dn.getXferAddr(connectToDnViaHostname);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Connecting to datanode " + dnAddr);
+      }
+      NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
+      sock.setSoTimeout(timeout);
+  
+      OutputStream unbufOut = NetUtils.getOutputStream(sock);
+      InputStream unbufIn = NetUtils.getInputStream(sock);
+      IOStreamPair ret;
+      if (encryptionKey != null) {
+        ret = DataTransferEncryptor.getEncryptedStreams(
+                unbufOut, unbufIn, encryptionKey);
+      } else {
+        ret = new IOStreamPair(unbufIn, unbufOut);        
+      }
+      success = true;
+      return ret;
+    } finally {
+      if (!success) {
+        IOUtils.closeSocket(sock);
+      }
+    }
+  }
+  
+  /**
+   * Infer the checksum type for a replica by sending an OP_READ_BLOCK
+   * for the first byte of that replica. This is used for compatibility
+   * with older HDFS versions which did not include the checksum type in
+   * OpBlockChecksumResponseProto.
+   *
+   * @param in input stream from datanode
+   * @param out output stream to datanode
+   * @param lb the located block
+   * @param clientName the name of the DFSClient requesting the checksum
+   * @param dn the connected datanode
+   * @return the inferred checksum type
+   * @throws IOException if an error occurs
+   */
+  private static Type inferChecksumTypeByReading(
+      String clientName, SocketFactory socketFactory, int socketTimeout,
+      LocatedBlock lb, DatanodeInfo dn,
+      DataEncryptionKey encryptionKey, boolean connectToDnViaHostname)
+      throws IOException {
+    IOStreamPair pair = connectToDN(socketFactory, connectToDnViaHostname,
+        encryptionKey, dn, socketTimeout);
+
+    try {
+      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(pair.out,
+          HdfsConstants.SMALL_BUFFER_SIZE));
+      DataInputStream in = new DataInputStream(pair.in);
+  
+      new Sender(out).readBlock(lb.getBlock(), lb.getBlockToken(), clientName, 0, 1, true);
+      final BlockOpResponseProto reply =
+          BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
+      
+      if (reply.getStatus() != Status.SUCCESS) {
+        if (reply.getStatus() == Status.ERROR_ACCESS_TOKEN) {
+          throw new InvalidBlockTokenException();
+        } else {
+          throw new IOException("Bad response " + reply + " trying to read "
+              + lb.getBlock() + " from datanode " + dn);
+        }
+      }
+      
+      return PBHelper.convert(reply.getReadOpChecksumInfo().getChecksum().getType());
+    } finally {
+      IOUtils.cleanup(null, pair.in, pair.out);
     }
   }
 
@@ -2135,6 +2246,12 @@ public class DFSClient implements java.io.Closeable {
   }
 
   void disableShortCircuit() {
+    LOG.info("Short circuit is disabled");
     shortCircuitLocalReads = false;
+  }
+  
+  @VisibleForTesting
+  boolean getShortCircuitLocalReads() {
+    return shortCircuitLocalReads;
   }
 }

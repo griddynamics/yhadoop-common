@@ -59,8 +59,13 @@ message AllocateRequestProto {
 }
 
 message AllocateResponseProto {
-  optional AMResponseProto AM_response = 1;
-  optional int32 num_cluster_nodes = 2;
+  optional bool reboot = 1;
+  optional int32 response_id = 2;
+  repeated ContainerProto allocated_containers = 3;
+  repeated ContainerStatusProto completed_container_statuses = 4;
+  optional ResourceProto limit = 5;
+  repeated NodeReportProto updated_nodes = 6;
+  optional int32 num_cluster_nodes = 7;
 }
 
 
@@ -139,30 +144,6 @@ message GetQueueUserAclsInfoResponseProto {
   repeated QueueUserACLInfoProto queueUserAcls = 1;
 }
 
-
-message GetDelegationTokenRequestProto {
-  optional string renewer = 1; 
-}
-
-message GetDelegationTokenResponseProto {
-  optional hadoop.common.TokenProto application_token = 1;
-}
-
-message RenewDelegationTokenRequestProto {
-  required hadoop.common.TokenProto delegation_token = 1;
-}
-
-message RenewDelegationTokenResponseProto {
-  required int64 next_expiry_ts = 1;
-}
-
-message CancelDelegationTokenRequestProto {
-  required hadoop.common.TokenProto delegation_token = 1;
-}
-
-message CancelDelegationTokenResponseProto {
-}
-  
 
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////

@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -275,7 +274,7 @@ public class AppSchedulable extends Schedulable {
       // The desired container won't fit here, so reserve
       reserve(application, priority, node, container, reserved);
 
-      return Resources.none();
+      return FairScheduler.CONTAINER_RESERVED;
     }
   }
 
@@ -307,20 +306,27 @@ public class AppSchedulable extends Schedulable {
     // (not scheduled) in order to promote better locality.
     synchronized (app) {
       for (Priority priority : prioritiesToTry) {
+        if (app.getTotalRequiredResources(priority) <= 0) {
+          continue;
+        }
+        
         app.addSchedulingOpportunity(priority);
+
+        ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
+            node.getRackName());
+        ResourceRequest localRequest = app.getResourceRequest(priority,
+            node.getHostName());
+        
         NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
             scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
             scheduler.getRackLocalityThreshold());
-
-        ResourceRequest localRequest = app.getResourceRequest(priority,
-            node.getHostName());
-        if (localRequest != null && localRequest.getNumContainers() != 0) {
+        
+        if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
+            && localRequest != null && localRequest.getNumContainers() != 0) {
           return assignContainer(node, app, priority,
               localRequest, NodeType.NODE_LOCAL, reserved);
         }
 
-        ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
-            node.getRackName());
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
             && (allowedLocality.equals(NodeType.RACK_LOCAL) ||
                 allowedLocality.equals(NodeType.OFF_SWITCH))) {
@@ -329,7 +335,7 @@ public class AppSchedulable extends Schedulable {
         }
 
         ResourceRequest offSwitchRequest = app.getResourceRequest(priority,
-            RMNode.ANY);
+            ResourceRequest.ANY);
         if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
             && allowedLocality.equals(NodeType.OFF_SWITCH)) {
           return assignContainer(node, app, priority, offSwitchRequest,

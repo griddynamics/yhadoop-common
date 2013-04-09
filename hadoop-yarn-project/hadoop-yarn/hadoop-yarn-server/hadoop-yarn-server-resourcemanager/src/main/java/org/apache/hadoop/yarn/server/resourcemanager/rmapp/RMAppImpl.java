@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -49,11 +50,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -82,12 +83,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final String queue;
   private final String name;
   private final ApplicationSubmissionContext submissionContext;
-  private final String clientTokenStr;
   private final Dispatcher dispatcher;
   private final YarnScheduler scheduler;
   private final ApplicationMasterService masterService;
   private final StringBuilder diagnostics = new StringBuilder();
-  private final int maxRetries;
+  private final int maxAppAttempts;
   private final ReadLock readLock;
   private final WriteLock writeLock;
   private final Map<ApplicationAttemptId, RMAppAttempt> attempts
@@ -213,9 +213,9 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
-      ApplicationSubmissionContext submissionContext, String clientTokenStr,
-      YarnScheduler scheduler, ApplicationMasterService masterService, 
-      long submitTime) {
+      ApplicationSubmissionContext submissionContext,
+      YarnScheduler scheduler,
+      ApplicationMasterService masterService, long submitTime) {
 
     this.applicationId = applicationId;
     this.name = name;
@@ -226,14 +226,24 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.user = user;
     this.queue = queue;
     this.submissionContext = submissionContext;
-    this.clientTokenStr = clientTokenStr;
     this.scheduler = scheduler;
     this.masterService = masterService;
     this.submitTime = submitTime;
     this.startTime = System.currentTimeMillis();
 
-    this.maxRetries = conf.getInt(YarnConfiguration.RM_AM_MAX_RETRIES,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_RETRIES);
+    int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    int individualMaxAppAttempts = submissionContext.getMaxAppAttempts();
+    if (individualMaxAppAttempts <= 0 ||
+        individualMaxAppAttempts > globalMaxAppAttempts) {
+      this.maxAppAttempts = globalMaxAppAttempts;
+      LOG.warn("The specific max attempts: " + individualMaxAppAttempts
+          + " for application: " + applicationId.getId()
+          + " is invalid, because it is out of the range [1, "
+          + globalMaxAppAttempts + "]. Use the global max attempts instead.");
+    } else {
+      this.maxAppAttempts = individualMaxAppAttempts;
+    }
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -402,12 +412,13 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     try {
       ApplicationAttemptId currentApplicationAttemptId = null;
-      String clientToken = UNAVAILABLE;
+      ClientToken clientToken = null;
       String trackingUrl = UNAVAILABLE;
       String host = UNAVAILABLE;
       String origTrackingUrl = UNAVAILABLE;
       int rpcPort = -1;
-      ApplicationResourceUsageReport appUsageReport = null;
+      ApplicationResourceUsageReport appUsageReport =
+          DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       String diags = UNAVAILABLE;
       if (allowAccess) {
@@ -419,18 +430,17 @@ public class RMAppImpl implements RMApp, Recoverable {
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
           appUsageReport = currentAttempt.getApplicationResourceUsageReport();
-        } else {
-          currentApplicationAttemptId = 
-              BuilderUtils.newApplicationAttemptId(this.applicationId, 
-                  DUMMY_APPLICATION_ATTEMPT_NUMBER);
         }
+
         diags = this.diagnostics.toString();
-      } else {
-        appUsageReport = DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
+      }
+
+      if (currentApplicationAttemptId == null) {
         currentApplicationAttemptId = 
             BuilderUtils.newApplicationAttemptId(this.applicationId, 
                 DUMMY_APPLICATION_ATTEMPT_NUMBER);
       }
+
       return BuilderUtils.newApplicationReport(this.applicationId,
           currentApplicationAttemptId, this.user, this.queue,
           this.name, host, rpcPort, clientToken,
@@ -495,6 +505,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   @Override
+  public int getMaxAppAttempts() {
+    return this.maxAppAttempts;
+  }
+
+  @Override
   public void handle(RMAppEvent event) {
 
     this.writeLock.lock();
@@ -541,9 +556,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     appAttemptId.setApplicationId(applicationId);
     appAttemptId.setAttemptId(attempts.size() + 1);
 
-    RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
-        clientTokenStr, rmContext, scheduler, masterService,
-        submissionContext, conf);
+    RMAppAttempt attempt =
+        new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
+          submissionContext, conf);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     if(startAttempt) {
@@ -670,10 +685,10 @@ public class RMAppImpl implements RMApp, Recoverable {
         msg = "Unmanaged application " + app.getApplicationId()
             + " failed due to " + failedEvent.getDiagnostics()
             + ". Failing the application.";
-      } else if (app.attempts.size() >= app.maxRetries) {
+      } else if (app.attempts.size() >= app.maxAppAttempts) {
         retryApp = false;
         msg = "Application " + app.getApplicationId() + " failed "
-            + app.maxRetries + " times due to " + failedEvent.getDiagnostics()
+            + app.maxAppAttempts + " times due to " + failedEvent.getDiagnostics()
             + ". Failing the application.";
       }
 

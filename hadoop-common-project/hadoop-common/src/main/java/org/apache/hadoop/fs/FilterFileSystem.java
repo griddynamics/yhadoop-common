@@ -95,16 +95,18 @@ public class FilterFileSystem extends FileSystem {
   public URI getUri() {
     return fs.getUri();
   }
-
-  /**
-   * Returns a qualified URI whose scheme and authority identify this
-   * FileSystem.
-   */
+  
+  
   @Override
   protected URI getCanonicalUri() {
     return fs.getCanonicalUri();
   }
-  
+
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    return fs.canonicalizeUri(uri);
+  }
+
   /** Make sure that a path specifies a FileSystem. */
   @Override
   public Path makeQualified(Path path) {
@@ -157,6 +159,11 @@ public class FilterFileSystem extends FileSystem {
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     return fs.append(f, bufferSize, progress);
+  }
+
+  @Override
+  public void concat(Path f, Path[] psrcs) throws IOException {
+    fs.concat(f, psrcs);
   }
 
   @Override

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
 
 /**
  * This is the API for the applications comprising of constants that YARN sets
@@ -41,12 +42,6 @@ public interface ApplicationConstants {
    * only
    */
   public static final String AM_CONTAINER_ID_ENV = "AM_CONTAINER_ID";
-  
-  /**
-   * The environment variable for APPLICATION_ATTEMPT_ID. Set in AppMaster
-   * environment only
-   */
-  public static final String AM_APP_ATTEMPT_ID_ENV = "AM_APP_ATTEMPT_ID";
 
   /**
    * The environment variable for the NM_HOST. Set in the AppMaster environment
@@ -92,6 +87,12 @@ public interface ApplicationConstants {
   public static final String STDOUT = "stdout";
 
   /**
+   * The environment variable for MAX_APP_ATTEMPTS. Set in AppMaster environment
+   * only
+   */
+  public static final String MAX_APP_ATTEMPTS_ENV = "MAX_APP_ATTEMPTS";
+
+  /**
    * Environment for Applications.
    * 
    * Some of the environment variables for applications are <em>final</em> 
@@ -102,7 +103,7 @@ public interface ApplicationConstants {
      * $USER
      * Final, non-modifiable.
      */
-    USER("USER"),
+    USER(Shell.WINDOWS ? "USERNAME": "USER"),
     
     /**
      * $LOGNAME
@@ -192,7 +193,11 @@ public interface ApplicationConstants {
     }
     
     public String $() {
-      return "$" + variable;
+      if (Shell.WINDOWS) {
+        return "%" + variable + "%";
+      } else {
+        return "$" + variable;
+      }
     }
   }
 }

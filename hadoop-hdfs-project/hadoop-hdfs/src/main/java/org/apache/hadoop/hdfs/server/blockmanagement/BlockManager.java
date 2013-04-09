@@ -62,6 +62,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -233,6 +235,7 @@ public class BlockManager {
     heartbeatManager = datanodeManager.getHeartbeatManager();
     invalidateBlocks = new InvalidateBlocks(datanodeManager);
 
+    // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
     blockplacement = BlockPlacementPolicy.getInstance(
         conf, stats, datanodeManager.getNetworkTopology());
@@ -873,9 +876,10 @@ public class BlockManager {
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size
       ) throws IOException {
+    namesystem.checkOperation(OperationCategory.READ);
     namesystem.readLock();
     try {
-      namesystem.checkSuperuserPrivilege();
+      namesystem.checkOperation(OperationCategory.READ);
       return getBlocksWithLocations(datanode, size);  
     } finally {
       namesystem.readUnlock();
@@ -1565,8 +1569,8 @@ public class BlockManager {
       node.receivedBlockReport();
       if (staleBefore && !node.areBlockContentsStale()) {
         LOG.info("BLOCK* processReport: Received first block report from "
-            + node + " after becoming active. Its block contents are no longer"
-            + " considered stale");
+            + node + " after starting up or becoming active. Its block "
+            + "contents are no longer considered stale");
         rescanPostponedMisreplicatedBlocks();
       }
       
@@ -1576,7 +1580,10 @@ public class BlockManager {
     }
 
     // Log the block report processing stats from Namenode perspective
-    NameNode.getNameNodeMetrics().addBlockReport((int) (endTime - startTime));
+    final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+    if (metrics != null) {
+      metrics.addBlockReport((int) (endTime - startTime));
+    }
     blockLog.info("BLOCK* processReport: from "
         + nodeID + ", blocks: " + newReport.getNumberOfBlocks()
         + ", processing time: " + (endTime - startTime) + " msecs");
@@ -3173,4 +3180,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     OK
   }
 
+  public void shutdown() {
+    blocksMap.close();
+  }
 }

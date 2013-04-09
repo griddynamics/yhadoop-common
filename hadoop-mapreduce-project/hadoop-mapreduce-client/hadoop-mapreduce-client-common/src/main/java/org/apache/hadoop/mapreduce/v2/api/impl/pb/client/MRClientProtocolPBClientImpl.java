@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -82,10 +83,8 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.KillTaskReques
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.KillTaskResponsePBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.RenewDelegationTokenResponsePBImpl;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.FailTaskAttemptRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetCountersRequestProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDiagnosticsRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetJobReportRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetTaskAttemptCompletionEventsRequestProto;
@@ -95,13 +94,16 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetTaskReportsReques
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillJobRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskAttemptRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskRequestProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.RenewDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 
 import com.google.protobuf.ServiceException;
 
-public class MRClientProtocolPBClientImpl implements MRClientProtocol {
+public class MRClientProtocolPBClientImpl implements MRClientProtocol,
+    Closeable {
 
   protected MRClientProtocolPB proxy;
   
@@ -109,13 +111,19 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
   
   public MRClientProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, MRClientProtocolPB.class, ProtobufRpcEngine.class);
-    proxy = (MRClientProtocolPB)RPC.getProxy(
-        MRClientProtocolPB.class, clientVersion, addr, conf);
+    proxy = RPC.getProxy(MRClientProtocolPB.class, clientVersion, addr, conf);
   }
   
   @Override
   public InetSocketAddress getConnectAddress() {
     return RPC.getServerAddress(proxy);
+  }
+
+  @Override
+  public void close() {
+    if (this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
   }
 
   @Override

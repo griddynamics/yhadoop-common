@@ -25,7 +25,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.ipc.Server.Connection;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 
 import java.util.Random;
@@ -62,7 +64,6 @@ public class TestIPC {
   final private static Configuration conf = new Configuration();
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
-
   /**
    * Flag used to turn off the fault injection behavior
    * of the various writables.
@@ -499,12 +500,74 @@ public class TestIPC {
     client.call(new LongWritable(RANDOM.nextLong()),
         addr, null, null, 3*PING_INTERVAL+MIN_SLEEP_TIME, conf);
   }
+
+  @Test
+  public void testIpcConnectTimeout() throws Exception {
+    // start server
+    Server server = new TestServer(1, true);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    //Intentionally do not start server to get a connection timeout
+
+    // start client
+    Client.setConnectTimeout(conf, 100);
+    Client client = new Client(LongWritable.class, conf);
+    // set the rpc timeout to twice the MIN_SLEEP_TIME
+    try {
+      client.call(new LongWritable(RANDOM.nextLong()),
+              addr, null, null, MIN_SLEEP_TIME*2, conf);
+      fail("Expected an exception to have been thrown");
+    } catch (SocketTimeoutException e) {
+      LOG.info("Get a SocketTimeoutException ", e);
+    }
+  }
   
+  /**
+   * Check service class byte in IPC header is correct on wire.
+   */
+  @Test(timeout=60000)
+  public void testIpcWithServiceClass() throws Exception {
+    // start server
+    Server server = new TestServer(5, false);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    // start client
+    Client.setConnectTimeout(conf, 10000);
+
+    callAndVerify(server, addr, 0, true);
+    // Service Class is low to -128 as byte on wire.
+    // -128 shouldn't be casted on wire but -129 should.
+    callAndVerify(server, addr, -128, true);
+    callAndVerify(server, addr, -129, false);
+
+    // Service Class is up to 127.
+    // 127 shouldn't be casted on wire but 128 should.
+    callAndVerify(server, addr, 127, true);
+    callAndVerify(server, addr, 128, false);
+
+    server.stop();
+  }
+
+  /**
+   * Make a call from a client and verify if header info is changed in server side
+   */
+  private void callAndVerify(Server server, InetSocketAddress addr,
+      int serviceClass, boolean noChanged) throws Exception{
+    Client client = new Client(LongWritable.class, conf);
+
+    client.call(new LongWritable(RANDOM.nextLong()),
+        addr, null, null, MIN_SLEEP_TIME, serviceClass, conf);
+    Connection connection = server.getConnections().get(0);
+    int serviceClass2 = connection.getServiceClass();
+    assertFalse(noChanged ^ serviceClass == serviceClass2);
+    client.stop();
+  }
+
   /**
    * Check that file descriptors aren't leaked by starting
    * and stopping IPC servers.
    */
-  @Test
+  @Test(timeout=60000)
   public void testSocketLeak() throws Exception {
     Assume.assumeTrue(FD_DIR.exists()); // only run on Linux
 
@@ -567,7 +630,7 @@ public class TestIPC {
   private void assertRetriesOnSocketTimeouts(Configuration conf,
       int maxTimeoutRetries) throws IOException, InterruptedException {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
-    doThrow(new SocketTimeoutException()).when(mockFactory).createSocket();
+    doThrow(new ConnectTimeoutException("fake")).when(mockFactory).createSocket();
     Client client = new Client(IntWritable.class, conf, mockFactory);
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 9090);
     try {

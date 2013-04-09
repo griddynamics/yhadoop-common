@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -147,7 +146,9 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
 
   @Override
   public synchronized void stop() {
-    RPC.stopProxy(this.rmClient);
+    if (this.rmClient != null) {
+      RPC.stopProxy(this.rmClient);
+    }
     super.stop();
   }
   
@@ -192,13 +193,12 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       }
 
       allocateResponse = rmClient.allocate(allocateRequest);
-      AMResponse response = allocateResponse.getAMResponse();
 
       synchronized (this) {
         // update these on successful RPC
         clusterNodeCount = allocateResponse.getNumClusterNodes();
-        lastResponseId = response.getResponseId();
-        clusterAvailableResources = response.getAvailableResources();
+        lastResponseId = allocateResponse.getResponseId();
+        clusterAvailableResources = allocateResponse.getAvailableResources();
       }
     } finally {
       // TODO how to differentiate remote yarn exception vs error in rpc
@@ -258,7 +258,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
     }
 
     // Off-switch
-    addResourceRequest(req.priority, ANY, req.capability, req.containerCount); 
+    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
+        req.containerCount);
   }
 
   @Override
@@ -276,7 +277,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       }
     }
    
-    decResourceRequest(req.priority, ANY, req.capability, req.containerCount);
+    decResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
+        req.containerCount);
   }
 
   @Override
