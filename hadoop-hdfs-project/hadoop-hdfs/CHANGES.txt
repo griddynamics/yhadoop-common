@@ -41,6 +41,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4525. Provide an API for knowing that whether file is closed or not. 
     (SreeHari via umamahesh)
 
+    HDFS-3940. Add Gset#clear method and clear the block map when namenode is
+    shutdown. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -134,6 +137,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-3981. Fix handling of FSN lock in getBlockLocations. (Xiaobo Peng
     and todd via todd)
+
+    HDFS-4676. TestHDFSFileSystemContract should set MiniDFSCluster variable
+    to null to free up memory. (suresh)
 
 Release 2.0.4-alpha - UNRELEASED
 
