@@ -30,10 +30,13 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.snappy.SnappyCompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibDecompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -52,9 +55,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
   private final byte[] originalRawData;
 
   private ImmutableList<TesterPair<T, E>> pairs = ImmutableList.of();
-
-  private ImmutableList.Builder<TesterPair<T, E>> builder = ImmutableList
-      .builder();
+  private ImmutableList.Builder<TesterPair<T, E>> builder = ImmutableList.builder();     
 
   private ImmutableSet<CompressionTestStrategy> stateges = ImmutableSet.of();
 
@@ -105,6 +106,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
       byte[] rawData) {
     return new CompressDecompressTester<T, E>(rawData);
   }
+  
 
   public CompressDecompressTester<T, E> withCompressDecompressPair(
       T compressor, E decompressor) {
@@ -115,7 +117,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
             decompressor.getClass().getCanonicalName()));
     return this;
   }
-
+  
   public CompressDecompressTester<T, E> withTestCases(
       ImmutableSet<CompressionTestStrategy> stateges) {
     this.stateges = ImmutableSet.copyOf(stateges);
@@ -126,7 +128,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     builder.add(new TesterPair<T, E>(name, compressor, decompressor));
   }
 
-  public void test() {
+  public void test() throws InstantiationException, IllegalAccessException {
     pairs = builder.build();
     pairs = assertionDelegate.filterOnAssumeWhat(pairs);
 
@@ -137,9 +139,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
             Arrays.copyOf(originalRawData, originalRawData.length));
       }
     }
-
     endAll(pairs);
-
   }
 
   private void endAll(ImmutableList<TesterPair<T, E>> pairs) {
@@ -506,10 +506,9 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
             && NativeCodeLoader.isNativeCodeLoaded())
       return true;
 
-    else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)
-            && NativeCodeLoader.isNativeCodeLoaded())
-      return true;
-
+    else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
+      return ZlibFactory.isNativeZlibLoaded(new Configuration());
+    }              
     else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)
             && isNativeSnappyLoadable())
       return true;

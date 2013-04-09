@@ -26,42 +26,70 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.compress.CompressDecompressTester;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DecompressorStream;
+import org.apache.hadoop.io.compress.CompressDecompressTester.CompressionTestStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Before;
 import org.junit.Test;
+import com.google.common.collect.ImmutableSet;
 
 public class TestZlibCompressorDecompressor {
 
+  private static final Random random = new Random(12345L);
+
   @Before
   public void before() {
-    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-  }
-
-  interface ByteGenerator {
-    byte[] generate(int size);
-  }
-
-  // return char 97 - 122
-  private static final ByteGenerator TEST_CHAR_TO_BYTE_GENERATOR = new ByteGenerator() {
-    private final Random random = new Random(12345L);
-    private byte[] data;
-    int start = 97;
-
-    @Override
-    public byte[] generate(int size) {
-      data = new byte[size];
-      for (int i = 0; i < size; i++)
-        data[i] = (byte) (start + random.nextInt(22));
-
-      return data;
+    assumeTrue(ZlibFactory.isNativeZlibLoaded(new Configuration()));
+  }  
+  
+  @Test
+  public void testZlibCompressorDecompressor() {
+    try {
+      int SIZE = 44 * 1024;
+      byte[] rawData = generate(SIZE);
+      
+      CompressDecompressTester.of(rawData)
+        .withCompressDecompressPair(new ZlibCompressor(), new ZlibDecompressor())
+        .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
+           CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
+           CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
+           CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
+         .test();
+    } catch (Exception ex) {
+      fail("testCompressorDecompressor error !!!" + ex);
     }
-  };
-
+  }
+  
+  @Test
+  public void testCompressorDecompressorWithExeedBufferLimit() {
+    int BYTE_SIZE = 100 * 1024;
+    byte[] rawData = generate(BYTE_SIZE);
+    try {
+      CompressDecompressTester.of(rawData)
+      .withCompressDecompressPair(
+        new ZlibCompressor(
+            org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel.BEST_COMPRESSION,
+            CompressionStrategy.DEFAULT_STRATEGY,
+            org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionHeader.DEFAULT_HEADER,
+            BYTE_SIZE),
+         new ZlibDecompressor(
+            org.apache.hadoop.io.compress.zlib.ZlibDecompressor.CompressionHeader.DEFAULT_HEADER,
+            BYTE_SIZE))
+         .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
+            CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
+            CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
+            CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
+          .test();
+    } catch (Exception ex) {
+      fail("testCompressorDecompressorWithExeedBufferLimit error !!!" + ex);
+    } 
+  }
+  
+  
   @Test
   public void testZlibCompressorDecompressorWithConfiguration() {
     Configuration conf = new Configuration();
@@ -72,7 +100,7 @@ public class TestZlibCompressorDecompressor {
       int BYTE_SIZE = 10 * 1024;
       Compressor zlibCompressor = ZlibFactory.getZlibCompressor(conf);
       Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);
-      rawData = TEST_CHAR_TO_BYTE_GENERATOR.generate(BYTE_SIZE);
+      rawData = generate(BYTE_SIZE);
       try {
         for (int i = 0; i < tryNumber; i++)
           compressDecompressZlib(rawData, (ZlibCompressor) zlibCompressor,
@@ -92,7 +120,7 @@ public class TestZlibCompressorDecompressor {
     byte[] rawData = null;
     int rawDataSize = 0;
     rawDataSize = 1024 * 64;
-    rawData = TEST_CHAR_TO_BYTE_GENERATOR.generate(rawDataSize);
+    rawData = generate(rawDataSize);
     try {
       ZlibCompressor compressor = new ZlibCompressor();
       ZlibDecompressor decompressor = new ZlibDecompressor();
@@ -121,7 +149,7 @@ public class TestZlibCompressorDecompressor {
       fail("testZlibCompressDecompress ex !!!" + ex);
     }
   }
-
+  
   @Test
   public void testZlibCompressorDecompressorSetDictionary() {
     Configuration conf = new Configuration();
@@ -162,6 +190,7 @@ public class TestZlibCompressorDecompressor {
     assertTrue("testZlibFactory compression strategy error !!!",
         CompressionStrategy.FILTERED == ZlibFactory.getCompressionStrategy(cfg));
   }
+  
 
   private boolean checkSetDictionaryNullPointerException(
       Decompressor decompressor) {
@@ -322,5 +351,12 @@ public class TestZlibCompressorDecompressor {
     } catch (Exception ex) {
       fail("invalid 3 byte make hasExtraField" + ex);
     }
-  }  
+  }
+  
+  public static byte[] generate(int size) {
+    byte[] data = new byte[size];
+    for (int i = 0; i < size; i++)
+      data[i] = (byte)random.nextInt(16);
+    return data;
+  }
 }

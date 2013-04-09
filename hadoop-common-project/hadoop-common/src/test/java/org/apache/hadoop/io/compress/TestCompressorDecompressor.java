@@ -26,30 +26,39 @@ import org.apache.hadoop.io.compress.snappy.SnappyCompressor;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
-import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
-import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
-import org.apache.hadoop.io.compress.zlib.ZlibDecompressor;
 import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
 
+/** 
+ * Test for pairs:
+ * <pre>
+ * SnappyCompressor/SnappyDecompressor
+ * Lz4Compressor/Lz4Decompressor
+ * BuiltInZlibDeflater/new BuiltInZlibInflater
+ *
+ *
+ * Note: we can't use ZlibCompressor/ZlibDecompressor here 
+ * because his constructor can throw exception (if native libraries not found)
+ * For ZlibCompressor/ZlibDecompressor pair testing used {@code TestZlibCompressorDecompressor}   
+ *
+ * </pre>
+ *
+ */
 public class TestCompressorDecompressor {
-
+  
+  private static final Random rnd = new Random(12345L);
+  
   @Test
   public void testCompressorDecompressor() {
     // no more for this data
     int SIZE = 44 * 1024;
-
-    byte[] rawData = BytesGenerator.get(SIZE);
+    
+    byte[] rawData = generate(SIZE);
     try {
       CompressDecompressTester.of(rawData)
-          .withCompressDecompressPair(new SnappyCompressor(),
-              new SnappyDecompressor())
-          .withCompressDecompressPair(new Lz4Compressor(),
-              new Lz4Decompressor())
-          .withCompressDecompressPair(new ZlibCompressor(),
-              new ZlibDecompressor())
-          .withCompressDecompressPair(new BuiltInZlibDeflater(),
-              new BuiltInZlibInflater())
+          .withCompressDecompressPair(new SnappyCompressor(), new SnappyDecompressor())
+          .withCompressDecompressPair(new Lz4Compressor(), new Lz4Decompressor())
+          .withCompressDecompressPair(new BuiltInZlibDeflater(), new BuiltInZlibInflater())
           .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
@@ -60,11 +69,11 @@ public class TestCompressorDecompressor {
       fail("testCompressorDecompressor error !!!" + ex);
     }
   }
-
+  
   @Test
   public void testCompressorDecompressorWithExeedBufferLimit() {
     int BYTE_SIZE = 100 * 1024;
-    byte[] rawData = BytesGenerator.get(BYTE_SIZE);
+    byte[] rawData = generate(BYTE_SIZE);
     try {
       CompressDecompressTester.of(rawData)
           .withCompressDecompressPair(
@@ -72,16 +81,6 @@ public class TestCompressorDecompressor {
               new SnappyDecompressor(BYTE_SIZE + BYTE_SIZE / 2))
           .withCompressDecompressPair(new Lz4Compressor(BYTE_SIZE),
               new Lz4Decompressor(BYTE_SIZE))
-          .withCompressDecompressPair(
-              new ZlibCompressor(
-                  org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel.BEST_COMPRESSION,
-                  CompressionStrategy.DEFAULT_STRATEGY,
-                  org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionHeader.DEFAULT_HEADER,
-                  BYTE_SIZE),
-              new ZlibDecompressor(
-                  org.apache.hadoop.io.compress.zlib.ZlibDecompressor.CompressionHeader.DEFAULT_HEADER,
-                  BYTE_SIZE))
-
           .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
@@ -92,18 +91,11 @@ public class TestCompressorDecompressor {
       fail("testCompressorDecompressorWithExeedBufferLimit error !!!" + ex);
     }
   }
-  
-  static final class BytesGenerator {
-    private static final Random rnd = new Random(12345L);
-    
-    private BytesGenerator() {
-    }
-
-    public static byte[] get(int size) {
-      byte[] array = new byte[size];
-      for (int i = 0; i < size; i++)
-        array[i] = (byte) rnd.nextInt(16);
-      return array;
-    }
+       
+  public static byte[] generate(int size) {
+    byte[] array = new byte[size];
+    for (int i = 0; i < size; i++)
+      array[i] = (byte) rnd.nextInt(16);
+    return array;
   }
 }
