@@ -394,7 +394,13 @@ public abstract class FileContextSymlinkBaseTest {
     // And fully qualified.. (NB: for local fs this is partially qualified)
     readFile(new Path(testURI().toString(), linkAbs));
     // And partially qualified..
-    readFile(new Path(getScheme()+"://"+testBaseDir1()+"/linkToFile"));
+    boolean failureExpected = "file".equals(getScheme()) ? false : true;
+    try {
+      readFile(new Path(getScheme()+"://"+testBaseDir1()+"/linkToFile"));
+      assertFalse(failureExpected);
+    } catch (Exception e) {
+      assertTrue(failureExpected);
+    }
     
     // Now read using a different file context (for HDFS at least)
     if (!"file".equals(getScheme())) {

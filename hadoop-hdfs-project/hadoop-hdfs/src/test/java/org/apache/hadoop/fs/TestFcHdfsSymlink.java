@@ -235,11 +235,18 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
   public void testCreateWithPartQualPathFails() throws IOException {
     Path fileWoAuth = new Path("hdfs:///test/file");
     Path linkWoAuth = new Path("hdfs:///test/link");
-    // NB: after HADOOP-9357 the authority fallback is implemented, 
-    // so no exception is expected below:
-    createAndWriteFile(fileWoAuth);
-    
-    fc.createSymlink(new Path("foo"), linkWoAuth, false);
+    try {
+      createAndWriteFile(fileWoAuth);
+      fail("HDFS requires URIs with schemes have an authority");
+    } catch (RuntimeException e) {
+      // Expected
+    }
+    try {
+      fc.createSymlink(new Path("foo"), linkWoAuth, false);
+      fail("HDFS requires URIs with schemes have an authority");
+    } catch (RuntimeException e) {
+      // Expected
+    }
   }
 
   @Test
