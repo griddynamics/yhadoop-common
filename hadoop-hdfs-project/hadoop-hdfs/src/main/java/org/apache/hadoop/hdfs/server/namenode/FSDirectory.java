@@ -1343,6 +1343,11 @@ public class FSDirectory implements Closeable {
 
     // fill up the inodes in the path from this inode to root
     for (int i = 0; i < depth; i++) {
+      if (inode == null) {
+        NameNode.stateChangeLog.warn("Could not get full path."
+            + " Corresponding file might have deleted already.");
+        return null;
+      }
       inodes[depth-i-1] = inode;
       inode = inode.parent;
     }
@@ -1985,7 +1990,8 @@ public class FSDirectory implements Closeable {
         node.getUserName(),
         node.getGroupName(),
         node.isSymlink() ? ((INodeSymlink)node).getSymlink() : null,
-        path);
+        path,
+        node.getId());
   }
 
    /**
@@ -2022,6 +2028,7 @@ public class FSDirectory implements Closeable {
           node.getGroupName(),
           node.isSymlink() ? ((INodeSymlink)node).getSymlink() : null,
           path,
+          node.getId(),
           loc);
       }
 
@@ -2090,5 +2097,9 @@ public class FSDirectory implements Closeable {
     if (name != null) {
       inode.setLocalName(name.getBytes());
     }
+  }
+  
+  void shutdown() {
+    nameCache.reset();
   }
 }

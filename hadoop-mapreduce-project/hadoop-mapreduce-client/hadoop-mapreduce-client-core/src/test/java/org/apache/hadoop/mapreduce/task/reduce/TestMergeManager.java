@@ -17,24 +17,34 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BoundedByteArrayOutputStream;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MROutputFiles;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.task.reduce.MapOutput.Type;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestMergeManager {
 
@@ -55,45 +65,47 @@ public class TestMergeManager {
 
     // reserve enough map output to cause a merge when it is committed
     MapOutput<Text, Text> out1 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out1.getType());
-    fillOutput(out1);
+    Assert.assertTrue("Should be a memory merge",
+                      (out1 instanceof InMemoryMapOutput));
+    InMemoryMapOutput<Text, Text> mout1 = (InMemoryMapOutput<Text, Text>)out1;
+    fillOutput(mout1);
     MapOutput<Text, Text> out2 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out2.getType());
-    fillOutput(out2);
+    Assert.assertTrue("Should be a memory merge",
+                      (out2 instanceof InMemoryMapOutput));
+    InMemoryMapOutput<Text, Text> mout2 = (InMemoryMapOutput<Text, Text>)out2;
+    fillOutput(mout2);
 
     // next reservation should be a WAIT
     MapOutput<Text, Text> out3 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be told to wait",
-        Type.WAIT, out3.getType());
+    Assert.assertEquals("Should be told to wait", null, out3);
 
     // trigger the first merge and wait for merge thread to start merging
     // and free enough output to reserve more
-    out1.commit();
-    out2.commit();
+    mout1.commit();
+    mout2.commit();
     mergeStart.await();
 
     Assert.assertEquals(1, mgr.getNumMerges());
 
     // reserve enough map output to cause another merge when committed
     out1 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out1.getType());
-    fillOutput(out1);
+    Assert.assertTrue("Should be a memory merge",
+                       (out1 instanceof InMemoryMapOutput));
+    mout1 = (InMemoryMapOutput<Text, Text>)out1;
+    fillOutput(mout1);
     out2 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out2.getType());
-    fillOutput(out2);
+    Assert.assertTrue("Should be a memory merge",
+                       (out2 instanceof InMemoryMapOutput));
+    mout2 = (InMemoryMapOutput<Text, Text>)out2;
+    fillOutput(mout2);
 
-    // next reservation should be a WAIT
+    // next reservation should be null
     out3 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be told to wait",
-        Type.WAIT, out3.getType());
+    Assert.assertEquals("Should be told to wait", null, out3);
 
     // commit output *before* merge thread completes
-    out1.commit();
-    out2.commit();
+    mout1.commit();
+    mout2.commit();
 
     // allow the first merge to complete
     mergeComplete.await();
@@ -110,7 +122,7 @@ public class TestMergeManager {
         0, reporter.getNumExceptions());
   }
 
-  private void fillOutput(MapOutput<Text, Text> output) throws IOException {
+  private void fillOutput(InMemoryMapOutput<Text, Text> output) throws IOException {
     BoundedByteArrayOutputStream stream = output.getArrayStream();
     int count = stream.getLimit();
     for (int i=0; i < count; ++i) {
@@ -118,7 +130,7 @@ public class TestMergeManager {
     }
   }
 
-  private static class StubbedMergeManager extends MergeManager<Text, Text> {
+  private static class StubbedMergeManager extends MergeManagerImpl<Text, Text> {
     private TestMergeThread mergeThread;
 
     public StubbedMergeManager(JobConf conf, ExceptionReporter reporter,
@@ -129,7 +141,7 @@ public class TestMergeManager {
     }
 
     @Override
-    protected MergeThread<MapOutput<Text, Text>, Text, Text> createInMemoryMerger() {
+    protected MergeThread<InMemoryMapOutput<Text, Text>, Text, Text> createInMemoryMerger() {
       mergeThread = new TestMergeThread(this, getExceptionReporter());
       return mergeThread;
     }
@@ -140,12 +152,12 @@ public class TestMergeManager {
   }
 
   private static class TestMergeThread
-  extends MergeThread<MapOutput<Text,Text>, Text, Text> {
+  extends MergeThread<InMemoryMapOutput<Text,Text>, Text, Text> {
     private AtomicInteger numMerges;
     private CyclicBarrier mergeStart;
     private CyclicBarrier mergeComplete;
 
-    public TestMergeThread(MergeManager<Text, Text> mergeManager,
+    public TestMergeThread(MergeManagerImpl<Text, Text> mergeManager,
         ExceptionReporter reporter) {
       super(mergeManager, Integer.MAX_VALUE, reporter);
       numMerges = new AtomicInteger(0);
@@ -162,11 +174,11 @@ public class TestMergeManager {
     }
 
     @Override
-    public void merge(List<MapOutput<Text, Text>> inputs)
+    public void merge(List<InMemoryMapOutput<Text, Text>> inputs)
         throws IOException {
       synchronized (this) {
         numMerges.incrementAndGet();
-        for (MapOutput<Text, Text> input : inputs) {
+        for (InMemoryMapOutput<Text, Text> input : inputs) {
           manager.unreserve(input.getSize());
         }
       }
@@ -192,5 +204,60 @@ public class TestMergeManager {
     public int getNumExceptions() {
       return exceptions.size();
     }
+  }
+
+  @SuppressWarnings({ "unchecked", "deprecation" })
+  @Test(timeout=10000)
+  public void testOnDiskMerger() throws IOException, URISyntaxException,
+    InterruptedException {
+    JobConf jobConf = new JobConf();
+    final int SORT_FACTOR = 5;
+    jobConf.setInt(MRJobConfig.IO_SORT_FACTOR, SORT_FACTOR);
+
+    MapOutputFile mapOutputFile = new MROutputFiles();
+    FileSystem fs = FileSystem.getLocal(jobConf);
+    MergeManagerImpl<IntWritable, IntWritable> manager =
+      new MergeManagerImpl<IntWritable, IntWritable>(null, jobConf, fs, null
+        , null, null, null, null, null, null, null, null, null, mapOutputFile);
+
+    MergeThread<MapOutput<IntWritable, IntWritable>, IntWritable, IntWritable>
+      onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,
+        IntWritable, IntWritable>) Whitebox.getInternalState(manager,
+          "onDiskMerger");
+    int mergeFactor = (Integer) Whitebox.getInternalState(onDiskMerger,
+      "mergeFactor");
+
+    // make sure the io.sort.factor is set properly
+    assertEquals(mergeFactor, SORT_FACTOR);
+
+    // Stop the onDiskMerger thread so that we can intercept the list of files
+    // waiting to be merged.
+    onDiskMerger.suspend();
+
+    //Send the list of fake files waiting to be merged
+    Random rand = new Random();
+    for(int i = 0; i < 2*SORT_FACTOR; ++i) {
+      Path path = new Path("somePath");
+      CompressAwarePath cap = new CompressAwarePath(path, 1l, rand.nextInt());
+      manager.closeOnDiskFile(cap);
+    }
+
+    //Check that the files pending to be merged are in sorted order.
+    LinkedList<List<CompressAwarePath>> pendingToBeMerged =
+      (LinkedList<List<CompressAwarePath>>) Whitebox.getInternalState(
+        onDiskMerger, "pendingToBeMerged");
+    assertTrue("No inputs were added to list pending to merge",
+      pendingToBeMerged.size() > 0);
+    for(int i = 0; i < pendingToBeMerged.size(); ++i) {
+      List<CompressAwarePath> inputs = pendingToBeMerged.get(i);
+      for(int j = 1; j < inputs.size(); ++j) {
+        assertTrue("Not enough / too many inputs were going to be merged",
+          inputs.size() > 0 && inputs.size() <= SORT_FACTOR);
+        assertTrue("Inputs to be merged were not sorted according to size: ",
+          inputs.get(j).getCompressedSize()
+          >= inputs.get(j-1).getCompressedSize());
+      }
+    }
+
   }
 }
