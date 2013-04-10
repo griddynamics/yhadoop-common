@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.Tool;
 import org.junit.Ignore;
 @Ignore
-public class TestJobClient extends TestMRJobClient {
+public class TestJobClient2 extends TestMRJobClient {
   
   private String runJob() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(),
@@ -71,7 +71,7 @@ public class TestJobClient extends TestMRJobClient {
   
   static void verifyJobPriority(String jobId, String priority,
       JobConf conf)  throws Exception {
-    TestJobClient test = new TestJobClient();
+    TestJobClient2 test = new TestJobClient2();
     test.verifyJobPriority(jobId, priority, conf, test.createJobClient());
   }
   
