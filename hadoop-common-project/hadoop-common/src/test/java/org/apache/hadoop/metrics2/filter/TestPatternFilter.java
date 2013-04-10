@@ -26,6 +26,7 @@ import org.apache.commons.configuration.SubsetConfiguration;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsFilter;
@@ -33,7 +34,6 @@ import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import static org.apache.hadoop.metrics2.lib.Interns.*;
-import static org.mockito.Mockito.*;
 
 public class TestPatternFilter {
 
@@ -44,6 +44,8 @@ public class TestPatternFilter {
     SubsetConfiguration empty = new ConfigBuilder().subset("");
     shouldAccept(empty, "anything");
     shouldAccept(empty, Arrays.asList(tag("key", "desc", "value")));
+    shouldAccept(empty, mockMetricsRecord("anything", Arrays.asList(
+      tag("key", "desc", "value"))));
   }
 
   /**
@@ -56,9 +58,15 @@ public class TestPatternFilter {
     shouldAccept(wl, "foo");
     shouldAccept(wl, Arrays.asList(tag("bar", "", ""),
                                    tag("foo", "", "f")));
+    shouldAccept(wl, mockMetricsRecord("foo", Arrays.asList(
+      tag("bar", "", ""), tag("foo", "", "f"))));
     shouldReject(wl, "bar");
     shouldReject(wl, Arrays.asList(tag("bar", "", "")));
     shouldReject(wl, Arrays.asList(tag("foo", "", "boo")));
+    shouldReject(wl, mockMetricsRecord("bar", Arrays.asList(
+      tag("foo", "", "f"))));
+    shouldReject(wl, mockMetricsRecord("foo", Arrays.asList(
+      tag("bar", "", ""))));
   }
 
   /**
@@ -70,9 +78,15 @@ public class TestPatternFilter {
         .add("p.exclude.tags", "foo:f").subset("p");
     shouldAccept(bl, "bar");
     shouldAccept(bl, Arrays.asList(tag("bar", "", "")));
+    shouldAccept(bl, mockMetricsRecord("bar", Arrays.asList(
+      tag("bar", "", ""))));
     shouldReject(bl, "foo");
     shouldReject(bl, Arrays.asList(tag("bar", "", ""),
                                    tag("foo", "", "f")));
+    shouldReject(bl, mockMetricsRecord("foo", Arrays.asList(
+      tag("bar", "", ""))));
+    shouldReject(bl, mockMetricsRecord("bar", Arrays.asList(
+      tag("bar", "", ""), tag("foo", "", "f"))));
   }
 
   /**
@@ -87,10 +101,18 @@ public class TestPatternFilter {
         .add("p.exclude.tags", "bar:b").subset("p");
     shouldAccept(c, "foo");
     shouldAccept(c, Arrays.asList(tag("foo", "", "f")));
+    shouldAccept(c, mockMetricsRecord("foo", Arrays.asList(
+      tag("foo", "", "f"))));
     shouldReject(c, "bar");
     shouldReject(c, Arrays.asList(tag("bar", "", "b")));
+    shouldReject(c, mockMetricsRecord("bar", Arrays.asList(
+      tag("foo", "", "f"))));
+    shouldReject(c, mockMetricsRecord("foo", Arrays.asList(
+      tag("bar", "", "b"))));
     shouldAccept(c, "foobar");
     shouldAccept(c, Arrays.asList(tag("foobar", "", "")));
+    shouldAccept(c, mockMetricsRecord("foobar", Arrays.asList(
+      tag("foobar", "", ""))));
   }
 
   /**
@@ -104,6 +126,8 @@ public class TestPatternFilter {
         .add("p.exclude.tags", "foo:f").subset("p");
     shouldAccept(c, "foo");
     shouldAccept(c, Arrays.asList(tag("foo", "", "f")));
+    shouldAccept(c, mockMetricsRecord("foo", Arrays.asList(
+      tag("foo", "", "f"))));
   }
   
   static void shouldAccept(SubsetConfiguration conf, String s) {
@@ -157,9 +181,31 @@ public class TestPatternFilter {
     return mr;
   }
 
+  /**
+   * Asserts that filters with the given configuration accept the given record.
+   * 
+   * @param conf SubsetConfiguration containing filter configuration
+   * @param record MetricsRecord to check
+   */
+  static void shouldAccept(SubsetConfiguration conf, MetricsRecord record) {
+    assertTrue("accepts " + record, newGlobFilter(conf).accepts(record));
+    assertTrue("accepts " + record, newRegexFilter(conf).accepts(record));
+  }
+
   static void shouldReject(SubsetConfiguration conf, String s) {
     assertTrue("rejects "+ s, !newGlobFilter(conf).accepts(s));
     assertTrue("rejects "+ s, !newRegexFilter(conf).accepts(s));
+  }
+
+  /**
+   * Asserts that filters with the given configuration reject the given record.
+   * 
+   * @param conf SubsetConfiguration containing filter configuration
+   * @param record MetricsRecord to check
+   */
+  static void shouldReject(SubsetConfiguration conf, MetricsRecord record) {
+    assertTrue("rejects " + record, !newGlobFilter(conf).accepts(record));
+    assertTrue("rejects " + record, !newRegexFilter(conf).accepts(record));
   }
 
   /**
@@ -182,5 +228,20 @@ public class TestPatternFilter {
     RegexFilter f = new RegexFilter();
     f.init(conf);
     return f;
+  }
+
+  /**
+   * Creates a mock MetricsRecord with the given name and tags.
+   * 
+   * @param name String name
+   * @param tags List<MetricsTag> tags
+   * @return MetricsRecord newly created mock
+   */
+  private static MetricsRecord mockMetricsRecord(String name,
+      List<MetricsTag> tags) {
+    MetricsRecord record = mock(MetricsRecord.class);
+    when(record.name()).thenReturn(name);
+    when(record.tags()).thenReturn(tags);
+    return record;
   }
 }
