@@ -19,7 +19,6 @@
 package org.apache.hadoop.metrics2.filter;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.configuration.SubsetConfiguration;
@@ -28,7 +27,6 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
@@ -151,11 +149,6 @@ public class TestPatternFilter {
     assertTrue("accepts "+ tags, expectAccept == globFilter.accepts(tags));
     assertTrue("accepts "+ tags, expectAccept == regexFilter.accepts(tags));
     
-    // Test that MetricsRecord composed of the tags is also accepted:
-    final MetricsRecord mr = createMetricsRecord("", tags, null);
-    assertTrue("accepts "+ tags, expectAccept == globFilter.accepts(mr));
-    assertTrue("accepts "+ tags, expectAccept == regexFilter.accepts(mr));
-    
     // Test results on each of the individual tag:
     int acceptedCount = 0, rejectedCount = 0;
     for (MetricsTag tag: tags) {
@@ -170,15 +163,6 @@ public class TestPatternFilter {
     } else {
       assertTrue("No tag of the following rejected: " + tags, rejectedCount > 0);
     }
-  }
-  
-  private static MetricsRecord createMetricsRecord(String name, 
-      Collection<MetricsTag> tags, Collection<AbstractMetric> metrics) {
-    MetricsRecord mr = mock(MetricsRecord.class);
-    when(mr.name()).thenReturn(name);
-    when(mr.tags()).thenReturn(tags);
-    when(mr.metrics()).thenReturn(metrics);
-    return mr;
   }
 
   /**
