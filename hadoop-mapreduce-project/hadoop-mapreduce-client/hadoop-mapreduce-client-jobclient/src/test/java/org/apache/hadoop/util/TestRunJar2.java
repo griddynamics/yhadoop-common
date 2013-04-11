@@ -28,7 +28,7 @@ import junit.framework.TestCase;
  * A test to rest the RunJar class.
  */
 @Ignore
-public class TestRunJar extends TestCase {
+public class TestRunJar2 extends TestCase {
   
   private static String TEST_ROOT_DIR = new Path(System.getProperty(
       "test.build.data", "/tmp")).toString();

@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.HeartbeatResponsePBImpl;
 import org.junit.Test;
 
-public class TestRecordFactory {
+public class TestRecordFactory2 {
   
   @Test
   public void testPbRecordFactory() {
