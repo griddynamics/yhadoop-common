@@ -35,10 +35,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeMan
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.NodeStatusPBImpl;
-import org.apache.hadoop.yarn.server.api.records.impl.pb.RegistrationResponsePBImpl;
 import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -62,14 +60,13 @@ public class TestYarnServerApiClasses {
   @Test(timeout = 500)
   public void testRegisterNodeManagerResponsePBImpl() {
     RegisterNodeManagerResponsePBImpl original = new RegisterNodeManagerResponsePBImpl();
-    RegistrationResponse response = recordFactory
-        .newRecordInstance(RegistrationResponse.class);
-    original.setRegistrationResponse(response);
-    response.setMasterKey(getMasterKey());
+    original.setMasterKey(getMasterKey());
+    original.setNodeAction(NodeAction.NORMAL);
 
     RegisterNodeManagerResponsePBImpl copy = new RegisterNodeManagerResponsePBImpl(
         original.getProto());
-    assertEquals(1, copy.getRegistrationResponse().getMasterKey().getKeyId());
+    assertEquals(1, copy.getMasterKey().getKeyId());
+    assertEquals(NodeAction.NORMAL, copy.getNodeAction());
 
   }
 
@@ -160,23 +157,7 @@ public class TestYarnServerApiClasses {
   }
 
  
-  /**
-   * Test RegistrationResponsePBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
-   */
-
-  @Test(timeout = 500)
-  public void testRegistrationResponsePBImpl() {
-    RegistrationResponsePBImpl original = new RegistrationResponsePBImpl();
-    original.setMasterKey(getMasterKey());
-    original.setNodeAction(NodeAction.NORMAL);
-    RegistrationResponsePBImpl copy = new RegistrationResponsePBImpl(
-        original.getProto());
-    assertEquals(NodeAction.NORMAL, copy.getNodeAction());
-    assertEquals(1, copy.getMasterKey().getKeyId());
-
-  }
+  
 
   private ContainerStatus getContainerStatus(int applicationId,
       int containerID, int appAttemptId) {
