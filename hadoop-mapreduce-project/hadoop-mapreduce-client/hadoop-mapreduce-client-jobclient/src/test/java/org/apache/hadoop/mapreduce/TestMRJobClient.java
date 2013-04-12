@@ -42,7 +42,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
-/*
+/**
  test CLI class. CLI class implemented  the Tool interface. 
  Here test that CLI sends correct command with options and parameters. 
  */
@@ -79,7 +79,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
       throw new IOException();
     }
   }
-
+  
   public void testJobSubmissionSpecsAndFiles() throws Exception {
     Configuration conf = createJobConf();
     Job job = MapReduceTestUtil.createJob(conf, getInputDir(), getOutputDir(),
@@ -91,7 +91,6 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
     }
-    // JobID jobId = job.getJobID();
     Cluster cluster = new Cluster(conf);
     Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster,
         job.getConfiguration());
@@ -101,9 +100,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
         FileSystem.get(conf).exists(submitJobFile));
   }
 
-  /*
+  /**
    * main test method
    */
+
   public void testJobClient() throws Exception {
     Configuration conf = createJobConf();
     Job job = runJob(conf);
@@ -140,31 +140,33 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
   }
 
-  /*
+  /**
    * test fail task
    */
   private void testfailTask(Job job, Configuration conf) throws Exception {
     CLI jc = createJobClient();
     TaskID tid = new TaskID(job.getJobID(), TaskType.MAP, 0);
-    TaskAttemptID taid = new TaskAttemptID(tid, 0);
+    TaskAttemptID taid = new TaskAttemptID(tid, 1);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    // not set TaskAttemptId
+    //  TaskAttemptId is not set
     int exitCode = runTool(conf, jc, new String[] { "-fail-task" }, out);
     assertEquals("Exit code", -1, exitCode);
 
     try {
       runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
+      fail(" this task should field");
     } catch (YarnRemoteException e) {
-      // task complited !
-      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+      // task completed !
+      assertTrue(e.getMessage().contains("_0001_m_000000_1"));
     }
   }
-
-  // test a kill task 
+  /**
+   * test a kill task
+   */ 
   private void testKillTask(Job job, Configuration conf) throws Exception {
     CLI jc = createJobClient();
     TaskID tid = new TaskID(job.getJobID(), TaskType.MAP, 0);
-    TaskAttemptID taid = new TaskAttemptID(tid, 0);
+    TaskAttemptID taid = new TaskAttemptID(tid, 1);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // bad parameters
     int exitCode = runTool(conf, jc, new String[] { "-kill-task" }, out);
@@ -172,13 +174,14 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
     try {
       runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
+      fail(" this task should be killed");
     } catch (YarnRemoteException e) {
-      // task complited
-      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+      // task completed
+      assertTrue(e.getMessage().contains("_0001_m_000000_1"));
     }
   }
   
-  /*
+  /**
    * test a kill job
    */
   private void testKillJob(String jobId, Configuration conf) throws Exception {
@@ -188,14 +191,15 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // without jobId
     int exitCode = runTool(conf, jc, new String[] { "-kill" }, out);
     assertEquals("Exit code", -1, exitCode);
-
+    // good parameters
     exitCode = runTool(conf, jc, new String[] { "-kill", jobId }, out);
     assertEquals("Exit code", 0, exitCode);
+    
     String answer = new String(out.toByteArray(), "UTF-8");
     assertTrue(answer.contains("Killed job " + jobId));
   }
 
-  /*
+  /**
    * test submit task from file
    */
   private void testSubmit(Configuration conf) throws Exception {
@@ -222,7 +226,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // in console was written
     assertTrue(answer.contains("Created job "));
   }
-  /*
+  /**
    * test start form console command without options
    */
   private void startStop() {
@@ -232,6 +236,8 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ExitUtil.disableSystemExit();
     try {
       CLI.main(new String[0]);
+      fail(" CLI.main should call System.exit");
+
     } catch (ExitUtil.ExitException e) {
       ExitUtil.resetFirstExitException();
       assertEquals(-1, e.status);
@@ -257,7 +263,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     assertTrue(s.contains("-logs"));
 
   }
-  /*
+  /**
    * black list 
    */
   private void testListBlackList(Configuration conf) throws Exception {
@@ -279,7 +285,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     }
     assertEquals(0, counter);
   }
-  /*
+  /**
    * print AttemptIds list 
    */
   private void testListAttemptIds(String jobId, Configuration conf)
@@ -301,7 +307,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     }
     assertEquals(1, counter);
   }
-  /*
+  /**
    * print tracker list
    */
   private void testListTrackers(Configuration conf) throws Exception {
@@ -322,7 +328,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     }
     assertEquals(2, counter);
   }
-  /*
+  /**
    * print job history from file 
    */
   private void testJobHistory(Configuration conf) throws Exception {
@@ -349,7 +355,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     }
     assertEquals(23, counter);
   }
-  /*
+  /**
    * print job events list 
    */
   private void testJobEvents(String jobId, Configuration conf) throws Exception {
@@ -374,7 +380,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     }
     assertEquals(2, counter);
   }
-  /*
+  /**
    * print job status 
    */
   private void testJobStatus(String jobId, Configuration conf) throws Exception {
@@ -400,7 +406,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     assertNotNull(line);
     assertTrue(line.contains("SUCCEEDED"));
   }
-  /*
+  /**
    * print counters 
    */
   public void testGetCounter(String jobId, Configuration conf) throws Exception {
@@ -417,7 +423,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     assertEquals("Exit code", 0, exitCode);
     assertEquals("Counter", "3", out.toString().trim());
   }
-  /*
+  /**
    * print a job list 
    */
   protected void testJobList(String jobId, Configuration conf) throws Exception {
