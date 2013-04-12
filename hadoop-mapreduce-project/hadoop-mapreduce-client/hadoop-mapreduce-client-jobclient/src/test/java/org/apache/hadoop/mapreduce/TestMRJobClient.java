@@ -40,7 +40,6 @@ import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 /**
  test CLI class. CLI class implemented  the Tool interface. 
@@ -157,8 +156,9 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     System.out.println("out1:"+out);
 
   }
-
-  // test a kill task 
+  /**
+   * test a kill task
+   */ 
   private void testKillTask(Job job, Configuration conf) throws Exception {
     CLI jc = createJobClient();
     TaskID tid = new TaskID(job.getJobID(), TaskType.MAP, 0);
