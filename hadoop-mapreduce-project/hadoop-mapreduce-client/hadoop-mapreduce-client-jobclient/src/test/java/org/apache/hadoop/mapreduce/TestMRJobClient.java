@@ -146,7 +146,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   private void testfailTask(Job job, Configuration conf) throws Exception {
     CLI jc = createJobClient();
     TaskID tid = new TaskID(job.getJobID(), TaskType.MAP, 0);
-    TaskAttemptID taid = new TaskAttemptID(tid, 0);
+    TaskAttemptID taid = new TaskAttemptID(tid, 1);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     //  TaskAttemptId is not set
     int exitCode = runTool(conf, jc, new String[] { "-fail-task" }, out);
@@ -157,7 +157,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
       fail(" this task should field");
     } catch (YarnRemoteException e) {
       // task completed !
-      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+      assertTrue(e.getMessage().contains("_0001_m_000000_1"));
     }
   }
   /**
@@ -166,7 +166,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   private void testKillTask(Job job, Configuration conf) throws Exception {
     CLI jc = createJobClient();
     TaskID tid = new TaskID(job.getJobID(), TaskType.MAP, 0);
-    TaskAttemptID taid = new TaskAttemptID(tid, 0);
+    TaskAttemptID taid = new TaskAttemptID(tid, 1);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     // bad parameters
     int exitCode = runTool(conf, jc, new String[] { "-kill-task" }, out);
@@ -177,8 +177,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
       fail(" this task should be killed");
     } catch (YarnRemoteException e) {
       // task completed
-      System.out.println("ddd::"+e.getMessage());
-      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+      assertTrue(e.getMessage().contains("_0001_m_000000_1"));
     }
   }
   
