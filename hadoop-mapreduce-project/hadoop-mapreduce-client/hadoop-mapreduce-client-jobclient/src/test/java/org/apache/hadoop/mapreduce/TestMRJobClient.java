@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 /**
  test CLI class. CLI class implemented  the Tool interface. 
@@ -131,7 +132,6 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // submit job from file
     testSubmit(conf);
     // kill a task
-   
     testKillTask(job, conf);
     // fail a task
     testfailTask(job, conf);
@@ -151,12 +151,14 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     //  TaskAttemptId is not set
     int exitCode = runTool(conf, jc, new String[] { "-fail-task" }, out);
     assertEquals("Exit code", -1, exitCode);
-    exitCode = runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
-    assertEquals("Exit code", 0, exitCode);
-    
-    String answer = new String(out.toByteArray(), "UTF-8");
-    assertTrue(answer.contains("Killed task attempt_"));
 
+    try {
+      runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
+      fail(" this task should field");
+    } catch (YarnRemoteException e) {
+      // task completed !
+      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+    }
   }
   /**
    * test a kill task
@@ -169,12 +171,15 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // bad parameters
     int exitCode = runTool(conf, jc, new String[] { "-kill-task" }, out);
     assertEquals("Exit code", -1, exitCode);
-    // good parameters
-    exitCode = runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
-    assertEquals("Exit code", 0, exitCode);
-    String answer = new String(out.toByteArray(), "UTF-8");
-    assertTrue(answer.contains("Killed task attempt_"));
-    
+
+    try {
+      runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
+      fail(" this task should be killed");
+    } catch (YarnRemoteException e) {
+      // task completed
+      System.out.println("ddd::"+e.getMessage());
+      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
+    }
   }
   
   /**
@@ -188,7 +193,6 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     int exitCode = runTool(conf, jc, new String[] { "-kill" }, out);
     assertEquals("Exit code", -1, exitCode);
     // good parameters
-
     exitCode = runTool(conf, jc, new String[] { "-kill", jobId }, out);
     assertEquals("Exit code", 0, exitCode);
     
