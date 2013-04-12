@@ -153,7 +153,9 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     assertEquals("Exit code", -1, exitCode);
     exitCode = runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
     assertEquals("Exit code", 0, exitCode);
-    System.out.println("out1:"+out);
+    
+    String answer = new String(out.toByteArray(), "UTF-8");
+    assertTrue(answer.contains("Killed task attempt_"));
 
   }
   /**
@@ -170,7 +172,9 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // good parameters
     exitCode = runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
     assertEquals("Exit code", 0, exitCode);
-    System.out.println("out2:"+out);
+    String answer = new String(out.toByteArray(), "UTF-8");
+    assertTrue(answer.contains("Killed task attempt_"));
+    
   }
   
   /**
