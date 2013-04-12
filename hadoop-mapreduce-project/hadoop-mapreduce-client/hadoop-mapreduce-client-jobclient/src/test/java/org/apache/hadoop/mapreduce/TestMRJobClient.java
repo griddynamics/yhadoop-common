@@ -41,7 +41,6 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.junit.Test;
 
 /**
  test CLI class. CLI class implemented  the Tool interface. 
@@ -133,6 +132,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // submit job from file
     testSubmit(conf);
     // kill a task
+   
     testKillTask(job, conf);
     // fail a task
     testfailTask(job, conf);
@@ -149,16 +149,13 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     TaskID tid = new TaskID(job.getJobID(), TaskType.MAP, 0);
     TaskAttemptID taid = new TaskAttemptID(tid, 0);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    // not set TaskAttemptId
+    //  TaskAttemptId is not set
     int exitCode = runTool(conf, jc, new String[] { "-fail-task" }, out);
     assertEquals("Exit code", -1, exitCode);
+    exitCode = runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
+    assertEquals("Exit code", 0, exitCode);
+    System.out.println("out1:"+out);
 
-    try {
-      runTool(conf, jc, new String[] { "-fail-task", taid.toString() }, out);
-    } catch (YarnRemoteException e) {
-      // task complited !
-      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
-    }
   }
 
   // test a kill task 
@@ -170,13 +167,10 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // bad parameters
     int exitCode = runTool(conf, jc, new String[] { "-kill-task" }, out);
     assertEquals("Exit code", -1, exitCode);
-
-    try {
-      runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
-    } catch (YarnRemoteException e) {
-      // task complited
-      assertTrue(e.getMessage().contains("Invalid operation on completed job"));
-    }
+    // good parameters
+    exitCode = runTool(conf, jc, new String[] { "-kill-task", taid.toString() }, out);
+    assertEquals("Exit code", 0, exitCode);
+    System.out.println("out2:"+out);
   }
   
   /**
@@ -189,9 +183,11 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     // without jobId
     int exitCode = runTool(conf, jc, new String[] { "-kill" }, out);
     assertEquals("Exit code", -1, exitCode);
+    // good parameters
 
     exitCode = runTool(conf, jc, new String[] { "-kill", jobId }, out);
     assertEquals("Exit code", 0, exitCode);
+    
     String answer = new String(out.toByteArray(), "UTF-8");
     assertTrue(answer.contains("Killed job " + jobId));
   }
@@ -233,6 +229,8 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     ExitUtil.disableSystemExit();
     try {
       CLI.main(new String[0]);
+      fail(" CLI.main should call System.exit");
+
     } catch (ExitUtil.ExitException e) {
       ExitUtil.resetFirstExitException();
       assertEquals(-1, e.status);
