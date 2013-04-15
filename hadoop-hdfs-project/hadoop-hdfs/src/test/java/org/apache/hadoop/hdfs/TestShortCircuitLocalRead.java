@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.EOFException;
 import java.io.File;
@@ -56,7 +57,6 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.hamcrest.CoreMatchers.*;
 
 /**
  * Test for short circuit read functionality using {@link BlockReaderLocal}.
@@ -507,7 +507,65 @@ public class TestShortCircuitLocalRead {
       if (cluster != null) cluster.shutdown();
     }
   }
-     
+
+  @Test(timeout = 15000)
+  public void testReadWithRemoteBlockReader() throws IOException, InterruptedException {
+    doTestShortCircuitReadWithRemoteBlockReader(true, 3*blockSize+100, 0);
+  }
+
+  public void doTestShortCircuitReadWithRemoteBlockReader(boolean ignoreChecksum, int size,
+    int readOffset) throws IOException, InterruptedException {
+    doTestShortCircuitReadWithRemoteBlockReader(ignoreChecksum, size, getCurrentUser(), readOffset, false);
+  }
+
+  public void doTestShortCircuitReadWithRemoteBlockReader(boolean ignoreChecksum, int size,
+         String shortCircuitUser, int readOffset, boolean shortCircuitFails) throws IOException, InterruptedException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+        
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(true).build();
+    FileSystem fs = cluster.getFileSystem();
+    // check that / exists
+    Path path = new Path("/");
+      assertTrue("/ should be a directory", fs.getFileStatus(path).isDirectory());
+        
+    URI uri = cluster.getURI();  
+    byte[] fileData = AppendTestUtil.randomBytes(seed, size);
+    Path file1 = new Path("filelocal.dat");
+    FSDataOutputStream stm = createFile(fs, file1, 1);
+      
+    stm.write(fileData);
+    stm.close();
+    try {
+      checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser, conf, shortCircuitFails);
+      //RemoteBlockReader have unsupported method read(ByteBuffer bf)
+      assertTrue("RemoteBlockReader unsupported method read(ByteBuffer bf) error",
+          checkUnsupportedMethod(fs, file1, fileData, readOffset));
+    } catch(IOException e) {
+      throw new IOException("doTestShortCircuitReadWithRemoteBlockReader ex error ", e);
+    } catch(InterruptedException inEx) {
+      throw inEx;
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
+  private boolean checkUnsupportedMethod(FileSystem fs, Path file,
+                byte[] expected, int readOffset) throws IOException {
+    HdfsDataInputStream stm = (HdfsDataInputStream)fs.open(file);
+    ByteBuffer actual = ByteBuffer.allocateDirect(expected.length - readOffset);
+    IOUtils.skipFully(stm, readOffset);
+    try {
+        stm.read(actual);
+    } catch(UnsupportedOperationException unex) {
+      return true;
+    }
+    return false;       
+  }
+
   /**
    * Test to run benchmarks between short circuit read vs regular read with
    * specified number of threads simultaneously reading.
