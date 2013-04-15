@@ -100,6 +100,7 @@ public class TestNNWithQJM {
 
   @Test (timeout = 30000)
   public void testNewNamenodeTakesOverWriter() throws Exception {
+    String baseDir = MiniDFSCluster.newDfsBaseDir();
     File nn1Dir = new File(
         baseDir + "/TestNNWithQJM/image-nn1");
     File nn2Dir = new File(
