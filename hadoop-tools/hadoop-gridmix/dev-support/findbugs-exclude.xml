@@ -26,4 +26,18 @@
   <Match>
     <Bug pattern="EI_EXPOSE_REP2" />
   </Match>
+
+ <!-- Ignore some irrelevant serialization warnings -->
+  <Match>
+    <Class name="org.apache.hadoop.mapred.gridmix.GridmixRecord$Comparator" />
+    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
+  </Match>
+
+  <!-- The called methods actually might throw Exceptions -->
+  <Match>
+    <Class name="org.apache.hadoop.mapred.gridmix.ExecutionSummarizer"/>
+    <Method name="processJobState"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+    <Bug code="REC"/>
+  </Match>
 </FindBugsFilter>

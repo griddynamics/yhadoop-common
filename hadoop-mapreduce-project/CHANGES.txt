@@ -33,6 +33,16 @@ Release 2.0.5-beta - UNRELEASED
     history, instaed of simulating state machine events.
     (Jason Lowe and Robert Parker via sseth)
 
+    MAPREDUCE-4981. Add WordMean, WordMedian, WordStandardDeviation
+    to ExamplesDriver. (Plamen Jeliazkov via shv)
+
+    MAPREUDUCE-5059. Change average merge time on Job overview page to be the
+    time delta between the end of the shuffle and the start of the reduce.
+    (Omkar Vinit Joshi via vinodkv)
+
+    MAPREDUCE-4985. Add compression option to TestDFSIO usage.
+    (Plamen Jeliazkov via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -120,6 +130,20 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
     command from the RM. (Jian He via jlowe)
 
+    MAPREDUCE-5113. Streaming input/output types are ignored with java
+    mapper/reducer. (sandyr via tucu)
+
+    MAPREDUCE-5098. Fix findbugs warnings in gridmix. (kkambatl via tucu)
+
+    MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
+    (Thomas Graves via jlowe)
+
+    MAPREDUCE-5136. TestJobImpl->testJobNoTasks fails with IBM JAVA (Amir
+    Sanjar via jlowe)
+
+    MAPREDUCE-5139. Update MR AM to use the modified startContainer API after
+    YARN-486. (Xuan Gong via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -144,6 +168,9 @@ Release 2.0.4-alpha - UNRELEASED
 
     MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
     actual cluster (Siddharth Seth via hitesh)
+
+    MAPREDUCE-5094. Disabled memory monitoring by default in MiniMRYarnCluster
+    to avoid some downstream tests failing. (Siddharth Seth via vinodkv)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -667,6 +694,18 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
 
+Release 0.23.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.7 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -732,6 +771,9 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-5007. fix coverage org.apache.hadoop.mapreduce.v2.hs (Aleksey
     Gorshkov via tgraves)
+
+    MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
+    (Thomas Graves via jlowe)
 
 Release 0.23.6 - UNRELEASED
 

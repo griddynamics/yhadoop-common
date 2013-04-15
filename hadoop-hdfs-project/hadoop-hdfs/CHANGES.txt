@@ -149,6 +149,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4643. Fix flakiness in TestQuorumJournalManager. (todd)
 
+    HDFS-4639. startFileInternal() should not increment generation stamp.
+    (Plamen Jeliazkov via shv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2197,6 +2200,20 @@ Release 2.0.0-alpha - 05-23-2012
     HDFS-3035. Fix failure of TestFileAppendRestart due to OP_UPDATE_BLOCKS (todd)
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
+
+Release 0.23.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-4477. Secondary namenode may retain old tokens (daryn via kihwal)
 
 Release 0.23.7 - UNRELEASED
 
