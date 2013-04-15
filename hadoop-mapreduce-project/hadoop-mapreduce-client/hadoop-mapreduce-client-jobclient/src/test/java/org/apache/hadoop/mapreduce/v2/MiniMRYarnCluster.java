@@ -24,9 +24,9 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -74,6 +74,15 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
           "apps_staging_dir/").getAbsolutePath());
     }
+
+    // By default, VMEM monitoring disabled, PMEM monitoring enabled.
+    if (!conf.getBoolean(
+        MRConfig.MAPREDUCE_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
+        MRConfig.DEFAULT_MAPREDUCE_MINICLUSTER_CONTROL_RESOURCE_MONITORING)) {
+      conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+      conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+    }
+
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,  "000");
 
     try {

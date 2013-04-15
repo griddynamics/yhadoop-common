@@ -100,9 +100,6 @@ public class TestNNWithQJM {
 
   @Test (timeout = 30000)
   public void testNewNamenodeTakesOverWriter() throws Exception {
-    // Skip the test on Windows. See HDFS-4584.
-    assumeTrue(!Path.WINDOWS);
-
     String baseDir = MiniDFSCluster.newDfsBaseDir();
     File nn1Dir = new File(
         baseDir + "/TestNNWithQJM/image-nn1");
@@ -113,7 +110,8 @@ public class TestNNWithQJM {
         nn1Dir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         mjc.getQuorumJournalURI("myjournal").toString());
-    
+
+    // Start the cluster once to generate the dfs dirs
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .dfsBaseDir(baseDir)
       .numDataNodes(0)
@@ -121,16 +119,29 @@ public class TestNNWithQJM {
       .checkExitOnShutdown(false)
       .build();
 
+    // Shutdown the cluster before making a copy of the namenode dir
+    // to release all file locks, otherwise, the copy will fail on
+    // some platforms.
+    cluster.shutdown();
+
     try {
-      cluster.getFileSystem().mkdirs(TEST_PATH);
-      
       // Start a second NN pointed to the same quorum.
       // We need to copy the image dir from the first NN -- or else
       // the new NN will just be rejected because of Namespace mismatch.
       FileUtil.fullyDelete(nn2Dir);
       FileUtil.copy(nn1Dir, FileSystem.getLocal(conf).getRaw(),
           new Path(nn2Dir.getAbsolutePath()), false, conf);
-      
+
+      // Start the cluster again
+      cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(0)
+        .format(false)
+        .manageNameDfsDirs(false)
+        .checkExitOnShutdown(false)
+        .build();
+
+      cluster.getFileSystem().mkdirs(TEST_PATH);
+
       Configuration conf2 = new Configuration();
       conf2.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           nn2Dir.getAbsolutePath());

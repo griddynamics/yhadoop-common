@@ -30,8 +30,6 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadInfo;
-import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -122,18 +120,7 @@ public class TestCheckpoint {
   
   @After
   public void checkForSNNThreads() {
-    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-    
-    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
-    for (ThreadInfo info : infos) {
-      if (info == null) continue;
-      LOG.info("Check thread: " + info.getThreadName());
-      if (info.getThreadName().contains("SecondaryNameNode")) {
-        fail("Leaked thread: " + info + "\n" +
-            Joiner.on("\n").join(info.getStackTrace()));
-      }
-    }
-    LOG.info("--------");
+    GenericTestUtils.assertNoThreadsMatching(".*SecondaryNameNode.*");
   }
   
   static void checkFile(FileSystem fileSys, Path name, int repl)
@@ -1169,7 +1156,7 @@ public class TestCheckpoint {
         throw new IOException(e);
       }
       
-      final int EXPECTED_TXNS_FIRST_SEG = 12;
+      final int EXPECTED_TXNS_FIRST_SEG = 11;
       
       // the following steps should have happened:
       //   edits_inprogress_1 -> edits_1-12  (finalized)
