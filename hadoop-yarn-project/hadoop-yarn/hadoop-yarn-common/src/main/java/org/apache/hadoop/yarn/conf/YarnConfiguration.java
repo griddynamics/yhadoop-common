@@ -122,9 +122,9 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_MB =
     YARN_PREFIX + "scheduler.maximum-allocation-mb";
   public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB = 8192;
-  public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_CORES =
+  public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES =
       YARN_PREFIX + "scheduler.maximum-allocation-vcores";
-  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_CORES = 32;
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES = 4;
 
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
@@ -717,21 +717,16 @@ public class YarnConfiguration extends Configuration {
   }
   
   public static String getRMWebAppHostAndPort(Configuration conf) {
-    int port = conf.getSocketAddr(
+    InetSocketAddress address = conf.getSocketAddr(
         YarnConfiguration.RM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_PORT).getPort();
-    // Use apps manager address to figure out the host for webapp
-    String host = conf.getSocketAddr(
-        YarnConfiguration.RM_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_PORT).getHostName();
-    InetSocketAddress address = NetUtils.createSocketAddrForHost(host, port);
+        YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
+    address = NetUtils.getConnectAddress(address);
     StringBuffer sb = new StringBuffer();
     InetAddress resolved = address.getAddress();
     if (resolved == null || resolved.isAnyLocalAddress() || 
         resolved.isLoopbackAddress()) {
-      String lh = host;
+      String lh = address.getHostName();
       try {
         lh = InetAddress.getLocalHost().getCanonicalHostName();
       } catch (UnknownHostException e) {
