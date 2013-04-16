@@ -116,7 +116,7 @@ public class TestBlockReaderLocal {
       fsIn.close();
       fsIn = null;
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
-      File dataFile = MiniDFSCluster.getBlockFile(0, block);
+      File dataFile = cluster.getBlockReplica(0, block);
       File metaFile = MiniDFSCluster.getBlockMetadataFile(0, block);
 
       DatanodeID datanodeID = cluster.getDataNodes().get(0).getDatanodeId();
