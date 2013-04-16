@@ -31,6 +31,7 @@ import java.net.URL;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 /**
@@ -38,8 +39,7 @@ import org.junit.Test;
  */
 public class TestUrlStreamHandler {
 
-  private static File TEST_ROOT_DIR = new File(System.getProperty("test.build.data","build/test/data") 
-      + File.separator + TestUrlStreamHandler.class.getSimpleName());
+  private static File TEST_ROOT_DIR = PathUtils.getTestDir(TestUrlStreamHandler.class);
     
   /**
    * Test opening and reading from an InputStream through a hdfs:// URL.

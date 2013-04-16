@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -43,8 +44,7 @@ import org.junit.Test;
  * underlying file system as Hdfs.
  */
 public class TestResolveHdfsSymlink {
-  private static File TEST_ROOT_DIR = new File(System.getProperty("test.build.data","build/test/data") 
-      + File.separator + TestResolveHdfsSymlink.class.getSimpleName());
+  private static File TEST_ROOT_DIR = PathUtils.getTestDir(TestResolveHdfsSymlink.class);
   private static MiniDFSCluster cluster = null;
 
   @BeforeClass
@@ -82,7 +82,7 @@ public class TestResolveHdfsSymlink {
         (short) 1, 2);
 
     Path linkTarget = new Path(fcLocal.getDefaultFileSystem().getUri()
-        .toString(), "/tmp");
+        .toString(), TEST_ROOT_DIR.getAbsolutePath());
     Path hdfsLink = new Path(fcHdfs.getDefaultFileSystem().getUri().toString(),
         "/tmp/link");
     fcHdfs.createSymlink(linkTarget, hdfsLink, true);

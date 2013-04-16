@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 public class TestReplicationPolicyWithNodeGroup {
@@ -104,8 +105,8 @@ public class TestReplicationPolicyWithNodeGroup {
       CONF.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
           "org.apache.hadoop.net.NetworkTopologyWithNodeGroup");
       
-      File baseDir = new File(System.getProperty(
-          "test.build.data", "build/test/data"), "dfs/");
+      File baseDir = PathUtils.getTestDir(TestReplicationPolicyWithNodeGroup.class);
+      
       CONF.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           new File(baseDir, "name").getPath());
       

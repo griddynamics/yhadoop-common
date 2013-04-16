@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer.Flags;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,7 +48,7 @@ public class TestOfflineEditsViewer {
   static { initializeObsoleteOpCodes(); }
 
   private static String buildDir =
-    System.getProperty("test.build.data", "build/test/data");
+    PathUtils.getTestDirName(TestOfflineEditsViewer.class);
 
   private static String cacheDir =
     System.getProperty("test.cache.data", "build/test/cache");

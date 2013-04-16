@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -87,8 +88,7 @@ public class TestOfflineImageViewer {
   final static HashMap<String, FileStatus> writtenFiles = 
       new HashMap<String, FileStatus>();
   
-  private static String ROOT = System.getProperty("test.build.data",
-                                                  "build/test/data");
+  private static String ROOT = PathUtils.getTestDirName(TestOfflineImageViewer.class);
   
   // Create a populated namespace for later testing.  Save its contents to a
   // data structure and store its fsimage location.
