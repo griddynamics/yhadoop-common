@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,6 +57,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.BZip2Codec;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -72,10 +72,7 @@ public class TestDFSShell {
   private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
   private static AtomicInteger counter = new AtomicInteger();
 
-  static final String TEST_ROOT_DIR =
-    System.getProperty("test.build.data","/tmp") + "/" + 
-        RandomStringUtils.randomAlphanumeric(10)
-        .toString().replace(' ', '+');
+  static final String TEST_ROOT_DIR = PathUtils.getTestDirName(TestDFSShell.class);
   
   static {
       new File(TEST_ROOT_DIR).mkdirs();

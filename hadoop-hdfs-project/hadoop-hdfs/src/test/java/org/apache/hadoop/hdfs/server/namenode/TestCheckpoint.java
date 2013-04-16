@@ -72,6 +72,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
@@ -188,7 +189,7 @@ public class TestCheckpoint {
     ArrayList<URI> fsImageDirs = new ArrayList<URI>();
     ArrayList<URI> editsDirs = new ArrayList<URI>();
     File filePath =
-      new File(System.getProperty("test.build.data","/tmp"), "storageDirToCheck");
+      new File(PathUtils.getTestDir(getClass()), "storageDirToCheck");
     assertTrue("Couldn't create directory storageDirToCheck",
                filePath.exists() || filePath.mkdirs());
     fsImageDirs.add(filePath.toURI());
@@ -1261,6 +1262,7 @@ public class TestCheckpoint {
   public void testCheckpointSignature() throws IOException {
 
     MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
     Configuration conf = new HdfsConfiguration();
 
     try {
@@ -1271,7 +1273,7 @@ public class TestCheckpoint {
       NameNode nn = cluster.getNameNode();
       NamenodeProtocols nnRpc = nn.getRpcServer();
 
-      secondary = startSecondaryNameNode(conf);
+      secondary  = startSecondaryNameNode(conf);
       // prepare checkpoint image
       secondary.doCheckpoint();
       CheckpointSignature sig = nnRpc.rollEditLog();
