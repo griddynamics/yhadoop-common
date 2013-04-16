@@ -33,17 +33,16 @@ import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestUberAM extends TestMRJobs {
 
   private static final Log LOG = LogFactory.getLog(TestUberAM.class);
 
-  @BeforeClass
-  public static void setup() throws IOException {
-    setTestClass(TestUberAM.class);
-    TestMRJobs.setup();
+  @Before
+  public void setup() throws IOException {
+    super.setup();
     if (mrCluster != null) {
     	mrCluster.getConfig().setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, true);
     }

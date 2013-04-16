@@ -73,38 +73,36 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestMRJobs {
 
   private static final Log LOG = LogFactory.getLog(TestMRJobs.class);
 
-  protected static MiniMRYarnCluster mrCluster;
-  protected static MiniDFSCluster dfsCluster;
+  protected MiniMRYarnCluster mrCluster;
+  protected MiniDFSCluster dfsCluster;
 
   private static Configuration conf = new Configuration();
   private static FileSystem localFs;
-  private static FileSystem remoteFs;
-  private static Class<?> testClass = TestMRJobs.class;
-  private static Path testRootDir;
-  protected static Path appJar;
   
-  protected static void setTestClass(Class<?> testClass) {
-      TestMRJobs.testClass = testClass;
-  }
-
-  @BeforeClass
-  public static void setup() throws IOException {
+  static {
     try {
       localFs = FileSystem.getLocal(conf);
     } catch (IOException io) {
       throw new RuntimeException("problem getting local fs", io);
     }
-
-    testRootDir = PathUtils.getTestPath(testClass).makeQualified(localFs);
+  }
+  
+  private FileSystem remoteFs;
+  private Path testRootDir;
+  protected static Path appJar;
+  
+  @Before
+  public void setup() throws IOException {
+    testRootDir = PathUtils.getTestPath(getClass()).makeQualified(localFs);
     if (!localFs.exists(testRootDir)) {
       localFs.mkdirs(testRootDir);
     }
@@ -140,8 +138,8 @@ public class TestMRJobs {
     localFs.setPermission(appJar, new FsPermission("700"));
   }
 
-  @AfterClass
-  public static void tearDown() {
+  @After
+  public void tearDown() {
     if (mrCluster != null) {
       mrCluster.stop();
       mrCluster = null;
@@ -488,7 +486,7 @@ public class TestMRJobs {
      * @return Map<String, Path> mapping the final component of each path to the
      *   corresponding Path instance
      */
-    private static Map<String, Path> pathsToMap(Path[] paths) {
+    private Map<String, Path> pathsToMap(Path[] paths) {
       Map<String, Path> map = new HashMap<String, Path>();
       for (Path path: paths) {
         map.put(path.getName(), path);
