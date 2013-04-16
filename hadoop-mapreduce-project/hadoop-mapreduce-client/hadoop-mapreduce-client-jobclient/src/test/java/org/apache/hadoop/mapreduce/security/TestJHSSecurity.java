@@ -95,7 +95,9 @@ public class TestJHSSecurity {
               maxLifetime, renewInterval, 3600000);
         }
       };
-//      final JobHistoryServer jobHistoryServer = jhServer;
+      // pick free random ports.
+      conf.set(JHAdminConfig.MR_HISTORY_ADDRESS,"0.0.0.0:0");
+      conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, "0.0.0.0:0");
       jobHistoryServer.init(conf);
       jobHistoryServer.start();
       final MRClientProtocol hsService = jobHistoryServer.getClientService()
