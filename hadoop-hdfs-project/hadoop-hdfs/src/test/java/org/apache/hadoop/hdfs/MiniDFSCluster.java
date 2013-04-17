@@ -2359,10 +2359,10 @@ public class MiniDFSCluster {
    * @param dnIndex Index of the datanode to get block files for
    * @param block block for which corresponding files are needed
    */
-  public static File getBlockMetadataFile(int dnIndex, ExtendedBlock block) {
+  public File getBlockMetadataFile(int dnIndex, ExtendedBlock block) {
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
-      File storageDir = MiniDFSCluster.getStorageDir(dnIndex, i);
+      File storageDir = getInstanceStorageDir(dnIndex, i);
       File blockMetaFile = getBlockMetadataFile(storageDir, block);
       if (blockMetaFile.exists()) {
         return blockMetaFile;

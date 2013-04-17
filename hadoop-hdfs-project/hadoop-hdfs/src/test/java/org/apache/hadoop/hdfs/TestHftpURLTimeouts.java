@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.junit.Test;
 
 public class TestHftpURLTimeouts {
-  
+
   @Test
   public void testHftpSocketTimeout() throws Exception {
     Configuration conf = new Configuration();
