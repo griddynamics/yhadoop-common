@@ -17,18 +17,20 @@
  */
 
 
-#if defined HADOOP_SNAPPY_LIBRARY
+
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "org_apache_hadoop_io_compress_snappy.h"
 
 #ifdef UNIX
 #include "config.h"
 #include <dlfcn.h>
 #endif
 
-#include "org_apache_hadoop_io_compress_snappy.h"
+#if defined HADOOP_SNAPPY_LIBRARY
 #include "org_apache_hadoop_io_compress_snappy_SnappyDecompressor.h"
 
 static jfieldID SnappyDecompressor_clazz;
