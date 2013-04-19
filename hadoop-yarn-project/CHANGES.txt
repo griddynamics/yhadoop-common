@@ -90,6 +90,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-514. Delayed store operations should not result in RM unavailability
     for app submission (Zhijie Shen via bikas)
 
+    YARN-586. Fixed a typo in ApplicationSubmissionContext#setApplicationId.
+    (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -197,6 +200,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-585. Fix failure in TestFairScheduler#testNotAllowSubmitApplication
     caused by YARN-514. (Zhijie Shen via vinodkv)
+
+    YARN-547. Fixed race conditions in public and private resource localization
+    which used to cause duplicate downloads. (Omkar Vinit Joshi via vinodkv)
 
 Release 2.0.4-alpha - UNRELEASED
 
