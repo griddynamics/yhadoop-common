@@ -370,6 +370,10 @@ Trunk (Unreleased)
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
 
+    HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
+    variables from current process environment/does not support overriding
+    when launching new process (Chris Nauroth via bikas)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -512,6 +516,9 @@ Trunk (Unreleased)
     HADOOP-9437. TestNativeIO#testRenameTo fails on Windows due to assumption
     that POSIX errno is embedded in NativeIOException. (Chris Nauroth via
     suresh)
+
+    HADOOP-9443. Port winutils static code analysis change to trunk.
+    (Chuan Liu via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 
@@ -1643,6 +1650,9 @@ Release 0.23.8 - UNRELEASED
 
     HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
     tests (Vadim Bondarev via jlowe)
+
+    HADOOP-9469. mapreduce/yarn source jars not included in dist tarball
+    (Robert Parker via tgraves)
 
 Release 0.23.7 - UNRELEASED
 

@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.mapreduce.v2;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -47,6 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -72,6 +75,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.JarFinder;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.Assert;
@@ -221,7 +225,7 @@ public class TestMRJobs {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 60000)
   public void testRandomWriter() throws IOException, InterruptedException,
       ClassNotFoundException {
     
@@ -283,7 +287,7 @@ public class TestMRJobs {
             && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 60000)
   public void testFailingMapper() throws IOException, InterruptedException,
       ClassNotFoundException {
 
@@ -365,7 +369,7 @@ public class TestMRJobs {
     return job;
   }
 
-  //@Test (timeout = 30000)
+  //@Test (timeout = 60000)
   public void testSleepJobWithSecurityOn() throws IOException,
       InterruptedException, ClassNotFoundException {
 
@@ -473,8 +477,46 @@ public class TestMRJobs {
       // Check that the symlink for the Job Jar was created in the cwd and
       // points to the extracted directory
       File jobJarDir = new File("job.jar");
-      Assert.assertTrue(FileUtils.isSymlink(jobJarDir));
-      Assert.assertTrue(jobJarDir.isDirectory());
+      if (Shell.WINDOWS) {
+        Assert.assertTrue(isWindowsSymlinkedDirectory(jobJarDir));
+      } else {
+        Assert.assertTrue(FileUtils.isSymlink(jobJarDir));
+        Assert.assertTrue(jobJarDir.isDirectory());
+      }
+    }
+
+    /**
+     * Used on Windows to determine if the specified file is a symlink that
+     * targets a directory.  On most platforms, these checks can be done using
+     * commons-io.  On Windows, the commons-io implementation is unreliable and
+     * always returns false.  Instead, this method checks the output of the dir
+     * command.  After migrating to Java 7, this method can be removed in favor
+     * of the new method java.nio.file.Files.isSymbolicLink, which is expected to
+     * work cross-platform.
+     * 
+     * @param file File to check
+     * @return boolean true if the file is a symlink that targets a directory
+     * @throws IOException thrown for any I/O error
+     */
+    private static boolean isWindowsSymlinkedDirectory(File file)
+        throws IOException {
+      String dirOut = Shell.execCommand("cmd", "/c", "dir",
+        file.getAbsoluteFile().getParent());
+      StringReader sr = new StringReader(dirOut);
+      BufferedReader br = new BufferedReader(sr);
+      try {
+        String line = br.readLine();
+        while (line != null) {
+          line = br.readLine();
+          if (line.contains(file.getName()) && line.contains("<SYMLINKD>")) {
+            return true;
+          }
+        }
+        return false;
+      } finally {
+        IOUtils.closeStream(br);
+        IOUtils.closeStream(sr);
+      }
     }
 
     /**
@@ -548,7 +590,7 @@ public class TestMRJobs {
           trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"));
   }
   
-  @Test (timeout = 300000)
+  @Test (timeout = 600000)
   public void testDistributedCache() throws Exception {
     // Test with a local (file:///) Job Jar
     Path localJobJarPath = makeJobJarWithLib(testRootDir.toUri().toString());

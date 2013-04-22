@@ -134,6 +134,10 @@ Trunk (Unreleased)
     MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
     Nauroth via bikas)
 
+    MAPREDUCE-4987. TestMRJobs#testDistributedCache fails on Windows due to
+    classpath problems and unexpected behavior of symlinks (Chris Nauroth via
+    bikas)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
@@ -322,6 +326,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-5163. Update MR App to not use API utility methods for collections
     after YARN-441. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5066. Added a timeout for the job.end.notification.url. (Ivan
+    Mitic via acmurthy)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -884,6 +891,9 @@ Release 0.23.8 - UNRELEASED
 
     MAPREDUCE-5015. Coverage fix for org.apache.hadoop.mapreduce.tools.CLI
     (Aleksey Gorshkov via tgraves)
+
+    MAPREDUCE-5147. Maven build should create 
+    hadoop-mapreduce-client-app-VERSION.jar directly (Robert Parker via tgraves)
 
 Release 0.23.7 - UNRELEASED
 
