@@ -186,7 +186,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String RM_AM_MAX_ATTEMPTS =
     RM_PREFIX + "am.max-attempts";
-  public static final int DEFAULT_RM_AM_MAX_ATTEMPTS = 1;
+  public static final int DEFAULT_RM_AM_MAX_ATTEMPTS = 2;
   
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 
@@ -582,11 +582,6 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "user-home-dir";
 
   public static final String DEFAULT_NM_USER_HOME_DIR= "/home/";
-
-
-  public static final int INVALID_CONTAINER_EXIT_STATUS = -1000;
-  public static final int ABORTED_CONTAINER_EXIT_STATUS = -100;
-  public static final int DISKS_FAILED = -101;
 
   ////////////////////////////////
   // Web Proxy Configs

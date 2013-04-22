@@ -134,6 +134,10 @@ Trunk (Unreleased)
     MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
     Nauroth via bikas)
 
+    MAPREDUCE-4987. TestMRJobs#testDistributedCache fails on Windows due to
+    classpath problems and unexpected behavior of symlinks (Chris Nauroth via
+    bikas)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
@@ -198,7 +202,14 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4985. Add compression option to TestDFSIO usage.
     (Plamen Jeliazkov via shv)
 
+    MAPREDUCE-5152. Make MR App to simply pass through the container from RM
+    instead of extracting and populating information itself to start any
+    container. (vinodkv)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
+    (Gelesh via bobby)
 
   BUG FIXES
 
@@ -298,6 +309,26 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-5139. Update MR AM to use the modified startContainer API after
     YARN-486. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5151. Update MR AM to use standard exit codes from the API after
+    YARN-444. (Sandy Ryza via vinodkv)
+
+    MAPREDUCE-5140. MR part of YARN-514 (Zhijie Shen via bikas)
+
+    MAPREDUCE-5128. mapred-default.xml is missing a bunch of history server 
+    configs. (sandyr via tucu)
+
+    MAPREDUCE-4898. FileOutputFormat.checkOutputSpecs and 
+    FileOutputFormat.setOutputPath incompatible with MR1. (rkanter via tucu)
+
+    MAPREDUCE-4932. mapreduce.job#getTaskCompletionEvents incompatible with 
+    Hadoop 1. (rkanter via tucu)
+
+    MAPREDUCE-5163. Update MR App to not use API utility methods for collections
+    after YARN-441. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5066. Added a timeout for the job.end.notification.url. (Ivan
+    Mitic via acmurthy)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -851,9 +882,18 @@ Release 0.23.8 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5065. DistCp should skip checksum comparisons if block-sizes 
+    are different on source/target (Mithun Radhakrishnan via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-5015. Coverage fix for org.apache.hadoop.mapreduce.tools.CLI
+    (Aleksey Gorshkov via tgraves)
+
+    MAPREDUCE-5147. Maven build should create 
+    hadoop-mapreduce-client-app-VERSION.jar directly (Robert Parker via tgraves)
 
 Release 0.23.7 - UNRELEASED
 

@@ -34,6 +34,13 @@ Trunk - Unreleased
     YARN-487. Modify path manipulation in LocalDirsHandlerService to let
     TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
 
+    YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
+    via vinodkv)
+
+    YARN-593. container launch on Windows does not correctly populate
+    classpath with new process's environment variables and localized resources
+    (Chris Nauroth via bikas)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
@@ -82,7 +89,16 @@ Release 2.0.5-beta - UNRELEASED
     RM as a direct parameter instead of as part of the ContainerLaunchContext
     record. (Xuan Gong via vinodkv)
 
+    YARN-444. Moved special container exit codes from YarnConfiguration to API
+    where they belong. (Sandy Ryza via vinodkv)
+
+    YARN-441. Removed unused utility methods for collections from two API
+    records. (Xuan Gong via vinodkv)
+
   NEW FEATURES
+
+    YARN-482. FS: Extend SchedulingMode to intermediate queues. 
+    (kkambatl via tucu)
 
   IMPROVEMENTS
 
@@ -141,6 +157,15 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-495. Changed NM reboot behaviour to be a simple resync - kill all
     containers  and re-register with RM. (Jian He via vinodkv)
+
+    YARN-514. Delayed store operations should not result in RM unavailability
+    for app submission (Zhijie Shen via bikas)
+
+    YARN-586. Fixed a typo in ApplicationSubmissionContext#setApplicationId.
+    (Zhijie Shen via vinodkv)
+
+    YARN-542. Changed the default global AM max-attempts value to be not one.
+    (Zhijie Shen via vinodkv)
 
   OPTIMIZATIONS
 
@@ -234,7 +259,24 @@ Release 2.0.5-beta - UNRELEASED
     YARN-412. Fixed FifoScheduler to check hostname of a NodeManager rather
     than its host:port during scheduling which caused incorrect locality for
     containers. (Roger Hoover via acmurthy)
-    
+
+    YARN-500. Fixed YARN webapps to not roll-over ports when explicitly asked
+    to use non-ephemeral ports. (Kenji Kikushima via vinodkv)
+
+    YARN-518. Fair Scheduler's document link could be added to the hadoop 2.x 
+    main doc page. (sandyr via tucu)
+
+    YARN-476. ProcfsBasedProcessTree info message confuses users. 
+    (sandyr via tucu)
+
+    YARN-585. Fix failure in TestFairScheduler#testNotAllowSubmitApplication
+    caused by YARN-514. (Zhijie Shen via vinodkv)
+
+    YARN-547. Fixed race conditions in public and private resource localization
+    which used to cause duplicate downloads. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-594. Update test and add comments in YARN-534 (Jian He via bikas)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
