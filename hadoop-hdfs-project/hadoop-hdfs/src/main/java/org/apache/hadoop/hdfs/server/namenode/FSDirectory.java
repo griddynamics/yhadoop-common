@@ -44,10 +44,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -57,6 +57,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -72,6 +74,10 @@ import com.google.common.base.Preconditions;
  * 
  *************************************************/
 public class FSDirectory implements Closeable {
+  private static INodeDirectoryWithQuota createRoot(FSNamesystem namesystem) {
+    return new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
+        namesystem.createFsOwnerPermissions(new FsPermission((short)0755)));
+  }
 
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
@@ -120,9 +126,7 @@ public class FSDirectory implements Closeable {
   FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.cond = dirLock.writeLock().newCondition();
-    rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-        ns.createFsOwnerPermissions(new FsPermission((short)0755)),
-        Integer.MAX_VALUE, UNKNOWN_DISK_SPACE);
+    rootDir = createRoot(ns);
     this.fsImage = fsImage;
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
@@ -301,35 +305,6 @@ public class FSDirectory implements Closeable {
       return null;
     }
     return newNode;
-  }
-
-  INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
-      INode newNode, boolean propagateModTime) {
-    // NOTE: This does not update space counts for parents
-    INodeDirectory newParent = null;
-    writeLock();
-    try {
-      try {
-        newParent = rootDir.addToParent(src, newNode, parentINode,
-                                        propagateModTime);
-        cacheName(newNode);
-      } catch (FileNotFoundException e) {
-        return null;
-      }
-      if(newParent == null)
-        return null;
-      if(!newNode.isDirectory() && !newNode.isSymlink()) {
-        // Add file->block mapping
-        INodeFile newF = (INodeFile)newNode;
-        BlockInfo[] blocks = newF.getBlocks();
-        for (int i = 0; i < blocks.length; i++) {
-          newF.setBlock(i, getBlockManager().addBlockCollection(blocks[i], newF));
-        }
-      }
-    } finally {
-      writeUnlock();
-    }
-    return newParent;
   }
 
   /**
@@ -536,7 +511,7 @@ public class FSDirectory implements Closeable {
       return true;
     }
     if (srcInode.isSymlink() && 
-        dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
+        dst.equals(((INodeSymlink)srcInode).getSymlinkString())) {
       throw new FileAlreadyExistsException(
           "Cannot rename symlink "+src+" to its target "+dst);
     }
@@ -551,8 +526,9 @@ public class FSDirectory implements Closeable {
     }
     
     byte[][] dstComponents = INode.getPathComponents(dst);
-    INode[] dstInodes = new INode[dstComponents.length];
-    rootDir.getExistingPathINodes(dstComponents, dstInodes, false);
+    INodesInPath dstInodesInPath = rootDir.getExistingPathINodes(dstComponents,
+        dstComponents.length, false);
+    INode[] dstInodes = dstInodesInPath.getINodes();
     if (dstInodes[dstInodes.length-1] != null) {
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                                    +"failed to rename "+src+" to "+dst+ 
@@ -567,7 +543,7 @@ public class FSDirectory implements Closeable {
     }
     
     // Ensure dst has quota to accommodate rename
-    verifyQuotaForRename(srcInodes,dstInodes);
+    verifyQuotaForRename(srcInodes, dstInodes);
     
     INode dstChild = null;
     INode srcChild = null;
@@ -659,7 +635,7 @@ public class FSDirectory implements Closeable {
           "The source "+src+" and destination "+dst+" are the same");
     }
     if (srcInode.isSymlink() && 
-        dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
+        dst.equals(((INodeSymlink)srcInode).getSymlinkString())) {
       throw new FileAlreadyExistsException(
           "Cannot rename symlink "+src+" to its target "+dst);
     }
@@ -673,8 +649,9 @@ public class FSDirectory implements Closeable {
       throw new IOException(error);
     }
     final byte[][] dstComponents = INode.getPathComponents(dst);
-    final INode[] dstInodes = new INode[dstComponents.length];
-    rootDir.getExistingPathINodes(dstComponents, dstInodes, false);
+    INodesInPath dstInodesInPath = rootDir.getExistingPathINodes(dstComponents,
+        dstComponents.length, false);
+    final INode[] dstInodes = dstInodesInPath.getINodes();
     INode dstInode = dstInodes[dstInodes.length - 1];
     if (dstInodes.length == 1) {
       error = "rename destination cannot be the root";
@@ -697,14 +674,15 @@ public class FSDirectory implements Closeable {
             + error);
         throw new FileAlreadyExistsException(error);
       }
-      List<INode> children = dstInode.isDirectory() ? 
-          ((INodeDirectory) dstInode).getChildren() : null;
-      if (children != null && children.size() != 0) {
-        error = "rename cannot overwrite non empty destination directory "
-            + dst;
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-            + error);
-        throw new IOException(error);
+      if (dstInode.isDirectory()) {
+        final List<INode> children = ((INodeDirectory) dstInode
+            ).getChildrenList();
+        if (!children.isEmpty()) {
+          error = "rename destination directory is not empty: " + dst;
+          NameNode.stateChangeLog.warn(
+              "DIR* FSDirectory.unprotectedRenameTo: " + error);
+          throw new IOException(error);
+        }
       }
     }
     if (dstInodes[dstInodes.length - 2] == null) {
@@ -762,7 +740,7 @@ public class FSDirectory implements Closeable {
         if (removedDst != null) {
           INode rmdst = removedDst;
           removedDst = null;
-          List<Block> collectedBlocks = new ArrayList<Block>();
+          BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
           filesDeleted = rmdst.collectSubtreeBlocksAndClear(collectedBlocks);
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
         }
@@ -820,11 +798,7 @@ public class FSDirectory implements Closeable {
 
     INode[] inodes = rootDir.getExistingPathINodes(src, true);
     INode inode = inodes[inodes.length - 1];
-    if (inode == null) {
-      return null;
-    }
-    assert !inode.isSymlink();
-    if (inode.isDirectory()) {
+    if (inode == null || !inode.isFile()) {
       return null;
     }
     INodeFile fileNode = (INodeFile)inode;
@@ -843,22 +817,15 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Get the blocksize of a file
-   * @param filename the filename
-   * @return the number of bytes 
+   * @param path the file path
+   * @return the block size of the file. 
    */
-  long getPreferredBlockSize(String filename) throws UnresolvedLinkException,
+  long getPreferredBlockSize(String path) throws UnresolvedLinkException,
       FileNotFoundException, IOException {
     readLock();
     try {
-      INode inode = rootDir.getNode(filename, false);
-      if (inode == null) {
-        throw new FileNotFoundException("File does not exist: " + filename);
-      }
-      if (inode.isDirectory() || inode.isSymlink()) {
-        throw new IOException("Getting block size of non-file: "+ filename); 
-      }
-      return ((INodeFile)inode).getPreferredBlockSize();
+      return INodeFile.valueOf(rootDir.getNode(path, false), path
+          ).getPreferredBlockSize();
     } finally {
       readUnlock();
     }
@@ -872,9 +839,7 @@ public class FSDirectory implements Closeable {
       if (inode == null) {
          return false;
       }
-      return inode.isDirectory() || inode.isSymlink() 
-        ? true 
-        : ((INodeFile)inode).getBlocks() != null;
+      return !inode.isFile() || ((INodeFile)inode).getBlocks() != null;
     } finally {
       readUnlock();
     }
@@ -999,7 +964,7 @@ public class FSDirectory implements Closeable {
    * @param collectedBlocks Blocks under the deleted directory
    * @return true on successful deletion; else false
    */
-  boolean delete(String src, List<Block>collectedBlocks) 
+  boolean delete(String src, BlocksMapUpdateInfo collectedBlocks) 
     throws UnresolvedLinkException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
@@ -1052,7 +1017,7 @@ public class FSDirectory implements Closeable {
   void unprotectedDelete(String src, long mtime) 
     throws UnresolvedLinkException {
     assert hasWriteLock();
-    List<Block> collectedBlocks = new ArrayList<Block>();
+    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime);
     if (filesRemoved > 0) {
       getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
@@ -1067,7 +1032,7 @@ public class FSDirectory implements Closeable {
    * @param mtime the time the inode is removed
    * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
-  int unprotectedDelete(String src, List<Block> collectedBlocks, 
+  int unprotectedDelete(String src, BlocksMapUpdateInfo collectedBlocks, 
       long mtime) throws UnresolvedLinkException {
     assert hasWriteLock();
     src = normalizePath(src);
@@ -1168,7 +1133,7 @@ public class FSDirectory implements Closeable {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing; i++) {
         INode cur = contents.get(startChild+i);
-        listing[i] = createFileStatus(cur.name, cur, needLocation);
+        listing[i] = createFileStatus(cur.getLocalNameBytes(), cur, needLocation);
       }
       return new DirectoryListing(
           listing, totalNumChildren-startChild-numOfListing);
@@ -1207,14 +1172,8 @@ public class FSDirectory implements Closeable {
     waitForReady();
     readLock();
     try {
-      INode targetNode = rootDir.getNode(src, false);
-      if (targetNode == null)
-        return null;
-      if (targetNode.isDirectory())
-        return null;
-      if (targetNode.isSymlink()) 
-        return null;
-      return ((INodeFile)targetNode).getBlocks();
+      final INode i = rootDir.getNode(src, false);
+      return i != null && i.isFile()? ((INodeFile)i).getBlocks(): null;
     } finally {
       readUnlock();
     }
@@ -1356,7 +1315,7 @@ public class FSDirectory implements Closeable {
     for(int i = 0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
         INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.updateNumItemsInTree(nsDelta, dsDelta);
+        node.addSpaceConsumed(nsDelta, dsDelta);
       }
     }
   }
@@ -1389,7 +1348,7 @@ public class FSDirectory implements Closeable {
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
         INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.unprotectedUpdateNumItemsInTree(nsDelta, dsDelta);
+        node.addSpaceConsumed(nsDelta, dsDelta);
       }
     }
   }
@@ -1455,12 +1414,13 @@ public class FSDirectory implements Closeable {
     src = normalizePath(src);
     String[] names = INode.getPathNames(src);
     byte[][] components = INode.getPathComponents(names);
-    INode[] inodes = new INode[components.length];
-    final int lastInodeIndex = inodes.length - 1;
+    final int lastInodeIndex = components.length - 1;
 
     writeLock();
     try {
-      rootDir.getExistingPathINodes(components, inodes, false);
+      INodesInPath inodesInPath = rootDir.getExistingPathINodes(components,
+          components.length, false);
+      INode[] inodes = inodesInPath.getINodes();
 
       // find the index of the first null in inodes[]
       StringBuilder pathbuilder = new StringBuilder();
@@ -1530,16 +1490,14 @@ public class FSDirectory implements Closeable {
     return true;
   }
 
-  /**
-   */
   INode unprotectedMkdir(String src, PermissionStatus permissions,
                           long timestamp) throws QuotaExceededException,
                           UnresolvedLinkException {
     assert hasWriteLock();
     byte[][] components = INode.getPathComponents(src);
-    INode[] inodes = new INode[components.length];
-
-    rootDir.getExistingPathINodes(components, inodes, false);
+    INodesInPath inodesInPath = rootDir.getExistingPathINodes(components,
+        components.length, false);
+    INode[] inodes = inodesInPath.getINodes();
     unprotectedMkdir(inodes, inodes.length-1, components[inodes.length-1],
         permissions, timestamp);
     return inodes[inodes.length-1];
@@ -1568,10 +1526,11 @@ public class FSDirectory implements Closeable {
     byte[] path = components[components.length-1];
     child.setLocalName(path);
     cacheName(child);
-    INode[] inodes = new INode[components.length];
     writeLock();
     try {
-      rootDir.getExistingPathINodes(components, inodes, false);
+      INodesInPath inodesInPath = rootDir.getExistingPathINodes(components,
+          components.length, false);
+      INode[] inodes = inodesInPath.getINodes();
       return addChild(inodes, inodes.length-1, child, childDiskspace);
     } finally {
       writeUnlock();
@@ -2018,9 +1977,7 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       setReady(false);
-      rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-          getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
-          Integer.MAX_VALUE, -1);
+      rootDir = createRoot(getFSNamesystem());
       nameCache.reset();
     } finally {
       writeUnlock();
@@ -2163,7 +2120,7 @@ public class FSDirectory implements Closeable {
    */
   void cacheName(INode inode) {
     // Name is cached only for files
-    if (inode.isDirectory() || inode.isSymlink()) {
+    if (!inode.isFile()) {
       return;
     }
     ByteArray name = new ByteArray(inode.getLocalNameBytes());
