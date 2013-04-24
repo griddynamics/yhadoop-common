@@ -15,31 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.common;
+package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.SequentialNumber;
 
-/****************************************************************
- * A GenerationStamp is a Hadoop FS primitive, identified by a long.
- ****************************************************************/
+/**
+ * An id which uniquely identifies an inode
+ */
 @InterfaceAudience.Private
-public class GenerationStamp extends SequentialNumber {
+class INodeId extends SequentialNumber {
   /**
-   * The last reserved generation stamp.
+   * The last reserved inode id. Reserve id 1 to 1000 for potential future
+   * usage. The id won't be recycled and is not expected to wrap around in a
+   * very long time. Root inode id will be 1001.
    */
-  public static final long LAST_RESERVED_STAMP = 1000L;
+  public static final long LAST_RESERVED_ID = 1000L;
 
   /**
-   * Generation stamp of blocks that pre-date the introduction
-   * of a generation stamp.
+   * The inode id validation of lease check will be skipped when the request
+   * uses GRANDFATHER_INODE_ID for backward compatibility.
    */
-  public static final long GRANDFATHER_GENERATION_STAMP = 0;
+  public static final long GRANDFATHER_INODE_ID = 0;
 
-  /**
-   * Create a new instance, initialized to {@link #LAST_RESERVED_STAMP}.
-   */
-  public GenerationStamp() {
-    super(LAST_RESERVED_STAMP);
+  INodeId() {
+    super(LAST_RESERVED_ID);
   }
 }
