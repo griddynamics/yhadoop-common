@@ -4,6 +4,8 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
+
   NEW FEATURES
 
     HDFS-1804. Add a new block-volume device choosing policy that looks at
@@ -15,6 +17,12 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4339. Persist inode id in fsimage and editlog. (Brandon Li via
     suresh)
+
+    HDFS-4340. Update addBlock() to inculde inode id as additional argument.
+    (Brandon Li via suresh)
+
+    HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
+    exists.  (Brandon Li via suresh)
 
   IMPROVEMENTS
 
