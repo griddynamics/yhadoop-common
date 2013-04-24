@@ -9,6 +9,13 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-1804. Add a new block-volume device choosing policy that looks at
     free space. (atm)
 
+    HDFS-4296. Reserve layout version for release 1.2.0. (suresh)
+
+    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
+
+    HDFS-4339. Persist inode id in fsimage and editlog. (Brandon Li via
+    suresh)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -56,6 +63,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
     returning more than INode array. (Jing Zhao via suresh)
 
+    HDFS-4151. Change the methods in FSDirectory to pass INodesInPath instead
+    of INode[] as a parameter. (szetszwo)
+
     HDFS-4129. Add utility methods to dump NameNode in memory tree for 
     testing. (szetszwo via suresh)
 
@@ -67,6 +77,16 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4215. Remove locking from addToParent(..) since it is used in image
     loading, and add INode.isFile().  (szetszwo)
+
+    HDFS-4243. When replacing an INodeDirectory, the parent pointers of the
+    children of the child have to be updated to the new child.  (Jing Zhao
+    via szetszwo)
+
+    HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
+    FSDirectory and INodeDirectory. (szetszwo)
+
+    HDFS-4346. Add SequentialNumber as a base class for INodeId and
+    GenerationStamp.  (szetszwo)
 
   OPTIMIZATIONS
 
