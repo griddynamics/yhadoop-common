@@ -167,6 +167,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
@@ -377,14 +378,43 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private final boolean haEnabled;
     
+  private INodeId inodeId;
+  
+  /**
+   * Set the last allocated inode id when fsimage or editlog is loaded. 
+   */
+  public void resetLastInodeId(long newValue) throws IOException {
+    try {
+      inodeId.skipTo(newValue);
+    } catch(IllegalStateException ise) {
+      throw new IOException(ise);
+    }
+  }
+
+  /** Should only be used for tests to reset to any value */
+  void resetLastInodeIdWithoutChecking(long newValue) {
+    inodeId.setCurrentValue(newValue);
+  }
+  
+  /** @return the last inode ID. */
+  public long getLastInodeId() {
+    return inodeId.getCurrentValue();
+  }
+
+  /** Allocate a new inode ID. */
+  public long allocateNewInodeId() {
+    return inodeId.nextValue();
+  }
+  
   /**
    * Clear all loaded data
    */
   void clear() {
     dir.reset();
     dtSecretManager.reset();
-    generationStamp.setStamp(GenerationStamp.FIRST_VALID_STAMP);
+    generationStamp.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     leaseManager.removeAllLeases();
+    inodeId.setCurrentValue(INodeId.LAST_RESERVED_ID);
   }
 
   @VisibleForTesting
@@ -559,6 +589,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
       this.standbyShouldCheckpoint = conf.getBoolean(
           DFS_HA_STANDBY_CHECKPOINTS_KEY, DFS_HA_STANDBY_CHECKPOINTS_DEFAULT);
+      
+      this.inodeId = new INodeId();
       
       // For testing purposes, allow the DT secret manager to be started regardless
       // of whether security is enabled.
@@ -1688,7 +1720,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  /*
+  /**
    * Verify that parent directory of src exists.
    */
   private void verifyParentDir(String src) throws FileNotFoundException,
@@ -1696,14 +1728,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasReadOrWriteLock();
     Path parent = new Path(src).getParent();
     if (parent != null) {
-      INode[] pathINodes = dir.getExistingPathINodes(parent.toString());
-      INode parentNode = pathINodes[pathINodes.length - 1];
+      final INode parentNode = dir.getINode(parent.toString());
       if (parentNode == null) {
         throw new FileNotFoundException("Parent directory doesn't exist: "
-            + parent.toString());
+            + parent);
       } else if (!parentNode.isDirectory() && !parentNode.isSymlink()) {
         throw new ParentNotDirectoryException("Parent path is not a directory: "
-            + parent.toString());
+            + parent);
       }
     }
   }
@@ -1895,6 +1926,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog) throws IOException {
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                                    file.getId(),
                                     file.getLocalNameBytes(),
                                     file.getBlockReplication(),
                                     file.getModificationTime(),
@@ -2149,7 +2181,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOperation(OperationCategory.READ);
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
       final INode[] inodes = analyzeFileState(
-          src, clientName, previous, onRetryBlock);
+          src, clientName, previous, onRetryBlock).getINodes();
       final INodeFileUnderConstruction pendingFile =
           (INodeFileUnderConstruction) inodes[inodes.length - 1];
 
@@ -2180,8 +2212,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Run the full analysis again, since things could have changed
       // while chooseTarget() was executing.
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
-      INode[] inodes =
+      INodesInPath inodesInPath =
           analyzeFileState(src, clientName, previous, onRetryBlock);
+      final INode[] inodes = inodesInPath.getINodes();
       final INodeFileUnderConstruction pendingFile =
           (INodeFileUnderConstruction) inodes[inodes.length - 1];
 
@@ -2196,7 +2229,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       // allocate new block, record block locations in INode.
       newBlock = createNewBlock();
-      saveAllocatedBlock(src, inodes, newBlock, targets);
+      saveAllocatedBlock(src, inodesInPath, newBlock, targets);
 
       dir.persistBlocks(src, pendingFile);
       offset = pendingFile.computeFileSize(true);
@@ -2211,7 +2244,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return makeLocatedBlock(newBlock, targets, offset);
   }
 
-  INode[] analyzeFileState(String src,
+  INodesInPath analyzeFileState(String src,
                                 String clientName,
                                 ExtendedBlock previous,
                                 LocatedBlock[] onRetryBlock)
@@ -2229,7 +2262,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkFsObjectLimit();
 
     Block previousBlock = ExtendedBlock.getLocalBlock(previous);
-    final INode[] inodes = dir.rootDir.getExistingPathINodes(src, true);
+    final INodesInPath inodesInPath = dir.rootDir.getExistingPathINodes(src, true);
+    final INode[] inodes = inodesInPath.getINodes();
     final INodeFileUnderConstruction pendingFile
         = checkLease(src, clientName, inodes[inodes.length - 1]);
     BlockInfo lastBlockInFile = pendingFile.getLastBlock();
@@ -2289,7 +2323,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         onRetryBlock[0] = makeLocatedBlock(lastBlockInFile,
             ((BlockInfoUnderConstruction)lastBlockInFile).getExpectedLocations(),
             offset);
-        return inodes;
+        return inodesInPath;
       } else {
         // Case 3
         throw new IOException("Cannot allocate block in " + src + ": " +
@@ -2302,7 +2336,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (!checkFileProgress(pendingFile, false)) {
       throw new NotReplicatedYetException("Not replicated yet: " + src);
     }
-    return inodes;
+    return inodesInPath;
   }
 
   LocatedBlock makeLocatedBlock(Block blk,
@@ -2512,7 +2546,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *                     The last INode is the INode for the file.
    * @throws QuotaExceededException If addition of block exceeds space quota
    */
-  BlockInfo saveAllocatedBlock(String src, INode[] inodes,
+  BlockInfo saveAllocatedBlock(String src, INodesInPath inodes,
       Block newBlock, DatanodeDescriptor targets[]) throws IOException {
     assert hasWriteLock();
     BlockInfo b = dir.addBlock(src, inodes, newBlock, targets);
@@ -2531,8 +2565,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     Block b = new Block(getFSImage().getUniqueBlockId(), 0, 0); 
     // Increment the generation stamp for every new block.
-    nextGenerationStamp();
-    b.setGenerationStamp(getGenerationStamp());
+    b.setGenerationStamp(nextGenerationStamp());
     return b;
   }
 
@@ -4780,14 +4813,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Sets the generation stamp for this filesystem
    */
   void setGenerationStamp(long stamp) {
-    generationStamp.setStamp(stamp);
+    generationStamp.setCurrentValue(stamp);
   }
 
   /**
    * Gets the generation stamp for this filesystem
    */
   long getGenerationStamp() {
-    return generationStamp.getStamp();
+    return generationStamp.getCurrentValue();
   }
 
   /**
@@ -4799,7 +4832,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new SafeModeException(
           "Cannot get next generation stamp", safeMode);
     }
-    long gs = generationStamp.nextStamp();
+    final long gs = generationStamp.nextValue();
     getEditLog().logGenerationStamp(gs);
     // NB: callers sync the log
     return gs;
