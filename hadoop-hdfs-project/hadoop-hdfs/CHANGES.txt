@@ -28,6 +28,11 @@ Trunk (Unreleased)
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
+
+    HDFS-4339. Persist inode id in fsimage and editlog. (Brandon Li via
+    suresh)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -181,8 +186,6 @@ Trunk (Unreleased)
 
     HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
-    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
-
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
 
@@ -325,6 +328,10 @@ Trunk (Unreleased)
 
     HDFS-4646. createNNProxyWithClientProtocol ignores configured timeout
     value (Jagane Sundar via cos)
+
+    HDFS-4732. Fix TestDFSUpgradeFromImage which fails on Windows due to
+    failure to unpack old image tarball that contains hard links.
+    (Chris Nauroth via szetszwo)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
@@ -575,6 +582,14 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4695. TestEditLog leaks open file handles between tests.
     (Ivan Mitic via suresh)
+
+    HDFS-4737. JVM path embedded in fuse binaries. (Sean Mackrory via atm)
+
+    HDFS-4739. NN can miscalculate the number of extra edit log segments to
+    retain. (atm)
+
+    HDFS-4745. TestDataTransferKeepalive#testSlowReader has race condition that
+    causes sporadic failure. (Chris Nauroth via suresh)
 
 Release 2.0.4-alpha - UNRELEASED
 
