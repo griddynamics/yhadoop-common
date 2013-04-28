@@ -177,9 +177,6 @@ Release 2.0.5-beta - UNRELEASED
     YARN-515. Node Manager not getting the master key. (Robert Joseph Evans
     via jlowe)
 
-    YARN-516. Fix failure in TestContainerLocalizer caused by HADOOP-9357.
-    (Andrew Wang via vinodkv)
-
     YARN-382. SchedulerUtils improve way normalizeRequest sets the resource
     capabilities. (Zhijie Shen via bikas)
 
@@ -243,6 +240,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-289. Fair scheduler allows reservations that won't fit on node.
     (Sandy Ryza via tomwhite)
+
+    YARN-576. Modified ResourceManager to reject NodeManagers that don't satisy
+    minimum resource requirements. (Kenji Kikushima via vinodkv)
 
 Release 2.0.4-alpha - UNRELEASED
 
