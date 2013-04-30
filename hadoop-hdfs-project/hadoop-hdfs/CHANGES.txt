@@ -22,9 +22,6 @@ Trunk (Unreleased)
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
-    HDFS-2576. Enhances the DistributedFileSystem's create API so that clients
-    can specify favored datanodes for a file's blocks. (ddas)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -418,6 +415,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
     exists.  (Brandon Li via suresh)
 
+    HDFS-2576. Enhances the DistributedFileSystem's create API so that clients
+    can specify favored datanodes for a file's blocks. (ddas)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -616,6 +616,9 @@ Release 2.0.5-beta - UNRELEASED
     causes sporadic test failures. (Chris Nauroth via suresh)
 
     HDFS-4733. Make HttpFS username pattern configurable. (tucu via atm)
+
+    HDFS-4778. Fixes some issues that the first patch on HDFS-2576 missed.
+    (ddas)
 
 Release 2.0.4-alpha - UNRELEASED
 
