@@ -118,6 +118,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-632. Changed ContainerManager api to throw IOException and
     YarnRemoteException. (Xuan Gong via vinodkv)
 
+    YARN-631. Changed ClientRMProtocol api to throw IOException and
+    YarnRemoteException. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -353,7 +356,7 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-646. Fix two typos in Fair Scheduler user guide. (Dapeng Sun via atm)
 
-Release 2.0.4-alpha - UNRELEASED
+Release 2.0.4-alpha - 2013-04-25 
 
   INCOMPATIBLE CHANGES
 
