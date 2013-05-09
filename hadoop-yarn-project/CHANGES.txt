@@ -160,6 +160,8 @@ Release 2.0.5-beta - UNRELEASED
     tokens for app attempt so that RM can be restarted while preserving current
     applications. (Jian He via vinodkv)
 
+    YARN-598. Add virtual cores to queue metrics. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -283,6 +285,14 @@ Release 2.0.5-beta - UNRELEASED
     minimum resource requirements. (Kenji Kikushima via vinodkv)
 
     YARN-646. Fix two typos in Fair Scheduler user guide. (Dapeng Sun via atm)
+
+    YARN-507. Add interface visibility and stability annotations to FS 
+    interfaces/classes. (kkambatl via tucu)
+
+    YARN-637. FS: maxAssign is not honored. (kkambatl via tucu)
+
+    YARN-655. Fair scheduler metrics should subtract allocated memory from 
+    available memory. (sandyr via tucu)
 
 Release 2.0.4-alpha - 2013-04-25 
 
