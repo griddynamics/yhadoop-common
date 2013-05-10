@@ -166,7 +166,7 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void registerWithRM() throws YarnRemoteException {
+      protected void registerWithRM() throws YarnRemoteException, IOException {
         super.registerWithRM();
         registrationCount++;
       }
@@ -297,7 +297,7 @@ public class TestNodeManagerResync {
                 " yet connected with ResourceManager"));
               // TO DO: This should be replaced to explicitly check exception
               // class name after YARN-142
-              Assert.assertTrue(e.getRemoteTrace().contains(
+              Assert.assertTrue(e.getMessage().contains(
                 NMNotYetReadyException.class.getName()));
             } catch (IOException e) {
               assertionFailedInThread.set(true);
