@@ -844,6 +844,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4804. WARN when users set the block balanced preference percent below
     0.5 or above 1.0. (Stephen Chu via atm)
 
+    HDFS-4698. Provide client-side metrics for remote reads, local reads, and
+    short-circuit reads. (Colin Patrick McCabe via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -980,6 +983,8 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4799. Corrupt replica can be prematurely removed from 
     corruptReplicas map. (todd via kihwal)
+
+    HDFS-4751. TestLeaseRenewer#testThreadName flakes. (Andrew Wang via atm)
 
 Release 2.0.4-alpha - 2013-04-25
 
