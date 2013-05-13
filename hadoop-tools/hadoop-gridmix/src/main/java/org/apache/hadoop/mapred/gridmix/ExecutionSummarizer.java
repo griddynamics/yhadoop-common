@@ -103,10 +103,6 @@ class ExecutionSummarizer implements StatListener<JobStats> {
       // this behavior is consistent with job-monitor which marks the job as 
       // complete (lost) if the status polling bails out
       ++totalLostJobs; 
-    } catch (InterruptedException e) {
-      // this behavior is consistent with job-monitor which marks the job as
-      // complete (lost) if the status polling bails out
-      ++totalLostJobs;
     } catch (RuntimeException e) {
       // this behavior is consistent with job-monitor which marks the job as
       // complete (lost) if the status polling bails out
