@@ -4,6 +4,16 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    avoid an extra copy (Sanjay Radia)
+
+    HADOOP-9151 Include RPC error info in RpcResponseHeader instead of sending
+    it separately (sanjay Radia)
+
+    HADOOP-9380 Add totalLength to rpc response  (sanjay Radia)
+
+    HADOOP-9425 Add error codes to rpc-response (sanjay Radia)
+
   NEW FEATURES
 
     HADOOP-9194. RPC support for QoS. (Junping Du via llu)
@@ -62,6 +72,10 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9560. metrics2#JvmMetrics should have max memory size of JVM.
     (Tsuyoshi Ozawa via suresh)
+
+    HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
+
+    HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
 
   OPTIMIZATIONS
 
