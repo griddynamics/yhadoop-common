@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.client;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.PrintStream;
 
 import org.apache.hadoop.conf.Configuration;
@@ -149,6 +148,20 @@ public class TestRMAdmin {
         FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.refreshNodes,
         FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
   }
+  /**
+   * Test method getGroups
+   */
+  @Test
+  public void testgetGroups() throws Exception {
+
+    RMAdmin test = new RMAdmin();
+    test.setConf(resourceManager.getConfig());
+    String[] args = { "-getGroups","admin" };
+    assertEquals(0, test.run(args));
+    assertEquals(
+        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.getGroupsForUser,
+        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+  }
 
   /**
    * Test print help messages
@@ -221,12 +234,16 @@ public class TestRMAdmin {
           dataErr, 0);
       testError(new String[] { "-help", "-refreshAdminAcls" },
           "Usage: java RMAdmin [-refreshAdminAcls]", dataErr, 0);
-      testError(new String[] { "-help", "-refreshAdminAcls" },
-          "Usage: java RMAdmin [-refreshAdminAcls]", dataErr, 0);
+      testError(new String[] { "-help", "-refreshServiceAcl" },
+          "Usage: java RMAdmin [-refreshServiceAcl]", dataErr, 0);
+      testError(new String[] { "-help", "-getGroups" },
+          "Usage: java RMAdmin [-getGroups [username]]", dataErr, 0);
+
+      
       testError(new String[] { "-help", "-badParameter" },
           "Usage: java RMAdmin", dataErr, 0);
       testError(new String[] { "-badParameter" },
-          "badParameter: Unknown command", dataErr, -1);
+          "badParameter: Unknown command", dataErr, -1); 
 
     } finally {
       System.setOut(oldOutPrimtStream);
