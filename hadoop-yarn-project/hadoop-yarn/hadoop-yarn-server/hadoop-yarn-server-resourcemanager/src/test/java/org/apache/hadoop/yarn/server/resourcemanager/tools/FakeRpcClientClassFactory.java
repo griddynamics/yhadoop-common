@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsRequest;
@@ -47,59 +48,75 @@ import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb
 /**
  * Class for provide a fake implementation RMAdminProtocol
  */
-public class FakeRpcClientClassFactory{
-  
-  public static  RpcClientFactory get(){
+public class FakeRpcClientClassFactory {
+
+  public static RpcClientFactory get() {
     return new FakeRpcClientFactory();
   }
-  
-  private static class FakeRpcClientFactory implements RpcClientFactory{
+
+  private static class FakeRpcClientFactory implements RpcClientFactory {
 
     @Override
     public Object getClient(Class<?> protocol, long clientVersion,
         InetSocketAddress addr, Configuration conf) throws YarnException {
-      
+
       return new FakeRMAdminProtocol();
-      
+
     }
+
     @Override
     public void stopClient(Object proxy) {
-      
+
     }
-    
+
   }
-  
-  public static class FakeRMAdminProtocol implements RMAdminProtocol{
-    
-    // indicator called function 
-    public static int parameter=0;
+
+  public static class FakeRMAdminProtocol implements RMAdminProtocol {
+    public enum FunctionCall {
+      refreshQueues, refreshNodes, refreshSuperUserGroupsConfiguration, 
+      refreshUserToGroupsMappings,refreshAdminAcls, refreshServiceAcls
+    };
+
+    public enum ResultCode {
+      OK, RemoteException
+    };
+
+    // indicator called function
+    public static FunctionCall functionCall;
+    public static ResultCode resultCode = ResultCode.OK;
+
     @Override
     public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
         throws YarnRemoteException {
-      parameter=1;
-      return new RefreshQueuesResponsePBImpl();
+      functionCall = FunctionCall.refreshQueues;
+      if (ResultCode.OK.equals(resultCode)) {
+        return new RefreshQueuesResponsePBImpl();
+      } else {
+        throw new YarnRemoteExceptionPBImpl("test exception");
+      }
     }
 
     @Override
     public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
         throws YarnRemoteException {
-      parameter=2;
+      functionCall = FunctionCall.refreshNodes;
 
       return new RefreshNodesResponsePBImpl();
     }
 
     @Override
-    public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
+    public RefreshSuperUserGroupsConfigurationResponse 
+    refreshSuperUserGroupsConfiguration(
         RefreshSuperUserGroupsConfigurationRequest request)
         throws YarnRemoteException {
-      parameter=3;
+      functionCall = FunctionCall.refreshSuperUserGroupsConfiguration;
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl();
     }
 
     @Override
     public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
         RefreshUserToGroupsMappingsRequest request) throws YarnRemoteException {
-      parameter=4;
+      functionCall = FunctionCall.refreshUserToGroupsMappings;
 
       return new RefreshUserToGroupsMappingsResponsePBImpl();
     }
@@ -107,7 +124,7 @@ public class FakeRpcClientClassFactory{
     @Override
     public RefreshAdminAclsResponse refreshAdminAcls(
         RefreshAdminAclsRequest request) throws YarnRemoteException {
-      parameter=5;
+      functionCall = FunctionCall.refreshAdminAcls;
 
       return new RefreshAdminAclsResponsePBImpl();
     }
@@ -115,10 +132,10 @@ public class FakeRpcClientClassFactory{
     @Override
     public RefreshServiceAclsResponse refreshServiceAcls(
         RefreshServiceAclsRequest request) throws YarnRemoteException {
-      parameter=6;
+      functionCall = FunctionCall.refreshServiceAcls;
 
       return new RefreshServiceAclsResponsePBImpl();
     }
-    
+
   }
 }
