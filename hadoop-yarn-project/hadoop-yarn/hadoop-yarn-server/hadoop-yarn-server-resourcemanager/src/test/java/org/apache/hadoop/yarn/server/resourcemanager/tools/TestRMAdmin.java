@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.tools;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -35,7 +38,7 @@ public class TestRMAdmin {
 
   @BeforeClass
   public static void setUp() {
-    
+
     Configuration conf = new YarnConfiguration();
     Store store = StoreFactory.getStore(conf);
     conf.set(YarnConfiguration.IPC_CLIENT_FACTORY,
@@ -43,10 +46,10 @@ public class TestRMAdmin {
     resourceManager = new ResourceManager(store);
     resourceManager.init(conf);
     resourceManager.start();
-    
+
   }
 
-  @Test 
+  @Test
   public void testRefreshQueues() throws Exception {
     RMAdmin test = new RMAdmin();
     test.setConf(resourceManager.getConfig());
@@ -92,6 +95,60 @@ public class TestRMAdmin {
     assertEquals(6, FakeRMAdminProtocol.parameter);
   }
 
+  @Test
+  public void testRefreshNodes() throws Exception {
+
+    RMAdmin test = new RMAdmin();
+    test.setConf(resourceManager.getConfig());
+    String[] args = { "-refreshNodes" };
+    assertEquals(0, test.run(args));
+    assertEquals(2, FakeRMAdminProtocol.parameter);
+  }
+  @Test
+  public void testHelp() throws Exception {
+    PrintStream oldOutPrimtStream = System.out;
+    PrintStream oldErrPrimtStream = System.err;
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
+    try {
+      String[] args = { "-help" };
+      assertEquals(0,new RMAdmin().run(args));
+      assertTrue(dataOut.toString().contains("rmadmin is the command to execute Map-Reduce administrative commands."));
+      assertTrue(dataOut.toString().contains("hadoop rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuperUserGroupsConfigurati" +
+      		"on] [-refreshUserToGroupsMappings] [-refreshAdminAcls] [-refreshServiceAcl] [-help [cmd]]"));
+      assertTrue(dataOut.toString().contains("-refreshQueues: Reload the queues' acls, states and scheduler specific properties."));
+      assertTrue(dataOut.toString().contains("-refreshNodes: Refresh the hosts information at the ResourceManager."));
+      assertTrue(dataOut.toString().contains("-refreshUserToGroupsMappings: Refresh user-to-groups mappings"));
+      assertTrue(dataOut.toString().contains("-refreshSuperUserGroupsConfiguration: Refresh superuser proxy groups mappings"));
+      assertTrue(dataOut.toString().contains("-refreshAdminAcls: Refresh acls for administration of ResourceManager"));
+      assertTrue(dataOut.toString().contains("-refreshServiceAcl: Reload the service-level authorization policy file"));
+      assertTrue(dataOut.toString().contains("-help [cmd]: \tDisplays help for the given command or all commands if none"));
+      
+      testError(new String[]{ "-help" ,"-refreshQueues" },"Usage: java RMAdmin [-refreshQueues]",dataErr);
+      testError(new String[]{ "-help" ,"-refreshNodes" },"Usage: java RMAdmin [-refreshNodes]",dataErr);
+      testError(new String[]{ "-help" ,"-refreshUserToGroupsMappings" },"Usage: java RMAdmin [-refreshUserToGroupsMappings]",dataErr);
+      testError(new String[]{ "-help" ,"-refreshSuperUserGroupsConfiguration" },"Usage: java RMAdmin [-refreshSuperUserGroupsConfiguration]",dataErr);
+      testError(new String[]{ "-help" ,"-refreshAdminAcls" },"Usage: java RMAdmin [-refreshAdminAcls]",dataErr);
+      testError(new String[]{ "-help" ,"-refreshServiceAcl" },"Usage: java RMAdmin [-refreshServiceAcl]",dataErr);
+
+
+      
+    } finally {
+      System.setOut(oldOutPrimtStream);
+      System.setErr(oldErrPrimtStream);
+
+    }
+
+  }
+
+  private void testError(String[] args, String template, ByteArrayOutputStream dataErr) throws Exception{
+    assertEquals(0,new RMAdmin().run(args));
+    assertTrue(dataErr.toString().contains(template));
+    dataErr.reset();
+    
+  } 
   @AfterClass
   public static void tearDown() {
     resourceManager.stop();
