@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>2.0.4-SNAPSHOT</version>
+    <version>2.0.5-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-common</artifactId>
-  <version>2.0.4-SNAPSHOT</version>
+  <version>2.0.5-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -229,6 +229,10 @@
           <artifactId>jline</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.jboss.netty</groupId>
+          <artifactId>netty</artifactId>
+        </exclusion>
+        <exclusion>
           <!-- otherwise seems to drag in junit 3.8.1 via jline -->
           <groupId>junit</groupId>
           <artifactId>junit</artifactId>
@@ -313,9 +317,9 @@
                   <include>HAServiceProtocol.proto</include>
                   <include>IpcConnectionContext.proto</include>
                   <include>ProtocolInfo.proto</include>
-                  <include>RpcPayloadHeader.proto</include>
+                  <include>RpcHeader.proto</include>
                   <include>ZKFCProtocol.proto</include>
-                  <include>hadoop_rpc.proto</include>
+                  <include>ProtobufRpcEngine.proto</include>
                   <include>Security.proto</include>
                 </includes>
               </source>
@@ -484,6 +488,7 @@
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.util.NativeCrc32</javahClassName>
+                    <javahClassName>org.apache.hadoop.net.unix.DomainSocket</javahClassName>
                   </javahClassNames>
                   <javahOutputDirectory>${project.build.directory}/native/javah</javahOutputDirectory>
                 </configuration>

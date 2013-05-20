@@ -213,6 +213,17 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.directory.search.timeout</name>
+  <value>10000</value>
+  <description>
+    The attribute applied to the LDAP SearchControl properties to set a
+    maximum time limit when searching and awaiting a result.
+    Set to 0 if infinite wait period is desired.
+    Default is 10 seconds. Units in milliseconds.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.service.user.name.key</name>
   <value></value>
   <description>
@@ -685,7 +696,7 @@
   <name>net.topology.table.file.name</name>
   <value></value>
   <description> The file name for a topology file, which is used when the
-    net.topology.script.file.name property is set to
+    net.topology.node.switch.mapping.impl property is set to
     org.apache.hadoop.net.TableMapping. The file format is a two column text
     file, with columns separated by whitespace. The first column is a DNS or
     IP address and the second column specifies the rack where the address maps.

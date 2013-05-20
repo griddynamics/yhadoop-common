@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -273,7 +274,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
     minimumDataNodeVersion = conf.get(
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY,
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_DEFAULT);
-  }
+
+    // Set terse exception whose stack trace won't be logged
+    this.clientRpcServer.addTerseExceptions(SafeModeException.class);
+ }
   
   /**
    * Start client and service RPC servers.
@@ -325,7 +329,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IllegalArgumentException(
         "Unexpected not positive size: "+size);
     }
-    namesystem.checkOperation(OperationCategory.READ);
     namesystem.checkSuperuserPrivilege();
     return namesystem.getBlockManager().getBlocks(datanode, size); 
   }
@@ -410,13 +413,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void create(String src, 
-                     FsPermission masked,
-                     String clientName, 
-                     EnumSetWritable<CreateFlag> flag,
-                     boolean createParent,
-                     short replication,
-                     long blockSize) throws IOException {
+  public HdfsFileStatus create(String src, FsPermission masked,
+      String clientName, EnumSetWritable<CreateFlag> flag,
+      boolean createParent, short replication, long blockSize)
+      throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.create: file "
@@ -426,12 +426,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("create: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    namesystem.startFile(src,
-        new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
-            null, masked),
-        clientName, clientMachine, flag.get(), createParent, replication, blockSize);
+    HdfsFileStatus fileStatus = namesystem.startFile(src, new PermissionStatus(
+        UserGroupInformation.getCurrentUser().getShortUserName(), null, masked),
+        clientName, clientMachine, flag.get(), createParent, replication,
+        blockSize);
     metrics.incrFilesCreated();
     metrics.incrCreateFileOps();
+    return fileStatus;
   }
 
   @Override // ClientProtocol
@@ -470,26 +471,27 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     namesystem.setOwner(src, username, groupname);
   }
-
-  @Override // ClientProtocol
-  public LocatedBlock addBlock(String src,
-                               String clientName,
-                               ExtendedBlock previous,
-                               DatanodeInfo[] excludedNodes)
+  
+  @Override
+  public LocatedBlock addBlock(String src, String clientName,
+      ExtendedBlock previous, DatanodeInfo[] excludedNodes, long fileId,
+      String[] favoredNodes)
       throws IOException {
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
-          +src+" for "+clientName);
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*BLOCK* NameNode.addBlock: file " + src
+          + " fileId=" + fileId + " for " + clientName);
     }
     HashMap<Node, Node> excludedNodesSet = null;
     if (excludedNodes != null) {
       excludedNodesSet = new HashMap<Node, Node>(excludedNodes.length);
-      for (Node node:excludedNodes) {
+      for (Node node : excludedNodes) {
         excludedNodesSet.put(node, node);
       }
     }
-    LocatedBlock locatedBlock = 
-      namesystem.getAdditionalBlock(src, clientName, previous, excludedNodesSet);
+    List<String> favoredNodesList = (favoredNodes == null) ? null
+        : Arrays.asList(favoredNodes);
+    LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, fileId,
+        clientName, previous, excludedNodesSet, favoredNodesList);
     if (locatedBlock != null)
       metrics.incrAddBlockOps();
     return locatedBlock;
@@ -683,7 +685,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, true);
   }
-
+  
+  @Override // ClientProtocol
+  public boolean isFileClosed(String src) throws IOException{
+    return namesystem.isFileClosed(src);
+  }
+  
   @Override // ClientProtocol
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException { 
     metrics.incrFileInfoOps();
@@ -699,7 +706,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
   throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     if (results == null ) {
       throw new IOException("Cannot find datanode report");
@@ -724,19 +730,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public boolean restoreFailedStorage(String arg) throws IOException { 
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     return namesystem.restoreFailedStorage(arg);
   }
 
   @Override // ClientProtocol
   public void saveNamespace() throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.saveNamespace();
   }
   
   @Override // ClientProtocol
   public long rollEdits() throws AccessControlException, IOException {
-    namesystem.checkOperation(OperationCategory.JOURNAL);
     CheckpointSignature sig = namesystem.rollEditLog();
     return sig.getCurSegmentTxId();
   }
@@ -781,7 +784,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public void metaSave(String filename) throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.metaSave(filename);
   }
 

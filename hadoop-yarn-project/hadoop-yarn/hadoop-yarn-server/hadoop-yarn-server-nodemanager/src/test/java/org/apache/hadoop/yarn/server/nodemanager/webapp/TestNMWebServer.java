@@ -86,6 +86,14 @@ public class TestNMWebServer {
       public long getPmemAllocatedForContainers() {
         return 0;
       }
+      @Override
+      public boolean isVmemCheckEnabled() {
+        return true;
+      }
+      @Override
+      public boolean isPmemCheckEnabled() {
+        return true;
+      }
     };
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
@@ -126,6 +134,14 @@ public class TestNMWebServer {
       public long getPmemAllocatedForContainers() {
         return 0;
       }
+      @Override
+      public boolean isVmemCheckEnabled() {
+        return true;
+      }
+      @Override
+      public boolean isPmemCheckEnabled() {
+        return true;
+      }
     };
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
@@ -163,15 +179,19 @@ public class TestNMWebServer {
       // TODO: Use builder utils
       ContainerLaunchContext launchContext =
           recordFactory.newRecordInstance(ContainerLaunchContext.class);
-      launchContext.setContainerId(containerId);
+      org.apache.hadoop.yarn.api.records.Container mockContainer =
+          mock(org.apache.hadoop.yarn.api.records.Container.class);
+      when(mockContainer.getId()).thenReturn(containerId);
       launchContext.setUser(user);
       Container container =
-          new ContainerImpl(conf, dispatcher, launchContext, null, metrics) {
-        @Override
-        public ContainerState getContainerState() {
-          return ContainerState.RUNNING;
-        };
-      };
+          new ContainerImpl(conf, dispatcher, launchContext, mockContainer,
+              null, metrics) {
+
+            @Override
+            public ContainerState getContainerState() {
+              return ContainerState.RUNNING;
+            };
+          };
       nmContext.getContainers().put(containerId, container);
       //TODO: Gross hack. Fix in code.
       ApplicationId applicationId = 

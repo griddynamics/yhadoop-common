@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>2.0.4-SNAPSHOT</version>
+    <version>2.0.5-SNAPSHOT</version>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-project</artifactId>
-  <version>2.0.4-SNAPSHOT</version>
+  <version>2.0.5-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -46,7 +46,7 @@
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
 
-    <commons-daemon.version>1.0.3</commons-daemon.version>
+    <commons-daemon.version>1.0.13</commons-daemon.version>
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
@@ -60,8 +60,8 @@
 
   <repositories>
     <repository>
-      <id>patched-surefire-and-plexus-utils</id>
-      <name>patched-surefire-repo</name>
+      <id>aws-nexus</id>
+      <name>aws-nexus-repo</name>
       <releases>
         <enabled>true</enabled>
         <updatePolicy>always</updatePolicy>
@@ -72,15 +72,15 @@
         <updatePolicy>always</updatePolicy>
         <checksumPolicy>fail</checksumPolicy>
       </snapshots>
-      <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+      <url>http://ec2-54-235-46-104.compute-1.amazonaws.com:8081/nexus/content/repositories/releases</url>
       <layout>default</layout>
     </repository>
   </repositories>
 
   <pluginRepositories>
     <pluginRepository>
-      <id>patched-surefire-and-plexus-utils</id>
-      <name>foo-plugins</name>
+      <id>aws-nexus</id>
+      <name>aws-nexus-plugins-repo</name>
       <releases>
         <enabled>true</enabled>
         <updatePolicy>always</updatePolicy>
@@ -91,7 +91,7 @@
         <updatePolicy>always</updatePolicy>
         <checksumPolicy>fail</checksumPolicy>
       </snapshots>
-      <url>http://black.calf.lupus.griddynamics.net:8081/nexus/content/repositories/patched-surefire-and-plexus-utils</url>
+      <url>http://ec2-54-235-46-104.compute-1.amazonaws.com:8081/nexus/content/repositories/releases</url>
       <layout>default</layout>
     </pluginRepository>
   </pluginRepositories>
@@ -617,16 +617,6 @@
         <version>1.8.8</version>
       </dependency>
       <dependency>
-        <groupId>org.aspectj</groupId>
-        <artifactId>aspectjtools</artifactId>
-        <version>1.6.5</version>
-      </dependency>
-      <dependency>
-        <groupId>org.aspectj</groupId>
-        <artifactId>aspectjrt</artifactId>
-        <version>1.6.5</version>
-      </dependency>
-      <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>1.8.5</version>
@@ -943,15 +933,6 @@
       <properties>
         <build.platform>${os.name}-${os.arch}-${sun.arch.data.model}</build.platform>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>jdk.tools</groupId>
-          <artifactId>jdk.tools</artifactId>
-          <version>1.6</version>
-          <scope>system</scope>
-          <systemPath>${java.home}/../lib/tools.jar</systemPath>
-        </dependency>
-      </dependencies>
     </profile>
     <profile>
       <id>os.mac</id>
@@ -1018,6 +999,7 @@
                 <phase>package</phase>
                 <goals>
                   <goal>jar-no-fork</goal>
+                  <goal>test-jar-no-fork</goal>
                 </goals>
               </execution>
             </executions>

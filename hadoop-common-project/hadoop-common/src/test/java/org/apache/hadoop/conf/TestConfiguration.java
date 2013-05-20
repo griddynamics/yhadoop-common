@@ -43,6 +43,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import org.codehaus.jackson.map.ObjectMapper; 
 
 public class TestConfiguration extends TestCase {
@@ -51,6 +52,9 @@ public class TestConfiguration extends TestCase {
   final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2.xml").getAbsolutePath();
   final static Random RAN = new Random();
+  final static String XMLHEADER = 
+            IBM_JAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
+  "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>";
 
   @Override
   protected void setUp() throws Exception {
@@ -327,8 +331,8 @@ public class TestConfiguration extends TestCase {
     ByteArrayOutputStream baos = new ByteArrayOutputStream(); 
     conf.writeXml(baos);
     String result = baos.toString();
-    assertTrue("Result has proper header", result.startsWith(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>"));
+    assertTrue("Result has proper header", result.startsWith(XMLHEADER));
+	  
     assertTrue("Result has proper footer", result.endsWith("</configuration>"));
   }
   
@@ -574,6 +578,29 @@ public class TestConfiguration extends TestCase {
     try {
       conf.getFloat("test.float5", 0.0f);
       fail("Property had invalid float value, but was read successfully.");
+    } catch (NumberFormatException e) {
+      // pass
+    }
+  }
+  
+  public void testDoubleValues() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.double1", "3.1415");
+    appendProperty("test.double2", "003.1415");
+    appendProperty("test.double3", "-3.1415");
+    appendProperty("test.double4", " -3.1415 ");
+    appendProperty("test.double5", "xyz-3.1415xyz");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(3.1415, conf.getDouble("test.double1", 0.0));
+    assertEquals(3.1415, conf.getDouble("test.double2", 0.0));
+    assertEquals(-3.1415, conf.getDouble("test.double3", 0.0));
+    assertEquals(-3.1415, conf.getDouble("test.double4", 0.0));
+    try {
+      conf.getDouble("test.double5", 0.0);
+      fail("Property had invalid double value, but was read successfully.");
     } catch (NumberFormatException e) {
       // pass
     }

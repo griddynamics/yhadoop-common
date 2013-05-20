@@ -18,7 +18,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>2.0.4-SNAPSHOT</version>
+  <version>2.0.5-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -439,18 +439,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
               <generateHtml>${cloverGenHtml}</generateHtml>
               <generateXml>${cloverGenXml}</generateXml>
               <generateHistorical>${cloverGenHistorical}</generateHistorical>
-              <excludes>
-                <exclude>**/examples/**/*.java</exclude>
-                <exclude>**/hamlet/*.java</exclude>
-                <exclude>**/ha/proto/*.java</exclude>
-                <exclude>**/protocol/proto/*.java</exclude>
-                <exclude>**/compiler/generated/*.java</exclude>
-                <exclude>**/protobuf/*.java</exclude>
-                <exclude>**/v2/proto/*.java</exclude>
-                <exclude>**/yarn/proto/*.java</exclude>
-                <exclude>**/hadoop/yarn/ipc/*.java</exclude>
-                <exclude>**/yarn/server/resourcemanager/tools/*.java</exclude>
-              </excludes>
             </configuration>
             <executions>
               <execution>

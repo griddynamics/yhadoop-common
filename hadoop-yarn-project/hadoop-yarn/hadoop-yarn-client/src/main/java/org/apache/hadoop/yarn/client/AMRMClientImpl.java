@@ -33,19 +33,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -116,24 +111,7 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       throw new YarnException(e);
     }
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      String tokenURLEncodedStr = System.getenv().get(
-          ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
-      Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
-
-      try {
-        token.decodeFromUrlString(tokenURLEncodedStr);
-      } catch (IOException e) {
-        throw new YarnException(e);
-      }
-
-      SecurityUtil.setTokenService(token, rmAddress);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("AppMasterToken is " + token);
-      }
-      currentUser.addToken(token);
-    }
-
+    // CurrentUser should already have AMToken loaded.
     rmClient = currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
       @Override
       public AMRMProtocol run() {
@@ -156,7 +134,7 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     // do this only once ???
     RegisterApplicationMasterRequest request = recordFactory
         .newRecordInstance(RegisterApplicationMasterRequest.class);
@@ -175,7 +153,7 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
 
   @Override
   public AllocateResponse allocate(float progressIndicator) 
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     AllocateResponse allocateResponse = null;
     ArrayList<ResourceRequest> askList = null;
     ArrayList<ContainerId> releaseList = null;
@@ -194,13 +172,12 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       }
 
       allocateResponse = rmClient.allocate(allocateRequest);
-      AMResponse response = allocateResponse.getAMResponse();
 
       synchronized (this) {
         // update these on successful RPC
         clusterNodeCount = allocateResponse.getNumClusterNodes();
-        lastResponseId = response.getResponseId();
-        clusterAvailableResources = response.getAvailableResources();
+        lastResponseId = allocateResponse.getResponseId();
+        clusterAvailableResources = allocateResponse.getAvailableResources();
       }
     } finally {
       // TODO how to differentiate remote yarn exception vs error in rpc
@@ -230,7 +207,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
 
   @Override
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
-      String appMessage, String appTrackingUrl) throws YarnRemoteException {
+      String appMessage, String appTrackingUrl) throws YarnRemoteException,
+      IOException {
     FinishApplicationMasterRequest request = recordFactory
                   .newRecordInstance(FinishApplicationMasterRequest.class);
     request.setAppAttemptId(appAttemptId);
@@ -260,7 +238,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
     }
 
     // Off-switch
-    addResourceRequest(req.priority, ANY, req.capability, req.containerCount); 
+    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
+        req.containerCount);
   }
 
   @Override
@@ -278,7 +257,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       }
     }
    
-    decResourceRequest(req.priority, ANY, req.capability, req.containerCount);
+    decResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
+        req.containerCount);
   }
 
   @Override

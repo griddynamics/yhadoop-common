@@ -235,7 +235,7 @@ public class DFSUtil {
   /**
    * Given a list of path components returns a path as a UTF8 String
    */
-  public static String byteArray2String(byte[][] pathComponents) {
+  public static String byteArray2PathString(byte[][] pathComponents) {
     if (pathComponents.length == 0)
       return "";
     if (pathComponents.length == 1 && pathComponents[0].length == 0) {
@@ -249,6 +249,14 @@ public class DFSUtil {
       }
     }
     return result.toString();
+  }
+
+  /** Convert an object representing a path to a string. */
+  public static String path2String(final Object path) {
+    return path == null? null
+        : path instanceof String? (String)path
+        : path instanceof byte[][]? byteArray2PathString((byte[][])path)
+        : path.toString();
   }
 
   /**
@@ -458,7 +466,7 @@ public class DFSUtil {
     
     // Look for configurations of the form <key>[.<nameserviceId>][.<namenodeId>]
     // across all of the configured nameservices and namenodes.
-    Map<String, Map<String, InetSocketAddress>> ret = Maps.newHashMap();
+    Map<String, Map<String, InetSocketAddress>> ret = Maps.newLinkedHashMap();
     for (String nsId : emptyAsSingletonNull(nameserviceIds)) {
       Map<String, InetSocketAddress> isas =
         getAddressesForNameserviceId(conf, nsId, defaultAddress, keys);

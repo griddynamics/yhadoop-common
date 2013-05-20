@@ -64,12 +64,21 @@ public class TestDistributedFileSystem {
 
   private boolean dualPortTesting = false;
   
+  private boolean noXmlDefaults = false;
+  
   private HdfsConfiguration getTestConfiguration() {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf;
+    if (noXmlDefaults) {
+       conf = new HdfsConfiguration(false);
+    } else {
+       conf = new HdfsConfiguration();
+    }
     if (dualPortTesting) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
               "localhost:0");
     }
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
+
     return conf;
   }
 
@@ -585,11 +594,32 @@ public class TestDistributedFileSystem {
   public void testAllWithDualPort() throws Exception {
     dualPortTesting = true;
 
-    testFileSystemCloseAll();
-    testDFSClose();
-    testDFSClient();
-    testFileChecksum();
+    try {
+      testFileSystemCloseAll();
+      testDFSClose();
+      testDFSClient();
+      testFileChecksum();
+    } finally {
+      dualPortTesting = false;
+    }
   }
+  
+  @Test
+  public void testAllWithNoXmlDefaults() throws Exception {
+    // Do all the tests with a configuration that ignores the defaults in
+    // the XML files.
+    noXmlDefaults = true;
+
+    try {
+      testFileSystemCloseAll();
+      testDFSClose();
+      testDFSClient();
+      testFileChecksum();
+    } finally {
+     noXmlDefaults = false; 
+    }
+  }
+  
 
   /**
    * Tests the normal path of batching up BlockLocation[]s to be passed to a
@@ -735,4 +765,27 @@ public class TestDistributedFileSystem {
       }
     }
   }
+
+  @Test(timeout=60000)
+  public void testFileCloseStatus() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      // create a new file.
+      Path file = new Path("/simpleFlush.dat");
+      FSDataOutputStream output = fs.create(file);
+      // write to file
+      output.writeBytes("Some test data");
+      output.flush();
+      assertFalse("File status should be open", fs.isFileClosed(file));
+      output.close();
+      assertTrue("File status should be closed", fs.isFileClosed(file));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
 }

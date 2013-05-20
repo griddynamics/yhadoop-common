@@ -41,6 +41,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPAC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
@@ -130,7 +132,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumR
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -193,12 +194,13 @@ public class DFSClient implements java.io.Closeable {
   final FileSystem.Statistics stats;
   final int hdfsTimeout;    // timeout value for a DFS operation.
   private final String authority;
-  final SocketCache socketCache;
+  final PeerCache peerCache;
   final Conf dfsClientConf;
   private Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
   private DataEncryptionKey encryptionKey;
-
+  private boolean shouldUseLegacyBlockReaderLocal;
+  
   /**
    * DFSClient configuration 
    */
@@ -214,6 +216,7 @@ public class DFSClient implements java.io.Closeable {
     final int socketTimeout;
     final int socketCacheCapacity;
     final long socketCacheExpiry;
+    final long excludedNodesCacheExpiry;
     /** Wait time window (in msec) if BlockMissingException is caught */
     final int timeWindow;
     final int nCachedConnRetry;
@@ -224,11 +227,16 @@ public class DFSClient implements java.io.Closeable {
     final short defaultReplication;
     final String taskId;
     final FsPermission uMask;
-    final boolean useLegacyBlockReader;
+    final boolean useLegacyBlockReaderLocal;
     final boolean connectToDnViaHostname;
     final boolean getHdfsBlocksMetadataEnabled;
     final int getFileBlockStorageLocationsNumThreads;
     final int getFileBlockStorageLocationsTimeout;
+    final String domainSocketPath;
+    final boolean skipShortCircuitChecksums;
+    final int shortCircuitBufferSize;
+    final boolean shortCircuitLocalReads;
+    final boolean domainSocketDataTraffic;
 
     Conf(Configuration conf) {
       maxFailoverAttempts = conf.getInt(
@@ -264,6 +272,9 @@ public class DFSClient implements java.io.Closeable {
           DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT);
       socketCacheExpiry = conf.getLong(DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
           DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT);
+      excludedNodesCacheExpiry = conf.getLong(
+          DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL,
+          DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT);
       prefetchSize = conf.getLong(DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
           10 * defaultBlockSize);
       timeWindow = conf
@@ -276,9 +287,9 @@ public class DFSClient implements java.io.Closeable {
           .getInt(DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
               DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
       uMask = FsPermission.getUMask(conf);
-      useLegacyBlockReader = conf.getBoolean(
-          DFS_CLIENT_USE_LEGACY_BLOCKREADER,
-          DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT);
+      useLegacyBlockReaderLocal = conf.getBoolean(
+          DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL,
+          DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT);
       connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
           DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
       getHdfsBlocksMetadataEnabled = conf.getBoolean(
@@ -290,6 +301,20 @@ public class DFSClient implements java.io.Closeable {
       getFileBlockStorageLocationsTimeout = conf.getInt(
           DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT,
           DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_DEFAULT);
+      domainSocketPath = conf.getTrimmed(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
+          DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_DEFAULT);
+      skipShortCircuitChecksums = conf.getBoolean(
+          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
+          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_DEFAULT);
+      shortCircuitBufferSize = conf.getInt(
+          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY,
+          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_DEFAULT);
+      shortCircuitLocalReads = conf.getBoolean(
+        DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
+        DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT);
+      domainSocketDataTraffic = conf.getBoolean(
+        DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+        DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT);
     }
 
     private DataChecksum.Type getChecksumType(Configuration conf) {
@@ -347,7 +372,7 @@ public class DFSClient implements java.io.Closeable {
   private final Map<String, DFSOutputStream> filesBeingWritten
       = new HashMap<String, DFSOutputStream>();
 
-  private boolean shortCircuitLocalReads;
+  private final DomainSocketFactory domainSocketFactory;
   
   /**
    * Same as this(NameNode.getAddress(conf), conf);
@@ -391,6 +416,11 @@ public class DFSClient implements java.io.Closeable {
     throws IOException {
     // Copy only the required DFSClient configuration
     this.dfsClientConf = new Conf(conf);
+    this.shouldUseLegacyBlockReaderLocal = 
+        this.dfsClientConf.useLegacyBlockReaderLocal;
+    if (this.dfsClientConf.useLegacyBlockReaderLocal) {
+      LOG.debug("Using legacy short-circuit local reads.");
+    }
     this.conf = conf;
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
@@ -414,17 +444,14 @@ public class DFSClient implements java.io.Closeable {
           "null URI");
       NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo =
         NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class);
+      
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }
 
     // read directly from the block file if configured.
-    this.shortCircuitLocalReads = conf.getBoolean(
-        DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
-        DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Short circuit read is " + shortCircuitLocalReads);
-    }
+    this.domainSocketFactory = new DomainSocketFactory(dfsClientConf);
+
     String localInterfaces[] =
       conf.getTrimmedStrings(DFSConfigKeys.DFS_CLIENT_LOCAL_INTERFACES);
     localInterfaceAddrs = getLocalInterfaceAddrs(localInterfaces);
@@ -434,7 +461,7 @@ public class DFSClient implements java.io.Closeable {
       Joiner.on(',').join(localInterfaceAddrs) + "]");
     }
     
-    this.socketCache = SocketCache.getInstance(dfsClientConf.socketCacheCapacity, dfsClientConf.socketCacheExpiry);
+    this.peerCache = PeerCache.getInstance(dfsClientConf.socketCacheCapacity, dfsClientConf.socketCacheExpiry);
   }
 
   /**
@@ -778,28 +805,11 @@ public class DFSClient implements java.io.Closeable {
                                      AccessControlException.class);
     }
   }
-
-  /**
-   * Get {@link BlockReader} for short circuited local reads.
-   */
-  static BlockReader getLocalBlockReader(Configuration conf,
-      String src, ExtendedBlock blk, Token<BlockTokenIdentifier> accessToken,
-      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock,
-      boolean connectToDnViaHostname) throws InvalidToken, IOException {
-    try {
-      return BlockReaderLocal.newBlockReader(conf, src, blk, accessToken,
-          chosenNode, socketTimeout, offsetIntoBlock, blk.getNumBytes()
-              - offsetIntoBlock, connectToDnViaHostname);
-    } catch (RemoteException re) {
-      throw re.unwrapRemoteException(InvalidToken.class,
-          AccessControlException.class);
-    }
-  }
   
   private static Map<String, Boolean> localAddrMap = Collections
       .synchronizedMap(new HashMap<String, Boolean>());
   
-  private static boolean isLocalAddress(InetSocketAddress targetAddr) {
+  static boolean isLocalAddress(InetSocketAddress targetAddr) {
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
     if (cached != null) {
@@ -1224,7 +1234,7 @@ public class DFSClient implements java.io.Closeable {
                              ChecksumOpt checksumOpt)
       throws IOException {
     return create(src, permission, flag, true,
-        replication, blockSize, progress, buffersize, checksumOpt);
+        replication, blockSize, progress, buffersize, checksumOpt, null);
   }
 
   /**
@@ -1258,6 +1268,29 @@ public class DFSClient implements java.io.Closeable {
                              Progressable progress,
                              int buffersize,
                              ChecksumOpt checksumOpt) throws IOException {
+    return create(src, permission, flag, createParent, replication, blockSize, 
+        progress, buffersize, checksumOpt, null);
+  }
+
+  /**
+   * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
+   * Progressable, int, ChecksumOpt)} with the addition of favoredNodes that is
+   * a hint to where the namenode should place the file blocks.
+   * The favored nodes hint is not persisted in HDFS. Hence it may be honored
+   * at the creation time only. HDFS could move the blocks during balancing or
+   * replication, to move the blocks from favored nodes. A value of null means
+   * no favored nodes for this create
+   */
+  public DFSOutputStream create(String src, 
+                             FsPermission permission,
+                             EnumSet<CreateFlag> flag, 
+                             boolean createParent,
+                             short replication,
+                             long blockSize,
+                             Progressable progress,
+                             int buffersize,
+                             ChecksumOpt checksumOpt,
+                             InetSocketAddress[] favoredNodes) throws IOException {
     checkOpen();
     if (permission == null) {
       permission = FsPermission.getFileDefault();
@@ -1266,9 +1299,18 @@ public class DFSClient implements java.io.Closeable {
     if(LOG.isDebugEnabled()) {
       LOG.debug(src + ": masked=" + masked);
     }
+    String[] favoredNodeStrs = null;
+    if (favoredNodes != null) {
+      favoredNodeStrs = new String[favoredNodes.length];
+      for (int i = 0; i < favoredNodes.length; i++) {
+        favoredNodeStrs[i] = 
+            favoredNodes[i].getAddress().getHostAddress() + ":" 
+                         + favoredNodes[i].getPort();
+      }
+    }
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
-        buffersize, dfsClientConf.createChecksum(checksumOpt));
+        buffersize, dfsClientConf.createChecksum(checksumOpt), favoredNodeStrs);
     beginFileLease(src, result);
     return result;
   }
@@ -1563,7 +1605,22 @@ public class DFSClient implements java.io.Closeable {
                                      UnresolvedPathException.class);
     }
   }
-
+  
+  /**
+   * Close status of a file
+   * @return true if file is already closed
+   */
+  public boolean isFileClosed(String src) throws IOException{
+    checkOpen();
+    try {
+      return namenode.isFileClosed(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+  
   /**
    * Get the file info for a specific file or directory. If src
    * refers to a symlink then the FileStatus of the link is returned.
@@ -1638,7 +1695,7 @@ public class DFSClient implements java.io.Closeable {
    * @param socketFactory to create sockets to connect to DNs
    * @param socketTimeout timeout to use when connecting and waiting for a response
    * @param encryptionKey the key needed to communicate with DNs in this cluster
-   * @param connectToDnViaHostname {@see #connectToDnViaHostname()}
+   * @param connectToDnViaHostname {@link #connectToDnViaHostname()}
    * @return The checksum 
    */
   static MD5MD5CRC32FileChecksum getFileChecksum(String src,
@@ -2222,10 +2279,6 @@ public class DFSClient implements java.io.Closeable {
       super(in);
     }
   }
-  
-  boolean shouldTryShortCircuitRead(InetSocketAddress targetAddr) {
-    return shortCircuitLocalReads && isLocalAddress(targetAddr);
-  }
 
   void reportChecksumFailure(String file, ExtendedBlock blk, DatanodeInfo dn) {
     DatanodeInfo [] dnArr = { dn };
@@ -2249,7 +2302,15 @@ public class DFSClient implements java.io.Closeable {
         + ", ugi=" + ugi + "]"; 
   }
 
-  void disableShortCircuit() {
-    shortCircuitLocalReads = false;
+  public DomainSocketFactory getDomainSocketFactory() {
+    return domainSocketFactory;
+  }
+
+  public void disableLegacyBlockReaderLocal() {
+    shouldUseLegacyBlockReaderLocal = false;
+  }
+
+  public boolean useLegacyBlockReaderLocal() {
+    return shouldUseLegacyBlockReaderLocal;
   }
 }

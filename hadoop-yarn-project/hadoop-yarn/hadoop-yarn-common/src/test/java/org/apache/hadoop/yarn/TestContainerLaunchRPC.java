@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn;
 
-import java.lang.reflect.UndeclaredThrowableException;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 
 import junit.framework.Assert;
 
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -47,9 +49,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 /*
@@ -60,7 +62,6 @@ public class TestContainerLaunchRPC {
 
   static final Log LOG = LogFactory.getLog(TestContainerLaunchRPC.class);
 
-  private static final String EXCEPTION_CAUSE = "java.net.SocketTimeoutException";
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
@@ -101,21 +102,21 @@ public class TestContainerLaunchRPC {
       applicationAttemptId.setAttemptId(0);
       containerId.setApplicationAttemptId(applicationAttemptId);
       containerId.setId(100);
-      containerLaunchContext.setContainerId(containerId);
-      containerLaunchContext.setResource(recordFactory
-          .newRecordInstance(Resource.class));
+      Container container =
+          BuilderUtils.newContainer(containerId, null, null, recordFactory
+              .newRecordInstance(Resource.class), null, null, 0);
 
       StartContainerRequest scRequest = recordFactory
           .newRecordInstance(StartContainerRequest.class);
       scRequest.setContainerLaunchContext(containerLaunchContext);
+      scRequest.setContainer(container);
       try {
         proxy.startContainer(scRequest);
       } catch (Exception e) {
         LOG.info(StringUtils.stringifyException(e));
-        Assert.assertTrue("Error, exception does not contain: "
-            + EXCEPTION_CAUSE,
-            e.getCause().getMessage().contains(EXCEPTION_CAUSE));
-
+        Assert.assertEquals("Error, exception is not: "
+            + SocketTimeoutException.class.getName(),
+            SocketTimeoutException.class.getName(), e.getClass().getName());
         return;
       }
     } finally {
@@ -140,8 +141,7 @@ public class TestContainerLaunchRPC {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException {
-      ContainerLaunchContext container = request.getContainerLaunchContext();
+        throws YarnRemoteException, IOException {
       StartContainerResponse response = recordFactory
           .newRecordInstance(StartContainerResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
@@ -150,10 +150,10 @@ public class TestContainerLaunchRPC {
         Thread.sleep(10000);
       } catch (Exception e) {
         LOG.error(e);
-        throw new UndeclaredThrowableException(e);
+        throw new YarnRemoteException(e);
       }
       status.setState(ContainerState.RUNNING);
-      status.setContainerId(container.getContainerId());
+      status.setContainerId(request.getContainer().getId());
       status.setExitStatus(0);
       return response;
     }
@@ -163,8 +163,7 @@ public class TestContainerLaunchRPC {
         throws YarnRemoteException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));
-      throw YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(
-          null).createYarnRemoteException(e);
+      throw new YarnRemoteException(e);
     }
   }
 }

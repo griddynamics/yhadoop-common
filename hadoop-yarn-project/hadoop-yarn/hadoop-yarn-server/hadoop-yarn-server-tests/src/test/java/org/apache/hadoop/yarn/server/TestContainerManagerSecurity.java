@@ -20,9 +20,6 @@ package org.apache.hadoop.yarn.server;
 
 import static org.junit.Assert.fail;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -40,14 +37,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -69,11 +63,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -88,10 +79,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestContainerManagerSecurity {
@@ -99,40 +87,52 @@ public class TestContainerManagerSecurity {
   static Log LOG = LogFactory.getLog(TestContainerManagerSecurity.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
-  private static FileContext localFS = null;
-  private static final File localDir = new File("target",
-      TestContainerManagerSecurity.class.getName() + "-localDir")
-      .getAbsoluteFile();
   private static MiniYARNCluster yarnCluster;
 
   static final Configuration conf = new Configuration();
 
-  @BeforeClass
-  public static void setup() throws AccessControlException,
-      FileNotFoundException, UnsupportedFileSystemException, IOException {
-    localFS = FileContext.getLocalFSFileContext();
-    localFS.delete(new Path(localDir.getAbsolutePath()), true);
-    localDir.mkdir();
-
+  @Test (timeout = 1000000)
+  public void testContainerManagerWithSecurityEnabled() throws Exception {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
-    // Set AM expiry interval to be very long.
-    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
-    UserGroupInformation.setConfiguration(conf);
-    yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
-        .getName(), 1, 1, 1);
-    yarnCluster.init(conf);
-    yarnCluster.start();
+    testContainerManager();
   }
-
-  @AfterClass
-  public static void teardown() {
-    yarnCluster.stop();
+  
+  @Test (timeout=1000000)
+  public void testContainerManagerWithSecurityDisabled() throws Exception {
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "simple");
+    testContainerManager();
   }
-
-  @Test
-  public void testAuthenticatedUser() throws IOException,
-      InterruptedException {
+  
+  private void testContainerManager() throws Exception {
+    try {
+      yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
+          .getName(), 1, 1, 1);
+      conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
+      UserGroupInformation.setConfiguration(conf);
+      yarnCluster.init(conf);
+      yarnCluster.start();
+      
+      // Testing for authenticated user
+      testAuthenticatedUser();
+      
+      // Testing for malicious user
+      testMaliceUser();
+      
+      // Testing for unauthorized user
+      testUnauthorizedUser();
+      
+    } finally {
+      if (yarnCluster != null) {
+        yarnCluster.stop();
+        yarnCluster = null;
+      }
+    }
+  }
+  
+  private void testAuthenticatedUser() throws IOException,
+      InterruptedException, YarnRemoteException {
 
     LOG.info("Running test for authenticated user");
 
@@ -183,8 +183,8 @@ public class TestContainerManagerSecurity {
     resourceManager.getClientRMService().forceKillApplication(request);
   }
 
-  @Test
-  public void testMaliceUser() throws IOException, InterruptedException {
+  private void testMaliceUser() throws IOException, InterruptedException,
+      YarnRemoteException {
 
     LOG.info("Running test for malice user");
 
@@ -250,10 +250,9 @@ public class TestContainerManagerSecurity {
               + "it will indicate RPC success");
         } catch (Exception e) {
           Assert.assertEquals(
-            java.lang.reflect.UndeclaredThrowableException.class
+              javax.security.sasl.SaslException.class
               .getCanonicalName(), e.getClass().getCanonicalName());
           Assert.assertTrue(e
-            .getCause()
             .getMessage()
             .contains(
               "DIGEST-MD5: digest response format violation. "
@@ -269,8 +268,8 @@ public class TestContainerManagerSecurity {
     resourceManager.getClientRMService().forceKillApplication(request);
   }
 
-  @Test
-  public void testUnauthorizedUser() throws IOException, InterruptedException {
+  private void testUnauthorizedUser() throws IOException, InterruptedException,
+      YarnRemoteException {
 
     LOG.info("\n\nRunning test for malice user");
 
@@ -319,9 +318,9 @@ public class TestContainerManagerSecurity {
 
         LOG.info("Going to contact NM:  unauthorized request");
 
-        callWithIllegalContainerID(client, tokenId);
-        callWithIllegalResource(client, tokenId);
-        callWithIllegalUserName(client, tokenId);
+        callWithIllegalContainerID(client, tokenId, allocatedContainer);
+        callWithIllegalResource(client, tokenId, allocatedContainer);
+        callWithIllegalUserName(client, tokenId, allocatedContainer);
 
         return client;
       }
@@ -339,10 +338,11 @@ public class TestContainerManagerSecurity {
       resourceManager.getRMContainerTokenSecretManager(); 
     final ContainerTokenIdentifier newTokenId =
         new ContainerTokenIdentifier(tokenId.getContainerID(),
-          tokenId.getNmHostAddress(), "testUser", tokenId.getResource(),
-          System.currentTimeMillis() - 1, 
-          containerTokenSecreteManager.getCurrentKey().getKeyId());
-    byte[] passowrd =
+            tokenId.getNmHostAddress(), tokenId.getApplicationSubmitter(),
+            tokenId.getResource(),
+            System.currentTimeMillis() - 1,
+            containerTokenSecreteManager.getCurrentKey().getKeyId());
+    final byte[] passowrd =
         containerTokenSecreteManager.createPassword(
             newTokenId);
     // Create a valid token by using the key from the RM.
@@ -361,8 +361,12 @@ public class TestContainerManagerSecurity {
 
         LOG.info("Going to contact NM with expired token");
         ContainerLaunchContext context = createContainerLaunchContextForTest(newTokenId);
-        StartContainerRequest request = Records.newRecord(StartContainerRequest.class);
+        StartContainerRequest request =
+            Records.newRecord(StartContainerRequest.class);
         request.setContainerLaunchContext(context);
+        allocatedContainer.setContainerToken(BuilderUtils.newContainerToken(
+            allocatedContainer.getNodeId(), passowrd, newTokenId));
+        request.setContainer(allocatedContainer);
 
         //Calling startContainer with an expired token.
         try {
@@ -402,8 +406,8 @@ public class TestContainerManagerSecurity {
       InterruptedException {
 
     ContainerLaunchContext amContainer = BuilderUtils
-        .newContainerLaunchContext(null, "testUser", BuilderUtils
-            .newResource(1024, 1), Collections.<String, LocalResource>emptyMap(),
+        .newContainerLaunchContext("testUser",
+            Collections.<String, LocalResource>emptyMap(),
             new HashMap<String, String>(), Arrays.asList("sleep", "100"),
             new HashMap<String, ByteBuffer>(), null,
             new HashMap<ApplicationAccessType, String>());
@@ -411,8 +415,9 @@ public class TestContainerManagerSecurity {
     ApplicationSubmissionContext appSubmissionContext = recordFactory
         .newRecordInstance(ApplicationSubmissionContext.class);
     appSubmissionContext.setApplicationId(appID);
-    appSubmissionContext.setUser("testUser");
     appSubmissionContext.setAMContainerSpec(amContainer);
+    appSubmissionContext.getAMContainerSpec().setUser("testUser");
+    appSubmissionContext.setResource(BuilderUtils.newResource(1024, 1));
 
     SubmitApplicationRequest submitRequest = recordFactory
         .newRecordInstance(SubmitApplicationRequest.class);
@@ -445,17 +450,19 @@ public class TestContainerManagerSecurity {
     // Ask for a container from the RM
     final InetSocketAddress schedulerAddr =
         resourceManager.getApplicationMasterService().getBindAddress();
-    ApplicationTokenIdentifier appTokenIdentifier = new ApplicationTokenIdentifier(
-        appAttempt.getAppAttemptId());
-    ApplicationTokenSecretManager appTokenSecretManager =
-        new ApplicationTokenSecretManager(conf);
-    appTokenSecretManager.setMasterKey(resourceManager
-      .getApplicationTokenSecretManager().getMasterKey());
-    Token<ApplicationTokenIdentifier> appToken =
-        new Token<ApplicationTokenIdentifier>(appTokenIdentifier,
-          appTokenSecretManager);
-    SecurityUtil.setTokenService(appToken, schedulerAddr);
-    currentUser.addToken(appToken);
+    if (UserGroupInformation.isSecurityEnabled()) {
+      ApplicationTokenIdentifier appTokenIdentifier = new ApplicationTokenIdentifier(
+          appAttempt.getAppAttemptId());
+      ApplicationTokenSecretManager appTokenSecretManager =
+          new ApplicationTokenSecretManager(conf);
+      appTokenSecretManager.setMasterKey(resourceManager
+        .getApplicationTokenSecretManager().getMasterKey());
+      Token<ApplicationTokenIdentifier> appToken =
+          new Token<ApplicationTokenIdentifier>(appTokenIdentifier,
+            appTokenSecretManager);
+      SecurityUtil.setTokenService(appToken, schedulerAddr);
+      currentUser.addToken(appToken);
+    }
     
     AMRMProtocol scheduler = currentUser
         .doAs(new PrivilegedAction<AMRMProtocol>() {
@@ -476,21 +483,22 @@ public class TestContainerManagerSecurity {
   }
 
   private Container requestAndGetContainer(AMRMProtocol scheduler,
-      ApplicationId appID) throws YarnRemoteException, InterruptedException {
+      ApplicationId appID) throws YarnRemoteException, InterruptedException,
+      IOException {
 
     // Request a container allocation.
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ask.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0), "*",
-        BuilderUtils.newResource(1024, 1), 1));
+    ask.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
+        ResourceRequest.ANY, BuilderUtils.newResource(1024, 1), 1));
 
     AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
         BuilderUtils.newApplicationAttemptId(appID, 1), 0, 0F, ask,
         new ArrayList<ContainerId>());
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
-        .getAMResponse().getAllocatedContainers();
+        .getAllocatedContainers();
 
     // Modify ask to request no more.
-    allocateRequest.clearAsks();
+    allocateRequest.setAskList(new ArrayList<ResourceRequest>());
 
     int waitCounter = 0;
     while ((allocatedContainers == null || allocatedContainers.size() == 0)
@@ -499,7 +507,7 @@ public class TestContainerManagerSecurity {
       Thread.sleep(1000);
       allocateRequest.setResponseId(allocateRequest.getResponseId() + 1);
       allocatedContainers = scheduler.allocate(allocateRequest)
-          .getAMResponse().getAllocatedContainers();
+          .getAllocatedContainers();
     }
 
     Assert.assertNotNull("Container is not allocted!", allocatedContainers);
@@ -510,16 +518,20 @@ public class TestContainerManagerSecurity {
   }
 
   void callWithIllegalContainerID(ContainerManager client,
-      ContainerTokenIdentifier tokenId) {
-    GetContainerStatusRequest request = recordFactory
-        .newRecordInstance(GetContainerStatusRequest.class);
+      ContainerTokenIdentifier tokenId, Container container) {
+    StartContainerRequest request = recordFactory
+        .newRecordInstance(StartContainerRequest.class);
+    ContainerLaunchContext context =
+        createContainerLaunchContextForTest(tokenId);
     ContainerId newContainerId = BuilderUtils.newContainerId(BuilderUtils
         .newApplicationAttemptId(tokenId.getContainerID()
             .getApplicationAttemptId().getApplicationId(), 1), 42);
-    request.setContainerId(newContainerId); // Authenticated but
-                                            // unauthorized.
+    ContainerId oldContainerId = container.getId();
     try {
-      client.getContainerStatus(request);
+      container.setId(newContainerId);
+      request.setContainer(container);
+      request.setContainerLaunchContext(context);
+      client.startContainer(request);
       fail("Connection initiation with unauthorized "
           + "access is expected to fail.");
     } catch (YarnRemoteException e) {
@@ -528,18 +540,25 @@ public class TestContainerManagerSecurity {
           "Unauthorized request to start container. "
               + "\nExpected containerId: " + tokenId.getContainerID()
               + " Found: " + newContainerId.toString()));
+    } catch (IOException e) {
+      LOG.info("Got IOException: ",e);
+      fail("IOException is not expected.");
+    } finally {
+      container.setId(oldContainerId);
     }
   }
 
   void callWithIllegalResource(ContainerManager client,
-      ContainerTokenIdentifier tokenId) {
+      ContainerTokenIdentifier tokenId, Container container) {
     StartContainerRequest request = recordFactory
         .newRecordInstance(StartContainerRequest.class);
     // Authenticated but unauthorized, due to wrong resource
     ContainerLaunchContext context =
         createContainerLaunchContextForTest(tokenId);
-    context.getResource().setMemory(2048); // Set a different resource size.
+    Resource rsrc = container.getResource();
+    container.setResource(BuilderUtils.newResource(2048, 1));
     request.setContainerLaunchContext(context);
+    request.setContainer(container);
     try {
       client.startContainer(request);
       fail("Connection initiation with unauthorized "
@@ -550,12 +569,16 @@ public class TestContainerManagerSecurity {
           "Unauthorized request to start container. "));
       Assert.assertTrue(e.getMessage().contains(
           "\nExpected resource " + tokenId.getResource().toString()
-              + " but found " + context.getResource().toString()));
+              + " but found " + container.getResource().toString()));
+    } catch (IOException e) {
+      LOG.info("Got IOException: ",e);
+      fail("IOException is not expected.");
     }
+    container.setResource(rsrc);
   }
 
   void callWithIllegalUserName(ContainerManager client,
-      ContainerTokenIdentifier tokenId) {
+      ContainerTokenIdentifier tokenId, Container container) {
     StartContainerRequest request = recordFactory
         .newRecordInstance(StartContainerRequest.class);
     // Authenticated but unauthorized, due to wrong resource
@@ -563,6 +586,7 @@ public class TestContainerManagerSecurity {
         createContainerLaunchContextForTest(tokenId);
     context.setUser("Saruman"); // Set a different user-name.
     request.setContainerLaunchContext(context);
+    request.setContainer(container);
     try {
       client.startContainer(request);
       fail("Connection initiation with unauthorized "
@@ -574,17 +598,17 @@ public class TestContainerManagerSecurity {
       Assert.assertTrue(e.getMessage().contains(
         "Expected user-name " + tokenId.getApplicationSubmitter()
             + " but found " + context.getUser()));
+    } catch (IOException e) {
+      LOG.info("Got IOException: ",e);
+      fail("IOException is not expected.");
     }
   }
 
   private ContainerLaunchContext createContainerLaunchContextForTest(
       ContainerTokenIdentifier tokenId) {
     ContainerLaunchContext context =
-        BuilderUtils.newContainerLaunchContext(tokenId.getContainerID(),
-            "testUser",
-            BuilderUtils.newResource(
-                tokenId.getResource().getMemory(), 
-                tokenId.getResource().getVirtualCores()),
+        BuilderUtils.newContainerLaunchContext(
+            tokenId.getApplicationSubmitter(),
             new HashMap<String, LocalResource>(),
             new HashMap<String, String>(), new ArrayList<String>(),
             new HashMap<String, ByteBuffer>(), null,

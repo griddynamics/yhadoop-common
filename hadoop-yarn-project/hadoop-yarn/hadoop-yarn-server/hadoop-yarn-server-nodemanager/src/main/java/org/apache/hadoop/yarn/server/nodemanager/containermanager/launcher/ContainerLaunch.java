@@ -45,6 +45,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -113,7 +114,7 @@ public class ContainerLaunch implements Callable<Integer> {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
     final Map<Path,List<String>> localResources =
         container.getLocalizedResources();
-    ContainerId containerID = container.getContainerID();
+    ContainerId containerID = container.getContainer().getId();
     String containerIdStr = ConverterUtils.toString(containerID);
     final String user = launchContext.getUser();
     final List<String> command = launchContext.getCommands();
@@ -182,7 +183,7 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> logDirs = dirsHandler.getLogDirs();
 
       if (!dirsHandler.areDisksHealthy()) {
-        ret = YarnConfiguration.DISKS_FAILED;
+        ret = ContainerExitStatus.DISKS_FAILED;
         throw new IOException("Most of the disks failed. "
             + dirsHandler.getDisksHealthReport());
       }
@@ -246,9 +247,8 @@ public class ContainerLaunch implements Callable<Integer> {
     } catch (Throwable e) {
       LOG.warn("Failed to launch container.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
-            launchContext.getContainerId(),
-            ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
-            e.getMessage()));
+          containerID, ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+          e.getMessage()));
       return ret;
     } finally {
       completed.set(true);
@@ -264,7 +264,7 @@ public class ContainerLaunch implements Callable<Integer> {
       // If the process was killed, Send container_cleanedup_after_kill and
       // just break out of this method.
       dispatcher.getEventHandler().handle(
-            new ContainerExitEvent(launchContext.getContainerId(),
+            new ContainerExitEvent(containerID,
                 ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ret,
                 "Container exited with a non-zero exit code " + ret));
       return ret;
@@ -273,15 +273,15 @@ public class ContainerLaunch implements Callable<Integer> {
     if (ret != 0) {
       LOG.warn("Container exited with a non-zero exit code " + ret);
       this.dispatcher.getEventHandler().handle(new ContainerExitEvent(
-              launchContext.getContainerId(),
-              ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
-              "Container exited with a non-zero exit code " + ret));
+          containerID,
+          ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+          "Container exited with a non-zero exit code " + ret));
       return ret;
     }
 
     LOG.info("Container " + containerIdStr + " succeeded ");
     dispatcher.getEventHandler().handle(
-        new ContainerEvent(launchContext.getContainerId(),
+        new ContainerEvent(containerID,
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
     return 0;
   }
@@ -295,7 +295,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * @throws IOException
    */
   public void cleanupContainer() throws IOException {
-    ContainerId containerId = container.getContainerID();
+    ContainerId containerId = container.getContainer().getId();
     String containerIdStr = ConverterUtils.toString(containerId);
     LOG.info("Cleaning up container " + containerIdStr);
 
@@ -366,7 +366,7 @@ public class ContainerLaunch implements Callable<Integer> {
    */
   private String getContainerPid(Path pidFilePath) throws Exception {
     String containerIdStr = 
-        ConverterUtils.toString(container.getContainerID());
+        ConverterUtils.toString(container.getContainer().getId());
     String processId = null;
     LOG.debug("Accessing pid for container " + containerIdStr
         + " from pid file " + pidFilePath);
@@ -484,6 +484,21 @@ public class ContainerLaunch implements Callable<Integer> {
      * Non-modifiable environment variables
      */
 
+    environment.put(Environment.CONTAINER_ID.name(), container
+        .getContainer().getId().toString());
+
+    environment.put(Environment.NM_PORT.name(),
+        String.valueOf(container.getContainer().getNodeId().getPort()));
+
+    environment.put(Environment.NM_HOST.name(), container.getContainer()
+        .getNodeId().getHost());
+
+    environment.put(Environment.NM_HTTP_PORT.name(), container.getContainer()
+        .getNodeHttpAddress().split(":")[1]);
+
+    environment.put(Environment.LOCAL_DIRS.name(),
+        StringUtils.join(",", appDirs));
+
     putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
     
     putEnvIfNotNull(environment, 
@@ -502,11 +517,6 @@ public class ContainerLaunch implements Callable<Integer> {
     putEnvIfNotNull(environment, 
         Environment.HADOOP_CONF_DIR.name(), 
         System.getenv(Environment.HADOOP_CONF_DIR.name())
-        );
-    
-    putEnvIfNotNull(environment, 
-        ApplicationConstants.LOCAL_DIR_ENV, 
-        StringUtils.join(",", appDirs)
         );
 
     if (!Shell.WINDOWS) {

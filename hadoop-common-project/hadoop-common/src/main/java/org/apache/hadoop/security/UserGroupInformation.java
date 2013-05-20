@@ -51,19 +51,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -190,8 +189,6 @@ public class UserGroupInformation {
 
   /** Metrics to track UGI activity */
   static UgiMetrics metrics = UgiMetrics.create();
-  /** Are the static variables that depend on configuration initialized? */
-  private static boolean isInitialized = false;
   /** The auth method to use */
   private static AuthenticationMethod authenticationMethod;
   /** Server-side groups fetching service */
@@ -212,8 +209,8 @@ public class UserGroupInformation {
    * Must be called before useKerberos or groups is used.
    */
   private static synchronized void ensureInitialized() {
-    if (!isInitialized) {
-        initialize(new Configuration(), KerberosName.hasRulesBeenSet());
+    if (conf == null) {
+      initialize(new Configuration(), false);
     }
   }
 
@@ -221,30 +218,21 @@ public class UserGroupInformation {
    * Initialize UGI and related classes.
    * @param conf the configuration to use
    */
-  private static synchronized void initialize(Configuration conf, boolean skipRulesSetting) {
-    initUGI(conf);
-    // give the configuration on how to translate Kerberos names
-    try {
-      if (!skipRulesSetting) {
-        HadoopKerberosName.setConfiguration(conf);
-      }
-    } catch (IOException ioe) {
-      throw new RuntimeException("Problem with Kerberos auth_to_local name " +
-          "configuration", ioe);
-    }
-  }
-  
-  /**
-   * Set the configuration values for UGI.
-   * @param conf the configuration to use
-   */
-  private static synchronized void initUGI(Configuration conf) {
+  private static synchronized void initialize(Configuration conf,
+                                              boolean overrideNameRules) {
     authenticationMethod = SecurityUtil.getAuthenticationMethod(conf);
+    if (overrideNameRules || !HadoopKerberosName.hasRulesBeenSet()) {
+      try {
+        HadoopKerberosName.setConfiguration(conf);
+      } catch (IOException ioe) {
+        throw new RuntimeException(
+            "Problem with Kerberos auth_to_local name configuration", ioe);
+      }
+    }
     // If we haven't set up testing groups, use the configuration to find it
     if (!(groups instanceof TestingGroups)) {
       groups = Groups.getUserToGroupsMappingService(conf);
     }
-    isInitialized = true;
     UserGroupInformation.conf = conf;
   }
 
@@ -257,7 +245,17 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static void setConfiguration(Configuration conf) {
-    initialize(conf, false);
+    initialize(conf, true);
+  }
+  
+  @InterfaceAudience.Private
+  @VisibleForTesting
+  static void reset() {
+    authenticationMethod = null;
+    conf = null;
+    groups = null;
+    setLoginUser(null);
+    HadoopKerberosName.setRules(null);
   }
   
   /**
@@ -297,12 +295,11 @@ public class UserGroupInformation {
       System.getProperty("os.name").startsWith("Windows");
   private static final boolean is64Bit =
       System.getProperty("os.arch").contains("64");
-  private static final boolean ibmJava = System.getProperty("java.vendor").contains("IBM");
   private static final boolean aix = System.getProperty("os.name").equals("AIX");
 
   /* Return the OS login module class name */
   private static String getOSLoginModuleName() {
-    if (ibmJava) {
+    if (IBM_JAVA) {
       if (windows) {
         return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
             : "com.ibm.security.auth.module.NTLoginModule";
@@ -324,7 +321,7 @@ public class UserGroupInformation {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
       String principalClass = null;
-      if (ibmJava) {
+      if (IBM_JAVA) {
         if (is64Bit) {
           principalClass = "com.ibm.security.auth.UsernamePrincipal";
         } else {
@@ -421,7 +418,7 @@ public class UserGroupInformation {
     private static final Map<String,String> USER_KERBEROS_OPTIONS = 
       new HashMap<String,String>();
     static {
-      if (ibmJava) {
+      if (IBM_JAVA) {
         USER_KERBEROS_OPTIONS.put("useDefaultCcache", "true");
       } else {
         USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
@@ -430,7 +427,7 @@ public class UserGroupInformation {
       }
       String ticketCache = System.getenv("KRB5CCNAME");
       if (ticketCache != null) {
-        if (ibmJava) {
+        if (IBM_JAVA) {
           // The first value searched when "useDefaultCcache" is used.
           System.setProperty("KRB5CCNAME", ticketCache);
         } else {
@@ -446,7 +443,7 @@ public class UserGroupInformation {
     private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = 
       new HashMap<String,String>();
     static {
-      if (ibmJava) {
+      if (IBM_JAVA) {
         KEYTAB_KERBEROS_OPTIONS.put("credsType", "both");
       } else {
         KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
@@ -478,7 +475,7 @@ public class UserGroupInformation {
       } else if (USER_KERBEROS_CONFIG_NAME.equals(appName)) {
         return USER_KERBEROS_CONF;
       } else if (KEYTAB_KERBEROS_CONFIG_NAME.equals(appName)) {
-        if (ibmJava) {
+        if (IBM_JAVA) {
           KEYTAB_KERBEROS_OPTIONS.put("useKeytab",
               prependFileAuthority(keytabFile));
         } else {

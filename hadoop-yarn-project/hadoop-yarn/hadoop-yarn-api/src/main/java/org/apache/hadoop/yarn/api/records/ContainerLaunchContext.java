@@ -52,22 +52,6 @@ import org.apache.hadoop.yarn.api.ContainerManager;
 @Stable
 public interface ContainerLaunchContext {
   /**
-   * Get <code>ContainerId</code> of container to be launched.
-   * @return <code>ContainerId</code> of container to be launched
-   */
-  @Public
-  @Stable
-  ContainerId getContainerId();
-
-  /**
-   * Set <code>ContainerId</code> of container to be launched.
-   * @param containerId et <code>ContainerId</code> of container to be launched
-   */
-  @Public
-  @Stable
-  void setContainerId(ContainerId containerId);
-
-  /**
    * Get the <em>user</em> to whom the container has been allocated.
    * @return the <em>user</em> to whom the container has been allocated
    */
@@ -84,39 +68,24 @@ public interface ContainerLaunchContext {
   void setUser(String user);
 
   /**
-   * Get the <code>Resource</code> allocated to the container by the
-   * <code>ResourceManager</code>.
-   * @return <code>Resource</code> allocated to the container by the
-   *         <code>ResourceManager</code>
+   * Get all the tokens needed by this container. It may include file-system
+   * tokens, ApplicationMaster related tokens if this container is an
+   * ApplicationMaster or framework level tokens needed by this container to
+   * communicate to various services in a secure manner.
+   * 
+   * @return tokens needed by this container.
    */
   @Public
   @Stable
-  Resource getResource();
+  ByteBuffer getTokens();
 
   /**
-   * Set the <code>Resource</code> allocated to the container by the
-   * <code>ResourceManager</code>.
-   * @param resource allocated resource
+   * Set security tokens needed by this container.
+   * @param tokens security tokens 
    */
   @Public
   @Stable
-  void setResource(Resource resource);
-
-  /**
-   * Get security tokens (if security is enabled).
-   * @return security tokens (if security is enabled)
-   */
-  @Public
-  @Stable
-  ByteBuffer getContainerTokens();
-
-  /**
-   * Set security tokens (if security is enabled).
-   * @param containerToken security tokens 
-   */
-  @Public
-  @Stable
-  void setContainerTokens(ByteBuffer containerToken);
+  void setTokens(ByteBuffer tokens);
 
   /**
    * Get <code>LocalResource</code> required by the container.

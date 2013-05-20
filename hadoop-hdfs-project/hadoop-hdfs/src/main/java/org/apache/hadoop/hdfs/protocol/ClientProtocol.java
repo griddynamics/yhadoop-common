@@ -150,6 +150,8 @@ public interface ClientProtocol {
    * @param replication block replication factor.
    * @param blockSize maximum block size.
    * 
+   * @return the status of the created file, it could be null if the server
+   *           doesn't support returning the file status
    * @throws AccessControlException If access is denied
    * @throws AlreadyBeingCreatedException if the path does not exist.
    * @throws DSQuotaExceededException If file creation violates disk space 
@@ -168,13 +170,14 @@ public interface ClientProtocol {
    * RuntimeExceptions:
    * @throws InvalidPathException Path <code>src</code> is invalid
    */
-  public void create(String src, FsPermission masked, String clientName,
-      EnumSetWritable<CreateFlag> flag, boolean createParent,
-      short replication, long blockSize) throws AccessControlException,
-      AlreadyBeingCreatedException, DSQuotaExceededException,
-      FileAlreadyExistsException, FileNotFoundException,
-      NSQuotaExceededException, ParentNotDirectoryException, SafeModeException,
-      UnresolvedLinkException, IOException;
+  public HdfsFileStatus create(String src, FsPermission masked,
+      String clientName, EnumSetWritable<CreateFlag> flag,
+      boolean createParent, short replication, long blockSize)
+      throws AccessControlException, AlreadyBeingCreatedException,
+      DSQuotaExceededException, FileAlreadyExistsException,
+      FileNotFoundException, NSQuotaExceededException,
+      ParentNotDirectoryException, SafeModeException, UnresolvedLinkException,
+      IOException;
 
   /**
    * Append to the end of the file. 
@@ -296,6 +299,9 @@ public interface ClientProtocol {
    * @param previous  previous block
    * @param excludeNodes a list of nodes that should not be
    * allocated for the current block
+   * @param fileId the id uniquely identifying a file
+   * @param favoredNodes the list of nodes where the client wants the blocks.
+   *          Nodes are identified by either host name or address.
    *
    * @return LocatedBlock allocated block information.
    *
@@ -310,7 +316,8 @@ public interface ClientProtocol {
    */
   @Idempotent
   public LocatedBlock addBlock(String src, String clientName,
-      ExtendedBlock previous, DatanodeInfo[] excludeNodes)
+      ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId, 
+      String[] favoredNodes)
       throws AccessControlException, FileNotFoundException,
       NotReplicatedYetException, SafeModeException, UnresolvedLinkException,
       IOException;
@@ -753,7 +760,21 @@ public interface ClientProtocol {
   @Idempotent
   public HdfsFileStatus getFileInfo(String src) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
-
+  
+  /**
+   * Get the close status of a file
+   * @param src The string representation of the path to the file
+   *
+   * @return return true if file is closed
+   * @throws AccessControlException permission denied
+   * @throws FileNotFoundException file <code>src</code> is not found
+   * @throws UnresolvedLinkException if the path contains a symlink.
+   * @throws IOException If an I/O error occurred     
+   */
+  @Idempotent
+  public boolean isFileClosed(String src) throws AccessControlException,
+      FileNotFoundException, UnresolvedLinkException, IOException;
+  
   /**
    * Get the file info for a specific file or directory. If the path 
    * refers to a symlink then the FileStatus of the symlink is returned.

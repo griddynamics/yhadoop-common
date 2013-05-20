@@ -78,6 +78,7 @@ public class DelegationTokenSecretManager
   
   @Override //SecretManager
   public void checkAvailableForRead() throws StandbyException {
+    namesystem.checkOperation(OperationCategory.READ);
     namesystem.readLock();
     try {
       namesystem.checkOperation(OperationCategory.READ);
@@ -307,6 +308,23 @@ public class DelegationTokenSecretManager
             "Interrupted before updating master key");
       }
       namesystem.logUpdateMasterKey(key);
+    }
+  }
+  
+  @Override //AbstractDelegationTokenManager
+  protected void logExpireToken(final DelegationTokenIdentifier dtId)
+      throws IOException {
+    synchronized (noInterruptsLock) {
+      // The edit logging code will fail catastrophically if it
+      // is interrupted during a logSync, since the interrupt
+      // closes the edit log files. Doing this inside the
+      // above lock and then checking interruption status
+      // prevents this bug.
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException(
+            "Interrupted before expiring delegation token");
+      }
+      namesystem.logExpireDelegationToken(dtId);
     }
   }
 

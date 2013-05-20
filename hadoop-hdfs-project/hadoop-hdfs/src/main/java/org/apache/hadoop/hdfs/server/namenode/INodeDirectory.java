@@ -18,29 +18,32 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Directory INode class.
  */
 class INodeDirectory extends INode {
   /** Cast INode to INodeDirectory. */
-  public static INodeDirectory valueOf(INode inode, String path
-      ) throws IOException {
+  public static INodeDirectory valueOf(INode inode, Object path
+      ) throws FileNotFoundException, PathIsNotDirectoryException {
     if (inode == null) {
-      throw new IOException("Directory does not exist: " + path);
+      throw new FileNotFoundException("Directory does not exist: "
+          + DFSUtil.path2String(path));
     }
     if (!inode.isDirectory()) {
-      throw new IOException("Path is not a directory: " + path);
+      throw new PathIsNotDirectoryException(DFSUtil.path2String(path));
     }
     return (INodeDirectory)inode; 
   }
@@ -48,22 +51,19 @@ class INodeDirectory extends INode {
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
 
-  private List<INode> children;
+  private List<INode> children = null;
 
-  INodeDirectory(String name, PermissionStatus permissions) {
-    super(name, permissions);
-    this.children = null;
+  INodeDirectory(long id, String name, PermissionStatus permissions) {
+    super(id, name, permissions);
   }
 
-  public INodeDirectory(PermissionStatus permissions, long mTime) {
-    super(permissions, mTime, 0);
-    this.children = null;
+  public INodeDirectory(long id, PermissionStatus permissions, long mTime) {
+    super(id, permissions, mTime, 0);
   }
-
+  
   /** constructor */
-  INodeDirectory(byte[] localName, PermissionStatus permissions, long mTime) {
-    this(permissions, mTime);
-    this.name = localName;
+  INodeDirectory(long id, byte[] name, PermissionStatus permissions, long mtime) {
+    super(id, name, permissions, null, mtime, 0L);
   }
   
   /** copy constructor
@@ -72,7 +72,12 @@ class INodeDirectory extends INode {
    */
   INodeDirectory(INodeDirectory other) {
     super(other);
-    this.children = other.getChildren();
+    this.children = other.children;
+    if (this.children != null) {
+      for (INode child : children) {
+        child.parent = this;
+      }
+    }
   }
   
   /** @return true unconditionally. */
@@ -81,14 +86,20 @@ class INodeDirectory extends INode {
     return true;
   }
 
-  INode removeChild(INode node) {
-    assert children != null;
-    int low = Collections.binarySearch(children, node.name);
-    if (low >= 0) {
-      return children.remove(low);
-    } else {
-      return null;
+  private void assertChildrenNonNull() {
+    if (children == null) {
+      throw new AssertionError("children is null: " + this);
     }
+  }
+
+  private int searchChildren(INode inode) {
+    return Collections.binarySearch(children, inode.getLocalNameBytes());
+  }
+
+  INode removeChild(INode node) {
+    assertChildrenNonNull();
+    final int i = searchChildren(node);
+    return i >= 0? children.remove(i): null;
   }
 
   /** Replace a child that has the same name as newChild by newChild.
@@ -96,11 +107,11 @@ class INodeDirectory extends INode {
    * @param newChild Child node to be added
    */
   void replaceChild(INode newChild) {
-    if ( children == null ) {
-      throw new IllegalArgumentException("The directory is empty");
-    }
-    int low = Collections.binarySearch(children, newChild.name);
+    assertChildrenNonNull();
+
+    final int low = searchChildren(newChild);
     if (low>=0) { // an old child exists so replace by the newChild
+      children.get(low).parent = null;
       children.set(low, newChild);
     } else {
       throw new IllegalArgumentException("No child exists to be replaced");
@@ -128,9 +139,9 @@ class INodeDirectory extends INode {
    */
   private INode getNode(byte[][] components, boolean resolveLink
       ) throws UnresolvedLinkException {
-    INode[] inode  = new INode[1];
-    getExistingPathINodes(components, inode, resolveLink);
-    return inode[0];
+    INodesInPath inodesInPath = getExistingPathINodes(components, 1,
+        resolveLink);
+    return inodesInPath.inodes[0];
   }
 
   /**
@@ -178,27 +189,29 @@ class INodeDirectory extends INode {
    * fill the array with [rootINode,c1,c2,null]
    * 
    * @param components array of path component name
-   * @param existing array to fill with existing INodes
+   * @param numOfINodes number of INodes to return
    * @param resolveLink indicates whether UnresolvedLinkException should
    *        be thrown when the path refers to a symbolic link.
-   * @return number of existing INodes in the path
+   * @return the specified number of existing INodes in the path
    */
-  int getExistingPathINodes(byte[][] components, INode[] existing, 
-      boolean resolveLink) throws UnresolvedLinkException {
+  INodesInPath getExistingPathINodes(byte[][] components, int numOfINodes,
+      boolean resolveLink)
+      throws UnresolvedLinkException {
     assert this.compareTo(components[0]) == 0 :
         "Incorrect name " + getLocalName() + " expected "
         + (components[0] == null? null: DFSUtil.bytes2String(components[0]));
 
+    INodesInPath existing = new INodesInPath(numOfINodes);
     INode curNode = this;
     int count = 0;
-    int index = existing.length - components.length;
+    int index = numOfINodes - components.length;
     if (index > 0) {
       index = 0;
     }
     while (count < components.length && curNode != null) {
       final boolean lastComp = (count == components.length - 1);      
       if (index >= 0) {
-        existing[index] = curNode;
+        existing.inodes[index] = curNode;
       }
       if (curNode.isSymlink() && (!lastComp || (lastComp && resolveLink))) {
         final String path = constructPath(components, 0, components.length);
@@ -206,7 +219,7 @@ class INodeDirectory extends INode {
         final String remainder =
           constructPath(components, count + 1, components.length);
         final String link = DFSUtil.bytes2String(components[count]);
-        final String target = ((INodeSymlink)curNode).getLinkValue();
+        final String target = ((INodeSymlink)curNode).getSymlinkString();
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("UnresolvedPathException " +
             " path: " + path + " preceding: " + preceding +
@@ -223,7 +236,7 @@ class INodeDirectory extends INode {
       count++;
       index++;
     }
-    return count;
+    return existing;
   }
 
   /**
@@ -239,16 +252,12 @@ class INodeDirectory extends INode {
    *         components in the path, and non existing components will be
    *         filled with null
    *         
-   * @see #getExistingPathINodes(byte[][], INode[])
+   * @see #getExistingPathINodes(byte[][], int, boolean)
    */
-  INode[] getExistingPathINodes(String path, boolean resolveLink) 
+  INodesInPath getExistingPathINodes(String path, boolean resolveLink) 
     throws UnresolvedLinkException {
     byte[][] components = getPathComponents(path);
-    INode[] inodes = new INode[components.length];
-
-    this.getExistingPathINodes(components, inodes, resolveLink);
-    
-    return inodes;
+    return getExistingPathINodes(components, components.length, resolveLink);
   }
 
   /**
@@ -275,16 +284,17 @@ class INodeDirectory extends INode {
    * @param setModTime set modification time for the parent node
    *                   not needed when replaying the addition and 
    *                   the parent already has the proper mod time
-   * @return  null if the child with this name already exists; 
-   *          node, otherwise
+   * @return false if the child with this name already exists; 
+   *         otherwise, return true;
    */
-  <T extends INode> T addChild(final T node, boolean setModTime) {
+  boolean addChild(final INode node, final boolean setModTime) {
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
-    int low = Collections.binarySearch(children, node.name);
-    if(low >= 0)
-      return null;
+    final int low = searchChildren(node);
+    if (low >= 0) {
+      return false;
+    }
     node.parent = this;
     children.add(-low - 1, node);
     // update modification time of the parent directory
@@ -293,7 +303,7 @@ class INodeDirectory extends INode {
     if (node.getGroupName() == null) {
       node.setGroup(getGroupName());
     }
-    return node;
+    return true;
   }
 
   /**
@@ -302,75 +312,32 @@ class INodeDirectory extends INode {
    * 
    * @param path file path
    * @param newNode INode to be added
-   * @return null if the node already exists; inserted INode, otherwise
+   * @return false if the node already exists; otherwise, return true;
    * @throws FileNotFoundException if parent does not exist or 
    * @throws UnresolvedLinkException if any path component is a symbolic link
    * is not a directory.
    */
-  <T extends INode> T addNode(String path, T newNode
-      ) throws FileNotFoundException, UnresolvedLinkException  {
+  boolean addINode(String path, INode newNode
+      ) throws FileNotFoundException, PathIsNotDirectoryException,
+      UnresolvedLinkException {
     byte[][] pathComponents = getPathComponents(path);        
-    return addToParent(pathComponents, newNode, true) == null? null: newNode;
-  }
-
-  /**
-   * Add new inode to the parent if specified.
-   * Optimized version of addNode() if parent is not null.
-   * 
-   * @return  parent INode if new inode is inserted
-   *          or null if it already exists.
-   * @throws  FileNotFoundException if parent does not exist or 
-   *          is not a directory.
-   */
-  INodeDirectory addToParent( byte[] localname,
-                              INode newNode,
-                              INodeDirectory parent,
-                              boolean propagateModTime
-                              ) throws FileNotFoundException {
+    if (pathComponents.length < 2) { // add root
+      return false;
+    }
+    newNode.setLocalName(pathComponents[pathComponents.length - 1]);
     // insert into the parent children list
-    newNode.name = localname;
-    if(parent.addChild(newNode, propagateModTime) == null)
-      return null;
-    return parent;
+    INodeDirectory parent = getParent(pathComponents);
+    return parent.addChild(newNode, true);
   }
 
   INodeDirectory getParent(byte[][] pathComponents
-      ) throws FileNotFoundException, UnresolvedLinkException {
+      ) throws FileNotFoundException, PathIsNotDirectoryException,
+      UnresolvedLinkException {
     if (pathComponents.length < 2)  // add root
       return null;
     // Gets the parent INode
-    INode[] inodes  = new INode[2];
-    getExistingPathINodes(pathComponents, inodes, false);
-    INode inode = inodes[0];
-    if (inode == null) {
-      throw new FileNotFoundException("Parent path does not exist: "+
-          DFSUtil.byteArray2String(pathComponents));
-    }
-    if (!inode.isDirectory()) {
-      throw new FileNotFoundException("Parent path is not a directory: "+
-          DFSUtil.byteArray2String(pathComponents));
-    }
-    return (INodeDirectory)inode;
-  }
-  
-  /**
-   * Add new inode 
-   * Optimized version of addNode()
-   * 
-   * @return  parent INode if new inode is inserted
-   *          or null if it already exists.
-   * @throws  FileNotFoundException if parent does not exist or 
-   *          is not a directory.
-   */
-  INodeDirectory addToParent(byte[][] pathComponents, INode newNode,
-      boolean propagateModTime) throws FileNotFoundException, UnresolvedLinkException {
-    if (pathComponents.length < 2) { // add root
-      return null;
-    }
-    newNode.name = pathComponents[pathComponents.length - 1];
-    // insert into the parent children list
-    INodeDirectory parent = getParent(pathComponents);
-    return parent.addChild(newNode, propagateModTime) == null? null: parent;
+    INodesInPath inodes =  getExistingPathINodes(pathComponents, 2, false);
+    return INodeDirectory.valueOf(inodes.inodes[0], pathComponents);
   }
 
   @Override
@@ -423,22 +390,94 @@ class INodeDirectory extends INode {
   public List<INode> getChildrenList() {
     return children==null ? EMPTY_LIST : children;
   }
-  /** @return the children list which is possibly null. */
-  public List<INode> getChildren() {
-    return children;
-  }
 
   @Override
-  int collectSubtreeBlocksAndClear(List<Block> v) {
+  int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
     int total = 1;
     if (children == null) {
       return total;
     }
     for (INode child : children) {
-      total += child.collectSubtreeBlocksAndClear(v);
+      total += child.collectSubtreeBlocksAndClear(info);
     }
     parent = null;
-    children = null;
     return total;
+  }
+  
+  /**
+   * Used by
+   * {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)}.
+   * Containing INodes information resolved from a given path.
+   */
+  static class INodesInPath {
+    private INode[] inodes;
+    
+    public INodesInPath(int number) {
+      assert (number >= 0);
+      this.inodes = new INode[number];
+    }
+    
+    INode[] getINodes() {
+      return inodes;
+    }
+    
+    void setINode(int i, INode inode) {
+      inodes[i] = inode;
+    }
+  }
+
+  /*
+   * The following code is to dump the tree recursively for testing.
+   * 
+   *      \- foo   (INodeDirectory@33dd2717)
+   *        \- sub1   (INodeDirectory@442172)
+   *          +- file1   (INodeFile@78392d4)
+   *          +- file2   (INodeFile@78392d5)
+   *          +- sub11   (INodeDirectory@8400cff)
+   *            \- file3   (INodeFile@78392d6)
+   *          \- z_file4   (INodeFile@45848712)
+   */
+  static final String DUMPTREE_EXCEPT_LAST_ITEM = "+-"; 
+  static final String DUMPTREE_LAST_ITEM = "\\-";
+  @VisibleForTesting
+  @Override
+  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix) {
+    super.dumpTreeRecursively(out, prefix);
+    if (prefix.length() >= 2) {
+      prefix.setLength(prefix.length() - 2);
+      prefix.append("  ");
+    }
+    dumpTreeRecursively(out, prefix, children);
+  }
+
+  /**
+   * Dump the given subtrees.
+   * @param prefix The prefix string that each line should print.
+   * @param subs The subtrees.
+   */
+  @VisibleForTesting
+  protected static void dumpTreeRecursively(PrintWriter out,
+      StringBuilder prefix, List<? extends INode> subs) {
+    prefix.append(DUMPTREE_EXCEPT_LAST_ITEM);
+    if (subs != null && subs.size() != 0) {
+      int i = 0;
+      for(; i < subs.size() - 1; i++) {
+        subs.get(i).dumpTreeRecursively(out, prefix);
+        prefix.setLength(prefix.length() - 2);
+        prefix.append(DUMPTREE_EXCEPT_LAST_ITEM);
+      }
+
+      prefix.setLength(prefix.length() - 2);
+      prefix.append(DUMPTREE_LAST_ITEM);
+      subs.get(i).dumpTreeRecursively(out, prefix);
+    }
+    prefix.setLength(prefix.length() - 2);
+  }
+  
+  void clearChildren() {
+    if (children != null) {
+      this.children.clear();
+      this.children = null;
+    }
   }
 }

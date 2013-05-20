@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
@@ -205,6 +207,20 @@ class FSImageFormat {
           imgTxId = 0;
         }
 
+        // read the last allocated inode id in the fsimage
+        if (LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion)) {
+          long lastInodeId = in.readLong();
+          namesystem.resetLastInodeId(lastInodeId);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("load last allocated InodeId from fsimage:" + lastInodeId);
+          }
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Old layout version doesn't have inode id."
+                + " Will assign new id for each inode.");
+          }
+        }
+        
         // read compression related info
         FSImageCompression compression;
         if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imgVersion)) {
@@ -215,7 +231,7 @@ class FSImageFormat {
         in = compression.unwrapInputStream(fin);
 
         LOG.info("Loading image file " + curFile + " using " + compression);
-
+        
         // load all inodes
         LOG.info("Number of files = " + numFiles);
         if (LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
@@ -230,8 +246,8 @@ class FSImageFormat {
         loadSecretManagerState(in);
 
         // make sure to read to the end of file
-        int eof = in.read();
-        assert eof == -1 : "Should have reached the end of image file " + curFile;
+        boolean eof = (in.read() == -1);
+        assert eof : "Should have reached the end of image file " + curFile;
       } finally {
         in.close();
       }
@@ -252,7 +268,7 @@ class FSImageFormat {
       fsDir.rootDir.setQuota(nsQuota, dsQuota);
     }
     fsDir.rootDir.setModificationTime(root.getModificationTime());
-    fsDir.rootDir.setPermissionStatus(root.getPermissionStatus());    
+    fsDir.rootDir.clonePermissionStatus(root);    
   }
 
   /** 
@@ -262,8 +278,8 @@ class FSImageFormat {
    * @param in image input stream
    * @throws IOException
    */  
-   private void loadLocalNameINodes(long numFiles, DataInputStream in) 
-   throws IOException {
+   private void loadLocalNameINodes(long numFiles, DataInputStream in)
+        throws IOException {
      assert LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
          getLayoutVersion());
      assert numFiles > 0;
@@ -307,7 +323,8 @@ class FSImageFormat {
        INode newNode = loadINode(in); // read rest of inode
 
        // add to parent
-       namesystem.dir.addToParent(localName, parent, newNode, false);
+       newNode.setLocalName(localName);
+       addToParent(parent, newNode);
      }
      return numChildren;
    }
@@ -336,13 +353,43 @@ class FSImageFormat {
       }
       // check if the new inode belongs to the same parent
       if(!isParent(pathComponents, parentPath)) {
-        parentINode = fsDir.getParent(pathComponents);
+        parentINode = fsDir.rootDir.getParent(pathComponents);
         parentPath = getParent(pathComponents);
       }
 
       // add new inode
-      parentINode = fsDir.addToParent(pathComponents[pathComponents.length-1], 
-          parentINode, newNode, false);
+      newNode.setLocalName(pathComponents[pathComponents.length-1]);
+      addToParent(parentINode, newNode);
+    }
+  }
+
+  /**
+   * Add the child node to parent and, if child is a file, update block map.
+   * This method is only used for image loading so that synchronization,
+   * modification time update and space count update are not needed.
+   */
+  void addToParent(INodeDirectory parent, INode child) {
+    FSDirectory fsDir = namesystem.dir;
+    if (parent == fsDir.rootDir && FSDirectory.isReservedName(child)) {
+        throw new HadoopIllegalArgumentException("File name \""
+            + child.getLocalName() + "\" is reserved. Please "
+            + " change the name of the existing file or directory to another "
+            + "name before upgrading to this release.");
+    }
+    // NOTE: This does not update space counts for parents
+    if (!parent.addChild(child, false)) {
+      return;
+    }
+    namesystem.dir.cacheName(child);
+
+    if (child.isFile()) {
+      // Add file->block mapping
+      final INodeFile file = (INodeFile)child;
+      final BlockInfo[] blocks = file.getBlocks();
+      final BlockManager bm = namesystem.getBlockManager();
+      for (int i = 0; i < blocks.length; i++) {
+        file.setBlock(i, bm.addBlockCollection(blocks[i], file));
+      }
     }
   }
 
@@ -359,6 +406,9 @@ class FSImageFormat {
     long blockSize = 0;
     
     int imgVersion = getLayoutVersion();
+    long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? 
+           in.readLong() : namesystem.allocateNewInodeId();
+    
     short replication = in.readShort();
     replication = namesystem.getBlockManager().adjustReplication(replication);
     modificationTime = in.readLong();
@@ -396,7 +446,7 @@ class FSImageFormat {
     
     PermissionStatus permissions = PermissionStatus.read(in);
 
-    return INode.newINode(permissions, blocks, symlink, replication,
+    return INode.newINode(inodeId, permissions, blocks, symlink, replication,
         modificationTime, atime, nsQuota, dsQuota, blockSize);
   }
 
@@ -408,8 +458,8 @@ class FSImageFormat {
       LOG.info("Number of files under construction = " + size);
 
       for (int i = 0; i < size; i++) {
-        INodeFileUnderConstruction cons =
-          FSImageSerialization.readINodeUnderConstruction(in);
+        INodeFileUnderConstruction cons = FSImageSerialization
+            .readINodeUnderConstruction(in, namesystem, getLayoutVersion());
 
         // verify that file exists in namespace
         String path = cons.getLocalName();
@@ -538,7 +588,8 @@ class FSImageFormat {
         out.writeLong(fsDir.rootDir.numItemsInTree());
         out.writeLong(sourceNamesystem.getGenerationStamp());
         out.writeLong(context.getTxId());
-
+        out.writeLong(sourceNamesystem.getLastInodeId());
+        
         // write compression info and set up compressed stream
         out = compression.writeHeaderAndWrapStream(fos);
         LOG.info("Saving image file " + newFile +
@@ -580,8 +631,8 @@ class FSImageFormat {
     private void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
-      List<INode> children = current.getChildren();
-      if (children == null || children.isEmpty())
+      final List<INode> children = current.getChildrenList();
+      if (children.isEmpty())
         return;
       // print prefix (parent directory name)
       int prefixLen = currentDirName.position();

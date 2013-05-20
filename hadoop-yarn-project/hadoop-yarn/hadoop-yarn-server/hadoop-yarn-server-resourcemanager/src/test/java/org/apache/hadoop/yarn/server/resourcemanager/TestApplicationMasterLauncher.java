@@ -33,11 +33,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -60,6 +60,7 @@ public class TestApplicationMasterLauncher {
     int nmPortAtContainerManager;
     int nmHttpPortAtContainerManager;
     long submitTimeAtContainerManager;
+    int maxAppAttempts;
 
     @Override
     public StartContainerResponse
@@ -69,20 +70,21 @@ public class TestApplicationMasterLauncher {
       launched = true;
       Map<String, String> env =
           request.getContainerLaunchContext().getEnvironment();
-      containerIdAtContainerManager =
-          env.get(ApplicationConstants.AM_CONTAINER_ID_ENV);
       ContainerId containerId =
-          ConverterUtils.toContainerId(containerIdAtContainerManager);
+          request.getContainer().getId();
+      containerIdAtContainerManager = containerId.toString();
       attemptIdAtContainerManager =
           containerId.getApplicationAttemptId().toString();
-      nmHostAtContainerManager = env.get(ApplicationConstants.NM_HOST_ENV);
+      nmHostAtContainerManager = request.getContainer().getNodeId().getHost();
       nmPortAtContainerManager =
-          Integer.parseInt(env.get(ApplicationConstants.NM_PORT_ENV));
+          request.getContainer().getNodeId().getPort();
       nmHttpPortAtContainerManager =
-          Integer.parseInt(env.get(ApplicationConstants.NM_HTTP_PORT_ENV));
+          Integer.parseInt(request.getContainer().getNodeHttpAddress()
+              .split(":")[1]);
       submitTimeAtContainerManager =
           Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
-
+      maxAppAttempts =
+          Integer.parseInt(env.get(ApplicationConstants.MAX_APP_ATTEMPTS_ENV));
       return null;
     }
 
@@ -110,7 +112,7 @@ public class TestApplicationMasterLauncher {
     MockRMWithCustomAMLauncher rm = new MockRMWithCustomAMLauncher(
         containerManager);
     rm.start();
-    MockNM nm1 = rm.registerNode("h1:1234", 5120);
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
     RMApp app = rm.submitApp(2000);
 
@@ -131,7 +133,7 @@ public class TestApplicationMasterLauncher {
     Assert.assertEquals(app.getSubmitTime(),
         containerManager.submitTimeAtContainerManager);
     Assert.assertEquals(app.getRMAppAttempt(appAttemptId)
-        .getSubmissionContext().getAMContainerSpec().getContainerId()
+        .getMasterContainer().getId()
         .toString(), containerManager.containerIdAtContainerManager);
     Assert.assertEquals(nm1.getNodeId().getHost(),
         containerManager.nmHostAtContainerManager);
@@ -139,6 +141,8 @@ public class TestApplicationMasterLauncher {
         containerManager.nmPortAtContainerManager);
     Assert.assertEquals(nm1.getHttpPort(),
         containerManager.nmHttpPortAtContainerManager);
+    Assert.assertEquals(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS,
+        containerManager.maxAppAttempts);
 
     MockAM am = new MockAM(rm.getRMContext(), rm
         .getApplicationMasterService(), appAttemptId);

@@ -110,13 +110,13 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       List<String> localDirs, List<String> logDirs) throws IOException {
 
     FsPermission dirPerm = new FsPermission(APPDIR_PERM);
-    ContainerId containerId = container.getContainerID();
+    ContainerId containerId = container.getContainer().getId();
 
     // create container dirs on all disks
     String containerIdStr = ConverterUtils.toString(containerId);
     String appIdStr =
         ConverterUtils.toString(
-            container.getContainerID().getApplicationAttemptId().
+            containerId.getApplicationAttemptId().
                 getApplicationId());
     for (String sLocalDir : localDirs) {
       Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);
@@ -170,8 +170,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
       // Setup command to run
-      String[] command = {"bash",
-          wrapperScriptDst.toUri().getPath().toString()};
+      String[] command = getRunCommand(wrapperScriptDst.toUri().getPath().toString(),
+          this.getConf());
+
+      // Setup command to run
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
           command,

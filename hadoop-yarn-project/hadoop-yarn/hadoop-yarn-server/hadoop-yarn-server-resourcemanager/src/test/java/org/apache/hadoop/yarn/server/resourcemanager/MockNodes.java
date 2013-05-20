@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 
@@ -187,11 +187,11 @@ public class MockNodes {
     }
 
     @Override
-    public void updateHeartbeatResponseForCleanup(HeartbeatResponse response) {
+    public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
     }
 
     @Override
-    public HeartbeatResponse getLastHeartBeatResponse() {
+    public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
       return null;
     }
 
@@ -202,14 +202,18 @@ public class MockNodes {
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode, NodeState state, String httpAddr) {
-    return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++);
+    return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++, null);
   }
 
-  private static RMNode buildRMNode(int rack, final Resource perNode, NodeState state, String httpAddr, int hostnum) {
+  private static RMNode buildRMNode(int rack, final Resource perNode,
+      NodeState state, String httpAddr, int hostnum, String hostName) {
     final String rackName = "rack"+ rack;
     final int nid = hostnum;
-    final String hostName = "host"+ nid;
+    final String nodeAddr = hostName + ":" + nid;
     final int port = 123;
+    if (hostName == null) {
+      hostName = "host"+ nid;
+    }
     final NodeId nodeID = newNodeID(hostName, port);
     final String httpAddress = httpAddr;
     final NodeHealthStatus nodeHealthStatus =
@@ -218,7 +222,7 @@ public class MockNodes {
       nodeHealthStatus.setIsNodeHealthy(true);
       nodeHealthStatus.setHealthReport("HealthyMe");
     }
-    return new MockRMNodeImpl(nodeID, hostName, httpAddress, perNode, rackName,
+    return new MockRMNodeImpl(nodeID, nodeAddr, httpAddress, perNode, rackName,
         nodeHealthStatus, nid, hostName, state); 
   }
 
@@ -232,6 +236,12 @@ public class MockNodes {
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode, int hostnum) {
-    return buildRMNode(rack, perNode, null, "localhost:0", hostnum);
+    return buildRMNode(rack, perNode, null, "localhost:0", hostnum, null);
   }
+  
+  public static RMNode newNodeInfo(int rack, final Resource perNode,
+      int hostnum, String hostName) {
+    return buildRMNode(rack, perNode, null, "localhost:0", hostnum, hostName);
+  }
+
 }

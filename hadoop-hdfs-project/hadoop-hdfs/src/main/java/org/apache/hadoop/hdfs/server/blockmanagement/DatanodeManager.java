@@ -66,6 +66,9 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
+import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.HostsFileReader;
@@ -208,7 +211,7 @@ public class DatanodeManager {
         " = '" + ratioUseStaleDataNodesForWrite + "' is invalid. " +
         "It should be a positive non-zero float value, not greater than 1.0f.");
   }
-  
+
   private static long getStaleIntervalFromConf(Configuration conf,
       long heartbeatExpireInterval) {
     long staleInterval = conf.getLong(
@@ -311,6 +314,67 @@ public class DatanodeManager {
   public DatanodeDescriptor getDatanodeByHost(final String host) {
     return host2DatanodeMap.getDatanodeByHost(host);
   }
+
+  /** @return the datanode descriptor for the host. */
+  public DatanodeDescriptor getDatanodeByXferAddr(String host, int xferPort) {
+    return host2DatanodeMap.getDatanodeByXferAddr(host, xferPort);
+  }
+
+  /**
+   * Given datanode address or host name, returns the DatanodeDescriptor for the
+   * same, or if it doesn't find the datanode, it looks for a machine local and
+   * then rack local datanode, if a rack local datanode is not possible either,
+   * it returns the DatanodeDescriptor of any random node in the cluster.
+   *
+   * @param address hostaddress:transfer address
+   * @return the best match for the given datanode
+   */
+  DatanodeDescriptor getDatanodeDescriptor(String address) {
+    DatanodeDescriptor node = null;
+    int colon = address.indexOf(":");
+    int xferPort;
+    String host = address;
+    if (colon > 0) {
+      host = address.substring(0, colon);
+      xferPort = Integer.parseInt(address.substring(colon+1));
+      node = getDatanodeByXferAddr(host, xferPort);
+    }
+    if (node == null) {
+      node = getDatanodeByHost(host);
+    }
+    if (node == null) {
+      String networkLocation = resolveNetworkLocation(host);
+
+      // If the current cluster doesn't contain the node, fallback to
+      // something machine local and then rack local.
+      List<Node> rackNodes = getNetworkTopology()
+                                   .getDatanodesInRack(networkLocation);
+      if (rackNodes != null) {
+        // Try something machine local.
+        for (Node rackNode : rackNodes) {
+          if (((DatanodeDescriptor) rackNode).getIpAddr().equals(host)) {
+            node = (DatanodeDescriptor) rackNode;
+            break;
+          }
+        }
+
+        // Try something rack local.
+        if (node == null && !rackNodes.isEmpty()) {
+          node = (DatanodeDescriptor) (rackNodes
+              .get(DFSUtil.getRandom().nextInt(rackNodes.size())));
+        }
+      }
+
+      // If we can't even choose rack local, just choose any node in the
+      // cluster.
+      if (node == null) {
+        node = (DatanodeDescriptor)getNetworkTopology()
+                                   .chooseRandom(NodeBase.ROOT);
+      }
+    }
+    return node;
+  }
+
 
   /** Get a datanode descriptor given corresponding storageID */
   DatanodeDescriptor getDatanode(final String storageID) {
@@ -418,8 +482,8 @@ public class DatanodeManager {
       host2DatanodeMap.remove(datanodeMap.put(node.getStorageID(), node));
     }
 
+    networktopology.add(node); // may throw InvalidTopologyException
     host2DatanodeMap.add(node);
-    networktopology.add(node);
     checkIfClusterIsNowMultiRack(node);
 
     if (LOG.isDebugEnabled()) {
@@ -441,8 +505,13 @@ public class DatanodeManager {
     }
   }
 
+  public String resolveNetworkLocation(String host) {
+    DatanodeID d = parseDNFromHostsEntry(host);
+    return resolveNetworkLocation(d);
+  }
+
   /* Resolve a node's network location */
-  private void resolveNetworkLocation (DatanodeDescriptor node) {
+  private String resolveNetworkLocation (DatanodeID node) {
     List<String> names = new ArrayList<String>(1);
     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
       names.add(node.getIpAddr());
@@ -460,7 +529,7 @@ public class DatanodeManager {
     } else {
       networkLocation = rName.get(0);
     }
-    node.setNetworkLocation(networkLocation);
+    return networkLocation;
   }
 
   private boolean inHostsList(DatanodeID node) {
@@ -634,92 +703,122 @@ public class DatanodeManager {
       nodeReg.setIpAddr(ip);
       nodeReg.setPeerHostName(hostname);
     }
-
-    nodeReg.setExportedKeys(blockManager.getBlockKeys());
-
-    // Checks if the node is not on the hosts list.  If it is not, then
-    // it will be disallowed from registering. 
-    if (!inHostsList(nodeReg)) {
-      throw new DisallowedDatanodeException(nodeReg);
-    }
-      
-    NameNode.stateChangeLog.info("BLOCK* registerDatanode: from "
-        + nodeReg + " storage " + nodeReg.getStorageID());
-
-    DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
-    DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
-        nodeReg.getIpAddr(), nodeReg.getXferPort());
-      
-    if (nodeN != null && nodeN != nodeS) {
-      NameNode.LOG.info("BLOCK* registerDatanode: " + nodeN);
-      // nodeN previously served a different data storage, 
-      // which is not served by anybody anymore.
-      removeDatanode(nodeN);
-      // physically remove node from datanodeMap
-      wipeDatanode(nodeN);
-      nodeN = null;
-    }
-
-    if (nodeS != null) {
-      if (nodeN == nodeS) {
-        // The same datanode has been just restarted to serve the same data 
-        // storage. We do not need to remove old data blocks, the delta will
-        // be calculated on the next block report from the datanode
-        if(NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug("BLOCK* registerDatanode: "
-              + "node restarted.");
-        }
-      } else {
-        // nodeS is found
-        /* The registering datanode is a replacement node for the existing 
-          data storage, which from now on will be served by a new node.
-          If this message repeats, both nodes might have same storageID 
-          by (insanely rare) random chance. User needs to restart one of the
-          nodes with its data cleared (or user can just remove the StorageID
-          value in "VERSION" file under the data directory of the datanode,
-          but this is might not work if VERSION file format has changed 
-       */        
-        NameNode.stateChangeLog.info("BLOCK* registerDatanode: " + nodeS
-            + " is replaced by " + nodeReg + " with the same storageID "
-            + nodeReg.getStorageID());
-      }
-      // update cluster map
-      getNetworkTopology().remove(nodeS);
-      nodeS.updateRegInfo(nodeReg);
-      nodeS.setDisallowed(false); // Node is in the include list
-      
-      // resolve network location
-      resolveNetworkLocation(nodeS);
-      getNetworkTopology().add(nodeS);
-        
-      // also treat the registration message as a heartbeat
-      heartbeatManager.register(nodeS);
-      checkDecommissioning(nodeS);
-      return;
-    } 
-
-    // this is a new datanode serving a new data storage
-    if ("".equals(nodeReg.getStorageID())) {
-      // this data storage has never been registered
-      // it is either empty or was created by pre-storageID version of DFS
-      nodeReg.setStorageID(newStorageID());
-      if (NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug(
-            "BLOCK* NameSystem.registerDatanode: "
-            + "new storageID " + nodeReg.getStorageID() + " assigned.");
-      }
-    }
-    // register new datanode
-    DatanodeDescriptor nodeDescr 
-      = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK);
-    resolveNetworkLocation(nodeDescr);
-    addDatanode(nodeDescr);
-    checkDecommissioning(nodeDescr);
     
-    // also treat the registration message as a heartbeat
-    // no need to update its timestamp
-    // because its is done when the descriptor is created
-    heartbeatManager.addDatanode(nodeDescr);
+    try {
+      nodeReg.setExportedKeys(blockManager.getBlockKeys());
+  
+      // Checks if the node is not on the hosts list.  If it is not, then
+      // it will be disallowed from registering. 
+      if (!inHostsList(nodeReg)) {
+        throw new DisallowedDatanodeException(nodeReg);
+      }
+        
+      NameNode.stateChangeLog.info("BLOCK* registerDatanode: from "
+          + nodeReg + " storage " + nodeReg.getStorageID());
+  
+      DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
+      DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
+          nodeReg.getIpAddr(), nodeReg.getXferPort());
+        
+      if (nodeN != null && nodeN != nodeS) {
+        NameNode.LOG.info("BLOCK* registerDatanode: " + nodeN);
+        // nodeN previously served a different data storage, 
+        // which is not served by anybody anymore.
+        removeDatanode(nodeN);
+        // physically remove node from datanodeMap
+        wipeDatanode(nodeN);
+        nodeN = null;
+      }
+  
+      if (nodeS != null) {
+        if (nodeN == nodeS) {
+          // The same datanode has been just restarted to serve the same data 
+          // storage. We do not need to remove old data blocks, the delta will
+          // be calculated on the next block report from the datanode
+          if(NameNode.stateChangeLog.isDebugEnabled()) {
+            NameNode.stateChangeLog.debug("BLOCK* registerDatanode: "
+                + "node restarted.");
+          }
+        } else {
+          // nodeS is found
+          /* The registering datanode is a replacement node for the existing 
+            data storage, which from now on will be served by a new node.
+            If this message repeats, both nodes might have same storageID 
+            by (insanely rare) random chance. User needs to restart one of the
+            nodes with its data cleared (or user can just remove the StorageID
+            value in "VERSION" file under the data directory of the datanode,
+            but this is might not work if VERSION file format has changed 
+         */        
+          NameNode.stateChangeLog.info("BLOCK* registerDatanode: " + nodeS
+              + " is replaced by " + nodeReg + " with the same storageID "
+              + nodeReg.getStorageID());
+        }
+        
+        boolean success = false;
+        try {
+          // update cluster map
+          getNetworkTopology().remove(nodeS);
+          nodeS.updateRegInfo(nodeReg);
+          nodeS.setDisallowed(false); // Node is in the include list
+          
+          // resolve network location
+          nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));
+          getNetworkTopology().add(nodeS);
+            
+          // also treat the registration message as a heartbeat
+          heartbeatManager.register(nodeS);
+          checkDecommissioning(nodeS);
+          success = true;
+        } finally {
+          if (!success) {
+            removeDatanode(nodeS);
+            wipeDatanode(nodeS);
+          }
+        }
+        return;
+      } 
+  
+      // this is a new datanode serving a new data storage
+      if ("".equals(nodeReg.getStorageID())) {
+        // this data storage has never been registered
+        // it is either empty or was created by pre-storageID version of DFS
+        nodeReg.setStorageID(newStorageID());
+        if (NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug(
+              "BLOCK* NameSystem.registerDatanode: "
+              + "new storageID " + nodeReg.getStorageID() + " assigned.");
+        }
+      }
+      
+      DatanodeDescriptor nodeDescr 
+        = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK);
+      boolean success = false;
+      try {
+        nodeDescr.setNetworkLocation(resolveNetworkLocation(nodeDescr));
+        networktopology.add(nodeDescr);
+  
+        // register new datanode
+        addDatanode(nodeDescr);
+        checkDecommissioning(nodeDescr);
+        
+        // also treat the registration message as a heartbeat
+        // no need to update its timestamp
+        // because its is done when the descriptor is created
+        heartbeatManager.addDatanode(nodeDescr);
+        success = true;
+      } finally {
+        if (!success) {
+          removeDatanode(nodeDescr);
+          wipeDatanode(nodeDescr);
+        }
+      }
+    } catch (InvalidTopologyException e) {
+      // If the network location is invalid, clear the cached mappings
+      // so that we have a chance to re-add this DataNode with the
+      // correct network location later.
+      dnsToSwitchMapping.reloadCachedMappings();
+      throw e;
+    }
   }
 
   /**
@@ -831,7 +930,7 @@ public class DatanodeManager {
         (numStaleNodes <= heartbeatManager.getLiveDatanodeCount()
             * ratioUseStaleDataNodesForWrite);
   }
-  
+
   /**
    * @return The time interval used to mark DataNodes as stale.
    */
@@ -1049,7 +1148,7 @@ public class DatanodeManager {
    * failed.  As a special case, the loopback address is also considered
    * acceptable.  This is particularly important on Windows, where 127.0.0.1 does
    * not resolve to "localhost".
-   * 
+   *
    * @param address InetAddress to check
    * @return boolean true if name resolution successful or address is loopback
    */
@@ -1083,7 +1182,7 @@ public class DatanodeManager {
           setDatanodeDead(nodeinfo);
           throw new DisallowedDatanodeException(nodeinfo);
         }
-         
+
         if (nodeinfo == null || !nodeinfo.isAlive) {
           return new DatanodeCommand[]{RegisterCommand.REGISTER};
         }
@@ -1098,9 +1197,34 @@ public class DatanodeManager {
           BlockRecoveryCommand brCommand = new BlockRecoveryCommand(
               blocks.length);
           for (BlockInfoUnderConstruction b : blocks) {
-            brCommand.add(new RecoveringBlock(
-                new ExtendedBlock(blockPoolId, b), b.getExpectedLocations(), b
-                    .getBlockRecoveryId()));
+            DatanodeDescriptor[] expectedLocations = b.getExpectedLocations();
+            // Skip stale nodes during recovery - not heart beated for some time (30s by default).
+            List<DatanodeDescriptor> recoveryLocations =
+                new ArrayList<DatanodeDescriptor>(expectedLocations.length);
+            for (int i = 0; i < expectedLocations.length; i++) {
+              if (!expectedLocations[i].isStale(this.staleInterval)) {
+                recoveryLocations.add(expectedLocations[i]);
+              }
+            }
+            // If we only get 1 replica after eliminating stale nodes, then choose all
+            // replicas for recovery and let the primary data node handle failures.
+            if (recoveryLocations.size() > 1) {
+              if (recoveryLocations.size() != expectedLocations.length) {
+                LOG.info("Skipped stale nodes for recovery : " +
+                    (expectedLocations.length - recoveryLocations.size()));
+              }
+              brCommand.add(new RecoveringBlock(
+                  new ExtendedBlock(blockPoolId, b),
+                  recoveryLocations.toArray(new DatanodeDescriptor[recoveryLocations.size()]),
+                  b.getBlockRecoveryId()));
+            } else {
+              // If too many replicas are stale, then choose all replicas to participate
+              // in block recovery.
+              brCommand.add(new RecoveringBlock(
+                  new ExtendedBlock(blockPoolId, b),
+                  expectedLocations,
+                  b.getBlockRecoveryId()));
+            }
           }
           return new DatanodeCommand[] { brCommand };
         }

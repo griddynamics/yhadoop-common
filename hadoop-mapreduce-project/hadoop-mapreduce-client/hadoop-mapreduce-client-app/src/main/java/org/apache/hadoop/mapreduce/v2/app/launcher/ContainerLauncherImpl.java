@@ -148,16 +148,18 @@ public class ContainerLauncherImpl extends AbstractService implements
 
         // Construct the actual Container
         ContainerLaunchContext containerLaunchContext =
-          event.getContainer();
+          event.getContainerLaunchContext();
 
         // Now launch the actual container
         StartContainerRequest startRequest = Records
           .newRecord(StartContainerRequest.class);
         startRequest.setContainerLaunchContext(containerLaunchContext);
+        startRequest.setContainer(event.getAllocatedContainer());
         StartContainerResponse response = proxy.startContainer(startRequest);
 
-        ByteBuffer portInfo = response
-          .getServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID);
+        ByteBuffer portInfo =
+            response.getAllServiceResponse().get(
+                ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID);
         int port = -1;
         if(portInfo != null) {
           port = ShuffleHandler.deserializeMetaData(portInfo);
@@ -230,7 +232,6 @@ public class ContainerLauncherImpl extends AbstractService implements
     }
   }
 
-
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
     this.context = context;
@@ -271,7 +272,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         ContainerLauncherEvent event = null;
         Set<String> allNodes = new HashSet<String>();
 
-          while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
+        while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
@@ -281,6 +282,7 @@ public class ContainerLauncherImpl extends AbstractService implements
             return;
           }
           allNodes.add(event.getContainerMgrAddress());
+
           int poolSize = launcherPool.getCorePoolSize();
 
           // See if we need up the pool size only if haven't reached the
@@ -348,15 +350,14 @@ public class ContainerLauncherImpl extends AbstractService implements
 
     final InetSocketAddress cmAddr =
         NetUtils.createSocketAddr(containerManagerBindAddr);
-    UserGroupInformation user = UserGroupInformation.getCurrentUser();
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
-      // the user in createRemoteUser in this context has to be ContainerID
-      user = UserGroupInformation.createRemoteUser(containerID.toString());
-      user.addToken(token);
-    }
+    // the user in createRemoteUser in this context has to be ContainerID
+    UserGroupInformation user =
+        UserGroupInformation.createRemoteUser(containerID.toString());
+
+    Token<ContainerTokenIdentifier> token =
+        ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
+    user.addToken(token);
 
     ContainerManager proxy = user
         .doAs(new PrivilegedAction<ContainerManager>() {

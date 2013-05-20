@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
@@ -69,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
@@ -138,6 +138,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   @Override
   public synchronized void init(Configuration conf) {
+
+    validateConfigs(conf);
 
     this.conf = conf;
 
@@ -323,6 +325,55 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected RMAppManager createRMAppManager() {
     return new RMAppManager(this.rmContext, this.scheduler, this.masterService,
       this.applicationACLsManager, this.conf);
+  }
+
+  // sanity check for configurations
+  protected static void validateConfigs(Configuration conf) {
+    // validate max-attempts
+    int globalMaxAppAttempts =
+        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    if (globalMaxAppAttempts <= 0) {
+      throw new YarnException("Invalid global max attempts configuration"
+          + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
+          + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
+    }
+
+    // validate scheduler memory allocation setting
+    int minMem = conf.getInt(
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+    int maxMem = conf.getInt(
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+
+    if (minMem <= 0 || minMem > maxMem) {
+      throw new YarnException("Invalid resource scheduler memory"
+          + " allocation configuration"
+          + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
+          + "=" + minMem
+          + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
+          + "=" + maxMem + ", min and max should be greater than 0"
+          + ", max should be no smaller than min.");
+    }
+
+    // validate scheduler vcores allocation setting
+    int minVcores = conf.getInt(
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+    int maxVcores = conf.getInt(
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+
+    if (minVcores <= 0 || minVcores > maxVcores) {
+      throw new YarnException("Invalid resource scheduler vcores"
+          + " allocation configuration"
+          + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
+          + "=" + minVcores
+          + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
+          + "=" + maxVcores + ", min and max should be greater than 0"
+          + ", max should be no smaller than min.");
+    }
   }
 
   @Private

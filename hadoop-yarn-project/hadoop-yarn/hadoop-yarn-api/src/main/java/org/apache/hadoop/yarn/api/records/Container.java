@@ -125,18 +125,6 @@ public interface Container extends Comparable<Container> {
   void setPriority(Priority priority);
   
   /**
-   * Get the current <code>ContainerState</code> of the container.
-   * @return current <code>ContainerState</code> of the container
-   */
-  @Public
-  @Stable
-  ContainerState getState();
-  
-  @Private
-  @Unstable
-  void setState(ContainerState state);
-  
-  /**
    * Get the <code>ContainerToken</code> for the container.
    * @return <code>ContainerToken</code> for the container
    */
@@ -147,16 +135,16 @@ public interface Container extends Comparable<Container> {
   @Private
   @Unstable
   void setContainerToken(ContainerToken containerToken);
-  
+
   /**
-   * Get the <code>ContainerStatus</code> of the container.
-   * @return <code>ContainerStatus</code> of the container
+   * Get the RMIdentifier of RM in which containers are allocated
+   * @return RMIdentifier
    */
-  @Public
-  @Stable
-  ContainerStatus getContainerStatus();
-  
   @Private
   @Unstable
-  void setContainerStatus(ContainerStatus containerStatus);
+  long getRMIdentifer();
+
+  @Private
+  @Unstable
+  void setRMIdentifier(long rmIdentifier);
 }

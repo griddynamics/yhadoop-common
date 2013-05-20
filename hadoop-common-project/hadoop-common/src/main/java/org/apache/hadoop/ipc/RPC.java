@@ -43,6 +43,8 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolInfoService;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -73,12 +75,12 @@ import com.google.protobuf.BlockingService;
  * the protocol instance is transmitted.
  */
 public class RPC {
+  final static int RPC_SERVICE_CLASS_DEFAULT = 0;
   public enum RpcKind {
     RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
     RPC_WRITABLE ((short) 2),        // Use WritableRpcEngine 
     RPC_PROTOCOL_BUFFER ((short) 3); // Use ProtobufRpcEngine
     final static short MAX_INDEX = RPC_PROTOCOL_BUFFER.value; // used for array size
-    private static final short FIRST_INDEX = RPC_BUILTIN.value;    
     public final short value; //TODO make it private
 
     RpcKind(short val) {
@@ -209,7 +211,7 @@ public class RPC {
   /**
    * A version mismatch for the RPC protocol.
    */
-  public static class VersionMismatch extends IOException {
+  public static class VersionMismatch extends RpcServerException {
     private static final long serialVersionUID = 0;
 
     private String interfaceName;
@@ -252,6 +254,19 @@ public class RPC {
      */
     public long getServerVersion() {
       return serverVersion;
+    }
+    /**
+     * get the rpc status corresponding to this exception
+     */
+    public RpcStatusProto getRpcStatusProto() {
+      return RpcStatusProto.ERROR;
+    }
+
+    /**
+     * get the detailed rpc status corresponding to this exception
+     */
+    public RpcErrorCodeProto getRpcErrorCodeProto() {
+      return RpcErrorCodeProto.ERROR_RPC_VERSION_MISMATCH;
     }
   }
 

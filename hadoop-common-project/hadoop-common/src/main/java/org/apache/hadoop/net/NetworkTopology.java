@@ -18,6 +18,7 @@
 package org.apache.hadoop.net;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -342,8 +343,16 @@ public class NetworkTopology {
       throw new IllegalArgumentException(
         "Not allow to add an inner node: "+NodeBase.getPath(node));
     }
+    int newDepth = NodeBase.locationToDepth(node.getNetworkLocation()) + 1;
     netlock.writeLock().lock();
     try {
+      if ((depthOfAllLeaves != -1) && (depthOfAllLeaves != newDepth)) {
+        LOG.error("Error: can't add leaf node at depth " +
+            newDepth + " to topology:\n" + oldTopoStr);
+        throw new InvalidTopologyException("Invalid network topology. " +
+            "You cannot have a rack and a non-rack node at the same " +
+            "level of the network topology.");
+      }
       Node rack = getNode(node.getNetworkLocation());
       if (rack != null && !(rack instanceof InnerNode)) {
         throw new IllegalArgumentException("Unexpected data node " 
@@ -358,14 +367,6 @@ public class NetworkTopology {
         if (!(node instanceof InnerNode)) {
           if (depthOfAllLeaves == -1) {
             depthOfAllLeaves = node.getLevel();
-          } else {
-            if (depthOfAllLeaves != node.getLevel()) {
-              LOG.error("Error: can't add leaf node at depth " +
-                  node.getLevel() + " to topology:\n" + oldTopoStr);
-              throw new InvalidTopologyException("Invalid network topology. " +
-                  "You cannot have a rack and a non-rack node at the same " +
-                  "level of the network topology.");
-            }
           }
         }
       }
@@ -377,6 +378,28 @@ public class NetworkTopology {
     }
   }
     
+  /**
+   * Given a string representation of a rack, return its children
+   * @param loc a path-like string representation of a rack
+   * @return a newly allocated list with all the node's children
+   */
+  public List<Node> getDatanodesInRack(String loc) {
+    netlock.readLock().lock();
+    try {
+      loc = NodeBase.normalize(loc);
+      if (!NodeBase.ROOT.equals(loc)) {
+        loc = loc.substring(1);
+      }
+      InnerNode rack = (InnerNode) clusterMap.getLoc(loc);
+      if (rack == null) {
+        return null;
+      }
+      return new ArrayList<Node>(rack.getChildren());
+    } finally {
+      netlock.readLock().unlock();
+    }
+  }
+
   /** Remove a node
    * Update node counter and rack counter if necessary
    * @param node node to be removed; can be null

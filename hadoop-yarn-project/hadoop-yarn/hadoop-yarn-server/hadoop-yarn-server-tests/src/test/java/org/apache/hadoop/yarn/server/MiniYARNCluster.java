@@ -306,13 +306,13 @@ public class MiniYARNCluster extends CompositeService {
 
             @Override
             public NodeHeartbeatResponse nodeHeartbeat(
-                NodeHeartbeatRequest request) throws YarnRemoteException {
+                NodeHeartbeatRequest request) throws YarnRemoteException,
+                IOException {
               NodeHeartbeatResponse response = recordFactory.newRecordInstance(
                   NodeHeartbeatResponse.class);
               try {
-                response.setHeartbeatResponse(rt.nodeHeartbeat(request)
-                    .getHeartbeatResponse());
-              } catch (IOException ioe) {
+                response = rt.nodeHeartbeat(request);
+              } catch (YarnRemoteException ioe) {
                 LOG.info("Exception in heartbeat from node " + 
                     request.getNodeStatus().getNodeId(), ioe);
                 throw RPCUtil.getRemoteException(ioe);
@@ -323,14 +323,12 @@ public class MiniYARNCluster extends CompositeService {
             @Override
             public RegisterNodeManagerResponse registerNodeManager(
                 RegisterNodeManagerRequest request)
-                throws YarnRemoteException {
+                throws YarnRemoteException, IOException {
               RegisterNodeManagerResponse response = recordFactory.
                   newRecordInstance(RegisterNodeManagerResponse.class);
               try {
-                response.setRegistrationResponse(rt
-                    .registerNodeManager(request)
-                    .getRegistrationResponse());
-              } catch (IOException ioe) {
+                response = rt.registerNodeManager(request);
+              } catch (YarnRemoteException ioe) {
                 LOG.info("Exception in node registration from "
                     + request.getNodeId().toString(), ioe);
                 throw RPCUtil.getRemoteException(ioe);
