@@ -39,6 +39,7 @@ public class TestRMAdmin {
 
   @BeforeClass
   public static void setUp() {
+    
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.IPC_CLIENT_FACTORY,
         "org.apache.hadoop.yarn.client.FakeRpcClientClassFactory");
@@ -149,9 +150,8 @@ public class TestRMAdmin {
     String[] args = { "-getGroups","admin" };
     assertEquals(0, test.run(args));
     assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
-        getGroupsForUser,
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.getGroupsForUser,
+          FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
   }
 
   /**
