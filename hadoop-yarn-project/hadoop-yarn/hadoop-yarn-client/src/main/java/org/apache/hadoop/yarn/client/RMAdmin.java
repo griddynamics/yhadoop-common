@@ -141,7 +141,7 @@ public class RMAdmin extends Configured implements Tool {
       System.err.println("Usage: java RMAdmin" + " [-refreshSuperUserGroupsConfiguration]");
     } else if ("-refreshAdminAcls".equals(cmd)){
       System.err.println("Usage: java RMAdmin" + " [-refreshAdminAcls]");
-    } else if ("-refreshServiceAcl".equals(cmd)){
+    } else if ("-refreshService".equals(cmd)){
       System.err.println("Usage: java RMAdmin" + " [-refreshServiceAcl]");
     } else if ("-getGroups".equals(cmd)){
       System.err.println("Usage: java RMAdmin" + " [-getGroups [username]]");

@@ -159,7 +159,8 @@ public class TestRMAdmin {
     String[] args = { "-getGroups","admin" };
     assertEquals(0, test.run(args));
     assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.getGroupsForUser,
+        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
+        getGroupsForUser,
         FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
   }
 
@@ -234,7 +235,7 @@ public class TestRMAdmin {
           dataErr, 0);
       testError(new String[] { "-help", "-refreshAdminAcls" },
           "Usage: java RMAdmin [-refreshAdminAcls]", dataErr, 0);
-      testError(new String[] { "-help", "-refreshServiceAcl" },
+      testError(new String[] { "-help", "-refreshService" },
           "Usage: java RMAdmin [-refreshServiceAcl]", dataErr, 0);
       testError(new String[] { "-help", "-getGroups" },
           "Usage: java RMAdmin [-getGroups [username]]", dataErr, 0);
