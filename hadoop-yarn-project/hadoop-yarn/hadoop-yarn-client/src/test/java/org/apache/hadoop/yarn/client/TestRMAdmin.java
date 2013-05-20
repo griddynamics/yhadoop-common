@@ -159,8 +159,8 @@ public class TestRMAdmin {
    */
   @Test
   public void testHelp() throws Exception {
-    PrintStream oldOutPrimtStream = System.out;
-    PrintStream oldErrPrimtStream = System.err;
+    PrintStream oldOutPrintStream = System.out;
+    PrintStream oldErrPrintStream = System.err;
     ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
     System.setOut(new PrintStream(dataOut));
@@ -237,8 +237,8 @@ public class TestRMAdmin {
           "badParameter: Unknown command", dataErr, -1); 
 
     } finally {
-      System.setOut(oldOutPrimtStream);
-      System.setErr(oldErrPrimtStream);
+      System.setOut(oldOutPrintStream);
+      System.setErr(oldErrPrintStream);
 
     }
 
@@ -249,7 +249,7 @@ public class TestRMAdmin {
    */
   @Test
   public void testException() throws Exception {
-    PrintStream oldErrPrimtStream = System.err;
+    PrintStream oldErrPrintStream = System.err;
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
     System.setErr(new PrintStream(dataErr));
     try {
@@ -268,7 +268,7 @@ public class TestRMAdmin {
           refreshQueues,
           FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
       assertTrue(dataErr.toString().contains("refreshQueues: test exception"));
-      configuration.set(YarnConfiguration.RM_ADMIN_ADDRESS, "fake adderss");
+      configuration.set(YarnConfiguration.RM_ADMIN_ADDRESS, "fake address");
       // test IllegalArgumentException
       assertEquals(-1, test.run(args));
       assertTrue(dataErr.toString().contains(
@@ -278,7 +278,7 @@ public class TestRMAdmin {
     } finally {
       FakeRpcClientClassFactory.FakeRMAdminProtocol.resultCode = 
           FakeRpcClientClassFactory.FakeRMAdminProtocol.ResultCode.OK;
-      System.setErr(oldErrPrimtStream);
+      System.setErr(oldErrPrintStream);
 
     }
 
