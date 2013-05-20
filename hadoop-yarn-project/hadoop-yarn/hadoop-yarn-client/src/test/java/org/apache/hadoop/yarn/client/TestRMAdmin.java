@@ -39,17 +39,7 @@ public class TestRMAdmin {
 
   @BeforeClass
   public static void setUp() {
-/*
-    if(System.getenv("HADOOP_HOME")==null ){
-      File f = new File("./");
-      System.setProperty("hadoop.home.dir", f.getAbsolutePath());
-    }
-    
-    System.out.println("ppp:"+System.getenv("HADOOP_HOME"));
-    */
     Configuration conf = new Configuration();
-//    System.setProperty("hadoop.home.dir", System.getenv("HADOOP_HOME"));
-
     conf.set(YarnConfiguration.IPC_CLIENT_FACTORY,
         "org.apache.hadoop.yarn.client.FakeRpcClientClassFactory");
     resourceManager = new ResourceManager();
