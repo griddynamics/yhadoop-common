@@ -45,6 +45,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
+import org.apache.hadoop.util.Shell;
 
 public class TestUserGroupInformation {
   final private static String USER_NAME = "user1@HADOOP.APACHE.ORG";
@@ -94,17 +95,17 @@ public class TestUserGroupInformation {
     UserGroupInformation.setLoginUser(null);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testSimpleLogin() throws IOException {
     tryLoginAuthenticationMethod(AuthenticationMethod.SIMPLE, true);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testTokenLogin() throws IOException {
     tryLoginAuthenticationMethod(AuthenticationMethod.TOKEN, false);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testProxyLogin() throws IOException {
     tryLoginAuthenticationMethod(AuthenticationMethod.PROXY, false);
   }
@@ -133,7 +134,7 @@ public class TestUserGroupInformation {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testGetRealAuthenticationMethod() {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
     ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
@@ -144,7 +145,7 @@ public class TestUserGroupInformation {
     assertEquals(AuthenticationMethod.SIMPLE, ugi.getRealAuthenticationMethod());
   }
   /** Test login method */
-  @Test
+  @Test (timeout = 30000)
   public void testLogin() throws Exception {
     // login from unix
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -171,7 +172,7 @@ public class TestUserGroupInformation {
    * given user name - get all the groups.
    * Needs to happen before creating the test users
    */
-  @Test
+  @Test (timeout = 30000)
   public void testGetServerSideGroups() throws IOException,
                                                InterruptedException {
     // get the user name
@@ -179,19 +180,38 @@ public class TestUserGroupInformation {
     BufferedReader br = new BufferedReader
                           (new InputStreamReader(pp.getInputStream()));
     String userName = br.readLine().trim();
+    // If on windows domain, token format is DOMAIN\\user and we want to
+    // extract only the user name
+    if(Shell.WINDOWS) {
+      int sp = userName.lastIndexOf('\\');
+      if (sp != -1) {
+        userName = userName.substring(sp + 1);
+      }
+      // user names are case insensitive on Windows. Make consistent
+      userName = userName.toLowerCase();
+    }
     // get the groups
-    pp = Runtime.getRuntime().exec("id -Gn " + userName);
+    pp = Runtime.getRuntime().exec(Shell.WINDOWS ?
+      Shell.WINUTILS + " groups -F" : "id -Gn");
     br = new BufferedReader(new InputStreamReader(pp.getInputStream()));
     String line = br.readLine();
+
     System.out.println(userName + ":" + line);
    
     Set<String> groups = new LinkedHashSet<String> ();    
-    for(String s: line.split("[\\s]")) {
+    String[] tokens = line.split(Shell.TOKEN_SEPARATOR_REGEX);
+    for(String s: tokens) {
       groups.add(s);
     }
     
     final UserGroupInformation login = UserGroupInformation.getCurrentUser();
-    assertEquals(userName, login.getShortUserName());
+    String loginUserName = login.getShortUserName();
+    if(Shell.WINDOWS) {
+      // user names are case insensitive on Windows. Make consistent
+      loginUserName = loginUserName.toLowerCase();
+    }
+    assertEquals(userName, loginUserName);
+
     String[] gi = login.getGroupNames();
     assertEquals(groups.size(), gi.length);
     for(int i=0; i < gi.length; i++) {
@@ -212,7 +232,7 @@ public class TestUserGroupInformation {
   }
 
   /** test constructor */
-  @Test
+  @Test (timeout = 30000)
   public void testConstructor() throws Exception {
     // security off, so default should just return simple name
     testConstructorSuccess("user1", "user1");
@@ -299,7 +319,7 @@ public class TestUserGroupInformation {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testSetConfigWithRules() {
     String[] rules = { "RULE:[1:TEST1]", "RULE:[1:TEST2]", "RULE:[1:TEST3]" };
 
@@ -366,7 +386,7 @@ public class TestUserGroupInformation {
     assertEquals(uugi.hashCode(), ugi3.hashCode());
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testEqualsWithRealUser() throws Exception {
     UserGroupInformation realUgi1 = UserGroupInformation.createUserForTesting(
         "RealUser", GROUP_NAMES);
@@ -379,7 +399,7 @@ public class TestUserGroupInformation {
     assertFalse(remoteUgi.equals(proxyUgi1));
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testGettingGroups() throws Exception {
     UserGroupInformation uugi = 
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
@@ -389,7 +409,7 @@ public class TestUserGroupInformation {
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks
-  @Test
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testAddToken() throws Exception {
     final UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -438,7 +458,7 @@ public class TestUserGroupInformation {
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks
-  @Test
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testGetCreds() throws Exception {
     UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -464,7 +484,7 @@ public class TestUserGroupInformation {
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks
-  @Test
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testAddCreds() throws Exception {
     UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -489,7 +509,7 @@ public class TestUserGroupInformation {
     assertSame(secret, ugi.getCredentials().getSecretKey(secretKey));
   }
 
-  @Test
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testGetCredsNotSame()
       throws Exception {
     UserGroupInformation ugi = 
@@ -517,7 +537,7 @@ public class TestUserGroupInformation {
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks
-  @Test
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testAddNamedToken() throws Exception {
     UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
@@ -538,7 +558,7 @@ public class TestUserGroupInformation {
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks
-  @Test
+  @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testUGITokens() throws Exception {
     UserGroupInformation ugi = 
       UserGroupInformation.createUserForTesting("TheDoctor", 
@@ -584,7 +604,7 @@ public class TestUserGroupInformation {
     assertTrue(otherSet.contains(t2));
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testTokenIdentifiers() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         "TheDoctor", new String[] { "TheTARDIS" });
@@ -612,7 +632,7 @@ public class TestUserGroupInformation {
     assertEquals(2, otherSet.size());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testTestAuthMethod() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     // verify the reverse mappings works
@@ -624,7 +644,7 @@ public class TestUserGroupInformation {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testUGIAuthMethod() throws Exception {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
@@ -640,7 +660,7 @@ public class TestUserGroupInformation {
     });
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testUGIAuthMethodInRealUser() throws Exception {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation proxyUgi = UserGroupInformation.createProxyUser(
@@ -675,7 +695,7 @@ public class TestUserGroupInformation {
     Assert.assertEquals(proxyUgi3, proxyUgi4);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testLoginObjectInSubject() throws Exception {
     UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     UserGroupInformation anotherUgi = new UserGroupInformation(loginUgi
@@ -688,7 +708,7 @@ public class TestUserGroupInformation {
     Assert.assertTrue(login1 == login2);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testLoginModuleCommit() throws Exception {
     UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     User user1 = loginUgi.getSubject().getPrincipals(User.class).iterator()
@@ -729,7 +749,7 @@ public class TestUserGroupInformation {
    * with it, but that Subject was not created by Hadoop (ie it has no
    * associated User principal)
    */
-  @Test
+  @Test (timeout = 30000)
   public void testUGIUnderNonHadoopContext() throws Exception {
     Subject nonHadoopSubject = new Subject();
     Subject.doAs(nonHadoopSubject, new PrivilegedExceptionAction<Void>() {
