@@ -62,7 +62,7 @@ public final class ExitUtil {
   }
   
   /**
-   * Disable the use of {@code Rintime.getRuntime().halt() } 
+   * Disable the use of {@code Runtime.getRuntime().halt() } 
    * for testing.
    */
   public static void disableSystemHalt() {
@@ -144,7 +144,7 @@ public final class ExitUtil {
    * @throws HaltException if Runtime.getRuntime().halt() is disabled for test purposes
    */
   public static void halt(int status, String msg) throws HaltException {
-    LOG.info("Halt with status " + status);
+    LOG.info("Halt with status " + status + " Message: " + msg);
     if (systemHaltDisabled) {
       HaltException ee = new HaltException(status, msg);
       LOG.fatal("Halt called", ee);
@@ -167,7 +167,7 @@ public final class ExitUtil {
     terminate(status, StringUtils.stringifyException(t));
   }
   /**
-   * 
+   * Forcibly terminates the currently running Java virtual machine.
    * @param status
    * @param t
    * @throws ExitException
@@ -184,7 +184,7 @@ public final class ExitUtil {
     terminate(status, "ExitException");
   }
   /**
-   * 
+   * Forcibly terminates the currently running Java virtual machine.
    * @param status
    * @throws ExitException
    */

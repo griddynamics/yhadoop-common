@@ -18,25 +18,28 @@
 
 package org.apache.hadoop.yarn;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 public class TestYarnUncaughtExceptionHandler {
 
   private static final YarnUncaughtExceptionHandler exHandler = 
-        new YarnUncaughtExceptionHandler();
+      new YarnUncaughtExceptionHandler();
+
   /**
-   * Throw {@code YarnException} inside thread and
-   * check {@code YarnUncaughtExceptionHandler} instance
-   *   
+   * Throw {@code YarnException} inside thread and check
+   * {@code YarnUncaughtExceptionHandler} instance
+   * 
    * @throws InterruptedException
    */
-  @Test(timeout = 15000)
+  @Test
   public void testUncaughtExceptionHandlerWithRuntimeException()
       throws InterruptedException {
-    final YarnUncaughtExceptionHandler spyYarnHandler = Mockito.spy(exHandler);
+    final YarnUncaughtExceptionHandler spyYarnHandler = spy(exHandler);
     final YarnException yarnException = new YarnException(
         "test-yarn-runtime-exception");
     final Thread yarnThread = new Thread(new Runnable() {
@@ -50,24 +53,24 @@ public class TestYarnUncaughtExceptionHandler {
     assertSame(spyYarnHandler, yarnThread.getUncaughtExceptionHandler());
     yarnThread.start();
     yarnThread.join();
-    Mockito.verify(spyYarnHandler).uncaughtException(yarnThread, yarnException);
+    verify(spyYarnHandler).uncaughtException(yarnThread, yarnException);
   }
 
   /**
    * <p>
-   * Throw {@code Error} inside thread and
-   * check {@code YarnUncaughtExceptionHandler} instance
+   * Throw {@code Error} inside thread and check
+   * {@code YarnUncaughtExceptionHandler} instance
    * <p>
    * Used {@code ExitUtil} class to avoid jvm exit through
    * {@code System.exit(-1) }
-   *  
+   * 
    * @throws InterruptedException
-   */
-  @Test(timeout = 15000)
+   */  
+  @Test
   public void testUncaughtExceptionHandlerWithError()
       throws InterruptedException {
     ExitUtil.disableSystemExit();
-    final YarnUncaughtExceptionHandler spyErrorHandler = Mockito.spy(exHandler);
+    final YarnUncaughtExceptionHandler spyErrorHandler = spy(exHandler);
     final java.lang.Error error = new java.lang.Error("test-error");
     final Thread errorThread = new Thread(new Runnable() {
       @Override
@@ -79,25 +82,26 @@ public class TestYarnUncaughtExceptionHandler {
     assertSame(spyErrorHandler, errorThread.getUncaughtExceptionHandler());
     errorThread.start();
     errorThread.join();
-    Mockito.verify(spyErrorHandler).uncaughtException(errorThread, error);    
+    verify(spyErrorHandler).uncaughtException(errorThread, error);
   }
-  
+
   /**
    * <p>
-   * Throw {@code OutOfMemoryError} inside thread and
-   * check {@code YarnUncaughtExceptionHandler} instance
+   * Throw {@code OutOfMemoryError} inside thread and check
+   * {@code YarnUncaughtExceptionHandler} instance
    * <p>
-   * Used {@code ExitUtil} class to avoid jvm exit through 
+   * Used {@code ExitUtil} class to avoid jvm exit through
    * {@code Runtime.getRuntime().halt(-1)}
    * 
    * @throws InterruptedException
    */
-  @Test(timeout = 15000)
+  @Test
   public void testUncaughtExceptionHandlerWithOutOfMemoryError()
       throws InterruptedException {
     ExitUtil.disableSystemHalt();
-    final YarnUncaughtExceptionHandler spyOomHandler = Mockito.spy(exHandler);
-    final OutOfMemoryError oomError = new OutOfMemoryError("out-of-memory-error");
+    final YarnUncaughtExceptionHandler spyOomHandler = spy(exHandler);
+    final OutOfMemoryError oomError = new OutOfMemoryError(
+        "out-of-memory-error");
     final Thread oomThread = new Thread(new Runnable() {
       @Override
       public void run() {
@@ -108,6 +112,6 @@ public class TestYarnUncaughtExceptionHandler {
     assertSame(spyOomHandler, oomThread.getUncaughtExceptionHandler());
     oomThread.start();
     oomThread.join();
-    Mockito.verify(spyOomHandler).uncaughtException(oomThread, oomError);    
+    verify(spyOomHandler).uncaughtException(oomThread, oomError);
   }
 }
