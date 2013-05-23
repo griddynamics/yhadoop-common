@@ -7,6 +7,8 @@ Release 0.23.8 - UNRELEASED
   NEW FEATURES
   
   IMPROVEMENTS
+    HDFS-4714. Log short messages in Namenode RPC server for exceptions 
+    meant for clients. (kihwal)
   
   OPTIMIZATIONS
  
@@ -27,6 +29,9 @@ Release 0.23.8 - UNRELEASED
     of HDFS-4805 and HADOOP-9549. (Robert Parker via kihwal)
 
     HDFS-3875. Issue handling checksum errors in write pipeline. (kihwal)
+
+    HDFS-4807. createSocketForPipeline() should not include timeout extension
+    on connect. (Cristina Abad via kihwal)
 
 Release 0.23.7 - 2013-04-18
 
