@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Facilitates hooking process termination for tests and debugging.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
 @InterfaceStability.Unstable
 public final class ExitUtil {
   private final static Log LOG = LogFactory.getLog(ExitUtil.class.getName());
@@ -43,7 +43,7 @@ public final class ExitUtil {
       this.status = status;
     }
   }
-  
+
   public static class HaltException extends RuntimeException {
     private static final long serialVersionUID = 1L;
     public final int status;
@@ -53,22 +53,21 @@ public final class ExitUtil {
       this.status = status;
     }
   }
-  
+
   /**
    * Disable the use of System.exit for testing.
    */
   public static void disableSystemExit() {
     systemExitDisabled = true;
   }
-  
+
   /**
-   * Disable the use of {@code Rintime.getRuntime().halt() } 
-   * for testing.
+   * Disable the use of {@code Runtime.getRuntime().halt() } for testing.
    */
   public static void disableSystemHalt() {
     systemHaltDisabled = true;
   }
-  
+
   /**
    * @return true if terminate has been called
    */
@@ -83,7 +82,7 @@ public final class ExitUtil {
   public static boolean haltCalled() {
     return firstHaltException != null;
   }
-  
+
   /**
    * @return the first ExitException thrown, null if none thrown yet
    */
@@ -97,25 +96,29 @@ public final class ExitUtil {
   public static HaltException getFirstHaltException() {
     return firstHaltException;
   }
-  
+
   /**
-   * Reset the tracking of process termination. This is for use
-   * in unit tests where one test in the suite expects an exit
-   * but others do not.
+   * Reset the tracking of process termination. This is for use in unit tests
+   * where one test in the suite expects an exit but others do not.
    */
   public static void resetFirstExitException() {
     firstExitException = null;
   }
-  
+
   public static void resetFirstHaltException() {
     firstHaltException = null;
   }
+
   /**
    * Terminate the current process. Note that terminate is the *only* method
    * that should be used to terminate the daemon processes.
-   * @param status exit code
-   * @param msg message used to create the {@code ExitException}
-   * @throws ExitException if System.exit is disabled for test purposes
+   * 
+   * @param status
+   *          exit code
+   * @param msg
+   *          message used to create the {@code ExitException}
+   * @throws ExitException
+   *           if System.exit is disabled for test purposes
    */
   public static void terminate(int status, String msg) throws ExitException {
     LOG.info("Exiting with status " + status);
@@ -129,15 +132,19 @@ public final class ExitUtil {
     }
     System.exit(status);
   }
-  
+
   /**
-   * Forcibly terminates the currently running Java virtual machine.  
-   * @param status exit code
-   * @param msg message used to create the {@code HaltException}
-   * @throws HaltException if Runtime.getRuntime().halt() is disabled for test purposes
+   * Forcibly terminates the currently running Java virtual machine.
+   * 
+   * @param status
+   *          exit code
+   * @param msg
+   *          message used to create the {@code HaltException}
+   * @throws HaltException
+   *           if Runtime.getRuntime().halt() is disabled for test purposes
    */
   public static void halt(int status, String msg) throws HaltException {
-    LOG.info("Halt with status " + status);
+    LOG.info("Halt with status " + status + " Message: " + msg);
     if (systemHaltDisabled) {
       HaltException ee = new HaltException(status, msg);
       LOG.fatal("Halt called", ee);
@@ -148,18 +155,23 @@ public final class ExitUtil {
     }
     Runtime.getRuntime().halt(status);
   }
-  
+
   /**
    * Like {@link terminate(int, String)} but uses the given throwable to
    * initialize the ExitException.
+   * 
    * @param status
-   * @param t throwable used to create the ExitException
-   * @throws ExitException if System.exit is disabled for test purposes
+   * @param t
+   *          throwable used to create the ExitException
+   * @throws ExitException
+   *           if System.exit is disabled for test purposes
    */
   public static void terminate(int status, Throwable t) throws ExitException {
     terminate(status, StringUtils.stringifyException(t));
   }
+
   /**
+   * Forcibly terminates the currently running Java virtual machine.
    * 
    * @param status
    * @param t
@@ -168,16 +180,20 @@ public final class ExitUtil {
   public static void halt(int status, Throwable t) throws HaltException {
     halt(status, StringUtils.stringifyException(t));
   }
+
   /**
    * Like {@link terminate(int, String)} without a message.
+   * 
    * @param status
-   * @throws ExitException if System.exit is disabled for test purposes
+   * @throws ExitException
+   *           if System.exit is disabled for test purposes
    */
   public static void terminate(int status) throws ExitException {
     terminate(status, "ExitException");
   }
+
   /**
-   * 
+   * Forcibly terminates the currently running Java virtual machine.
    * @param status
    * @throws ExitException
    */

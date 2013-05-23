@@ -56,9 +56,9 @@ public class YarnUncaughtExceptionHandler implements UncaughtExceptionHandler {
         } catch (Throwable err) {
           //Again we done want to exit because of logging issues.
         }
-        ExitUtil.halt(-1); //Runtime.getRuntime().halt(-1);
+        ExitUtil.halt(-1);
       } else {
-        ExitUtil.terminate(-1); //System.exit(-1);
+        ExitUtil.terminate(-1);
       }
     } else {
       LOG.error("Thread " + t + " threw an Exception.", e);
