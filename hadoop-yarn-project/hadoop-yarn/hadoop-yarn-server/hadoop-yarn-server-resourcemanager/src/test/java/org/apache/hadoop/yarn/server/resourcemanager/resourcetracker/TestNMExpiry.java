@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.Test;
@@ -109,7 +110,7 @@ public class TestNMExpiry {
               .newRecordInstance(NodeHeartbeatRequest.class);
           request.setNodeStatus(nodeStatus);
           lastResponseID = resourceTrackerService.nodeHeartbeat(request)
-              .getHeartbeatResponse().getResponseId();
+              .getResponseId();
 
           Thread.sleep(1000);
         } catch(Exception e) {
@@ -127,7 +128,7 @@ public class TestNMExpiry {
     String hostname1 = "localhost1";
     String hostname2 = "localhost2";
     String hostname3 = "localhost3";
-    Resource capability = recordFactory.newRecordInstance(Resource.class);
+    Resource capability = BuilderUtils.newResource(1024, 1);
 
     RegisterNodeManagerRequest request1 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
@@ -166,7 +167,7 @@ public class TestNMExpiry {
     request3.setHttpPort(0);
     request3.setResource(capability);
     resourceTrackerService
-        .registerNodeManager(request3).getRegistrationResponse();
+        .registerNodeManager(request3);
 
     /* test to see if hostanme 3 does not expire */
     stopT = false;

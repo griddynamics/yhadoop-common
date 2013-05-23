@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -35,8 +37,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
+import org.apache.hadoop.util.Shell;
 
 public abstract class ContainerExecutor implements Configurable {
 
@@ -182,6 +186,41 @@ public abstract class ContainerExecutor implements Configurable {
       readLock.unlock();
     }
   }
+  
+  /** 
+   *  Return a command to execute the given command in OS shell.
+   *  On Windows, the passed in groupId can be used to launch
+   *  and associate the given groupId in a process group. On
+   *  non-Windows, groupId is ignored. 
+   */
+  protected static String[] getRunCommand(String command, String groupId,
+                                          Configuration conf) {
+    boolean containerSchedPriorityIsSet = false;
+    int containerSchedPriorityAdjustment = 
+        YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY;
+
+    if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) != 
+        null) {
+      containerSchedPriorityIsSet = true;
+      containerSchedPriorityAdjustment = conf 
+          .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 
+          YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
+    }
+  
+    if (Shell.WINDOWS) {
+      return new String[] { Shell.WINUTILS, "task", "create", groupId,
+          "cmd /c " + command };
+    } else {
+      List<String> retCommand = new ArrayList<String>();
+      if (containerSchedPriorityIsSet) {
+        retCommand.addAll(Arrays.asList("nice", "-n",
+            Integer.toString(containerSchedPriorityAdjustment)));
+      }
+      retCommand.addAll(Arrays.asList("bash", "-c", command));
+      return retCommand.toArray(new String[retCommand.size()]);
+    }
+
+  }
 
   /**
    * Is the container still active?
@@ -249,23 +288,6 @@ public abstract class ContainerExecutor implements Configurable {
       LOG.error("Got exception reading pid from pid-file " + pidFile, e);
     }
     return pid;
-  }
-
-  public static final boolean isSetsidAvailable = isSetsidSupported();
-  private static boolean isSetsidSupported() {
-    ShellCommandExecutor shexec = null;
-    boolean setsidSupported = true;
-    try {
-      String[] args = {"setsid", "bash", "-c", "echo $$"};
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (IOException ioe) {
-      LOG.warn("setsid is not available on this machine. So not using it.");
-      setsidSupported = false;
-    } finally { // handle the exit code
-      LOG.info("setsid exited with exit code " + shexec.getExitCode());
-    }
-    return setsidSupported;
   }
 
   public static class DelayedProcessKiller extends Thread {

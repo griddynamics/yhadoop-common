@@ -48,6 +48,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -91,6 +93,8 @@ import com.google.common.base.Joiner;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
+
+  private static final Log LOG = LogFactory.getLog(DFSTestUtil.class);
   
   private static Random gen = new Random();
   private static String[] dirNames = {
@@ -610,6 +614,25 @@ public class DFSTestUtil {
   }
   
   /**
+   * Append specified length of bytes to a given file
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param length Length of bytes to append to the file
+   * @throws IOException
+   */
+  public static void appendFile(FileSystem fs, Path p, int length)
+      throws IOException {
+    assert fs.exists(p);
+    assert length >= 0;
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    FSDataOutputStream out = fs.append(p);
+    out.write(toAppend);
+    out.close();
+  }
+  
+  /**
    * @return url content as string (UTF-8 encoding assumed)
    */
   public static String urlGet(URL url) throws IOException {
@@ -723,7 +746,11 @@ public class DFSTestUtil {
     File file = new File(filename);
     DataInputStream in = new DataInputStream(new FileInputStream(file));
     byte[] content = new byte[(int)file.length()];
-    in.readFully(content);
+    try {
+      in.readFully(content);
+    } finally {
+      IOUtils.cleanup(LOG, in);
+    }
     return content;
   }
 

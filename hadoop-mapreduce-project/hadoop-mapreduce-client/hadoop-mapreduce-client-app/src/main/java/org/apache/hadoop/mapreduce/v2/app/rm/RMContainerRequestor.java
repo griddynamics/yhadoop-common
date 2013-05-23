@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,7 +39,6 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 public abstract class RMContainerRequestor extends RMCommunicator {
   
   private static final Log LOG = LogFactory.getLog(RMContainerRequestor.class);
-  static final String ANY = "*";
 
   private int lastResponseID;
   private Resource availableResources;
@@ -146,30 +145,35 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     LOG.info("blacklistDisablePercent is " + blacklistDisablePercent);
   }
 
-  protected AMResponse makeRemoteRequest() throws YarnRemoteException {
+  protected AllocateResponse makeRemoteRequest() throws IOException {
     AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
         applicationAttemptId, lastResponseID, super.getApplicationProgress(),
         new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
             release));
-    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
-    AMResponse response = allocateResponse.getAMResponse();
-    lastResponseID = response.getResponseId();
-    availableResources = response.getAvailableResources();
+    AllocateResponse allocateResponse;
+    try {
+      allocateResponse = scheduler.allocate(allocateRequest);
+    } catch (YarnRemoteException e) {
+      throw new IOException(e);
+    }
+    lastResponseID = allocateResponse.getResponseId();
+    availableResources = allocateResponse.getAvailableResources();
     lastClusterNmCount = clusterNmCount;
     clusterNmCount = allocateResponse.getNumClusterNodes();
 
     if (ask.size() > 0 || release.size() > 0) {
       LOG.info("getResources() for " + applicationId + ":" + " ask="
           + ask.size() + " release= " + release.size() + " newContainers="
-          + response.getAllocatedContainers().size() + " finishedContainers="
-          + response.getCompletedContainersStatuses().size()
+          + allocateResponse.getAllocatedContainers().size()
+          + " finishedContainers="
+          + allocateResponse.getCompletedContainersStatuses().size()
           + " resourcelimit=" + availableResources + " knownNMs="
           + clusterNmCount);
     }
 
     ask.clear();
     release.clear();
-    return response;
+    return allocateResponse;
   }
 
   // May be incorrect if there's multiple NodeManagers running on a single host.
@@ -279,7 +283,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     }
 
     // Off-switch
-    addResourceRequest(req.priority, ANY, req.capability); 
+    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability);
   }
 
   protected void decContainerReq(ContainerRequest req) {
@@ -292,7 +296,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       decResourceRequest(req.priority, rack, req.capability);
     }
    
-    decResourceRequest(req.priority, ANY, req.capability);
+    decResourceRequest(req.priority, ResourceRequest.ANY, req.capability);
   }
 
   private void addResourceRequest(Priority priority, String resourceName,

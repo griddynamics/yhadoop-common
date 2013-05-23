@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.yarn.client.cli;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.DecimalFormat;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -31,7 +34,9 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ApplicationCLI extends YarnCLI {
-  private static final String APPLICATIONS_PATTERN = "%30s\t%20s\t%10s\t%10s\t%18s\t%18s\t%35s\n";
+  private static final String APPLICATIONS_PATTERN =
+    "%30s\t%20s\t%10s\t%10s\t%18s\t%18s\t%15s\t%35s" +
+    System.getProperty("line.separator");
 
   public static void main(String[] args) throws Exception {
     ApplicationCLI cli = new ApplicationCLI();
@@ -86,20 +91,24 @@ public class ApplicationCLI extends YarnCLI {
    * Lists all the applications present in the Resource Manager
    * 
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private void listAllApplications() throws YarnRemoteException {
+  private void listAllApplications() throws YarnRemoteException, IOException {
     PrintWriter writer = new PrintWriter(sysout);
     List<ApplicationReport> appsReport = client.getApplicationList();
 
     writer.println("Total Applications:" + appsReport.size());
     writer.printf(APPLICATIONS_PATTERN, "Application-Id",
         "Application-Name", "User", "Queue", "State", "Final-State",
-        "Tracking-URL");
+        "Progress", "Tracking-URL");
     for (ApplicationReport appReport : appsReport) {
+      DecimalFormat formatter = new DecimalFormat("###.##%");
+      String progress = formatter.format(appReport.getProgress());
       writer.printf(APPLICATIONS_PATTERN, appReport.getApplicationId(),
           appReport.getName(), appReport.getUser(), appReport.getQueue(),
           appReport.getYarnApplicationState(), appReport
-              .getFinalApplicationStatus(), appReport.getOriginalTrackingUrl());
+              .getFinalApplicationStatus(),
+          progress, appReport.getOriginalTrackingUrl());
     }
     writer.flush();
   }
@@ -109,8 +118,10 @@ public class ApplicationCLI extends YarnCLI {
    * 
    * @param applicationId
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private void killApplication(String applicationId) throws YarnRemoteException {
+  private void killApplication(String applicationId)
+      throws YarnRemoteException, IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
     sysout.println("Killing application " + applicationId);
     client.killApplication(appId);
@@ -123,37 +134,48 @@ public class ApplicationCLI extends YarnCLI {
    * @throws YarnRemoteException
    */
   private void printApplicationReport(String applicationId)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
     ApplicationReport appReport = client.getApplicationReport(ConverterUtils
         .toApplicationId(applicationId));
-    StringBuffer appReportStr = new StringBuffer();
+    // Use PrintWriter.println, which uses correct platform line ending.
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter appReportStr = new PrintWriter(baos);
     if (appReport != null) {
-      appReportStr.append("Application Report : ");
-      appReportStr.append("\n\tApplication-Id : ");
-      appReportStr.append(appReport.getApplicationId());
-      appReportStr.append("\n\tApplication-Name : ");
-      appReportStr.append(appReport.getName());
-      appReportStr.append("\n\tUser : ");
-      appReportStr.append(appReport.getUser());
-      appReportStr.append("\n\tQueue : ");
-      appReportStr.append(appReport.getQueue());
-      appReportStr.append("\n\tStart-Time : ");
-      appReportStr.append(appReport.getStartTime());
-      appReportStr.append("\n\tFinish-Time : ");
-      appReportStr.append(appReport.getFinishTime());
-      appReportStr.append("\n\tState : ");
-      appReportStr.append(appReport.getYarnApplicationState());
-      appReportStr.append("\n\tFinal-State : ");
-      appReportStr.append(appReport.getFinalApplicationStatus());
-      appReportStr.append("\n\tTracking-URL : ");
-      appReportStr.append(appReport.getOriginalTrackingUrl());
-      appReportStr.append("\n\tDiagnostics : ");
-      appReportStr.append(appReport.getDiagnostics());
+      appReportStr.println("Application Report : ");
+      appReportStr.print("\tApplication-Id : ");
+      appReportStr.println(appReport.getApplicationId());
+      appReportStr.print("\tApplication-Name : ");
+      appReportStr.println(appReport.getName());
+      appReportStr.print("\tUser : ");
+      appReportStr.println(appReport.getUser());
+      appReportStr.print("\tQueue : ");
+      appReportStr.println(appReport.getQueue());
+      appReportStr.print("\tStart-Time : ");
+      appReportStr.println(appReport.getStartTime());
+      appReportStr.print("\tFinish-Time : ");
+      appReportStr.println(appReport.getFinishTime());
+      appReportStr.print("\tProgress : ");
+      DecimalFormat formatter = new DecimalFormat("###.##%");
+      String progress = formatter.format(appReport.getProgress());
+      appReportStr.println(progress);
+      appReportStr.print("\tState : ");
+      appReportStr.println(appReport.getYarnApplicationState());
+      appReportStr.print("\tFinal-State : ");
+      appReportStr.println(appReport.getFinalApplicationStatus());
+      appReportStr.print("\tTracking-URL : ");
+      appReportStr.println(appReport.getOriginalTrackingUrl());
+      appReportStr.print("\tRPC Port : ");
+      appReportStr.println(appReport.getRpcPort());
+      appReportStr.print("\tAM Host : ");
+      appReportStr.println(appReport.getHost());
+      appReportStr.print("\tDiagnostics : ");
+      appReportStr.print(appReport.getDiagnostics());
     } else {
-      appReportStr.append("Application with id '" + applicationId
+      appReportStr.print("Application with id '" + applicationId
           + "' doesn't exist in RM.");
     }
-    sysout.println(appReportStr.toString());
+    appReportStr.close();
+    sysout.println(baos.toString("UTF-8"));
   }
 
 }

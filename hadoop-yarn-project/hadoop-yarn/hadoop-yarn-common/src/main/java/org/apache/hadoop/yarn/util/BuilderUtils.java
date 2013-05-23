@@ -28,6 +28,8 @@ import java.util.Map;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -236,21 +238,17 @@ public class BuilderUtils {
     return containerStatus;
   }
 
-  public static Container newContainer(ContainerId containerId,
-      NodeId nodeId, String nodeHttpAddress,
-      Resource resource, Priority priority, ContainerToken containerToken) {
+  public static Container newContainer(ContainerId containerId, NodeId nodeId,
+      String nodeHttpAddress, Resource resource, Priority priority,
+      ContainerToken containerToken, long rmIdentifier) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
     container.setNodeHttpAddress(nodeHttpAddress);
     container.setResource(resource);
     container.setPriority(priority);
-    container.setState(ContainerState.NEW);
-    ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
-    containerStatus.setContainerId(containerId);
-    containerStatus.setState(ContainerState.NEW);
-    container.setContainerStatus(containerStatus);
     container.setContainerToken(containerToken);
+    container.setRMIdentifier(rmIdentifier);
     return container;
   }
 
@@ -288,21 +286,18 @@ public class BuilderUtils {
   }
 
   public static ContainerLaunchContext newContainerLaunchContext(
-      ContainerId containerID, String user, Resource assignedCapability,
-      Map<String, LocalResource> localResources,
+      String user, Map<String, LocalResource> localResources,
       Map<String, String> environment, List<String> commands,
-      Map<String, ByteBuffer> serviceData, ByteBuffer containerTokens,
+      Map<String, ByteBuffer> serviceData,  ByteBuffer tokens,
       Map<ApplicationAccessType, String> acls) {
     ContainerLaunchContext container = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
-    container.setContainerId(containerID);
     container.setUser(user);
-    container.setResource(assignedCapability);
     container.setLocalResources(localResources);
     container.setEnvironment(environment);
     container.setCommands(commands);
     container.setServiceData(serviceData);
-    container.setContainerTokens(containerTokens);
+    container.setTokens(tokens);
     container.setApplicationACLs(acls);
     return container;
   }
@@ -340,7 +335,8 @@ public class BuilderUtils {
       ClientToken clientToken, YarnApplicationState state, String diagnostics,
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
-      ApplicationResourceUsageReport appResources, String origTrackingUrl) {
+      ApplicationResourceUsageReport appResources, String origTrackingUrl,
+      float progress) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -359,6 +355,7 @@ public class BuilderUtils {
     report.setFinalApplicationStatus(finalStatus);
     report.setApplicationResourceUsageReport(appResources);
     report.setOriginalTrackingUrl(origTrackingUrl);
+    report.setProgress(progress);
     return report;
   }
 
@@ -400,8 +397,27 @@ public class BuilderUtils {
     allocateRequest.setApplicationAttemptId(applicationAttemptId);
     allocateRequest.setResponseId(responseID);
     allocateRequest.setProgress(appProgress);
-    allocateRequest.addAllAsks(resourceAsk);
-    allocateRequest.addAllReleases(containersToBeReleased);
+    allocateRequest.setAskList(resourceAsk);
+    allocateRequest.setReleaseList(containersToBeReleased);
     return allocateRequest;
+  }
+  
+  public static AllocateResponse newAllocateResponse(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, boolean reboot, int numClusterNodes,
+      PreemptionMessage preempt) {
+    AllocateResponse response = recordFactory
+        .newRecordInstance(AllocateResponse.class);
+    response.setNumClusterNodes(numClusterNodes);
+    response.setResponseId(responseId);
+    response.setCompletedContainersStatuses(completedContainers);
+    response.setAllocatedContainers(allocatedContainers);
+    response.setUpdatedNodes(updatedNodes);
+    response.setAvailableResources(availResources);
+    response.setReboot(reboot);
+    response.setPreemptionMessage(preempt);
+
+    return response;
   }
 }

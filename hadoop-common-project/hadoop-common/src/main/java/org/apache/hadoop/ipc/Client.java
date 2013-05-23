@@ -59,13 +59,13 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
@@ -84,6 +84,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.CodedOutputStream;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -243,7 +244,7 @@ public class Client {
       callComplete();
     }
     
-    public synchronized Writable getRpcResult() {
+    public synchronized Writable getRpcResponse() {
       return rpcResponse;
     }
   }
@@ -257,6 +258,7 @@ public class Client {
     private final ConnectionId remoteId;                // connection id
     private AuthMethod authMethod; // authentication method
     private Token<? extends TokenIdentifier> token;
+    private int serviceClass;
     private SaslRpcClient saslRpcClient;
     
     private Socket socket = null;                 // connected socket
@@ -279,7 +281,7 @@ public class Client {
     
     private final Object sendRpcRequestLock = new Object();
 
-    public Connection(ConnectionId remoteId) throws IOException {
+    public Connection(ConnectionId remoteId, int serviceClass) throws IOException {
       this.remoteId = remoteId;
       this.server = remoteId.getAddress();
       if (server.isUnresolved()) {
@@ -296,6 +298,7 @@ public class Client {
       this.tcpNoDelay = remoteId.getTcpNoDelay();
       this.doPing = remoteId.getDoPing();
       this.pingInterval = remoteId.getPingInterval();
+      this.serviceClass = serviceClass;
       if (LOG.isDebugEnabled()) {
         LOG.debug("The ping interval is " + this.pingInterval + " ms.");
       }
@@ -704,12 +707,6 @@ public class Client {
       if (curRetries >= maxRetries) {
         throw ioe;
       }
-
-      // otherwise back off and retry
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException ignored) {}
-      
       LOG.info("Retrying connect to server: " + server + ". Already tried "
           + curRetries + " time(s); maxRetries=" + maxRetries);
     }
@@ -747,7 +744,9 @@ public class Client {
      * +----------------------------------+
      * |  "hrpc" 4 bytes                  |      
      * +----------------------------------+
-     * |  Version (1 bytes)               |      
+     * |  Version (1 byte)                |
+     * +----------------------------------+
+     * |  Service Class (1 byte)          |
      * +----------------------------------+
      * |  Authmethod (1 byte)             |      
      * +----------------------------------+
@@ -760,6 +759,7 @@ public class Client {
       // Write out the header, version and authentication method
       out.write(Server.HEADER.array());
       out.write(Server.CURRENT_VERSION);
+      out.write(serviceClass);
       authMethod.write(out);
       Server.IpcSerializationType.PROTOBUF.write(out);
       out.flush();
@@ -945,31 +945,65 @@ public class Client {
       touch();
       
       try {
-        RpcResponseHeaderProto response = 
+        int totalLen = in.readInt();
+        RpcResponseHeaderProto header = 
             RpcResponseHeaderProto.parseDelimitedFrom(in);
-        if (response == null) {
+        if (header == null) {
           throw new IOException("Response is null.");
         }
+        int headerLen = header.getSerializedSize();
+        headerLen += CodedOutputStream.computeRawVarint32Size(headerLen);
 
-        int callId = response.getCallId();
+        int callId = header.getCallId();
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + callId);
 
         Call call = calls.get(callId);
-        RpcStatusProto status = response.getStatus();
+        RpcStatusProto status = header.getStatus();
         if (status == RpcStatusProto.SUCCESS) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setRpcResponse(value);
           calls.remove(callId);
-        } else if (status == RpcStatusProto.ERROR) {
-          call.setException(new RemoteException(WritableUtils.readString(in),
-                                                WritableUtils.readString(in)));
-          calls.remove(callId);
-        } else if (status == RpcStatusProto.FATAL) {
-          // Close the connection
-          markClosed(new RemoteException(WritableUtils.readString(in), 
-                                         WritableUtils.readString(in)));
+          
+          // verify that length was correct
+          // only for ProtobufEngine where len can be verified easily
+          if (call.getRpcResponse() instanceof ProtobufRpcEngine.RpcWrapper) {
+            ProtobufRpcEngine.RpcWrapper resWrapper = 
+                (ProtobufRpcEngine.RpcWrapper) call.getRpcResponse();
+            if (totalLen != headerLen + resWrapper.getLength()) { 
+              throw new RpcClientException(
+                  "RPC response length mismatch on rpc success");
+            }
+          }
+        } else { // Rpc Request failed
+          // Verify that length was correct
+          if (totalLen != headerLen) {
+            throw new RpcClientException(
+                "RPC response length mismatch on rpc error");
+          }
+          
+          final String exceptionClassName = header.hasExceptionClassName() ?
+                header.getExceptionClassName() : 
+                  "ServerDidNotSetExceptionClassName";
+          final String errorMsg = header.hasErrorMsg() ? 
+                header.getErrorMsg() : "ServerDidNotSetErrorMsg" ;
+          final RpcErrorCodeProto erCode = 
+                    (header.hasErrorDetail() ? header.getErrorDetail() : null);
+          if (erCode == null) {
+             LOG.warn("Detailed error code not set by server on rpc error");
+          }
+          RemoteException re = 
+              ( (erCode == null) ? 
+                  new RemoteException(exceptionClassName, errorMsg) :
+              new RemoteException(exceptionClassName, errorMsg, erCode));
+          if (status == RpcStatusProto.ERROR) {
+            call.setException(re);
+            calls.remove(callId);
+          } else if (status == RpcStatusProto.FATAL) {
+            // Close the connection
+            markClosed(re);
+          }
         }
       } catch (IOException e) {
         markClosed(e);
@@ -1152,19 +1186,33 @@ public class Client {
 
   
   /**
-   * Same as {@link #call(RPC.RpcKind, Writable, InetSocketAddress, 
+   * Same as {@link #call(RPC.RpcKind, Writable, InetSocketAddress,
    * Class, UserGroupInformation, int, Configuration)}
    * except that rpcKind is writable.
    */
-  public Writable call(Writable param, InetSocketAddress addr, 
+  public Writable call(Writable param, InetSocketAddress addr,
       Class<?> protocol, UserGroupInformation ticket,
-      int rpcTimeout, Configuration conf)  
+      int rpcTimeout, Configuration conf)
       throws InterruptedException, IOException {
-        ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
+    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
     return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId);
   }
   
+  /**
+   * Same as {@link #call(Writable, InetSocketAddress,
+   * Class, UserGroupInformation, int, Configuration)}
+   * except that specifying serviceClass.
+   */
+  public Writable call(Writable param, InetSocketAddress addr,
+      Class<?> protocol, UserGroupInformation ticket,
+      int rpcTimeout, int serviceClass, Configuration conf)
+      throws InterruptedException, IOException {
+    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
+        ticket, rpcTimeout, conf);
+    return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, serviceClass);
+  }
+
   /**
    * Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol,
@@ -1191,10 +1239,10 @@ public class Client {
      return call(RPC.RpcKind.RPC_BUILTIN, param, remoteId);
   }
   
-  /** 
+  /**
    * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the rpc respond.
-   * 
+   *
    * @param rpcKind
    * @param rpcRequest -  contains serialized method and method parameters
    * @param remoteId - the target rpc server
@@ -1204,8 +1252,26 @@ public class Client {
    */
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId) throws InterruptedException, IOException {
+    return call(rpcKind, rpcRequest, remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT);
+  }
+
+  /** 
+   * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
+   * <code>remoteId</code>, returning the rpc respond.
+   * 
+   * @param rpcKind
+   * @param rpcRequest -  contains serialized method and method parameters
+   * @param remoteId - the target rpc server
+   * @param serviceClass - service class for RPC
+   * @returns the rpc response
+   * Throws exceptions if there are network problems or if the remote code 
+   * threw an exception.
+   */
+  public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
+      ConnectionId remoteId, int serviceClass)
+      throws InterruptedException, IOException {
     Call call = new Call(rpcKind, rpcRequest);
-    Connection connection = getConnection(remoteId, call);
+    Connection connection = getConnection(remoteId, call, serviceClass);
     try {
       connection.sendRpcRequest(call);                 // send the rpc request
     } catch (RejectedExecutionException e) {
@@ -1245,7 +1311,7 @@ public class Client {
                   call.error);
         }
       } else {
-        return call.getRpcResult();
+        return call.getRpcResponse();
       }
     }
   }
@@ -1262,7 +1328,7 @@ public class Client {
   /** Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given ConnectionId are reused. */
   private Connection getConnection(ConnectionId remoteId,
-                                   Call call)
+                                   Call call, int serviceClass)
                                    throws IOException, InterruptedException {
     if (!running.get()) {
       // the client is stopped
@@ -1277,7 +1343,7 @@ public class Client {
       synchronized (connections) {
         connection = connections.get(remoteId);
         if (connection == null) {
-          connection = new Connection(remoteId);
+          connection = new Connection(remoteId, serviceClass);
           connections.put(remoteId, connection);
         }
       }

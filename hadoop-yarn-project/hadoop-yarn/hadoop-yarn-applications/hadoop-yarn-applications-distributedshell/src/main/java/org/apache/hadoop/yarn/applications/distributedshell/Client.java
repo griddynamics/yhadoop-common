@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -310,8 +312,9 @@ public class Client extends YarnClientImpl {
    * Main run function for the client
    * @return true if application completed successfully
    * @throws IOException
+   * @throws YarnRemoteException
    */
-  public boolean run() throws IOException {
+  public boolean run() throws IOException, YarnRemoteException {
 
     LOG.info("Running Client");
     start();
@@ -481,14 +484,15 @@ public class Client extends YarnClientImpl {
     // It should be provided out of the box. 
     // For now setting all required classpaths including
     // the classpath to "." for the application jar
-    StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
+    StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$())
+      .append(File.pathSeparatorChar).append("./*");
     for (String c : conf.getStrings(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-      classPathEnv.append(':');
+      classPathEnv.append(File.pathSeparatorChar);
       classPathEnv.append(c.trim());
     }
-    classPathEnv.append(":./log4j.properties");
+    classPathEnv.append(File.pathSeparatorChar).append("./log4j.properties");
 
     // add the runtime classpath needed for tests to work
     if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
@@ -505,7 +509,7 @@ public class Client extends YarnClientImpl {
 
     // Set java executable command 
     LOG.info("Setting up app master command");
-    vargs.add("${JAVA_HOME}" + "/bin/java");
+    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
     // Set Xmx based on am memory size
     vargs.add("-Xmx" + amMemory + "m");
     // Set class name 
@@ -545,7 +549,7 @@ public class Client extends YarnClientImpl {
     // For now, only memory is supported so we set memory requirements
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(amMemory);
-    amContainer.setResource(capability);
+    appContext.setResource(capability);
 
     // Service data is a binary blob that can be passed to the application
     // Not needed in this scenario
@@ -570,6 +574,7 @@ public class Client extends YarnClientImpl {
     // Ignore the response as either a valid response object is returned on success 
     // or an exception thrown to denote some form of a failure
     LOG.info("Submitting application to ASM");
+
     super.submitApplication(appContext);
 
     // TODO
@@ -587,8 +592,10 @@ public class Client extends YarnClientImpl {
    * @param appId Application Id of application to be monitored
    * @return true if application completed successfully
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private boolean monitorApplication(ApplicationId appId) throws YarnRemoteException {
+  private boolean monitorApplication(ApplicationId appId)
+      throws YarnRemoteException, IOException {
 
     while (true) {
 
@@ -650,8 +657,10 @@ public class Client extends YarnClientImpl {
    * Kill a submitted application by sending a call to the ASM
    * @param appId Application Id to be killed. 
    * @throws YarnRemoteException
+   * @throws IOException
    */
-  private void forceKillApplication(ApplicationId appId) throws YarnRemoteException {
+  private void forceKillApplication(ApplicationId appId)
+      throws YarnRemoteException, IOException {
     // TODO clarify whether multiple jobs with the same app id can be submitted and be running at 
     // the same time. 
     // If yes, can we kill a particular attempt only?

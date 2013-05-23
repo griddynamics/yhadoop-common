@@ -37,7 +37,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -60,15 +59,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -225,10 +221,6 @@ public class TestContainerLauncher {
 
   @Test
   public void testSlowNM() throws Exception {
-    test();
-  }
-
-  private void test() throws Exception {
 
     conf = new Configuration();
     int maxAttempts = 1;
@@ -373,7 +365,7 @@ public class TestContainerLauncher {
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws IOException {
       GetContainerStatusResponse response = recordFactory
           .newRecordInstance(GetContainerStatusResponse.class);
       response.setStatus(status);
@@ -382,31 +374,38 @@ public class TestContainerLauncher {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException {
-      ContainerLaunchContext container = request.getContainerLaunchContext();
+        throws IOException {
+
+      // Validate that the container is what RM is giving.
+      Assert.assertEquals(MRApp.NM_HOST, request.getContainer().getNodeId()
+          .getHost());
+      Assert.assertEquals(MRApp.NM_PORT, request.getContainer().getNodeId()
+          .getPort());
+      Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_HTTP_PORT, request
+          .getContainer().getNodeHttpAddress());
+
       StartContainerResponse response = recordFactory
           .newRecordInstance(StartContainerResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
-          try {
+      try {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(15000);
       } catch (Exception e) {
         LOG.error(e);
         throw new UndeclaredThrowableException(e);
-            }
+      }
       status.setState(ContainerState.RUNNING);
-      status.setContainerId(container.getContainerId());
+      status.setContainerId(request.getContainer().getId());
       status.setExitStatus(0);
       return response;
-            }
+    }
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));
-      throw YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(
-          null).createYarnRemoteException(e);
-          }
-        }
+      throw new IOException(e);
+    }
   }
+}

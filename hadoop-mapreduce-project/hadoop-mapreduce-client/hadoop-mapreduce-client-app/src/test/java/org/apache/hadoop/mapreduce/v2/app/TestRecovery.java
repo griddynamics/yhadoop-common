@@ -18,10 +18,21 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
@@ -31,36 +42,66 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.jobhistory.Event;
+import org.apache.hadoop.mapreduce.jobhistory.EventType;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskRecoverEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.MapTaskImpl;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
+import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.ClusterInfo;
+import org.apache.hadoop.yarn.SystemClock;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestRecovery {
@@ -74,6 +115,7 @@ public class TestRecovery {
   private Text key2 = new Text("key2");
   private Text val1 = new Text("val1");
   private Text val2 = new Text("val2");
+
 
   /**
    * AM with 2 maps and 1 reduce. For 1st map, one attempt fails, one attempt
@@ -900,6 +942,534 @@ public class TestRecovery {
 
   }
 
+  @Test(timeout=30000)
+  public void testRecoveryWithoutShuffleSecret() throws Exception {
+
+    int runCount = 0;
+    MRApp app = new MRAppNoShuffleSecret(2, 1, false,
+        this.getClass().getName(), true, ++runCount);
+    Configuration conf = new Configuration();
+    conf.setBoolean("mapred.mapper.new-api", true);
+    conf.setBoolean("mapred.reducer.new-api", true);
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+    conf.set(FileOutputFormat.OUTDIR, outputDir.toString());
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    //all maps would be running
+    Assert.assertEquals("No of tasks not correct",
+       3, job.getTasks().size());
+    Iterator<Task> it = job.getTasks().values().iterator();
+    Task mapTask1 = it.next();
+    Task mapTask2 = it.next();
+    Task reduceTask = it.next();
+
+    // all maps must be running
+    app.waitForState(mapTask1, TaskState.RUNNING);
+    app.waitForState(mapTask2, TaskState.RUNNING);
+
+    TaskAttempt task1Attempt = mapTask1.getAttempts().values().iterator().next();
+    TaskAttempt task2Attempt = mapTask2.getAttempts().values().iterator().next();
+
+    //before sending the TA_DONE, event make sure attempt has come to
+    //RUNNING state
+    app.waitForState(task1Attempt, TaskAttemptState.RUNNING);
+    app.waitForState(task2Attempt, TaskAttemptState.RUNNING);
+
+    // reduces must be in NEW state
+    Assert.assertEquals("Reduce Task state not correct",
+        TaskState.RUNNING, reduceTask.getReport().getTaskState());
+
+    //send the done signal to the 1st map attempt
+    app.getContext().getEventHandler().handle(
+        new TaskAttemptEvent(
+            task1Attempt.getID(),
+            TaskAttemptEventType.TA_DONE));
+
+    //wait for first map task to complete
+    app.waitForState(mapTask1, TaskState.SUCCEEDED);
+
+    //stop the app
+    app.stop();
+
+    //in recovery the 1st map should NOT be recovered from previous run
+    //since the shuffle secret was not provided with the job credentials
+    //and had to be rolled per app attempt
+    app = new MRAppNoShuffleSecret(2, 1, false,
+        this.getClass().getName(), false, ++runCount);
+    conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
+    conf.setBoolean("mapred.mapper.new-api", true);
+    conf.setBoolean("mapred.reducer.new-api", true);
+    conf.set(FileOutputFormat.OUTDIR, outputDir.toString());
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+    job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    //all maps would be running
+    Assert.assertEquals("No of tasks not correct",
+       3, job.getTasks().size());
+    it = job.getTasks().values().iterator();
+    mapTask1 = it.next();
+    mapTask2 = it.next();
+    reduceTask = it.next();
+
+    app.waitForState(mapTask1, TaskState.RUNNING);
+    app.waitForState(mapTask2, TaskState.RUNNING);
+
+    task2Attempt = mapTask2.getAttempts().values().iterator().next();
+    //before sending the TA_DONE, event make sure attempt has come to
+    //RUNNING state
+    app.waitForState(task2Attempt, TaskAttemptState.RUNNING);
+
+    //send the done signal to the 2nd map task
+    app.getContext().getEventHandler().handle(
+        new TaskAttemptEvent(
+            mapTask2.getAttempts().values().iterator().next().getID(),
+            TaskAttemptEventType.TA_DONE));
+
+    //wait to get it completed
+    app.waitForState(mapTask2, TaskState.SUCCEEDED);
+
+    //verify first map task is still running
+    app.waitForState(mapTask1, TaskState.RUNNING);
+
+    //send the done signal to the 2nd map task
+    app.getContext().getEventHandler().handle(
+        new TaskAttemptEvent(
+            mapTask1.getAttempts().values().iterator().next().getID(),
+            TaskAttemptEventType.TA_DONE));
+
+    //wait to get it completed
+    app.waitForState(mapTask1, TaskState.SUCCEEDED);
+
+    //wait for reduce to be running before sending done
+    app.waitForState(reduceTask, TaskState.RUNNING);
+    //send the done signal to the reduce
+    app.getContext().getEventHandler().handle(
+        new TaskAttemptEvent(
+            reduceTask.getAttempts().values().iterator().next().getID(),
+            TaskAttemptEventType.TA_DONE));
+
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+  }
+
+  @Test
+  public void testRecoverySuccessAttempt() {
+    LOG.info("--- START: testRecoverySuccessAttempt ---");
+
+    long clusterTimestamp = System.currentTimeMillis();
+    EventHandler mockEventHandler = mock(EventHandler.class);
+    MapTaskImpl recoverMapTask = getMockMapTask(clusterTimestamp,
+        mockEventHandler);
+
+    TaskId taskId = recoverMapTask.getID();
+    JobID jobID = new JobID(Long.toString(clusterTimestamp), 1);
+    TaskID taskID = new TaskID(jobID,
+        org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
+
+    //Mock up the TaskAttempts
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
+
+    TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
+    TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
+        TaskAttemptState.SUCCEEDED);
+    mockTaskAttempts.put(taId1, mockTAinfo1);
+
+    TaskAttemptID taId2 = new TaskAttemptID(taskID, 1);
+    TaskAttemptInfo mockTAinfo2 = getMockTaskAttemptInfo(taId2,
+        TaskAttemptState.FAILED);
+    mockTaskAttempts.put(taId2, mockTAinfo2);
+
+    OutputCommitter mockCommitter = mock (OutputCommitter.class);
+    TaskInfo mockTaskInfo = mock(TaskInfo.class);
+    when(mockTaskInfo.getTaskStatus()).thenReturn("SUCCEEDED");
+    when(mockTaskInfo.getTaskId()).thenReturn(taskID);
+    when(mockTaskInfo.getAllTaskAttempts()).thenReturn(mockTaskAttempts);
+
+    recoverMapTask.handle(
+        new TaskRecoverEvent(taskId, mockTaskInfo,mockCommitter, true));
+
+    ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
+    verify(mockEventHandler,atLeast(1)).handle(
+        (org.apache.hadoop.yarn.event.Event) arg.capture());
+
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
+    finalAttemptStates.put(taId1, TaskAttemptState.SUCCEEDED);
+    finalAttemptStates.put(taId2, TaskAttemptState.FAILED);
+
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
+    jobHistoryEvents.add(EventType.TASK_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FINISHED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FAILED);
+    jobHistoryEvents.add(EventType.TASK_FINISHED);
+    recoveryChecker(recoverMapTask, TaskState.SUCCEEDED, finalAttemptStates,
+        arg, jobHistoryEvents, 2L, 1L);
+  }
+
+  @Test
+  public void testRecoveryAllFailAttempts() {
+    LOG.info("--- START: testRecoveryAllFailAttempts ---");
+
+    long clusterTimestamp = System.currentTimeMillis();
+    EventHandler mockEventHandler = mock(EventHandler.class);
+    MapTaskImpl recoverMapTask = getMockMapTask(clusterTimestamp,
+        mockEventHandler);
+
+    TaskId taskId = recoverMapTask.getID();
+    JobID jobID = new JobID(Long.toString(clusterTimestamp), 1);
+    TaskID taskID = new TaskID(jobID,
+        org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
+
+    //Mock up the TaskAttempts
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
+
+    TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
+    TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
+        TaskAttemptState.FAILED);
+    mockTaskAttempts.put(taId1, mockTAinfo1);
+
+    TaskAttemptID taId2 = new TaskAttemptID(taskID, 1);
+    TaskAttemptInfo mockTAinfo2 = getMockTaskAttemptInfo(taId2,
+        TaskAttemptState.FAILED);
+    mockTaskAttempts.put(taId2, mockTAinfo2);
+
+    OutputCommitter mockCommitter = mock (OutputCommitter.class);
+
+    TaskInfo mockTaskInfo = mock(TaskInfo.class);
+    when(mockTaskInfo.getTaskStatus()).thenReturn("FAILED");
+    when(mockTaskInfo.getTaskId()).thenReturn(taskID);
+    when(mockTaskInfo.getAllTaskAttempts()).thenReturn(mockTaskAttempts);
+
+    recoverMapTask.handle(
+        new TaskRecoverEvent(taskId, mockTaskInfo, mockCommitter, true));
+
+    ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
+    verify(mockEventHandler,atLeast(1)).handle(
+        (org.apache.hadoop.yarn.event.Event) arg.capture());
+
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
+    finalAttemptStates.put(taId1, TaskAttemptState.FAILED);
+    finalAttemptStates.put(taId2, TaskAttemptState.FAILED);
+
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
+    jobHistoryEvents.add(EventType.TASK_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FAILED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FAILED);
+    jobHistoryEvents.add(EventType.TASK_FAILED);
+    recoveryChecker(recoverMapTask, TaskState.FAILED, finalAttemptStates,
+        arg, jobHistoryEvents, 2L, 2L);
+  }
+
+  @Test
+  public void testRecoveryTaskSuccessAllAttemptsFail() {
+    LOG.info("--- START:  testRecoveryTaskSuccessAllAttemptsFail ---");
+
+    long clusterTimestamp = System.currentTimeMillis();
+    EventHandler mockEventHandler = mock(EventHandler.class);
+    MapTaskImpl recoverMapTask = getMockMapTask(clusterTimestamp,
+        mockEventHandler);
+
+    TaskId taskId = recoverMapTask.getID();
+    JobID jobID = new JobID(Long.toString(clusterTimestamp), 1);
+    TaskID taskID = new TaskID(jobID,
+        org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
+
+    //Mock up the TaskAttempts
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
+
+    TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
+    TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
+        TaskAttemptState.FAILED);
+    mockTaskAttempts.put(taId1, mockTAinfo1);
+
+    TaskAttemptID taId2 = new TaskAttemptID(taskID, 1);
+    TaskAttemptInfo mockTAinfo2 = getMockTaskAttemptInfo(taId2,
+        TaskAttemptState.FAILED);
+    mockTaskAttempts.put(taId2, mockTAinfo2);
+
+    OutputCommitter mockCommitter = mock (OutputCommitter.class);
+    TaskInfo mockTaskInfo = mock(TaskInfo.class);
+    when(mockTaskInfo.getTaskStatus()).thenReturn("SUCCEEDED");
+    when(mockTaskInfo.getTaskId()).thenReturn(taskID);
+    when(mockTaskInfo.getAllTaskAttempts()).thenReturn(mockTaskAttempts);
+
+    recoverMapTask.handle(
+        new TaskRecoverEvent(taskId, mockTaskInfo, mockCommitter, true));
+
+    ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
+    verify(mockEventHandler,atLeast(1)).handle(
+        (org.apache.hadoop.yarn.event.Event) arg.capture());
+
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
+    finalAttemptStates.put(taId1, TaskAttemptState.FAILED);
+    finalAttemptStates.put(taId2, TaskAttemptState.FAILED);
+    // check for one new attempt launched since successful attempt not found
+    TaskAttemptID taId3 = new TaskAttemptID(taskID, 2000);
+    finalAttemptStates.put(taId3, TaskAttemptState.NEW);
+
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
+    jobHistoryEvents.add(EventType.TASK_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FAILED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FAILED);
+    recoveryChecker(recoverMapTask, TaskState.RUNNING, finalAttemptStates,
+        arg, jobHistoryEvents, 2L, 2L);
+  }
+
+  @Test
+  public void testRecoveryTaskSuccessAllAttemptsSucceed() {
+    LOG.info("--- START:  testRecoveryTaskSuccessAllAttemptsFail ---");
+
+    long clusterTimestamp = System.currentTimeMillis();
+    EventHandler mockEventHandler = mock(EventHandler.class);
+    MapTaskImpl recoverMapTask = getMockMapTask(clusterTimestamp,
+        mockEventHandler);
+
+    TaskId taskId = recoverMapTask.getID();
+    JobID jobID = new JobID(Long.toString(clusterTimestamp), 1);
+    TaskID taskID = new TaskID(jobID,
+        org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
+
+    //Mock up the TaskAttempts
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
+
+    TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
+    TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
+        TaskAttemptState.SUCCEEDED);
+    mockTaskAttempts.put(taId1, mockTAinfo1);
+
+    TaskAttemptID taId2 = new TaskAttemptID(taskID, 1);
+    TaskAttemptInfo mockTAinfo2 = getMockTaskAttemptInfo(taId2,
+        TaskAttemptState.SUCCEEDED);
+    mockTaskAttempts.put(taId2, mockTAinfo2);
+
+    OutputCommitter mockCommitter = mock (OutputCommitter.class);
+    TaskInfo mockTaskInfo = mock(TaskInfo.class);
+    when(mockTaskInfo.getTaskStatus()).thenReturn("SUCCEEDED");
+    when(mockTaskInfo.getTaskId()).thenReturn(taskID);
+    when(mockTaskInfo.getAllTaskAttempts()).thenReturn(mockTaskAttempts);
+
+    recoverMapTask.handle(
+        new TaskRecoverEvent(taskId, mockTaskInfo, mockCommitter, true));
+
+    ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
+    verify(mockEventHandler,atLeast(1)).handle(
+        (org.apache.hadoop.yarn.event.Event) arg.capture());
+
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
+    finalAttemptStates.put(taId1, TaskAttemptState.SUCCEEDED);
+    finalAttemptStates.put(taId2, TaskAttemptState.SUCCEEDED);
+
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
+    jobHistoryEvents.add(EventType.TASK_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FINISHED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_FINISHED);
+    jobHistoryEvents.add(EventType.TASK_FINISHED);
+    recoveryChecker(recoverMapTask, TaskState.SUCCEEDED, finalAttemptStates,
+        arg, jobHistoryEvents, 2L, 0L);
+  }
+
+  @Test
+  public void testRecoveryAllAttemptsKilled() {
+    LOG.info("--- START:  testRecoveryAllAttemptsKilled ---");
+
+    long clusterTimestamp = System.currentTimeMillis();
+    EventHandler mockEventHandler = mock(EventHandler.class);
+    MapTaskImpl recoverMapTask = getMockMapTask(clusterTimestamp,
+        mockEventHandler);
+
+    TaskId taskId = recoverMapTask.getID();
+    JobID jobID = new JobID(Long.toString(clusterTimestamp), 1);
+    TaskID taskID = new TaskID(jobID,
+        org.apache.hadoop.mapreduce.TaskType.MAP, taskId.getId());
+
+    //Mock up the TaskAttempts
+    Map<TaskAttemptID, TaskAttemptInfo> mockTaskAttempts =
+        new HashMap<TaskAttemptID, TaskAttemptInfo>();
+    TaskAttemptID taId1 = new TaskAttemptID(taskID, 2);
+    TaskAttemptInfo mockTAinfo1 = getMockTaskAttemptInfo(taId1,
+        TaskAttemptState.KILLED);
+    mockTaskAttempts.put(taId1, mockTAinfo1);
+
+    TaskAttemptID taId2 = new TaskAttemptID(taskID, 1);
+    TaskAttemptInfo mockTAinfo2 = getMockTaskAttemptInfo(taId2,
+        TaskAttemptState.KILLED);
+    mockTaskAttempts.put(taId2, mockTAinfo2);
+
+    OutputCommitter mockCommitter = mock (OutputCommitter.class);
+    TaskInfo mockTaskInfo = mock(TaskInfo.class);
+    when(mockTaskInfo.getTaskStatus()).thenReturn("KILLED");
+    when(mockTaskInfo.getTaskId()).thenReturn(taskID);
+    when(mockTaskInfo.getAllTaskAttempts()).thenReturn(mockTaskAttempts);
+
+    recoverMapTask.handle(
+        new TaskRecoverEvent(taskId, mockTaskInfo, mockCommitter, true));
+
+    ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
+    verify(mockEventHandler,atLeast(1)).handle(
+        (org.apache.hadoop.yarn.event.Event) arg.capture());
+
+    Map<TaskAttemptID, TaskAttemptState> finalAttemptStates =
+        new HashMap<TaskAttemptID, TaskAttemptState>();
+    finalAttemptStates.put(taId1, TaskAttemptState.KILLED);
+    finalAttemptStates.put(taId2, TaskAttemptState.KILLED);
+
+    List<EventType> jobHistoryEvents = new ArrayList<EventType>();
+    jobHistoryEvents.add(EventType.TASK_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_KILLED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_STARTED);
+    jobHistoryEvents.add(EventType.MAP_ATTEMPT_KILLED);
+    jobHistoryEvents.add(EventType.TASK_FAILED);
+    recoveryChecker(recoverMapTask, TaskState.KILLED, finalAttemptStates,
+        arg, jobHistoryEvents, 2L, 0L);
+  }
+
+  private void recoveryChecker(MapTaskImpl checkTask, TaskState finalState,
+      Map<TaskAttemptID, TaskAttemptState> finalAttemptStates,
+      ArgumentCaptor<Event> arg, List<EventType> expectedJobHistoryEvents,
+      long expectedMapLaunches, long expectedFailedMaps) {
+
+    assertEquals("Final State of Task", finalState, checkTask.getState());
+
+    Map<TaskAttemptId, TaskAttempt> recoveredAttempts =
+        checkTask.getAttempts();
+    assertEquals("Expected Number of Task Attempts",
+        finalAttemptStates.size(), recoveredAttempts.size());
+    for (TaskAttemptID taID : finalAttemptStates.keySet()) {
+      assertEquals("Expected Task Attempt State",
+          finalAttemptStates.get(taID),
+          recoveredAttempts.get(TypeConverter.toYarn(taID)).getState());
+    }
+
+    Iterator<Event> ie = arg.getAllValues().iterator();
+    int eventNum = 0;
+    long totalLaunchedMaps = 0;
+    long totalFailedMaps = 0;
+    boolean jobTaskEventReceived = false;
+
+    while (ie.hasNext()) {
+      Object current = ie.next();
+      ++eventNum;
+      LOG.info(eventNum + " " + current.getClass().getName());
+      if (current instanceof JobHistoryEvent) {
+        JobHistoryEvent jhe = (JobHistoryEvent) current;
+        LOG.info(expectedJobHistoryEvents.get(0).toString() + " " +
+            jhe.getHistoryEvent().getEventType().toString() + " " +
+            jhe.getJobID());
+        assertEquals(expectedJobHistoryEvents.get(0),
+            jhe.getHistoryEvent().getEventType());
+        expectedJobHistoryEvents.remove(0);
+      }  else if (current instanceof JobCounterUpdateEvent) {
+        JobCounterUpdateEvent jcue = (JobCounterUpdateEvent) current;
+
+        LOG.info("JobCounterUpdateEvent "
+            + jcue.getCounterUpdates().get(0).getCounterKey()
+            + " " + jcue.getCounterUpdates().get(0).getIncrementValue());
+        if (jcue.getCounterUpdates().get(0).getCounterKey() ==
+            JobCounter.NUM_FAILED_MAPS) {
+          totalFailedMaps += jcue.getCounterUpdates().get(0)
+              .getIncrementValue();
+        } else if (jcue.getCounterUpdates().get(0).getCounterKey() ==
+            JobCounter.TOTAL_LAUNCHED_MAPS) {
+          totalLaunchedMaps += jcue.getCounterUpdates().get(0)
+              .getIncrementValue();
+        }
+      } else if (current instanceof JobTaskEvent) {
+        JobTaskEvent jte = (JobTaskEvent) current;
+        assertEquals(jte.getState(), finalState);
+        jobTaskEventReceived = true;
+      }
+    }
+    assertTrue(jobTaskEventReceived || (finalState == TaskState.RUNNING));
+    assertEquals("Did not process all expected JobHistoryEvents",
+        0, expectedJobHistoryEvents.size());
+    assertEquals("Expected Map Launches",
+        expectedMapLaunches, totalLaunchedMaps);
+    assertEquals("Expected Failed Maps",
+        expectedFailedMaps, totalFailedMaps);
+  }
+
+  private MapTaskImpl getMockMapTask(long clusterTimestamp, EventHandler eh) {
+
+    ApplicationId appId = BuilderUtils.newApplicationId(clusterTimestamp, 1);
+    JobId jobId = MRBuilderUtils.newJobId(appId, 1);
+
+    int partitions = 2;
+
+    Path remoteJobConfFile = mock(Path.class);
+    JobConf conf = new JobConf();
+    TaskAttemptListener taskAttemptListener = mock(TaskAttemptListener.class);
+    Token<JobTokenIdentifier> jobToken =
+        (Token<JobTokenIdentifier>) mock(Token.class);
+    Credentials credentials = null;
+    Clock clock = new SystemClock();
+    int appAttemptId = 3;
+    MRAppMetrics metrics = mock(MRAppMetrics.class);
+    Resource minContainerRequirements = mock(Resource.class);
+    when(minContainerRequirements.getMemory()).thenReturn(1000);
+
+    ClusterInfo clusterInfo = mock(ClusterInfo.class);
+    when(clusterInfo.getMinContainerCapability()).thenReturn(
+        minContainerRequirements);
+    AppContext appContext = mock(AppContext.class);
+    when(appContext.getClusterInfo()).thenReturn(clusterInfo);
+
+    TaskSplitMetaInfo taskSplitMetaInfo = mock(TaskSplitMetaInfo.class);
+    MapTaskImpl mapTask = new MapTaskImpl(jobId, partitions,
+        eh, remoteJobConfFile, conf,
+        taskSplitMetaInfo, taskAttemptListener, jobToken, credentials, clock,
+        appAttemptId, metrics, appContext);
+    return mapTask;
+  }
+
+  private TaskAttemptInfo getMockTaskAttemptInfo(TaskAttemptID tai,
+      TaskAttemptState tas) {
+
+    ContainerId ci = mock(ContainerId.class);
+    Counters counters = mock(Counters.class);
+    TaskType tt = TaskType.MAP;
+
+    long finishTime = System.currentTimeMillis();
+
+    TaskAttemptInfo mockTAinfo = mock(TaskAttemptInfo.class);
+
+    when(mockTAinfo.getAttemptId()).thenReturn(tai);
+    when(mockTAinfo.getContainerId()).thenReturn(ci);
+    when(mockTAinfo.getCounters()).thenReturn(counters);
+    when(mockTAinfo.getError()).thenReturn("");
+    when(mockTAinfo.getFinishTime()).thenReturn(finishTime);
+    when(mockTAinfo.getHostname()).thenReturn("localhost");
+    when(mockTAinfo.getHttpPort()).thenReturn(23);
+    when(mockTAinfo.getMapFinishTime()).thenReturn(finishTime - 1000L);
+    when(mockTAinfo.getPort()).thenReturn(24);
+    when(mockTAinfo.getRackname()).thenReturn("defaultRack");
+    when(mockTAinfo.getShuffleFinishTime()).thenReturn(finishTime - 2000L);
+    when(mockTAinfo.getShufflePort()).thenReturn(25);
+    when(mockTAinfo.getSortFinishTime()).thenReturn(finishTime - 3000L);
+    when(mockTAinfo.getStartTime()).thenReturn(finishTime -10000);
+    when(mockTAinfo.getState()).thenReturn("task in progress");
+    when(mockTAinfo.getTaskStatus()).thenReturn(tas.toString());
+    when(mockTAinfo.getTaskType()).thenReturn(tt);
+    when(mockTAinfo.getTrackerName()).thenReturn("TrackerName");
+    return mockTAinfo;
+  }
+
   private void writeBadOutput(TaskAttempt attempt, Configuration conf)
   throws Exception {
   TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, 
@@ -1019,8 +1589,31 @@ public class TestRecovery {
     }
   }
 
+  static class MRAppNoShuffleSecret extends MRAppWithHistory {
+    public MRAppNoShuffleSecret(int maps, int reduces, boolean autoComplete,
+        String testName, boolean cleanOnStart, int startCount) {
+      super(maps, reduces, autoComplete, testName, cleanOnStart, startCount);
+    }
+
+    @Override
+    protected void downloadTokensAndSetupUGI(Configuration conf) {
+      // do NOT put a shuffle secret in the job credentials
+    }
+  }
+
   public static void main(String[] arg) throws Exception {
     TestRecovery test = new TestRecovery();
     test.testCrashed();
+    test.testMultipleCrashes();
+    test.testOutputRecovery();
+    test.testOutputRecoveryMapsOnly();
+    test.testRecoveryWithOldCommiter();
+    test.testSpeculative();
+    test.testRecoveryWithoutShuffleSecret();
+    test.testRecoverySuccessAttempt();
+    test.testRecoveryAllFailAttempts();
+    test.testRecoveryTaskSuccessAllAttemptsFail();
+    test.testRecoveryTaskSuccessAllAttemptsSucceed();
+    test.testRecoveryAllAttemptsKilled();
   }
 }

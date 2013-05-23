@@ -112,12 +112,6 @@ if [[ ( "$HADOOP_SLAVES" != '' ) && ( "$HADOOP_SLAVE_NAMES" != '' ) ]] ; then
   exit 1
 fi
 
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
-
 # check if net.ipv6.bindv6only is set to 1
 bindv6only=$(/sbin/sysctl -n net.ipv6.bindv6only 2> /dev/null)
 if [ -n "$bindv6only" ] && [ "$bindv6only" -eq "1" ] && [ "$HADOOP_ALLOW_IPV6" != "yes" ]
@@ -164,10 +158,6 @@ fi
 # CLASSPATH initially contains $HADOOP_CONF_DIR
 CLASSPATH="${HADOOP_CONF_DIR}"
 
-if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ] && [ "$HADOOP_CLASSPATH" != "" ] ; then
-  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
-fi
-
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
@@ -188,11 +178,6 @@ fi
 
 CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/$HADOOP_COMMON_DIR'/*'
 
-# add user-specified CLASSPATH last
-if [ "$HADOOP_USER_CLASSPATH_FIRST" = "" ] && [ "$HADOOP_CLASSPATH" != "" ]; then
-  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
-fi
-
 # default log directory & file
 if [ "$HADOOP_LOG_DIR" = "" ]; then
   HADOOP_LOG_DIR="$HADOOP_PREFIX/logs"
@@ -209,13 +194,6 @@ fi
 # restore ordinary behaviour
 unset IFS
 
-# cygwin path translation
-if $cygwin; then
-  HADOOP_PREFIX=`cygpath -w "$HADOOP_PREFIX"`
-  HADOOP_LOG_DIR=`cygpath -w "$HADOOP_LOG_DIR"`
-  JAVA_LIBRARY_PATH=`cygpath -w "$JAVA_LIBRARY_PATH"`
-fi
-
 # setup 'java.library.path' for native-hadoop code if necessary
 
 if [ -d "${HADOOP_PREFIX}/build/native" -o -d "${HADOOP_PREFIX}/$HADOOP_COMMON_LIB_NATIVE_DIR" ]; then
@@ -231,11 +209,6 @@ fi
 
 # setup a default TOOL_PATH
 TOOL_PATH="${TOOL_PATH:-$HADOOP_PREFIX/share/hadoop/tools/lib/*}"
-
-# cygwin path translation
-if $cygwin; then
-  JAVA_LIBRARY_PATH=`cygpath -p "$JAVA_LIBRARY_PATH"`
-fi
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
@@ -304,14 +277,14 @@ if [ "$HADOOP_MAPRED_HOME/$MAPRED_DIR" != "$HADOOP_YARN_HOME/$YARN_DIR" ] ; then
   CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_DIR'/*'
 fi
 
-# cygwin path translation
-if $cygwin; then
-  HADOOP_HDFS_HOME=`cygpath -w "$HADOOP_HDFS_HOME"`
+# Add the user-specified CLASSPATH via HADOOP_CLASSPATH
+# Add it first or last depending on if user has
+# set env-var HADOOP_USER_CLASSPATH_FIRST
+if [ "$HADOOP_CLASSPATH" != "" ]; then
+  # Prefix it if its to be preceded
+  if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ]; then
+    CLASSPATH=${HADOOP_CLASSPATH}:${CLASSPATH}
+  else
+    CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
+  fi
 fi
-
-# cygwin path translation
-if $cygwin; then
-  TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
-fi
-
-

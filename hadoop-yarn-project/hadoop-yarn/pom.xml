@@ -30,6 +30,7 @@
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
     <yarn.basedir>${basedir}</yarn.basedir>
+    <hadoop.common.build.dir>${basedir}/../../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
   </properties>
 
   <dependencies>
@@ -85,7 +86,7 @@
       <artifactId>guice-servlet</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.jboss.netty</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>netty</artifactId>
     </dependency>
     <dependency>

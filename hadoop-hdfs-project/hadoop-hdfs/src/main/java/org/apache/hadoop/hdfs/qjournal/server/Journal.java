@@ -128,6 +128,10 @@ class Journal implements Closeable {
 
   private final JournalMetrics metrics;
 
+  /**
+   * Time threshold for sync calls, beyond which a warning should be logged to the console.
+   */
+  private static final int WARN_SYNC_MILLIS_THRESHOLD = 1000;
 
   Journal(File logDir, String journalId,
       StorageErrorReporter errorReporter) throws IOException {
@@ -215,8 +219,8 @@ class Journal implements Closeable {
   @Override // Closeable
   public void close() throws IOException {
     storage.close();
-    
     IOUtils.closeStream(committedTxnId);
+    IOUtils.closeStream(curSegment);
   }
   
   JNStorage getStorage() {
@@ -370,6 +374,10 @@ class Journal implements Closeable {
     sw.stop();
     
     metrics.addSync(sw.elapsedTime(TimeUnit.MICROSECONDS));
+    if (sw.elapsedTime(TimeUnit.MILLISECONDS) > WARN_SYNC_MILLIS_THRESHOLD) {
+      LOG.warn("Sync of transaction range " + firstTxnId + "-" + lastTxnId +
+               " took " + sw.elapsedTime(TimeUnit.MILLISECONDS) + "ms");
+    }
 
     if (isLagging) {
       // This batch of edits has already been committed on a quorum of other
@@ -619,14 +627,14 @@ class Journal implements Closeable {
   /**
    * @see QJournalProtocol#getEditLogManifest(String, long)
    */
-  public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
-      throws IOException {
+  public RemoteEditLogManifest getEditLogManifest(long sinceTxId,
+      boolean forReading) throws IOException {
     // No need to checkRequest() here - anyone may ask for the list
     // of segments.
     checkFormatted();
     
     RemoteEditLogManifest manifest = new RemoteEditLogManifest(
-        fjm.getRemoteEditLogs(sinceTxId));
+        fjm.getRemoteEditLogs(sinceTxId, forReading));
     return manifest;
   }
 

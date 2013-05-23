@@ -47,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -217,7 +218,8 @@ public abstract class FSImageTestUtil {
         FsPermission.createImmutable((short)0755));
     for (int i = 1; i <= numDirs; i++) {
       String dirName = "dir" + i;
-      INodeDirectory dir = new INodeDirectory(newInodeId + i -1, dirName, perms);
+      INodeDirectory dir = new INodeDirectory(newInodeId + i - 1,
+          DFSUtil.string2Bytes(dirName), perms, 0L);
       editLog.logMkDir("/" + dirName, dir);
     }
     editLog.logSync();
@@ -272,15 +274,15 @@ public abstract class FSImageTestUtil {
     for (File dir : dirs) {
       FSImageTransactionalStorageInspector inspector =
         inspectStorageDirectory(dir, NameNodeDirType.IMAGE);
-      FSImageFile latestImage = inspector.getLatestImage();
-      assertNotNull("No image in " + dir, latestImage);      
-      long thisTxId = latestImage.getCheckpointTxId();
+      List<FSImageFile> latestImages = inspector.getLatestImages();
+      assert(!latestImages.isEmpty());
+      long thisTxId = latestImages.get(0).getCheckpointTxId();
       if (imageTxId != -1 && thisTxId != imageTxId) {
         fail("Storage directory " + dir + " does not have the same " +
             "last image index " + imageTxId + " as another");
       }
       imageTxId = thisTxId;
-      imageFiles.add(inspector.getLatestImage().getFile());
+      imageFiles.add(inspector.getLatestImages().get(0).getFile());
     }
     
     assertFileContentsSame(imageFiles.toArray(new File[0]));
@@ -424,7 +426,7 @@ public abstract class FSImageTestUtil {
       new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(sd);
     
-    return inspector.getLatestImage().getFile();
+    return inspector.getLatestImages().get(0).getFile();
   }
 
   /**
@@ -439,8 +441,8 @@ public abstract class FSImageTestUtil {
       new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(sd);
 
-    FSImageFile latestImage = inspector.getLatestImage();
-    return (latestImage == null) ? null : latestImage.getFile();
+    List<FSImageFile> latestImages = inspector.getLatestImages();
+    return (latestImages.isEmpty()) ? null : latestImages.get(0).getFile();
   }
 
   /**

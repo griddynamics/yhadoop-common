@@ -100,6 +100,11 @@
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.util.ProgramDriver" />
+       <Method name="driver" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
      <!--
        We need to cast objects between old and new api objects
      -->
@@ -307,5 +312,12 @@
        <Class name="org.apache.hadoop.fs.DelegationTokenRenewer" />
        <Method name="removeRenewAction" />
        <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     
+     <!-- Inconsistent synchronization flagged by findbugs is not valid. -->
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Client$Connection" />
+       <Field name="in" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
  </FindBugsFilter>

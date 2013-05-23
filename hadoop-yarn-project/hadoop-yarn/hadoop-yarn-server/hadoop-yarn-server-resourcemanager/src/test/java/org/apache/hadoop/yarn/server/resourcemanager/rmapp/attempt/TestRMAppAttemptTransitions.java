@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -199,13 +200,14 @@ public class TestRMAppAttemptTransitions {
     final String user = MockApps.newUserName();
     final String queue = MockApps.newQueue();
     submissionContext = mock(ApplicationSubmissionContext.class);
-    when(submissionContext.getUser()).thenReturn(user);
     when(submissionContext.getQueue()).thenReturn(queue);
-    ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
-    Resource resource = mock(Resource.class);
-    when(amContainerSpec.getResource()).thenReturn(resource);
+    Resource resource = BuilderUtils.newResource(1536, 1);
+    ContainerLaunchContext amContainerSpec =
+        BuilderUtils.newContainerLaunchContext(user, null, null,
+            null, null, null, null);
     when(submissionContext.getAMContainerSpec()).thenReturn(amContainerSpec);
-    
+    when(submissionContext.getResource()).thenReturn(resource);
+
     unmanagedAM = false;
     
     application = mock(RMApp.class);
@@ -468,8 +470,10 @@ public class TestRMAppAttemptTransitions {
     
     // Mock the allocation of AM container 
     Container container = mock(Container.class);
+    Resource resource = BuilderUtils.newResource(2048, 1);
     when(container.getId()).thenReturn(
         BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
+    when(container.getResource()).thenReturn(resource);
     Allocation allocation = mock(Allocation.class);
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
@@ -659,6 +663,39 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
     assertEquals(0, applicationAttempt.getRanNodes().size());
+    String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
+        applicationAttempt.getAppAttemptId().getApplicationId());
+    assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
+    assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
+  }
+
+  @Test(timeout=10000)
+  public void testLaunchedExpire() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    applicationAttempt.handle(new RMAppAttemptEvent(
+        applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    assertEquals(RMAppAttemptState.FAILED,
+        applicationAttempt.getAppAttemptState());
+    assertTrue("expire diagnostics missing",
+        applicationAttempt.getDiagnostics().contains("timed out"));
+    String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
+        applicationAttempt.getAppAttemptId().getApplicationId());
+    assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
+    assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
+  }
+
+  @Test(timeout=20000)
+  public void testRunningExpire() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl");
+    applicationAttempt.handle(new RMAppAttemptEvent(
+        applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    assertEquals(RMAppAttemptState.FAILED,
+        applicationAttempt.getAppAttemptState());
+    assertTrue("expire diagnostics missing",
+        applicationAttempt.getDiagnostics().contains("timed out"));
     String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());

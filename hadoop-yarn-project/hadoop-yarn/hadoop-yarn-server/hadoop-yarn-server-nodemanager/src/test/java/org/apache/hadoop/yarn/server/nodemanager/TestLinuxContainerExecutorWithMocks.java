@@ -27,6 +27,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -36,6 +37,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -77,8 +79,8 @@ public class TestLinuxContainerExecutorWithMocks {
   @Before
   public void setup() {
     File f = new File("./src/test/resources/mock-container-executor");
-    if(!f.canExecute()) {
-      f.setExecutable(true);
+    if(!FileUtil.canExecute(f)) {
+      FileUtil.setExecutable(f, true);
     }
     String executorPath = f.getAbsolutePath();
     Configuration conf = new Configuration();
@@ -106,7 +108,10 @@ public class TestLinuxContainerExecutorWithMocks {
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
     HashMap<String, String> env = new HashMap<String,String>();
     
-    when(container.getContainerID()).thenReturn(cId);
+    org.apache.hadoop.yarn.api.records.Container containerAPI =
+        mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(container.getContainer()).thenReturn(containerAPI);
+    when(container.getContainer().getId()).thenReturn(cId);
     when(container.getLaunchContext()).thenReturn(context);
     
     when(cId.toString()).thenReturn(containerId);
@@ -131,8 +136,41 @@ public class TestLinuxContainerExecutorWithMocks {
     
   }
 
+  @Test (timeout = 5000)
+  public void testContainerLaunchWithPriority() throws IOException {
+
+    // set the scheduler priority to make sure still works with nice -n prio
+    File f = new File("./src/test/resources/mock-container-executor");
+    if (!FileUtil.canExecute(f)) {
+      FileUtil.setExecutable(f, true);
+    }
+    String executorPath = f.getAbsolutePath();
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, executorPath);
+    conf.setInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 2);
+
+    mockExec.setConf(conf);
+    List<String> command = new ArrayList<String>();
+    mockExec.addSchedPriorityCommand(command);
+    assertEquals("first should be nice", "nice", command.get(0));
+    assertEquals("second should be -n", "-n", command.get(1));
+    assertEquals("third should be the priority", Integer.toString(2), 
+                 command.get(2)); 
+
+    testContainerLaunch();
+  }
+
+  @Test (timeout = 5000)
+  public void testLaunchCommandWithoutPriority() throws IOException {
+    // make sure the command doesn't contain the nice -n since priority
+    // not specified
+    List<String> command = new ArrayList<String>();
+    mockExec.addSchedPriorityCommand(command);
+    assertEquals("addSchedPriority should be empty", 0, command.size());
+  }
+
   
-  @Test
+  @Test (timeout = 5000)
   public void testStartLocalizer() throws IOException {
 
   
@@ -167,8 +205,8 @@ public class TestLinuxContainerExecutorWithMocks {
 
     // reinitialize executer
     File f = new File("./src/test/resources/mock-container-executer-with-error");
-    if (!f.canExecute()) {
-      f.setExecutable(true);
+    if (!FileUtil.canExecute(f)) {
+      FileUtil.setExecutable(f, true);
     }
     String executorPath = f.getAbsolutePath();
     Configuration conf = new Configuration();
@@ -191,7 +229,10 @@ public class TestLinuxContainerExecutorWithMocks {
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
     HashMap<String, String> env = new HashMap<String, String>();
 
-    when(container.getContainerID()).thenReturn(cId);
+    org.apache.hadoop.yarn.api.records.Container containerAPI =
+        mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(container.getContainer()).thenReturn(containerAPI);
+    when(container.getContainer().getId()).thenReturn(cId);
     when(container.getLaunchContext()).thenReturn(context);
 
     when(cId.toString()).thenReturn(containerId);

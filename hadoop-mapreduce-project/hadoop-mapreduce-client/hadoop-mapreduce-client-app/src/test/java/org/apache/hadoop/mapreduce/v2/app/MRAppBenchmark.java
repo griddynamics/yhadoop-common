@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -40,12 +41,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -203,7 +202,7 @@ public class MRAppBenchmark {
               public RegisterApplicationMasterResponse
                   registerApplicationMaster(
                       RegisterApplicationMasterRequest request)
-                      throws YarnRemoteException {
+                      throws IOException {
                 RegisterApplicationMasterResponse response =
                     Records.newRecord(RegisterApplicationMasterResponse.class);
                 response.setMinimumResourceCapability(BuilderUtils
@@ -216,7 +215,7 @@ public class MRAppBenchmark {
               @Override
               public FinishApplicationMasterResponse finishApplicationMaster(
                   FinishApplicationMasterRequest request)
-                  throws YarnRemoteException {
+                  throws IOException {
                 FinishApplicationMasterResponse response =
                     Records.newRecord(FinishApplicationMasterResponse.class);
                 return response;
@@ -224,14 +223,14 @@ public class MRAppBenchmark {
 
               @Override
               public AllocateResponse allocate(AllocateRequest request)
-                  throws YarnRemoteException {
+                  throws IOException {
 
                 AllocateResponse response =
                     Records.newRecord(AllocateResponse.class);
                 List<ResourceRequest> askList = request.getAskList();
                 List<Container> containers = new ArrayList<Container>();
                 for (ResourceRequest req : askList) {
-                  if (req.getHostName() != "*") {
+                  if (!ResourceRequest.isAnyLocation(req.getHostName())) {
                     continue;
                   }
                   int numContainers = req.getNumContainers();
@@ -244,14 +243,12 @@ public class MRAppBenchmark {
                       .newContainer(containerId, BuilderUtils.newNodeId("host"
                           + containerId.getId(), 2345),
                         "host" + containerId.getId() + ":5678", req
-                          .getCapability(), req.getPriority(), null));
+                          .getCapability(), req.getPriority(), null, 0));
                   }
                 }
 
-                AMResponse amResponse = Records.newRecord(AMResponse.class);
-                amResponse.setAllocatedContainers(containers);
-                amResponse.setResponseId(request.getResponseId() + 1);
-                response.setAMResponse(amResponse);
+                response.setAllocatedContainers(containers);
+                response.setResponseId(request.getResponseId() + 1);
                 response.setNumClusterNodes(350);
                 return response;
               }

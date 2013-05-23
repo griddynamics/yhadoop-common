@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -72,6 +73,7 @@ import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -81,6 +83,7 @@ import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -106,6 +109,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.CodedOutputStream;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -201,7 +205,8 @@ public abstract class Server {
   // 6 : Made RPC Request header explicit
   // 7 : Changed Ipc Connection Header to use Protocol buffers
   // 8 : SASL server always sends a final response
-  public static final byte CURRENT_VERSION = 8;
+  // 9 : Changes to protocol for HADOOP-8990
+  public static final byte CURRENT_VERSION = 9;
 
   /**
    * Initial and max size of response buffer
@@ -313,6 +318,14 @@ public abstract class Server {
     return (addr == null) ? null : addr.getHostAddress();
   }
 
+  /** Returns the RPC remote user when invoked inside an RPC.  Note this
+   *  may be different than the current user if called within another doAs
+   *  @return connection's UGI or null if not an RPC
+   */
+  public static UserGroupInformation getRemoteUser() {
+    Call call = CurCall.get();
+    return (call != null) ? call.connection.user : null;
+  }
  
   /** Return true if the invocation was through an RPC.
    */
@@ -424,6 +437,11 @@ public abstract class Server {
   @VisibleForTesting
   Iterable<? extends Thread> getHandlers() {
     return Arrays.asList(handlers);
+  }
+
+  @VisibleForTesting
+  List<Connection> getConnections() {
+    return connectionList;
   }
 
   /**
@@ -1092,6 +1110,7 @@ public abstract class Server {
     private ByteBuffer connectionHeaderBuf = null;
     private ByteBuffer unwrappedData;
     private ByteBuffer unwrappedDataLengthBuffer;
+    private int serviceClass;
     
     UserGroupInformation user = null;
     public UserGroupInformation attemptingUser = null; // user name before auth
@@ -1219,7 +1238,8 @@ public abstract class Server {
           rpcMetrics.incrAuthenticationFailures();
           String clientIP = this.toString();
           // attempting user could be null
-          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
+          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser +
+            " (" + e.getLocalizedMessage() + ")");
           throw e;
         }
         if (saslServer.isComplete() && replyToken == null) {
@@ -1302,14 +1322,17 @@ public abstract class Server {
         if (!connectionHeaderRead) {
           //Every connection is expected to send the header.
           if (connectionHeaderBuf == null) {
-            connectionHeaderBuf = ByteBuffer.allocate(3);
+            connectionHeaderBuf = ByteBuffer.allocate(4);
           }
           count = channelRead(channel, connectionHeaderBuf);
           if (count < 0 || connectionHeaderBuf.remaining() > 0) {
             return count;
           }
           int version = connectionHeaderBuf.get(0);
-          byte[] method = new byte[] {connectionHeaderBuf.get(1)};
+          // TODO we should add handler for service class later
+          this.setServiceClass(connectionHeaderBuf.get(1));
+
+          byte[] method = new byte[] {connectionHeaderBuf.get(2)};
           authMethod = AuthMethod.read(new DataInputStream(
               new ByteArrayInputStream(method)));
           dataLengthBuffer.flip();
@@ -1333,7 +1356,7 @@ public abstract class Server {
           }
           
           IpcSerializationType serializationType = IpcSerializationType
-              .fromByte(connectionHeaderBuf.get(2));
+              .fromByte(connectionHeaderBuf.get(3));
           if (serializationType != IpcSerializationType.PROTOBUF) {
             respondUnsupportedSerialization(serializationType);
             return -1;
@@ -1416,7 +1439,8 @@ public abstract class Server {
         final String ioeMessage  = ioe.getLocalizedMessage();
         if (authMethod == AuthMethod.SIMPLE) {
           setupResponse(authFailedResponse, authFailedCall,
-              RpcStatusProto.FATAL, null, ioeClass, ioeMessage);
+              RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_UNAUTHORIZED, 
+              null, ioeClass, ioeMessage);
           responder.doRespond(authFailedCall);
         } else {
           doSaslReply(SaslStatus.ERROR, null, ioeClass, ioeMessage);
@@ -1503,10 +1527,16 @@ public abstract class Server {
       " cannot communicate with client version " + clientVersion;
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
       
-      if (clientVersion >= 3) {
+      if (clientVersion >= 9) {
+        // Versions >>9  understand the normal response
         Call fakeCall =  new Call(-1, null, this);
-        // Versions 3 and greater can interpret this exception
-        // response in the same manner
+        setupResponse(buffer, fakeCall, 
+            RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_VERSION_MISMATCH,
+            null, VersionMismatch.class.getName(), errMsg);
+        responder.doRespond(fakeCall);
+      } else if (clientVersion >= 3) {
+        Call fakeCall =  new Call(-1, null, this);
+        // Versions 3 to 8 use older response
         setupResponseOldVersionFatal(buffer, fakeCall,
             null, VersionMismatch.class.getName(), errMsg);
 
@@ -1530,8 +1560,9 @@ public abstract class Server {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
       Call fakeCall = new Call(-1, null, this);
-      setupResponse(buffer, fakeCall, RpcStatusProto.FATAL, null,
-          IpcException.class.getName(), errMsg);
+      setupResponse(buffer, fakeCall, 
+       RpcStatusProto.FATAL,  RpcErrorCodeProto.FATAL_UNSUPPORTED_SERIALIZATION,
+       null, IpcException.class.getName(), errMsg);
       responder.doRespond(fakeCall);
     }
     
@@ -1553,9 +1584,6 @@ public abstract class Server {
       UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);
       if (saslServer == null) {
         user = protocolUser;
-        if (user != null) {
-          user.setAuthenticationMethod(AuthMethod.SIMPLE);
-        }
       } else {
         // user is authenticated
         user.setAuthenticationMethod(authMethod);
@@ -1623,7 +1651,7 @@ public abstract class Server {
     private void processOneRpc(byte[] buf) throws IOException,
         InterruptedException {
       if (connectionContextRead) {
-        processData(buf);
+        processRpcRequest(buf);
       } else {
         processConnectionContext(buf);
         connectionContextRead = true;
@@ -1635,7 +1663,17 @@ public abstract class Server {
       }
     }
     
-    private void processData(byte[] buf) throws  IOException, InterruptedException {
+    /**
+     * Process an RPC Request - the connection headers and context have been
+     * read
+     * @param buf - contains the RPC request header and the rpc request
+     * @throws RpcServerException due to fatal rpc layer issues such as
+     *   invalid header. In this case a RPC fatal status response is sent back
+     *   to client.
+     */
+    
+    private void processRpcRequest(byte[] buf) 
+        throws  RpcServerException, IOException, InterruptedException {
       DataInputStream dis =
         new DataInputStream(new ByteArrayInputStream(buf));
       RpcRequestHeaderProto header = RpcRequestHeaderProto.parseDelimitedFrom(dis);
@@ -1643,51 +1681,58 @@ public abstract class Server {
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + header.getCallId());
       if (!header.hasRpcOp()) {
-        throw new IOException(" IPC Server: No rpc op in rpcRequestHeader");
+        String err = " IPC Server: No rpc op in rpcRequestHeader";
+        respondBadRpcHeader(new Call(header.getCallId(), null, this),
+            RpcServerException.class.getName(), err);
+        throw new RpcServerException(err);
       }
       if (header.getRpcOp() != 
           RpcRequestHeaderProto.OperationProto.RPC_FINAL_PACKET) {
-        throw new IOException("IPC Server does not implement operation" + 
-              header.getRpcOp());
+        String err = "IPC Server does not implement rpc header operation" + 
+                header.getRpcOp();
+        respondBadRpcHeader(new Call(header.getCallId(), null, this),
+            RpcServerException.class.getName(), err);
+        throw new RpcServerException(err);
       }
       // If we know the rpc kind, get its class so that we can deserialize
       // (Note it would make more sense to have the handler deserialize but 
       // we continue with this original design.
       if (!header.hasRpcKind()) {
-        throw new IOException(" IPC Server: No rpc kind in rpcRequestHeader");
+        String err = " IPC Server: No rpc kind in rpcRequestHeader";
+        respondBadRpcHeader(new Call(header.getCallId(), null, this),
+            RpcServerException.class.getName(), err);
+        throw new RpcServerException(err);
       }
       Class<? extends Writable> rpcRequestClass = 
           getRpcRequestWrapper(header.getRpcKind());
       if (rpcRequestClass == null) {
         LOG.warn("Unknown rpc kind "  + header.getRpcKind() + 
             " from client " + getHostAddress());
-        final Call readParamsFailedCall = 
-            new Call(header.getCallId(), null, this);
-        ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
-
-        setupResponse(responseBuffer, readParamsFailedCall, RpcStatusProto.FATAL, null,
-            IOException.class.getName(),
-            "Unknown rpc kind "  + header.getRpcKind());
-        responder.doRespond(readParamsFailedCall);
-        return;   
+        final String err = "Unknown rpc kind in rpc header"  + 
+            header.getRpcKind();
+        respondBadRpcHeader(new Call(header.getCallId(), null, this),
+            RpcServerException.class.getName(), err);
+        throw new RpcServerException(err);   
       }
       Writable rpcRequest;
       try { //Read the rpc request
         rpcRequest = ReflectionUtils.newInstance(rpcRequestClass, conf);
         rpcRequest.readFields(dis);
-      } catch (Throwable t) {
+      } catch (Throwable t) { // includes runtime exception from newInstance
         LOG.warn("Unable to read call parameters for client " +
                  getHostAddress() + "on connection protocol " +
             this.protocolName + " for rpcKind " + header.getRpcKind(),  t);
         final Call readParamsFailedCall = 
             new Call(header.getCallId(), null, this);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
+        String err = "IPC server unable to read call parameters: "+ t.getMessage();
 
-        setupResponse(responseBuffer, readParamsFailedCall, RpcStatusProto.FATAL, null,
-            t.getClass().getName(),
-            "IPC server unable to read call parameters: " + t.getMessage());
+        setupResponse(responseBuffer, readParamsFailedCall, 
+            RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST,
+            null, t.getClass().getName(),
+            err);
         responder.doRespond(readParamsFailedCall);
-        return;
+        throw new RpcServerException(err, t);
       }
         
       Call call = new Call(header.getCallId(), rpcRequest, this, 
@@ -1713,7 +1758,8 @@ public abstract class Server {
         rpcMetrics.incrAuthorizationSuccesses();
       } catch (AuthorizationException ae) {
         rpcMetrics.incrAuthorizationFailures();
-        setupResponse(authFailedResponse, authFailedCall, RpcStatusProto.FATAL, null,
+        setupResponse(authFailedResponse, authFailedCall, 
+            RpcStatusProto.FATAL,  RpcErrorCodeProto.FATAL_UNAUTHORIZED, null,
             ae.getClass().getName(), ae.getMessage());
         responder.doRespond(authFailedCall);
         return false;
@@ -1721,6 +1767,22 @@ public abstract class Server {
       return true;
     }
     
+    /**
+     * Get service class for connection
+     * @return the serviceClass
+     */
+    public int getServiceClass() {
+      return serviceClass;
+    }
+
+    /**
+     * Set service class for connection
+     * @param serviceClass the serviceClass to set
+     */
+    public void setServiceClass(int serviceClass) {
+      this.serviceClass = serviceClass;
+    }
+
     private synchronized void close() throws IOException {
       disposeSasl();
       data = null;
@@ -1759,6 +1821,8 @@ public abstract class Server {
           }
           String errorClass = null;
           String error = null;
+          RpcStatusProto returnStatus = RpcStatusProto.SUCCESS;
+          RpcErrorCodeProto detailedErr = null;
           Writable value = null;
 
           CurCall.set(call);
@@ -1783,6 +1847,9 @@ public abstract class Server {
                   );
             }
           } catch (Throwable e) {
+            if (e instanceof UndeclaredThrowableException) {
+              e = e.getCause();
+            }
             String logMsg = getName() + ", call " + call + ": error: " + e;
             if (e instanceof RuntimeException || e instanceof Error) {
               // These exception types indicate something is probably wrong
@@ -1796,7 +1863,14 @@ public abstract class Server {
             } else {
               LOG.info(logMsg, e);
             }
-
+            if (e instanceof RpcServerException) {
+              RpcServerException rse = ((RpcServerException)e); 
+              returnStatus = rse.getRpcStatusProto();
+              detailedErr = rse.getRpcErrorCodeProto();
+            } else {
+              returnStatus = RpcStatusProto.ERROR;
+              detailedErr = RpcErrorCodeProto.ERROR_APPLICATION;
+            }
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
             // Remove redundant error class name from the beginning of the stack trace
@@ -1811,8 +1885,8 @@ public abstract class Server {
             // responder.doResponse() since setupResponse may use
             // SASL to encrypt response data and SASL enforces
             // its own message ordering.
-            setupResponse(buf, call, (error == null) ? RpcStatusProto.SUCCESS
-                : RpcStatusProto.ERROR, value, errorClass, error);
+            setupResponse(buf, call, returnStatus, detailedErr, 
+                value, errorClass, error);
             
             // Discard the large buf and reset it back to smaller size 
             // to free up heap
@@ -1983,38 +2057,60 @@ public abstract class Server {
    * @throws IOException
    */
   private void setupResponse(ByteArrayOutputStream responseBuf,
-                             Call call, RpcStatusProto status, 
+                             Call call, RpcStatusProto status, RpcErrorCodeProto erCode,
                              Writable rv, String errorClass, String error) 
   throws IOException {
     responseBuf.reset();
     DataOutputStream out = new DataOutputStream(responseBuf);
-    RpcResponseHeaderProto.Builder response =  
+    RpcResponseHeaderProto.Builder headerBuilder =  
         RpcResponseHeaderProto.newBuilder();
-    response.setCallId(call.callId);
-    response.setStatus(status);
-
+    headerBuilder.setCallId(call.callId);
+    headerBuilder.setStatus(status);
+    headerBuilder.setServerIpcVersionNum(Server.CURRENT_VERSION);
 
     if (status == RpcStatusProto.SUCCESS) {
+      RpcResponseHeaderProto header = headerBuilder.build();
+      final int headerLen = header.getSerializedSize();
+      int fullLength  = CodedOutputStream.computeRawVarint32Size(headerLen) +
+          headerLen;
       try {
-        response.build().writeDelimitedTo(out);
-        rv.write(out);
+        if (rv instanceof ProtobufRpcEngine.RpcWrapper) {
+          ProtobufRpcEngine.RpcWrapper resWrapper = 
+              (ProtobufRpcEngine.RpcWrapper) rv;
+          fullLength += resWrapper.getLength();
+          out.writeInt(fullLength);
+          header.writeDelimitedTo(out);
+          rv.write(out);
+        } else { // Have to serialize to buffer to get len
+          final DataOutputBuffer buf = new DataOutputBuffer();
+          rv.write(buf);
+          byte[] data = buf.getData();
+          fullLength += buf.getLength();
+          out.writeInt(fullLength);
+          header.writeDelimitedTo(out);
+          out.write(data, 0, buf.getLength());
+        }
       } catch (Throwable t) {
         LOG.warn("Error serializing call response for call " + call, t);
         // Call back to same function - this is OK since the
         // buffer is reset at the top, and since status is changed
         // to ERROR it won't infinite loop.
         setupResponse(responseBuf, call, RpcStatusProto.ERROR,
+            RpcErrorCodeProto.ERROR_SERIALIZING_RESPONSE,
             null, t.getClass().getName(),
             StringUtils.stringifyException(t));
         return;
       }
-    } else {
-      if (status == RpcStatusProto.FATAL) {
-        response.setServerIpcVersionNum(Server.CURRENT_VERSION);
-      }
-      response.build().writeDelimitedTo(out);
-      WritableUtils.writeString(out, errorClass);
-      WritableUtils.writeString(out, error);
+    } else { // Rpc Failure
+      headerBuilder.setExceptionClassName(errorClass);
+      headerBuilder.setErrorMsg(error);
+      headerBuilder.setErrorDetail(erCode);
+      RpcResponseHeaderProto header = headerBuilder.build();
+      int headerLen = header.getSerializedSize();
+      final int fullLength  = 
+          CodedOutputStream.computeRawVarint32Size(headerLen) + headerLen;
+      out.writeInt(fullLength);
+      header.writeDelimitedTo(out);
     }
     if (call.connection.useWrap) {
       wrapWithSasl(responseBuf, call);
@@ -2051,6 +2147,19 @@ public abstract class Server {
       wrapWithSasl(response, call);
     }
     call.setResponse(ByteBuffer.wrap(response.toByteArray()));
+  }
+  
+  
+  private void respondBadRpcHeader(Call call, String errorClass, String error)
+      throws IOException
+  {
+    ByteArrayOutputStream responseBuf = new ByteArrayOutputStream();
+    setupResponse(responseBuf, call, 
+        RpcStatusProto.FATAL,  RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
+        null, errorClass, error);
+    responder.doRespond(call);
+    return; 
+    
   }
   
   private void wrapWithSasl(ByteArrayOutputStream response, Call call)

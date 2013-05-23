@@ -63,6 +63,9 @@ public interface MRJobConfig {
 
   public static final String SPLIT_FILE = "mapreduce.job.splitfile";
 
+  public static final String SPLIT_METAINFO_MAXSIZE = "mapreduce.job.split.metainfo.maxsize";
+  public static final long DEFAULT_SPLIT_METAINFO_MAXSIZE = 10000000L;
+
   public static final String NUM_MAPS = "mapreduce.job.maps";
 
   public static final String MAX_TASK_FAILURES_PER_TRACKER = "mapreduce.job.maxtaskfailures.per.tracker";
@@ -130,6 +133,11 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
 
   public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
+
+  public static final String MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG = "mapreduce.jvm.system-properties-to-log";
+  public static final String DEFAULT_MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG =
+    "os.name,os.version,java.home,java.runtime.version,java.vendor," +
+    "java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name";
 
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
@@ -419,6 +427,7 @@ public interface MRJobConfig {
   /** Enable job recovery.*/
   public static final String MR_AM_JOB_RECOVERY_ENABLE = 
     MR_AM_PREFIX + "job.recovery.enable";
+  public static final boolean MR_AM_JOB_RECOVERY_ENABLE_DEFAULT = true;
 
   /** 
    * Limit on the number of reducers that can be preempted to ensure that at
@@ -565,8 +574,6 @@ public interface MRJobConfig {
   public static final String STDOUT_LOGFILE_ENV = "STDOUT_LOGFILE_ENV";
   public static final String STDERR_LOGFILE_ENV = "STDERR_LOGFILE_ENV";
 
-  public static final String APPLICATION_ATTEMPT_ID_ENV = "APPLICATION_ATTEMPT_ID_ENV";
-
   // This should be the directory where splits file gets localized on the node
   // running ApplicationMaster.
   public static final String JOB_SUBMIT_DIR = "jobSubmitDir";
@@ -612,6 +619,9 @@ public interface MRJobConfig {
   public static final String MR_JOB_END_NOTIFICATION_PROXY =
     "mapreduce.job.end-notification.proxy";
 
+  public static final String MR_JOB_END_NOTIFICATION_TIMEOUT =
+      "mapreduce.job.end-notification.timeout";
+
   public static final String MR_JOB_END_RETRY_ATTEMPTS =
     "mapreduce.job.end-notification.retry.attempts";
 
@@ -623,6 +633,9 @@ public interface MRJobConfig {
 
   public static final String MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL =
     "mapreduce.job.end-notification.max.retry.interval";
+
+  public static final int DEFAULT_MR_JOB_END_NOTIFICATION_TIMEOUT =
+      5000;
 
   /*
    * MR AM Service Authorization
@@ -660,5 +673,15 @@ public interface MRJobConfig {
   
   public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
       "^mapreduce\\.workflow\\.adjacency\\..+";
+
+  public static final String WORKFLOW_TAGS = "mapreduce.workflow.tags";
+
+  /**
+   * The maximum number of application attempts.
+   * It is a application-specific setting.
+   */
+  public static final String MR_AM_MAX_ATTEMPTS = "mapreduce.am.max-attempts";
+
+  public static final int DEFAULT_MR_AM_MAX_ATTEMPTS = 2;
   
 }

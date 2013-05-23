@@ -113,9 +113,9 @@ public class TestTaskAttemptContainerRequest {
     ContainerId containerId = BuilderUtils.newContainerId(1, 1, 1, 1);
 
     ContainerLaunchContext launchCtx =
-        TaskAttemptImpl.createContainerLaunchContext(acls, containerId,
+        TaskAttemptImpl.createContainerLaunchContext(acls,
             jobConf, jobToken, taImpl.createRemoteTask(),
-            TypeConverter.fromYarn(jobId), mock(Resource.class),
+            TypeConverter.fromYarn(jobId),
             mock(WrappedJvmID.class), taListener,
             credentials);
 
@@ -123,7 +123,7 @@ public class TestTaskAttemptContainerRequest {
     Credentials launchCredentials = new Credentials();
 
     DataInputByteBuffer dibb = new DataInputByteBuffer();
-    dibb.reset(launchCtx.getContainerTokens());
+    dibb.reset(launchCtx.getTokens());
     launchCredentials.readTokenStorageStream(dibb);
 
     // verify all tokens specified for the task attempt are in the launch context

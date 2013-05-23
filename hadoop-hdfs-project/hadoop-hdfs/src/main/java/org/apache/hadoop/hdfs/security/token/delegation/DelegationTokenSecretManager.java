@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.security.token.delegation;
 
-import java.io.DataInputStream;
+import java.io.DataInput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -78,6 +78,7 @@ public class DelegationTokenSecretManager
   
   @Override //SecretManager
   public void checkAvailableForRead() throws StandbyException {
+    namesystem.checkOperation(OperationCategory.READ);
     namesystem.readLock();
     try {
       namesystem.checkOperation(OperationCategory.READ);
@@ -109,7 +110,7 @@ public class DelegationTokenSecretManager
    * @param in input stream to read fsimage
    * @throws IOException
    */
-  public synchronized void loadSecretManagerState(DataInputStream in)
+  public synchronized void loadSecretManagerState(DataInput in)
       throws IOException {
     if (running) {
       // a safety check
@@ -265,7 +266,7 @@ public class DelegationTokenSecretManager
   /**
    * Private helper methods to load Delegation tokens from fsimage
    */
-  private synchronized void loadCurrentTokens(DataInputStream in)
+  private synchronized void loadCurrentTokens(DataInput in)
       throws IOException {
     int numberOfTokens = in.readInt();
     for (int i = 0; i < numberOfTokens; i++) {
@@ -281,7 +282,7 @@ public class DelegationTokenSecretManager
    * @param in
    * @throws IOException
    */
-  private synchronized void loadAllKeys(DataInputStream in) throws IOException {
+  private synchronized void loadAllKeys(DataInput in) throws IOException {
     int numberOfKeys = in.readInt();
     for (int i = 0; i < numberOfKeys; i++) {
       DelegationKey value = new DelegationKey();
@@ -307,6 +308,23 @@ public class DelegationTokenSecretManager
             "Interrupted before updating master key");
       }
       namesystem.logUpdateMasterKey(key);
+    }
+  }
+  
+  @Override //AbstractDelegationTokenManager
+  protected void logExpireToken(final DelegationTokenIdentifier dtId)
+      throws IOException {
+    synchronized (noInterruptsLock) {
+      // The edit logging code will fail catastrophically if it
+      // is interrupted during a logSync, since the interrupt
+      // closes the edit log files. Doing this inside the
+      // above lock and then checking interruption status
+      // prevents this bug.
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException(
+            "Interrupted before expiring delegation token");
+      }
+      namesystem.logExpireDelegationToken(dtId);
     }
   }
 

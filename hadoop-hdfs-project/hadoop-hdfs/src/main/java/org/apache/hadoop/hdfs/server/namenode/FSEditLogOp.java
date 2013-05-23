@@ -51,6 +51,7 @@ import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -75,11 +76,6 @@ import java.io.EOFException;
 public abstract class FSEditLogOp {
   public final FSEditLogOpCodes opCode;
   long txid;
-  /**
-   * Opcode size is limited to 1.5 megabytes
-   */
-  public static final int MAX_OP_SIZE = (3 * 1024 * 1024) / 2;
-
 
   @SuppressWarnings("deprecation")
   final public static class OpInstanceCache {
@@ -114,6 +110,12 @@ public abstract class FSEditLogOp {
       inst.put(OP_END_LOG_SEGMENT,
                     new LogSegmentOp(OP_END_LOG_SEGMENT));
       inst.put(OP_UPDATE_BLOCKS, new UpdateBlocksOp());
+
+      inst.put(OP_ALLOW_SNAPSHOT, new AllowSnapshotOp());
+      inst.put(OP_DISALLOW_SNAPSHOT, new DisallowSnapshotOp());
+      inst.put(OP_CREATE_SNAPSHOT, new CreateSnapshotOp());
+      inst.put(OP_DELETE_SNAPSHOT, new DeleteSnapshotOp());
+      inst.put(OP_RENAME_SNAPSHOT, new RenameSnapshotOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -162,6 +164,7 @@ public abstract class FSEditLogOp {
   @SuppressWarnings("unchecked")
   static abstract class AddCloseOp extends FSEditLogOp implements BlockListUpdatingOp {
     int length;
+    long inodeId;
     String path;
     short replication;
     long mtime;
@@ -175,6 +178,11 @@ public abstract class FSEditLogOp {
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
       assert(opCode == OP_ADD || opCode == OP_CLOSE);
+    }
+    
+    <T extends AddCloseOp> T setInodeId(long inodeId) {
+      this.inodeId = inodeId;
+      return (T)this;
     }
 
     <T extends AddCloseOp> T setPath(String path) {
@@ -239,6 +247,7 @@ public abstract class FSEditLogOp {
     @Override
     public 
     void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(inodeId, out);
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeShort(replication, out);
       FSImageSerialization.writeLong(mtime, out);
@@ -258,6 +267,12 @@ public abstract class FSEditLogOp {
         throws IOException {
       if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
         this.length = in.readInt();
+      }
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, logVersion)) {
+        this.inodeId = in.readLong();
+      } else {
+        // The inodeId should be updated when this editLogOp is applied
+        this.inodeId = INodeId.GRANDFATHER_INODE_ID;
       }
       if ((-17 < logVersion && length != 4) ||
           (logVersion <= -17 && length != 5 && !LayoutVersion.supports(
@@ -331,6 +346,8 @@ public abstract class FSEditLogOp {
       StringBuilder builder = new StringBuilder();
       builder.append("[length=");
       builder.append(length);
+      builder.append(", inodeId=");
+      builder.append(inodeId);
       builder.append(", path=");
       builder.append(path);
       builder.append(", replication=");
@@ -361,6 +378,8 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "LENGTH",
           Integer.valueOf(length).toString());
+      XMLUtils.addSaxString(contentHandler, "INODEID",
+          Long.valueOf(inodeId).toString());
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "REPLICATION",
           Short.valueOf(replication).toString());
@@ -380,6 +399,7 @@ public abstract class FSEditLogOp {
 
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
+      this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
       this.replication = Short.valueOf(st.getValue("REPLICATION"));
       this.mtime = Long.valueOf(st.getValue("MTIME"));
@@ -911,6 +931,7 @@ public abstract class FSEditLogOp {
     
   static class MkdirOp extends FSEditLogOp {
     int length;
+    long inodeId;
     String path;
     long timestamp;
     PermissionStatus permissions;
@@ -923,6 +944,11 @@ public abstract class FSEditLogOp {
       return (MkdirOp)cache.get(OP_MKDIR);
     }
 
+    MkdirOp setInodeId(long inodeId) {
+      this.inodeId = inodeId;
+      return this;
+    }
+    
     MkdirOp setPath(String path) {
       this.path = path;
       return this;
@@ -941,6 +967,7 @@ public abstract class FSEditLogOp {
     @Override
     public 
     void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(inodeId, out);
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeLong(timestamp, out); // mtime
       FSImageSerialization.writeLong(timestamp, out); // atime, unused at this
@@ -956,6 +983,12 @@ public abstract class FSEditLogOp {
           logVersion <= -17 && length != 3
           && !LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
         throw new IOException("Incorrect data format. Mkdir operation.");
+      }
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, logVersion)) {
+        this.inodeId = FSImageSerialization.readLong(in);
+      } else {
+        // This id should be updated when this editLogOp is applied
+        this.inodeId = INodeId.GRANDFATHER_INODE_ID;
       }
       this.path = FSImageSerialization.readString(in);
       if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
@@ -983,6 +1016,8 @@ public abstract class FSEditLogOp {
       StringBuilder builder = new StringBuilder();
       builder.append("MkdirOp [length=");
       builder.append(length);
+      builder.append(", inodeId=");
+      builder.append(inodeId);
       builder.append(", path=");
       builder.append(path);
       builder.append(", timestamp=");
@@ -1001,6 +1036,8 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "LENGTH",
           Integer.valueOf(length).toString());
+      XMLUtils.addSaxString(contentHandler, "INODEID",
+          Long.valueOf(inodeId).toString());
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
           Long.valueOf(timestamp).toString());
@@ -1009,6 +1046,7 @@ public abstract class FSEditLogOp {
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
+      this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
       this.timestamp = Long.valueOf(st.getValue("TIMESTAMP"));
       this.permissions =
@@ -1487,6 +1525,7 @@ public abstract class FSEditLogOp {
 
   static class SymlinkOp extends FSEditLogOp {
     int length;
+    long inodeId;
     String path;
     String value;
     long mtime;
@@ -1501,6 +1540,11 @@ public abstract class FSEditLogOp {
       return (SymlinkOp)cache.get(OP_SYMLINK);
     }
 
+    SymlinkOp setId(long inodeId) {
+      this.inodeId = inodeId;
+      return this;
+    }
+    
     SymlinkOp setPath(String path) {
       this.path = path;
       return this;
@@ -1529,6 +1573,7 @@ public abstract class FSEditLogOp {
     @Override
     public 
     void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(inodeId, out);      
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeString(value, out);
       FSImageSerialization.writeLong(mtime, out);
@@ -1545,6 +1590,12 @@ public abstract class FSEditLogOp {
           throw new IOException("Incorrect data format. "
               + "symlink operation.");
         }
+      }
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, logVersion)) {
+        this.inodeId = FSImageSerialization.readLong(in);
+      } else {
+        // This id should be updated when the editLogOp is applied
+        this.inodeId = INodeId.GRANDFATHER_INODE_ID;
       }
       this.path = FSImageSerialization.readString(in);
       this.value = FSImageSerialization.readString(in);
@@ -1564,6 +1615,8 @@ public abstract class FSEditLogOp {
       StringBuilder builder = new StringBuilder();
       builder.append("SymlinkOp [length=");
       builder.append(length);
+      builder.append(", inodeId=");
+      builder.append(inodeId);
       builder.append(", path=");
       builder.append(path);
       builder.append(", value=");
@@ -1586,6 +1639,8 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "LENGTH",
           Integer.valueOf(length).toString());
+      XMLUtils.addSaxString(contentHandler, "INODEID",
+          Long.valueOf(inodeId).toString());
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "VALUE", value);
       XMLUtils.addSaxString(contentHandler, "MTIME",
@@ -1597,6 +1652,7 @@ public abstract class FSEditLogOp {
 
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
+      this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
       this.value = st.getValue("VALUE");
       this.mtime = Long.valueOf(st.getValue("MTIME"));
@@ -2160,6 +2216,309 @@ public abstract class FSEditLogOp {
     }
   }
 
+  /**
+   * Operation corresponding to creating a snapshot
+   */
+  static class CreateSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+    String snapshotName;
+    
+    public CreateSnapshotOp() {
+      super(OP_CREATE_SNAPSHOT);
+    }
+    
+    static CreateSnapshotOp getInstance(OpInstanceCache cache) {
+      return (CreateSnapshotOp)cache.get(OP_CREATE_SNAPSHOT);
+    }
+    
+    CreateSnapshotOp setSnapshotName(String snapName) {
+      this.snapshotName = snapName;
+      return this;
+    }
+
+    public CreateSnapshotOp setSnapshotRoot(String snapRoot) {
+      snapshotRoot = snapRoot;
+      return this;
+    }
+    
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+      snapshotName = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+      FSImageSerialization.writeString(snapshotName, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTNAME", snapshotName);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+      snapshotName = st.getValue("SNAPSHOTNAME");
+    }
+    
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("CreateSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append(", snapshotName=");
+      builder.append(snapshotName);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+  
+  /**
+   * Operation corresponding to delete a snapshot
+   */
+  static class DeleteSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+    String snapshotName;
+    
+    DeleteSnapshotOp() {
+      super(OP_DELETE_SNAPSHOT);
+    }
+    
+    static DeleteSnapshotOp getInstance(OpInstanceCache cache) {
+      return (DeleteSnapshotOp)cache.get(OP_DELETE_SNAPSHOT);
+    }
+    
+    DeleteSnapshotOp setSnapshotName(String snapName) {
+      this.snapshotName = snapName;
+      return this;
+    }
+
+    DeleteSnapshotOp setSnapshotRoot(String snapRoot) {
+      snapshotRoot = snapRoot;
+      return this;
+    }
+    
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+      snapshotName = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+      FSImageSerialization.writeString(snapshotName, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTNAME", snapshotName);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+      snapshotName = st.getValue("SNAPSHOTNAME");
+    }
+    
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("DeleteSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append(", snapshotName=");
+      builder.append(snapshotName);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+  
+  /**
+   * Operation corresponding to rename a snapshot
+   */
+  static class RenameSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+    String snapshotOldName;
+    String snapshotNewName;
+    
+    RenameSnapshotOp() {
+      super(OP_RENAME_SNAPSHOT);
+    }
+    
+    static RenameSnapshotOp getInstance(OpInstanceCache cache) {
+      return (RenameSnapshotOp) cache.get(OP_RENAME_SNAPSHOT);
+    }
+    
+    RenameSnapshotOp setSnapshotOldName(String snapshotOldName) {
+      this.snapshotOldName = snapshotOldName;
+      return this;
+    }
+
+    RenameSnapshotOp setSnapshotNewName(String snapshotNewName) {
+      this.snapshotNewName = snapshotNewName;
+      return this;
+    }
+    
+    RenameSnapshotOp setSnapshotRoot(String snapshotRoot) {
+      this.snapshotRoot = snapshotRoot;
+      return this;
+    }
+    
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+      snapshotOldName = FSImageSerialization.readString(in);
+      snapshotNewName = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+      FSImageSerialization.writeString(snapshotOldName, out);
+      FSImageSerialization.writeString(snapshotNewName, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTOLDNAME", snapshotOldName);
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTNEWNAME", snapshotNewName);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+      snapshotOldName = st.getValue("SNAPSHOTOLDNAME");
+      snapshotNewName = st.getValue("SNAPSHOTNEWNAME");
+    }
+    
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("RenameSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append(", snapshotOldName=");
+      builder.append(snapshotOldName);
+      builder.append(", snapshotNewName=");
+      builder.append(snapshotNewName);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /**
+   * Operation corresponding to allow creating snapshot on a directory
+   */
+  static class AllowSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+
+    public AllowSnapshotOp() {
+      super(OP_ALLOW_SNAPSHOT);
+    }
+
+    public AllowSnapshotOp(String snapRoot) {
+      super(OP_ALLOW_SNAPSHOT);
+      snapshotRoot = snapRoot;
+    }
+
+    static AllowSnapshotOp getInstance(OpInstanceCache cache) {
+      return (AllowSnapshotOp) cache.get(OP_ALLOW_SNAPSHOT);
+    }
+
+    public AllowSnapshotOp setSnapshotRoot(String snapRoot) {
+      snapshotRoot = snapRoot;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("AllowSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /**
+   * Operation corresponding to disallow creating snapshot on a directory
+   */
+  static class DisallowSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+
+    public DisallowSnapshotOp() {
+      super(OP_DISALLOW_SNAPSHOT);
+    }
+
+    public DisallowSnapshotOp(String snapRoot) {
+      super(OP_DISALLOW_SNAPSHOT);
+      snapshotRoot = snapRoot;
+    }
+
+    static DisallowSnapshotOp getInstance(OpInstanceCache cache) {
+      return (DisallowSnapshotOp) cache.get(OP_DISALLOW_SNAPSHOT);
+    }
+
+    public DisallowSnapshotOp setSnapshotRoot(String snapRoot) {
+      snapshotRoot = snapRoot;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("DisallowSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
   static private short readShort(DataInputStream in) throws IOException {
     return Short.parseShort(FSImageSerialization.readString(in));
   }
@@ -2246,6 +2605,7 @@ public abstract class FSEditLogOp {
     private final int logVersion;
     private final Checksum checksum;
     private final OpInstanceCache cache;
+    private int maxOpSize;
 
     /**
      * Construct the reader
@@ -2253,7 +2613,8 @@ public abstract class FSEditLogOp {
      * @param logVersion The version of the data coming from the stream.
      */
     @SuppressWarnings("deprecation")
-    public Reader(DataInputStream in, StreamLimiter limiter, int logVersion) {
+    public Reader(DataInputStream in, StreamLimiter limiter,
+        int logVersion) {
       this.logVersion = logVersion;
       if (LayoutVersion.supports(Feature.EDITS_CHESKUM, logVersion)) {
         this.checksum = new PureJavaCrc32();
@@ -2269,6 +2630,11 @@ public abstract class FSEditLogOp {
       }
       this.limiter = limiter;
       this.cache = new OpInstanceCache();
+      this.maxOpSize = DFSConfigKeys.DFS_NAMENODE_MAX_OP_SIZE_DEFAULT;
+    }
+
+    public void setMaxOpSize(int maxOpSize) {
+      this.maxOpSize = maxOpSize;
     }
 
     /**
@@ -2363,8 +2729,8 @@ public abstract class FSEditLogOp {
      * problematic byte.  This usually means the beginning of the opcode.
      */
     private FSEditLogOp decodeOp() throws IOException {
-      limiter.setLimit(MAX_OP_SIZE);
-      in.mark(MAX_OP_SIZE);
+      limiter.setLimit(maxOpSize);
+      in.mark(maxOpSize);
 
       if (checksum != null) {
         checksum.reset();

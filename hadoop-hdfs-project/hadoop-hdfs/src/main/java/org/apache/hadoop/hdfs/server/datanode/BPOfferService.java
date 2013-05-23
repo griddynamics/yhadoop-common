@@ -538,7 +538,7 @@ class BPOfferService {
         // using global fsdataset
         dn.getFSDataset().invalidate(bcmd.getBlockPoolId(), toDelete);
       } catch(IOException e) {
-        dn.checkDiskError();
+        // Exceptions caught here are not expected to be disk-related.
         throw e;
       }
       dn.metrics.incrBlocksRemoved(toDelete.length);
@@ -612,6 +612,7 @@ class BPOfferService {
     case DatanodeProtocol.DNA_TRANSFER:
     case DatanodeProtocol.DNA_INVALIDATE:
     case DatanodeProtocol.DNA_SHUTDOWN:
+    case DatanodeProtocol.DNA_FINALIZE:
     case DatanodeProtocol.DNA_RECOVERBLOCK:
     case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
       LOG.warn("Got a command from standby NN - ignoring command:" + cmd.getAction());
