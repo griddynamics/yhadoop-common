@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,6 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
-package org.apache.hadoop.mapreduce.v2.app.recover;
+package org.apache.hadoop.hdfs;
+import java.io.IOException;
+
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+
+/**
+ * Used for injecting faults in DFSClient and DFSOutputStream tests.
+ * Calls into this are a no-op in production code. 
+ */
+@VisibleForTesting
+@InterfaceAudience.Private
+public class DFSClientFaultInjector {
+  public static DFSClientFaultInjector instance = new DFSClientFaultInjector();
+
+  public static DFSClientFaultInjector get() {
+    return instance;
+  }
+
+  public boolean corruptPacket() {
+    return false;
+  }
+
+  public boolean uncorruptPacket() {
+    return false;
+  }
+}

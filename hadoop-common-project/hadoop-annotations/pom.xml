@@ -21,12 +21,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.7-SNAPSHOT</version>
+    <version>0.23.8-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-annotations</artifactId>
-  <version>0.23.7-SNAPSHOT</version>
+  <version>0.23.8-SNAPSHOT</version>
   <description>Apache Hadoop Annotations</description>
   <name>Apache Hadoop Annotations</name>
   <packaging>jar</packaging>
@@ -38,5 +38,25 @@
       <scope>compile</scope>
     </dependency>
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>os.linux</id>
+      <activation>
+        <os>
+          <family>!Mac</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>jdk.tools</groupId>
+          <artifactId>jdk.tools</artifactId>
+          <version>1.6</version>
+          <scope>system</scope>
+          <systemPath>${java.home}/../lib/tools.jar</systemPath>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 
 </project>

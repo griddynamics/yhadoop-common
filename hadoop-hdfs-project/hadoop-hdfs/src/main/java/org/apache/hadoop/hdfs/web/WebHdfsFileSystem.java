@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import java.security.PrivilegedExceptionAction;
+
 import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -30,6 +32,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
@@ -62,30 +65,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenRenewer;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
-import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
-import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
-import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
-import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
-import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
-import org.apache.hadoop.hdfs.web.resources.DestinationParam;
-import org.apache.hadoop.hdfs.web.resources.GetOpParam;
-import org.apache.hadoop.hdfs.web.resources.GroupParam;
-import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
-import org.apache.hadoop.hdfs.web.resources.LengthParam;
-import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
-import org.apache.hadoop.hdfs.web.resources.OffsetParam;
-import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
-import org.apache.hadoop.hdfs.web.resources.OwnerParam;
-import org.apache.hadoop.hdfs.web.resources.Param;
-import org.apache.hadoop.hdfs.web.resources.PermissionParam;
-import org.apache.hadoop.hdfs.web.resources.PostOpParam;
-import org.apache.hadoop.hdfs.web.resources.PutOpParam;
-import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
-import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
-import org.apache.hadoop.hdfs.web.resources.RenewerParam;
-import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
-import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
-import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -102,6 +82,9 @@ import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
@@ -122,15 +105,17 @@ public class WebHdfsFileSystem extends FileSystem
   public static final WebHdfsDelegationTokenSelector DT_SELECTOR
       = new WebHdfsDelegationTokenSelector();
 
-  private static DelegationTokenRenewer<WebHdfsFileSystem> DT_RENEWER = null;
+  private  DelegationTokenRenewer dtRenewer = null;
+  @VisibleForTesting
+  DelegationTokenRenewer.RenewAction<?> action;
 
-  private static synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
-    if (DT_RENEWER == null) {
-      DT_RENEWER = new DelegationTokenRenewer<WebHdfsFileSystem>(WebHdfsFileSystem.class);
-      DT_RENEWER.start();
+  @VisibleForTesting
+  protected synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
+    if (dtRenewer == null) {
+      dtRenewer = DelegationTokenRenewer.getInstance();
     }
 
-    DT_RENEWER.addRenewAction(webhdfs);
+    action = dtRenewer.addRenewAction(webhdfs);
   }
 
   /** Is WebHDFS enabled in conf? */
@@ -141,26 +126,19 @@ public class WebHdfsFileSystem extends FileSystem
     return b;
   }
 
-  private final UserGroupInformation ugi;
+  private UserGroupInformation ugi;
   private InetSocketAddress nnAddr;
   private URI uri;
+  private boolean hasInitedToken;
   private Token<?> delegationToken;
-  private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   private Path workingDir;
-
-  {
-    try {
-      ugi = UserGroupInformation.getCurrentUser();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   @Override
   public synchronized void initialize(URI uri, Configuration conf
       ) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
+    ugi = UserGroupInformation.getCurrentUser();
     try {
       this.uri = new URI(uri.getScheme(), uri.getAuthority(), null, null, null);
     } catch (URISyntaxException e) {
@@ -177,24 +155,27 @@ public class WebHdfsFileSystem extends FileSystem
   protected void initDelegationToken() throws IOException {
     // look for webhdfs token, then try hdfs
     Token<?> token = selectDelegationToken(ugi);
-
-    //since we don't already have a token, go get one
-    boolean createdToken = false;
-    if (token == null) {
-      token = getDelegationToken(null);
-      createdToken = (token != null);
-    }
-
-    // security might be disabled
     if (token != null) {
+      LOG.debug("Found existing DT for " + token.getService());        
       setDelegationToken(token);
-      if (createdToken) {
+      hasInitedToken = true;
+    }
+  }
+
+  protected synchronized Token<?> getDelegationToken() throws IOException {
+    // we haven't inited yet, or we used to have a token but it expired
+    if (!hasInitedToken || (action != null && !action.isValid())) {
+      //since we don't already have a token, go get one
+      Token<?> token = getDelegationToken(null);
+      // security might be disabled
+      if (token != null) {
+        setDelegationToken(token);
         addRenewAction(this);
         LOG.debug("Created new DT for " + token.getService());
-      } else {
-        LOG.debug("Found existing DT for " + token.getService());        
       }
+      hasInitedToken = true;
     }
+    return delegationToken;
   }
 
   protected Token<DelegationTokenIdentifier> selectDelegationToken(
@@ -276,7 +257,11 @@ public class WebHdfsFileSystem extends FileSystem
             + ", message=" + conn.getResponseMessage(), e);
       }
 
-      if (m.get(RemoteException.class.getSimpleName()) == null) {
+      if (m == null) {
+        throw new IOException("Unexpected HTTP response: code=" + code + " != "
+            + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
+            + ", message=" + conn.getResponseMessage());
+      } else if (m.get(RemoteException.class.getSimpleName()) == null) {
         return m;
       }
 
@@ -313,16 +298,26 @@ public class WebHdfsFileSystem extends FileSystem
     return url;
   }
   
-  private String addDt2Query(String query) throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      synchronized (this) {
-        if (delegationToken != null) {
-          final String encoded = delegationToken.encodeToUrlString();
-          return query + JspHelper.getDelegationTokenUrlParam(encoded);
-        } // else we are talking to an insecure cluster
-      }
+  Param<?,?>[] getAuthParameters(final HttpOpParam.Op op) throws IOException {
+    List<Param<?,?>> authParams = Lists.newArrayList();    
+    // Skip adding delegation token for token operations because these
+    // operations require authentication.
+    Token<?> token = null;
+    if (UserGroupInformation.isSecurityEnabled() && !op.getRequireAuth()) {
+      token = getDelegationToken();
     }
-    return query;
+    if (token != null) {
+      authParams.add(new DelegationParam(token.encodeToUrlString()));
+    } else {
+      UserGroupInformation userUgi = ugi;
+      UserGroupInformation realUgi = userUgi.getRealUser();
+      if (realUgi != null) { // proxy user
+        authParams.add(new DoAsParam(userUgi.getShortUserName()));
+        userUgi = realUgi;
+      }
+      authParams.add(new UserParam(userUgi.getShortUserName()));
+    }
+    return authParams.toArray(new Param<?,?>[0]);
   }
 
   URL toUrl(final HttpOpParam.Op op, final Path fspath,
@@ -331,34 +326,50 @@ public class WebHdfsFileSystem extends FileSystem
     final String path = PATH_PREFIX
         + (fspath == null? "/": makeQualified(fspath).toUri().getPath());
     final String query = op.toQueryString()
-        + '&' + new UserParam(ugi)
+        + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);
-    final URL url;
-    if (op == PutOpParam.Op.RENEWDELEGATIONTOKEN
-        || op == GetOpParam.Op.GETDELEGATIONTOKEN) {
-      // Skip adding delegation token for getting or renewing delegation token,
-      // because these operations require kerberos authentication.
-      url = getNamenodeURL(path, query);
-    } else {
-      url = getNamenodeURL(path, addDt2Query(query));
-    }
+    final URL url = getNamenodeURL(path, query);
     if (LOG.isTraceEnabled()) {
       LOG.trace("url=" + url);
     }
     return url;
   }
 
-  private HttpURLConnection getHttpUrlConnection(URL url)
+  private HttpURLConnection getHttpUrlConnection(final URL url,
+                                                 final boolean requireAuth)
+      throws IOException {
+    UserGroupInformation connectUgi = ugi.getRealUser();
+    if (connectUgi == null) {
+      connectUgi = ugi;
+    }
+    try {
+      return connectUgi.doAs(
+          new PrivilegedExceptionAction<HttpURLConnection>() {
+            @Override
+            public HttpURLConnection run() throws IOException {
+              return openHttpUrlConnection(url, requireAuth);
+            }
+          });
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private HttpURLConnection openHttpUrlConnection(URL url, boolean requireAuth)
       throws IOException {
     final HttpURLConnection conn;
     try {
-      if (ugi.hasKerberosCredentials()) { 
+      if (requireAuth) {
+        LOG.debug("open AuthenticatedURL connection");
+        UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
+        final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
         conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
       } else {
+        LOG.debug("open URL connection");
         conn = (HttpURLConnection)url.openConnection();
       }
     } catch (AuthenticationException e) {
-      throw new IOException("Authentication failed, url=" + url, e);
+      throw new IOException(e);
     }
     return conn;
   }
@@ -368,7 +379,7 @@ public class WebHdfsFileSystem extends FileSystem
     final URL url = toUrl(op, fspath, parameters);
 
     //connect and get response
-    HttpURLConnection conn = getHttpUrlConnection(url);
+    HttpURLConnection conn = getHttpUrlConnection(url, op.getRequireAuth());
     try {
       conn.setRequestMethod(op.getType().toString());
       if (op.getDoOutput()) {
@@ -635,7 +646,7 @@ public class WebHdfsFileSystem extends FileSystem
     /** Open connection with offset url. */
     @Override
     protected HttpURLConnection openConnection() throws IOException {
-      return getHttpUrlConnection(offsetUrl);
+      return getHttpUrlConnection(offsetUrl, false);
     }
 
     /** Setup offset url before open connection. */
@@ -820,20 +831,12 @@ public class WebHdfsFileSystem extends FileSystem
     @Override
     public long renew(final Token<?> token, final Configuration conf
         ) throws IOException, InterruptedException {
-      final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-      // update the kerberos credentials, if they are coming from a keytab
-      ugi.reloginFromKeytab();
-
       return getWebHdfs(token, conf).renewDelegationToken(token);
     }
   
     @Override
     public void cancel(final Token<?> token, final Configuration conf
         ) throws IOException, InterruptedException {
-      final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-      // update the kerberos credentials, if they are coming from a keytab
-      ugi.checkTGTAndReloginFromKeytab();
-
       getWebHdfs(token, conf).cancelDelegationToken(token);
     }
   }

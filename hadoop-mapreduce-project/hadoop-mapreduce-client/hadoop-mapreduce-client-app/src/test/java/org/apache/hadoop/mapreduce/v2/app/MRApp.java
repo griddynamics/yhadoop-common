@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.NormalizedResourceEvent;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -144,6 +145,9 @@ public class MRApp extends MRAppMaster {
   
   @Override
   protected void downloadTokensAndSetupUGI(Configuration conf) {
+    // Fake a shuffle secret that normally is provided by the job client.
+    String shuffleSecret = "fake-shuffle-secret";
+    TokenCache.setShuffleSecretKey(shuffleSecret.getBytes(), getCredentials());
   }
 
   private static ApplicationAttemptId getApplicationAttemptId(
@@ -410,7 +414,8 @@ public class MRApp extends MRAppMaster {
     Job newJob = new TestJob(getJobId(), getAttemptID(), conf, 
     		getDispatcher().getEventHandler(),
             getTaskAttemptListener(), getContext().getClock(),
-            isNewApiCommitter(), currentUser.getUserName(), getContext(),
+            getCommitter(), isNewApiCommitter(),
+            currentUser.getUserName(), getContext(),
             forcedState, diagnostic);
     ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
 
@@ -644,12 +649,13 @@ public class MRApp extends MRAppMaster {
     public TestJob(JobId jobId, ApplicationAttemptId applicationAttemptId,
         Configuration conf, EventHandler eventHandler,
         TaskAttemptListener taskAttemptListener, Clock clock,
-        boolean newApiCommitter, String user, AppContext appContext, 
+        OutputCommitter committer, boolean newApiCommitter,
+        String user, AppContext appContext,
         JobStateInternal forcedState, String diagnostic) {
       super(jobId, getApplicationAttemptId(applicationId, getStartCount()),
           conf, eventHandler, taskAttemptListener,
           new JobTokenSecretManager(), new Credentials(), clock,
-          getCompletedTaskFromPreviousRun(), metrics,
+          getCompletedTaskFromPreviousRun(), metrics, committer,
           newApiCommitter, user, System.currentTimeMillis(), getAllAMInfos(),
           appContext, forcedState, diagnostic);
 

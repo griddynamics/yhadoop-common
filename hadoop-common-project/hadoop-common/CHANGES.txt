@@ -1,6 +1,30 @@
 Hadoop Change Log
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.8 - UNRELEASED
+  
+  INCOMPATIBLE CHANGES
+  
+  NEW FEATURES
+  
+  IMPROVEMENTS
+  
+  OPTIMIZATIONS
+ 
+  BUG FIXES
+
+    HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
+    Bondarev via jlowe)
+
+    HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
+    tests (Vadim Bondarev via jlowe)
+
+    HADOOP-9469. mapreduce/yarn source jars not included in dist tarball
+    (Robert Parker via tgraves)
+
+    HADOOP-9504. MetricsDynamicMBeanBase has concurrency issues in
+    createMBeanInfo (Liang Xie via jlowe)
+
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -23,10 +47,33 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8075. Lower native-hadoop library log from info to debug.
     (Hızır Sefa İrken via eli)
 
+    HADOOP-9336. Allow UGI of current connection to be queried. (Daryn Sharp
+    via kihwal)
+
+    HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
+
+    HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
+    jeagles)
+
+    HADOOP-9374. Add tokens from -tokenCacheFile into UGI (daryn)
+
+    HADOOP-7358. Improve log levels when exceptions caught in RPC handler
+    (Todd Lipcon via shv)
+
+    HADOOP-8711. IPC Server supports adding exceptions for which
+    the message is printed and the stack trace is not printed to avoid chatter.
+    (Brandon Li via Suresh)
+
+    HADOOP-9379. capture the ulimit info after printing the log to the 
+    console. (Arpit Gupta via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.
     (Jonathan Allen via suresh)
+
+    HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
+    jlowe)
 
   BUG FIXES
 
@@ -87,6 +134,14 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
     the map. (Karthik Kambatla via tgraves)
+
+    HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via
+    kihwal)
+
+    HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication
+    (daryn)
+
+    HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
 
 Release 0.23.6 - 2013-02-06
 

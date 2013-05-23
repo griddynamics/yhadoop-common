@@ -43,11 +43,13 @@ import java.nio.channels.WritableByteChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -98,6 +100,42 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class Server {
   private final boolean authorize;
   private boolean isSecurityEnabled;
+  private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
+  
+  public void addTerseExceptions(Class<?>... exceptionClass) {
+    exceptionsHandler.addTerseExceptions(exceptionClass);
+  }
+
+  /**
+   * ExceptionsHandler manages Exception groups for special handling
+   * e.g., terse exception group for concise logging messages
+   */
+  static class ExceptionsHandler {
+    private volatile Set<String> terseExceptions = new HashSet<String>();
+
+    /**
+     * Add exception class so server won't log its stack trace.
+     * Modifying the terseException through this method is thread safe.
+     *
+     * @param exceptionClass exception classes 
+     */
+    void addTerseExceptions(Class<?>... exceptionClass) {
+
+      // Make a copy of terseException for performing modification
+      final HashSet<String> newSet = new HashSet<String>(terseExceptions);
+
+      // Add all class names into the HashSet
+      for (Class<?> name : exceptionClass) {
+        newSet.add(name.toString());
+      }
+      // Replace terseException set
+      terseExceptions = Collections.unmodifiableSet(newSet);
+    }
+
+    boolean isTerse(Class<?> t) {
+      return terseExceptions.contains(t.toString());
+    }
+  }
   
   /**
    * The first four bytes of Hadoop RPC connections
@@ -168,6 +206,14 @@ public abstract class Server {
     return (addr == null) ? null : addr.getHostAddress();
   }
 
+  /** Returns the RPC remote user when invoked inside an RPC.  Note this
+   *  may be different than the current user if called within another doAs
+   *  @return connection's UGI or null if not an RPC
+   */
+  public static UserGroupInformation getRemoteUser() {
+    Call call = CurCall.get();
+    return (call != null) ? call.connection.user : null;
+  }
  
   /** Return true if the invocation was through an RPC.
    */
@@ -1334,9 +1380,6 @@ public abstract class Server {
       UserGroupInformation protocolUser = header.getUgi();
       if (!useSasl) {
         user = protocolUser;
-        if (user != null) {
-          user.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
-        }
       } else {
         // user is authenticated
         user.setAuthenticationMethod(authMethod.authenticationMethod);
@@ -1357,8 +1400,6 @@ public abstract class Server {
             UserGroupInformation realUser = user;
             user = UserGroupInformation.createProxyUser(protocolUser
                 .getUserName(), realUser);
-            // Now the user is a proxy user, set Authentication method Proxy.
-            user.setAuthenticationMethod(AuthenticationMethod.PROXY);
           }
         }
       }
@@ -1535,7 +1576,20 @@ public abstract class Server {
                   );
             }
           } catch (Throwable e) {
-            LOG.info(getName() + ", call: " + call + ", error: ", e);
+            String logMsg = getName() + ", call " + call + ": error: " + e;
+            if (e instanceof RuntimeException || e instanceof Error) {
+              // These exception types indicate something is probably wrong
+              // on the server side, as opposed to just a normal exceptional
+              // result.
+              LOG.warn(logMsg, e);
+            } else if (exceptionsHandler.isTerse(e.getClass())) {
+             // Don't log the whole stack trace of these exceptions.
+              // Way too noisy!
+              LOG.info(logMsg);
+            } else {
+              LOG.info(logMsg, e);
+            }
+
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
             // Remove redundant error class name from the beginning of the stack trace

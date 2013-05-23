@@ -1,6 +1,29 @@
 Hadoop YARN Change Log
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.8 - UNRELEASED
+  
+  INCOMPATIBLE CHANGES
+  
+  NEW FEATURES
+  
+  IMPROVEMENTS
+  
+  OPTIMIZATIONS
+ 
+  BUG FIXES
+
+    YARN-476. ProcfsBasedProcessTree info message confuses users. 
+    (sandyr via tucu)
+
+    YARN-71. Fix the NodeManager to clean up local-dirs on restart.
+    (Xuan Gong via sseth)
+
+    YARN-363. Add webapps/proxy directory without which YARN proxy-server fails
+    when started in stand-alone mode. (Kenji Kikushima via vinodkv)
+
+    YARN-690. RM exits on token cancel/renew problems (daryn via bobby)
+
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -18,6 +41,27 @@ Release 0.23.7 - UNRELEASED
 
     YARN-236. RM should point tracking URL to RM web page when app fails to
     start (Jason Lowe via jeagles)
+
+    YARN-269. Resource Manager not logging the health_check_script result when
+    taking it out (Jason Lowe via kihwal)
+
+    YARN-227. Application expiration difficult to debug for end-users
+    (Jason Lowe via jeagles)
+
+    YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
+    the per-application page are translated to html line breaks. (Omkar Vinit
+    Joshi via vinodkv)
+
+    YARN-443. allow OS scheduling priority of NM to be different than the 
+    containers it launches (tgraves)
+
+    YARN-468. coverage fix for org.apache.hadoop.yarn.server.webproxy.amfilter
+    (Aleksey Gorshkov via bobby)
+
+    YARN-200. yarn log does not output all needed information, and is in a
+    binary format (Ravi Prakash via jlowe)
+
+    YARN-525. make CS node-locality-delay refreshable (Thomas Graves via jlowe)
 
   OPTIMIZATIONS
 
@@ -49,6 +93,24 @@ Release 0.23.7 - UNRELEASED
 
     YARN-400. RM can return null application resource usage report leading to 
     NPE in client (Jason Lowe via tgraves)
+
+    YARN-426. Failure to download a public resource prevents further downloads
+    (Jason Lowe via bobby)
+
+    YARN-376. Fixes a bug which would prevent the NM knowing about completed
+    containers and applications. (Jason Lowe via sseth)
+
+    YARN-448. Remove unnecessary hflush from log aggregation (Kihwal Lee via
+    bobby)
+
+    YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
+    in Node Manager (Robert Parker via jlowe)
+
+    YARN-109. .tmp file is not deleted for localized archives (Mayank Bansal 
+    via bobby)
+
+    YARN-460. CS user left in list of active users for the queue even when
+    application finished (tgraves)
 
 Release 0.23.6 - 2013-02-06
 

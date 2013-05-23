@@ -56,8 +56,11 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.PrivilegedExceptionAction;
@@ -1200,7 +1203,16 @@ public class DataNode extends Configured
   protected void checkDiskError(Exception e ) throws IOException {
     
     LOG.warn("checkDiskError: exception: ", e);
-    
+    if (e instanceof SocketException || e instanceof SocketTimeoutException
+    	  || e instanceof ClosedByInterruptException 
+    	  || e.getMessage().startsWith("An established connection was aborted")
+    	  || e.getMessage().startsWith("Broken pipe")
+    	  || e.getMessage().startsWith("Connection reset")
+    	  || e.getMessage().contains("java.nio.channels.SocketChannel")) {
+      LOG.info("Not checking disk as checkDiskError was called on a network" +
+      		" related exception");	
+      return;
+    }
     if (e.getMessage() != null &&
         e.getMessage().startsWith("No space left on device")) {
       throw new DiskOutOfSpaceException("No space left on device");
@@ -1510,8 +1522,12 @@ public class DataNode extends Configured
         LOG.warn(
             bpReg + ":Failed to transfer " + b + " to " + targets[0].getName()
                 + " got ", ie);
-        // check if there are any disk problem
-        checkDiskError();
+          // check if there are any disk problem
+        try{
+          checkDiskError(ie);
+        } catch(IOException e) {
+            LOG.warn("DataNode.checkDiskError failed in run() with: ", e);
+        }
         
       } finally {
         xmitsInProgress.getAndDecrement();
@@ -2107,6 +2123,18 @@ public class DataNode extends Configured
 
     //get replica information
     synchronized(data) {
+      Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
+          b.getBlockId());
+      if (null == storedBlock) {
+        throw new IOException(b + " not found in datanode.");
+      }
+      storedGS = storedBlock.getGenerationStamp();
+      if (storedGS < b.getGenerationStamp()) {
+        throw new IOException(storedGS
+            + " = storedGS < b.getGenerationStamp(), b=" + b);
+      }
+      // Update the genstamp with storedGS
+      b.setGenerationStamp(storedGS);
       if (data.isValidRbw(b)) {
         stage = BlockConstructionStage.TRANSFER_RBW;
       } else if (data.isValidBlock(b)) {
@@ -2115,18 +2143,9 @@ public class DataNode extends Configured
         final String r = data.getReplicaString(b.getBlockPoolId(), b.getBlockId());
         throw new IOException(b + " is neither a RBW nor a Finalized, r=" + r);
       }
-
-      storedGS = data.getStoredBlock(b.getBlockPoolId(),
-          b.getBlockId()).getGenerationStamp();
-      if (storedGS < b.getGenerationStamp()) {
-        throw new IOException(
-            storedGS + " = storedGS < b.getGenerationStamp(), b=" + b);        
-      }
       visible = data.getReplicaVisibleLength(b);
     }
-
-    //set storedGS and visible length
-    b.setGenerationStamp(storedGS);
+    //set visible length
     b.setNumBytes(visible);
 
     if (targets.length > 0) {

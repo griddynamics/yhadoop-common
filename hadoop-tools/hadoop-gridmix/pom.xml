@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.7-SNAPSHOT</version>
+    <version>0.23.8-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-gridmix</artifactId>
-  <version>0.23.7-SNAPSHOT</version>
+  <version>0.23.8-SNAPSHOT</version>
   <description>Apache Hadoop Gridmix</description>
   <name>Apache Hadoop Gridmix</name>
   <packaging>jar</packaging>
@@ -94,6 +94,11 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+     <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -117,6 +122,15 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+        <excludes>
+        <exclude>src/test/resources/data/*</exclude>
+        </excludes>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
