@@ -41,7 +41,7 @@ public class TestRMAdmin {
   public static void setUp() {
     
     Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.IPC_CLIENT_FACTORY,
+    conf.set(YarnConfiguration.IPC_CLIENT_FACTORY_CLASS,
         "org.apache.hadoop.yarn.client.FakeRpcClientClassFactory");
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
