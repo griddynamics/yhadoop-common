@@ -339,7 +339,7 @@ public class TestShuffleHandler {
       }
       // Retrieve file owner name
       FileInputStream is = new FileInputStream(fileMap.get(0));
-      String owner = NativeIO.getFstat(is.getFD()).getOwner();
+      String owner = NativeIO.POSIX.getFstat(is.getFD()).getOwner();
       is.close();
 
       String message =
