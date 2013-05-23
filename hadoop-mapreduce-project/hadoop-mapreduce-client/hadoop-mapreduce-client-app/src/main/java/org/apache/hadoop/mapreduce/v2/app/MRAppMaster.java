@@ -116,6 +116,7 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -1270,22 +1271,22 @@ public class MRAppMaster extends CompositeService {
     try {
       Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
       String containerIdStr =
-          System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
-      String nodeHostString = System.getenv(ApplicationConstants.NM_HOST_ENV);
-      String nodePortString = System.getenv(ApplicationConstants.NM_PORT_ENV);
+          System.getenv(Environment.CONTAINER_ID.name());
+      String nodeHostString = System.getenv(Environment.NM_HOST.name());
+      String nodePortString = System.getenv(Environment.NM_PORT.name());
       String nodeHttpPortString =
-          System.getenv(ApplicationConstants.NM_HTTP_PORT_ENV);
+          System.getenv(Environment.NM_HTTP_PORT.name());
       String appSubmitTimeStr =
           System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
       String maxAppAttempts =
           System.getenv(ApplicationConstants.MAX_APP_ATTEMPTS_ENV);
       
       validateInputParam(containerIdStr,
-          ApplicationConstants.AM_CONTAINER_ID_ENV);
-      validateInputParam(nodeHostString, ApplicationConstants.NM_HOST_ENV);
-      validateInputParam(nodePortString, ApplicationConstants.NM_PORT_ENV);
+          Environment.CONTAINER_ID.name());
+      validateInputParam(nodeHostString, Environment.NM_HOST.name());
+      validateInputParam(nodePortString, Environment.NM_PORT.name());
       validateInputParam(nodeHttpPortString,
-          ApplicationConstants.NM_HTTP_PORT_ENV);
+          Environment.NM_HTTP_PORT.name());
       validateInputParam(appSubmitTimeStr,
           ApplicationConstants.APP_SUBMIT_TIME_ENV);
       validateInputParam(maxAppAttempts,
@@ -1303,8 +1304,15 @@ public class MRAppMaster extends CompositeService {
               Integer.parseInt(maxAppAttempts));
       ShutdownHookManager.get().addShutdownHook(
         new MRAppMasterShutdownHook(appMaster), SHUTDOWN_HOOK_PRIORITY);
-      YarnConfiguration conf = new YarnConfiguration(new JobConf());
+      JobConf conf = new JobConf(new YarnConfiguration());
       conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
+
+      // log the system properties
+      String systemPropsToLog = MRApps.getSystemPropertiesToLog(conf);
+      if (systemPropsToLog != null) {
+        LOG.info(systemPropsToLog);
+      }
+
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
       conf.set(MRJobConfig.USER_NAME, jobUserName);
@@ -1356,11 +1364,17 @@ public class MRAppMaster extends CompositeService {
   }
 
   protected static void initAndStartAppMaster(final MRAppMaster appMaster,
-      final YarnConfiguration conf, String jobUserName) throws IOException,
+      final JobConf conf, String jobUserName) throws IOException,
       InterruptedException {
     UserGroupInformation.setConfiguration(conf);
+    // Security framework already loaded the tokens into current UGI, just use
+    // them
+    Credentials credentials =
+        UserGroupInformation.getCurrentUser().getCredentials();
     UserGroupInformation appMasterUgi = UserGroupInformation
         .createRemoteUser(jobUserName);
+    appMasterUgi.addCredentials(credentials);
+    conf.getCredentials().addAll(credentials);
     appMasterUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {

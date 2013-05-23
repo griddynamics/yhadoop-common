@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
@@ -177,7 +178,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
 
   @Test
   public void testContainerKillOnMemoryOverflow() throws IOException,
-      InterruptedException {
+      InterruptedException, YarnRemoteException {
 
     if (!ProcfsBasedProcessTree.isAvailable()) {
       return;
@@ -213,6 +214,11 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     cId.setApplicationAttemptId(appAttemptId);
     when(mockContainer.getId()).thenReturn(cId);
 
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
+    when(mockContainer.getRMIdentifer()).thenReturn(
+      super.DUMMY_RM_IDENTIFIER);
     containerLaunchContext.setUser(user);
 
     URL resource_alpha =
