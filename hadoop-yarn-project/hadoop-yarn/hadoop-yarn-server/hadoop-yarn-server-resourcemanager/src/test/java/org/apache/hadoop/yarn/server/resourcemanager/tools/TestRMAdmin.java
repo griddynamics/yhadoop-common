@@ -256,10 +256,9 @@ public class TestRMAdmin {
       assertTrue(dataErr.toString().contains("refreshQueues: test exception"));
       configuration.set(YarnConfiguration.RM_ADMIN_ADDRESS, "fake address");
       // test IllegalArgumentException
-      assertEquals(-1, test.run(args));
+      assertEquals(-1, test.run(args));      
       assertTrue(dataErr.toString().contains(
-          "refreshQueues: Does not contain a valid host:"
-              + "port authority: fake adderss"));
+          "refreshQueues: Does not contain a valid host:port"));
 
     } finally {
       FakeRpcClientClassFactory.FakeRMAdminProtocol.resultCode = 
