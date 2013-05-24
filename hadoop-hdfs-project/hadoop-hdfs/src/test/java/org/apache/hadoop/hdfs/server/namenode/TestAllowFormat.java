@@ -33,7 +33,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -61,8 +60,7 @@ public class TestAllowFormat {
   @BeforeClass
   public static void setUp() throws Exception {
     config = new Configuration();
-    String baseDir = System.getProperty("test.build.data", "build/test/data");
-
+    
     // Test has multiple name directories.
     // Format should not really prompt us if one of the directories exist,
     // but is empty. So in case the test hangs on an input, it means something
@@ -158,6 +156,8 @@ public class TestAllowFormat {
     InetSocketAddress nnAddr2 = new InetSocketAddress(localhost, 9020);
     HATestUtil.setFailoverConfigurations(conf, logicalName, nnAddr1, nnAddr2);
 
+    conf.set(DFS_NAMENODE_NAME_DIR_KEY,
+        new File(DFS_BASE_DIR, "name").getAbsolutePath());
     conf.setBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, true);
     conf.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_EDITS_PLUGIN_PREFIX, "dummy"),

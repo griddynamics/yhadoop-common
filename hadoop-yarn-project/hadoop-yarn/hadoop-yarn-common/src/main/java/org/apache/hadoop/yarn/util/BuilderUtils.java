@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -25,15 +26,18 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -186,6 +190,16 @@ public class BuilderUtils {
     return cId;
   }
 
+  public static ContainerToken newContainerToken(ContainerId cId, String host,
+      int port, String user, Resource r, long expiryTime, int masterKeyId,
+      byte[] password) throws IOException {
+    ContainerTokenIdentifier identifier =
+        new ContainerTokenIdentifier(cId, host, user, r, expiryTime,
+            masterKeyId);
+    return newContainerToken(BuilderUtils.newNodeId(host, port), password,
+        identifier);
+  }
+
   public static ContainerId newContainerId(RecordFactory recordFactory,
       ApplicationId appId, ApplicationAttemptId appAttemptId,
       int containerId) {
@@ -237,9 +251,9 @@ public class BuilderUtils {
     return containerStatus;
   }
 
-  public static Container newContainer(ContainerId containerId,
-      NodeId nodeId, String nodeHttpAddress,
-      Resource resource, Priority priority, ContainerToken containerToken) {
+  public static Container newContainer(ContainerId containerId, NodeId nodeId,
+      String nodeHttpAddress, Resource resource, Priority priority,
+      ContainerToken containerToken, long rmIdentifier) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -247,6 +261,7 @@ public class BuilderUtils {
     container.setResource(resource);
     container.setPriority(priority);
     container.setContainerToken(containerToken);
+    container.setRMIdentifier(rmIdentifier);
     return container;
   }
 
@@ -283,19 +298,29 @@ public class BuilderUtils {
     return containerToken;
   }
 
+  public static ContainerTokenIdentifier newContainerTokenIdentifier(
+      ContainerToken containerToken) throws IOException {
+    org.apache.hadoop.security.token.Token<ContainerTokenIdentifier> token =
+        new org.apache.hadoop.security.token.Token<ContainerTokenIdentifier>(
+            containerToken.getIdentifier()
+                .array(), containerToken.getPassword().array(), new Text(
+                containerToken.getKind()),
+            new Text(containerToken.getService()));
+    return token.decodeIdentifier();
+  }
+
   public static ContainerLaunchContext newContainerLaunchContext(
-      String user, Map<String, LocalResource> localResources,
+      Map<String, LocalResource> localResources,
       Map<String, String> environment, List<String> commands,
-      Map<String, ByteBuffer> serviceData,  ByteBuffer containerTokens,
+      Map<String, ByteBuffer> serviceData, ByteBuffer tokens,
       Map<ApplicationAccessType, String> acls) {
     ContainerLaunchContext container = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
-    container.setUser(user);
     container.setLocalResources(localResources);
     container.setEnvironment(environment);
     container.setCommands(commands);
     container.setServiceData(serviceData);
-    container.setContainerTokens(containerTokens);
+    container.setTokens(tokens);
     container.setApplicationACLs(acls);
     return container;
   }
@@ -333,7 +358,8 @@ public class BuilderUtils {
       ClientToken clientToken, YarnApplicationState state, String diagnostics,
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
-      ApplicationResourceUsageReport appResources, String origTrackingUrl) {
+      ApplicationResourceUsageReport appResources, String origTrackingUrl,
+      float progress, String appType) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -352,9 +378,41 @@ public class BuilderUtils {
     report.setFinalApplicationStatus(finalStatus);
     report.setApplicationResourceUsageReport(appResources);
     report.setOriginalTrackingUrl(origTrackingUrl);
+    report.setProgress(progress);
+    report.setApplicationType(appType);
     return report;
   }
+  
+  public static ApplicationSubmissionContext newApplicationSubmissionContext(
+      ApplicationId applicationId, String applicationName, String queue,
+      Priority priority, ContainerLaunchContext amContainer,
+      boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
+      int maxAppAttempts, Resource resource, String applicationType) {
+    ApplicationSubmissionContext context =
+        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    context.setApplicationId(applicationId);
+    context.setApplicationName(applicationName);
+    context.setQueue(queue);
+    context.setPriority(priority);
+    context.setAMContainerSpec(amContainer);
+    context.setUnmanagedAM(isUnmanagedAM);
+    context.setCancelTokensWhenComplete(cancelTokensWhenComplete);
+    context.setMaxAppAttempts(maxAppAttempts);
+    context.setResource(resource);
+    context.setApplicationType(applicationType);
+    return context;
+  }
 
+  public static ApplicationSubmissionContext newApplicationSubmissionContext(
+      ApplicationId applicationId, String applicationName, String queue,
+      Priority priority, ContainerLaunchContext amContainer,
+      boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
+      int maxAppAttempts, Resource resource) {
+    return newApplicationSubmissionContext(applicationId, applicationName,
+      queue, priority, amContainer, isUnmanagedAM, cancelTokensWhenComplete,
+      maxAppAttempts, resource, null);
+  }
+  
   public static ApplicationResourceUsageReport newApplicationResourceUsageReport(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources) {
@@ -401,7 +459,8 @@ public class BuilderUtils {
   public static AllocateResponse newAllocateResponse(int responseId,
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,
-      Resource availResources, boolean reboot, int numClusterNodes) {
+      Resource availResources, boolean reboot, int numClusterNodes,
+      PreemptionMessage preempt) {
     AllocateResponse response = recordFactory
         .newRecordInstance(AllocateResponse.class);
     response.setNumClusterNodes(numClusterNodes);
@@ -411,6 +470,7 @@ public class BuilderUtils {
     response.setUpdatedNodes(updatedNodes);
     response.setAvailableResources(availResources);
     response.setReboot(reboot);
+    response.setPreemptionMessage(preempt);
 
     return response;
   }

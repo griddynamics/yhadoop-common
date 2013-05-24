@@ -327,12 +327,15 @@ public class TestNameEditsConfigs {
     MiniDFSCluster cluster = null;
     File nameAndEditsDir = new File(BASE_DIR, "name_and_edits");
     File nameAndEditsDir2 = new File(BASE_DIR, "name_and_edits2");
+    File nameDir = new File(BASE_DIR, "name");
 
     // 1
     // Bad configuration. Add a directory to dfs.namenode.edits.dir.required
     // without adding it to dfs.namenode.edits.dir.
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          nameDir.getAbsolutePath());
       conf.set(
           DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
           nameAndEditsDir2.toURI().toString());
@@ -358,6 +361,8 @@ public class TestNameEditsConfigs {
     // and dfs.namenode.edits.dir.
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          nameDir.getAbsolutePath());
       conf.setStrings(
           DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
           nameAndEditsDir.toURI().toString(),
@@ -380,6 +385,8 @@ public class TestNameEditsConfigs {
     // dfs.namenode.edits.dir.required.
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          nameDir.getAbsolutePath());
       conf.setStrings(
           DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
           nameAndEditsDir.toURI().toString(),

@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.Map;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -55,6 +59,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -130,26 +136,33 @@ public class MockRM extends ResourceManager {
   public RMApp submitApp(int masterMemory, String name, String user) throws Exception {
     return submitApp(masterMemory, name, user, null, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
   }
   
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls) throws Exception {
     return submitApp(masterMemory, name, user, acls, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
   }  
 
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, String queue) throws Exception {
     return submitApp(masterMemory, name, user, acls, false, queue,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
   }
 
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
-      int maxAppAttempts) throws Exception {
+      int maxAppAttempts, Credentials ts) throws Exception {
+    return submitApp(masterMemory, name, user, acls, unmanaged, queue,
+      maxAppAttempts, ts, null);
+  }
+
+  public RMApp submitApp(int masterMemory, String name, String user,
+      Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
+      int maxAppAttempts, Credentials ts, String appType) throws Exception {
     ClientRMProtocol client = getClientRMService();
     GetNewApplicationResponse resp = client.getNewApplication(Records
         .newRecord(GetNewApplicationRequest.class));
@@ -168,13 +181,19 @@ public class MockRM extends ResourceManager {
     if (queue != null) {
       sub.setQueue(queue);
     }
+    sub.setApplicationType(appType);
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
     final Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(masterMemory);
     sub.setResource(capability);
     clc.setApplicationACLs(acls);
-    clc.setUser(user);
+    if (ts != null && UserGroupInformation.isSecurityEnabled()) {
+      DataOutputBuffer dob = new DataOutputBuffer();
+      ts.writeTokenStorageToStream(dob);
+      ByteBuffer securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      clc.setTokens(securityTokens);
+    }
     sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
@@ -188,6 +207,8 @@ public class MockRM extends ResourceManager {
         try {
           return client.submitApplication(req);
         } catch (YarnRemoteException e) {
+          e.printStackTrace();
+        } catch (IOException e) {
           e.printStackTrace();
         }
         return null;
@@ -285,8 +306,12 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ResourceTrackerService createResourceTrackerService() {
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        new RMContainerTokenSecretManager(new Configuration());
+    containerTokenSecretManager.rollMasterKey();
     return new ResourceTrackerService(getRMContext(), nodesListManager,
-        this.nmLivelinessMonitor, this.containerTokenSecretManager) {
+        this.nmLivelinessMonitor, containerTokenSecretManager) {
+
       @Override
       public void start() {
         // override to not start rpc handler
@@ -355,6 +380,10 @@ public class MockRM extends ResourceManager {
 
   public NodesListManager getNodesListManager() {
     return this.nodesListManager;
+  }
+
+  public RMDelegationTokenSecretManager getRMDTSecretManager() {
+    return this.rmDTSecretManager;
   }
 
   @Override

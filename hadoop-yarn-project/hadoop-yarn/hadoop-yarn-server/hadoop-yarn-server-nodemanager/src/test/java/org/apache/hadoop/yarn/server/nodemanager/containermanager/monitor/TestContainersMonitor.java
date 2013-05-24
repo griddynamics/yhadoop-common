@@ -49,12 +49,15 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
@@ -177,7 +180,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
 
   @Test
   public void testContainerKillOnMemoryOverflow() throws IOException,
-      InterruptedException {
+      InterruptedException, YarnRemoteException {
 
     if (!ProcfsBasedProcessTree.isAvailable()) {
       return;
@@ -213,7 +216,12 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     cId.setApplicationAttemptId(appAttemptId);
     when(mockContainer.getId()).thenReturn(cId);
 
-    containerLaunchContext.setUser(user);
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":" + port);
+    when(mockContainer.getRMIdentifer()).thenReturn(
+      super.DUMMY_RM_IDENTIFIER);
 
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -230,16 +238,20 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = new ArrayList<String>();
     commands.add("/bin/bash");
     commands.add(scriptFile.getAbsolutePath());
     containerLaunchContext.setCommands(commands);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(8 * 1024 * 1024, 1));
+    Resource r = BuilderUtils.newResource(8 * 1024 * 1024, 1);
+    when(mockContainer.getResource()).thenReturn(r);
     StartContainerRequest startRequest =
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     startRequest.setContainer(mockContainer);
     containerManager.startContainer(startRequest);
 

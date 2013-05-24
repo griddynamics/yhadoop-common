@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
 
@@ -178,7 +179,8 @@ public class TestNMWebServicesContainers extends JerseyTest {
     assertEquals("apps isn't NULL", JSONObject.NULL, json.get("containers"));
   }
 
-  private HashMap<String, String> addAppContainers(Application app) {
+  private HashMap<String, String> addAppContainers(Application app) 
+      throws IOException {
     Dispatcher dispatcher = new AsyncDispatcher();
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         app.getAppId(), 1);
@@ -186,16 +188,18 @@ public class TestNMWebServicesContainers extends JerseyTest {
         app.getUser(), app.getAppId(), 1);
     Container container2 = new MockContainer(appAttemptId, dispatcher, conf,
         app.getUser(), app.getAppId(), 2);
-    nmContext.getContainers().put(container1.getContainerID(), container1);
-    nmContext.getContainers().put(container2.getContainerID(), container2);
+    nmContext.getContainers()
+        .put(container1.getContainer().getId(), container1);
+    nmContext.getContainers()
+        .put(container2.getContainer().getId(), container2);
 
-    app.getContainers().put(container1.getContainerID(), container1);
-    app.getContainers().put(container2.getContainerID(), container2);
+    app.getContainers().put(container1.getContainer().getId(), container1);
+    app.getContainers().put(container2.getContainer().getId(), container2);
     HashMap<String, String> hash = new HashMap<String, String>();
-    hash.put(container1.getContainerID().toString(), container1
-        .getContainerID().toString());
-    hash.put(container2.getContainerID().toString(), container2
-        .getContainerID().toString());
+    hash.put(container1.getContainer().getId().toString(), container1
+        .getContainer().getId().toString());
+    hash.put(container2.getContainer().getId().toString(), container2
+        .getContainer().getId().toString());
     return hash;
   }
 
@@ -468,7 +472,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
       String state, String user, int exitCode, String diagnostics,
       String nodeId, int totalMemoryNeededMB, String logsLink)
       throws JSONException, Exception {
-    WebServicesTestUtils.checkStringMatch("id", cont.getContainerID()
+    WebServicesTestUtils.checkStringMatch("id", cont.getContainer().getId()
         .toString(), id);
     WebServicesTestUtils.checkStringMatch("state", cont.getContainerState()
         .toString(), state);
@@ -481,8 +485,9 @@ public class TestNMWebServicesContainers extends JerseyTest {
     WebServicesTestUtils.checkStringMatch("nodeId", nmContext.getNodeId()
         .toString(), nodeId);
     assertEquals("totalMemoryNeededMB wrong", 0, totalMemoryNeededMB);
-    String shortLink = ujoin("containerlogs", cont.getContainerID().toString(),
-        cont.getUser());
+    String shortLink =
+        ujoin("containerlogs", cont.getContainer().getId().toString(),
+            cont.getUser());
     assertTrue("containerLogsLink wrong", logsLink.contains(shortLink));
   }
 

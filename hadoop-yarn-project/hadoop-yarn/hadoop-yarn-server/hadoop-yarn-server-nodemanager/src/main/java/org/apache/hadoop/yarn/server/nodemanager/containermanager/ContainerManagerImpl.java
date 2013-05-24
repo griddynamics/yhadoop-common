@@ -23,16 +23,17 @@ import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -101,6 +103,9 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.ServiceStateChangeListener;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public class ContainerManagerImpl extends CompositeService implements
     ServiceStateChangeListener, ContainerManager,
@@ -125,6 +130,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ApplicationACLsManager aclsManager;
 
   private final DeletionService deletionService;
+  private AtomicBoolean blockNewContainerRequests = new AtomicBoolean(false);
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -239,7 +245,10 @@ public class ContainerManagerImpl extends CompositeService implements
         false)) {
       refreshServiceAcls(conf, new NMPolicyProvider());
     }
-    
+
+    LOG.info("Blocking new container-requests as container manager rpc" +
+    		" server is still starting.");
+    this.setBlockNewContainerRequests(true);
     server.start();
     InetSocketAddress connectAddress = NetUtils.getConnectAddress(server);
     this.context.getNodeId().setHost(connectAddress.getHostName());
@@ -296,6 +305,29 @@ public class ContainerManagerImpl extends CompositeService implements
     return resultId;
   }
 
+  @Private
+  @VisibleForTesting
+  protected ContainerTokenIdentifier getContainerTokenIdentifier(
+      UserGroupInformation remoteUgi,
+      org.apache.hadoop.yarn.api.records.Container container)
+      throws YarnRemoteException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Number of TokenIdentifiers in the UGI from RPC: "
+            + remoteUgi.getTokenIdentifiers().size());
+      }
+      // Get the tokenId from the remote user ugi
+      return selectContainerTokenIdentifier(remoteUgi);
+    } else {
+      try {
+        return BuilderUtils.newContainerTokenIdentifier(container
+          .getContainerToken());
+      } catch (IOException e) {
+        throw RPCUtil.getRemoteException(e);
+      }
+    }
+  }
+  
   /**
    * Authorize the request.
    * 
@@ -307,15 +339,13 @@ public class ContainerManagerImpl extends CompositeService implements
    *          ugi corresponding to the remote end making the api-call
    * @throws YarnRemoteException
    */
-  private void authorizeRequest(String containerIDStr,
+  @Private
+  @VisibleForTesting
+  protected void authorizeRequest(String containerIDStr,
       ContainerLaunchContext launchContext,
       org.apache.hadoop.yarn.api.records.Container container,
-      UserGroupInformation remoteUgi)
+      UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
       throws YarnRemoteException {
-
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return;
-    }
 
     boolean unauthorized = false;
     StringBuilder messageBuilder =
@@ -328,37 +358,20 @@ public class ContainerManagerImpl extends CompositeService implements
     } else if (launchContext != null) {
       // Verify other things also for startContainer() request.
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Number of TokenIdentifiers in the UGI from RPC: "
-            + remoteUgi.getTokenIdentifiers().size());
-      }
-
-      // Get the tokenId from the remote user ugi
-      ContainerTokenIdentifier tokenId =
-          selectContainerTokenIdentifier(remoteUgi);
 
       if (tokenId == null) {
         unauthorized = true;
         messageBuilder
-            .append("\nContainerTokenIdentifier cannot be null! Null found for "
-                + containerIDStr);
+          .append("\nNo ContainerToken found for " + containerIDStr);
       } else {
-
-        // Is the container coming in with correct user-name?
-        if (!tokenId.getApplicationSubmitter().equals(launchContext.getUser())) {
-          unauthorized = true;
-          messageBuilder.append("\n Expected user-name "
-              + tokenId.getApplicationSubmitter() + " but found "
-              + launchContext.getUser());
-        }
-
+        
         // Is the container being relaunched? Or RPC layer let startCall with 
       	//  tokens generated off old-secret through?
         if (!this.context.getContainerTokenSecretManager()
-          .isValidStartContainerRequest(tokenId)) {
+          .isValidStartContainerRequest(tokenId.getContainerID())) {
           unauthorized = true;
-          messageBuilder.append("\n Attempt to relaunch the same " +
-              "container with id " + containerIDStr + ".");
+          messageBuilder.append("\n Attempt to relaunch the same "
+              + "container with id " + containerIDStr + ".");
         }
 
         // Ensure the token is not expired. 
@@ -371,7 +384,7 @@ public class ContainerManagerImpl extends CompositeService implements
         }
         
         Resource resource = tokenId.getResource();
-        if (!resource.equals(container.getResource())) {
+        if (resource == null || !resource.equals(container.getResource())) {
           unauthorized = true;
           messageBuilder.append("\nExpected resource " + resource
               + " but found " + container.getResource());
@@ -392,7 +405,14 @@ public class ContainerManagerImpl extends CompositeService implements
   @SuppressWarnings("unchecked")
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
+
+    if (blockNewContainerRequests.get()) {
+      throw RPCUtil.getRemoteException(new NMNotYetReadyException(
+          "Rejecting new containers as NodeManager has not" +
+          " yet connected with ResourceManager"));
+    }
+
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
     org.apache.hadoop.yarn.api.records.Container lauchContainer =
         request.getContainer();
@@ -400,13 +420,26 @@ public class ContainerManagerImpl extends CompositeService implements
     String containerIDStr = containerID.toString();
 
     UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
-    authorizeRequest(containerIDStr, launchContext, lauchContainer, remoteUgi);
+    ContainerTokenIdentifier tokenId = 
+        getContainerTokenIdentifier(remoteUgi, lauchContainer);
+    authorizeRequest(containerIDStr, launchContext, lauchContainer, remoteUgi,
+      tokenId);
+
+    // Is the container coming from unknown RM
+    if (lauchContainer.getRMIdentifer() != nodeStatusUpdater
+      .getRMIdentifier()) {
+      String msg = "\nContainer "+ containerIDStr
+          + " rejected as it is allocated by a previous RM";
+      LOG.error(msg);
+      throw RPCUtil
+        .getRemoteException(new InvalidContainerException(msg));
+    }
 
     LOG.info("Start request for " + containerIDStr + " by user "
-        + launchContext.getUser());
+        + tokenId.getApplicationSubmitter());
 
     // //////////// Parse credentials
-    ByteBuffer tokens = launchContext.getContainerTokens();
+    ByteBuffer tokens = launchContext.getTokens();
     Credentials credentials = new Credentials();
     if (tokens != null) {
       DataInputByteBuffer buf = new DataInputByteBuffer();
@@ -425,13 +458,14 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
     // //////////// End of parsing credentials
+    String user = tokenId.getApplicationSubmitter();
 
     Container container = new ContainerImpl(getConfig(), this.dispatcher,
-        launchContext, lauchContainer, credentials, metrics);
+        launchContext, lauchContainer, credentials, metrics, tokenId);
     ApplicationId applicationID = 
         containerID.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerID, container) != null) {
-      NMAuditLogger.logFailure(launchContext.getUser(), 
+      NMAuditLogger.logFailure(user, 
           AuditConstants.START_CONTAINER, "ContainerManagerImpl",
           "Container already running on this node!",
           applicationID, containerID);
@@ -442,7 +476,8 @@ public class ContainerManagerImpl extends CompositeService implements
     // Create the application
     Application application =
         new ApplicationImpl(dispatcher, this.aclsManager,
-          launchContext.getUser(), applicationID, credentials, context);
+          user, applicationID, credentials,
+          context);
     if (null ==
         context.getApplications().putIfAbsent(applicationID, application)) {
       LOG.info("Creating a new application reference for app "
@@ -455,14 +490,10 @@ public class ContainerManagerImpl extends CompositeService implements
     // TODO: Validate the request
     dispatcher.getEventHandler().handle(
         new ApplicationContainerInitEvent(container));
-    if (UserGroupInformation.isSecurityEnabled()) {
-      ContainerTokenIdentifier tokenId =
-          selectContainerTokenIdentifier(remoteUgi);
-      this.context.getContainerTokenSecretManager().startContainerSuccessful(
-        tokenId);
-    }
-
-    NMAuditLogger.logSuccess(launchContext.getUser(), 
+    
+    this.context.getContainerTokenSecretManager().startContainerSuccessful(
+      tokenId);
+    NMAuditLogger.logSuccess(user, 
         AuditConstants.START_CONTAINER, "ContainerManageImpl", 
         applicationID, containerID);
 
@@ -482,7 +513,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   @SuppressWarnings("unchecked")
   public StopContainerResponse stopContainer(StopContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnRemoteException, IOException {
 
     ContainerId containerID = request.getContainerId();
     String containerIDStr = containerID.toString();
@@ -490,12 +521,10 @@ public class ContainerManagerImpl extends CompositeService implements
     // TODO: Only the container's owner can kill containers today.
 
     UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
-    authorizeRequest(containerIDStr, null, null, remoteUgi);
-
+    Container container = this.context.getContainers().get(containerID);
     StopContainerResponse response =
         recordFactory.newRecordInstance(StopContainerResponse.class);
 
-    Container container = this.context.getContainers().get(containerID);
     if (container == null) {
       LOG.warn("Trying to stop unknown container " + containerID);
       NMAuditLogger.logFailure("UnknownUser",
@@ -505,6 +534,8 @@ public class ContainerManagerImpl extends CompositeService implements
           containerID);
       return response; // Return immediately.
     }
+    authorizeRequest(containerIDStr, null, null, remoteUgi,
+      getContainerTokenIdentifier(remoteUgi, container.getContainer()));
 
     dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerID,
@@ -524,7 +555,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public GetContainerStatusResponse getContainerStatus(
-      GetContainerStatusRequest request) throws YarnRemoteException {
+      GetContainerStatusRequest request) throws YarnRemoteException,
+      IOException {
 
     ContainerId containerID = request.getContainerId();
     String containerIDStr = containerID.toString();
@@ -532,21 +564,21 @@ public class ContainerManagerImpl extends CompositeService implements
     // TODO: Only the container's owner can get containers' status today.
 
     UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
-    authorizeRequest(containerIDStr, null, null, remoteUgi);
-
     LOG.info("Getting container-status for " + containerIDStr);
     Container container = this.context.getContainers().get(containerID);
-    if (container != null) {
-      ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
-      LOG.info("Returning " + containerStatus);
-      GetContainerStatusResponse response = recordFactory
-          .newRecordInstance(GetContainerStatusResponse.class);
-      response.setStatus(containerStatus);
-      return response;
+    if (container == null) {
+      throw RPCUtil.getRemoteException("Container " + containerIDStr
+        + " is not handled by this NodeManager"); 
     }
+    authorizeRequest(containerIDStr, null, null, remoteUgi,
+      getContainerTokenIdentifier(remoteUgi, container.getContainer()));
 
-    throw RPCUtil.getRemoteException("Container " + containerIDStr
-        + " is not handled by this NodeManager");
+    ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
+    LOG.info("Returning " + containerStatus);
+    GetContainerStatusResponse response =
+        recordFactory.newRecordInstance(GetContainerStatusResponse.class);
+    response.setStatus(containerStatus);
+    return response;
   }
 
   class ContainerEventDispatcher implements EventHandler<ContainerEvent> {
@@ -613,6 +645,10 @@ public class ContainerManagerImpl extends CompositeService implements
     default:
       LOG.warn("Invalid event " + event.getType() + ". Ignoring.");
     }
+  }
+
+  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
+    this.blockNewContainerRequests.set(blockNewContainerRequests);
   }
 
   @Override

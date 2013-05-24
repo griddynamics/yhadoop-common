@@ -34,7 +34,6 @@ import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -48,8 +47,8 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -98,7 +97,7 @@ public class AMLauncher implements Runnable {
     containerMgrProxy = getContainerMgrProxy(masterContainerID);
   }
   
-  private void launch() throws IOException {
+  private void launch() throws IOException, YarnRemoteException {
     connect();
     ContainerId masterContainerID = masterContainer.getId();
     ApplicationSubmissionContext applicationContext =
@@ -116,7 +115,7 @@ public class AMLauncher implements Runnable {
         + " for AM " + application.getAppAttemptId());
   }
   
-  private void cleanup() throws IOException {
+  private void cleanup() throws IOException, YarnRemoteException {
     connect();
     ContainerId containerId = masterContainer.getId();
     StopContainerRequest stopRequest = 
@@ -166,7 +165,6 @@ public class AMLauncher implements Runnable {
             new String[0])));
     
     // Finalize the container
-    container.setUser(applicationMasterContext.getAMContainerSpec().getUser());
     setupTokensAndEnv(container, containerID);
     
     return container;
@@ -178,17 +176,7 @@ public class AMLauncher implements Runnable {
     Map<String, String> environment = container.getEnvironment();
     environment.put(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV,
         application.getWebProxyBase());
-    // Set the AppAttemptId, containerId, NMHTTPAdress, AppSubmitTime to be
-    // consumable by the AM.
-    environment.put(ApplicationConstants.AM_CONTAINER_ID_ENV,
-        containerID.toString());
-    environment.put(ApplicationConstants.NM_HOST_ENV, masterContainer
-        .getNodeId().getHost());
-    environment.put(ApplicationConstants.NM_PORT_ENV,
-        String.valueOf(masterContainer.getNodeId().getPort()));
-    String parts[] =
-        masterContainer.getNodeHttpAddress().split(":");
-    environment.put(ApplicationConstants.NM_HTTP_PORT_ENV, parts[1]);
+    // Set AppSubmitTime and MaxAppAttempts to be consumable by the AM.
     ApplicationId applicationId =
         application.getAppAttemptId().getApplicationId();
     environment.put(
@@ -206,36 +194,22 @@ public class AMLauncher implements Runnable {
       Credentials credentials = new Credentials();
 
       DataInputByteBuffer dibb = new DataInputByteBuffer();
-      if (container.getContainerTokens() != null) {
+      if (container.getTokens() != null) {
         // TODO: Don't do this kind of checks everywhere.
-        dibb.reset(container.getContainerTokens());
+        dibb.reset(container.getTokens());
         credentials.readTokenStorageStream(dibb);
       }
 
-      ApplicationTokenIdentifier id = new ApplicationTokenIdentifier(
-          application.getAppAttemptId());
-      Token<ApplicationTokenIdentifier> token =
-          new Token<ApplicationTokenIdentifier>(id,
-              this.rmContext.getApplicationTokenSecretManager());
-      InetSocketAddress serviceAddr = conf.getSocketAddr(
-          YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-      // normally the client should set the service after acquiring the token,
-      // but this token is directly provided to the tasks
-      SecurityUtil.setTokenService(token, serviceAddr);
-      String appMasterTokenEncoded = token.encodeToUrlString();
-      LOG.debug("Putting appMaster token in env : " + token);
-      environment.put(
-          ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME,
-          appMasterTokenEncoded);
-
-      // Add the RM token
-      credentials.addToken(token.getService(), token);
+      // Add application token
+      Token<ApplicationTokenIdentifier> applicationToken =
+          application.getApplicationToken();
+      if(applicationToken != null) {
+        credentials.addToken(applicationToken.getService(), applicationToken);
+      }
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
-      container.setContainerTokens(
-          ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+      container.setTokens(ByteBuffer.wrap(dob.getData(), 0,
+        dob.getLength()));
 
       SecretKey clientSecretKey =
           this.rmContext.getClientToAMTokenSecretManager().getMasterKey(
@@ -271,6 +245,8 @@ public class AMLauncher implements Runnable {
         cleanup();
       } catch(IOException ie) {
         LOG.info("Error cleaning master ", ie);
+      } catch (YarnRemoteException e) {
+        LOG.info("Error cleaning master ", e);
       }
       break;
     default:

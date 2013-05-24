@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -46,24 +48,24 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 public class TestContainerManager extends BaseContainerManagerTest {
 
@@ -109,7 +111,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
 
   @Test
-  public void testContainerSetup() throws IOException, InterruptedException {
+  public void testContainerSetup() throws IOException, InterruptedException,
+      YarnRemoteException {
 
     containerManager.start();
 
@@ -125,8 +128,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     // ////// Construct the Container-id
     ContainerId cId = createContainerId();
-
-    container.setUser(user);
 
     // ////// Construct the container-spec.
     ContainerLaunchContext containerLaunchContext = 
@@ -145,12 +146,21 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(container.getUser());
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(512, 1));
-
+    Resource r = BuilderUtils.newResource(512, 1);
+    when(mockContainer.getResource()).thenReturn(r);
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":" + port);
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest startRequest = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
@@ -195,7 +205,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
   @Test
   public void testContainerLaunchAndStop() throws IOException,
-      InterruptedException {
+      InterruptedException, YarnRemoteException {
     containerManager.start();
 
     File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
@@ -221,8 +231,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-    containerLaunchContext.setUser(user);
-
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
@@ -238,13 +246,23 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(100, 1)); // MB
+    Resource r = BuilderUtils.newResource(100, 1);
+    when(mockContainer.getResource()).thenReturn(r); // MB
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":" + port);
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
+
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     startRequest.setContainer(mockContainer);
@@ -297,7 +315,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
       DefaultContainerExecutor.containerIsAlive(pid));
   }
   
-  private void testContainerLaunchAndExit(int exitCode) throws IOException, InterruptedException {
+  private void testContainerLaunchAndExit(int exitCode) throws IOException,
+      InterruptedException, YarnRemoteException {
 
 	  File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
 	  PrintWriter fileWriter = new PrintWriter(scriptFile);
@@ -328,8 +347,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
 	  ContainerLaunchContext containerLaunchContext = 
 			  recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
-	  containerLaunchContext.setUser(user);
-
 	  URL resource_alpha =
 			  ConverterUtils.getYarnUrlFromPath(localFS
 					  .makeQualified(new Path(scriptFile.getAbsolutePath())));
@@ -345,14 +362,22 @@ public class TestContainerManager extends BaseContainerManagerTest {
 			  new HashMap<String, LocalResource>();
 	  localResources.put(destinationFile, rsrc_alpha);
 	  containerLaunchContext.setLocalResources(localResources);
-	  containerLaunchContext.setUser(containerLaunchContext.getUser());
 	  List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
 	  containerLaunchContext.setCommands(commands);
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(100, 1)); // MB
-
+    Resource r = BuilderUtils.newResource(100, 1);
+    when(mockContainer.getResource()).thenReturn(r); // MB
+    int port = 12345;
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":" + port);
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
 	  StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
 	  startRequest.setContainerLaunchContext(containerLaunchContext);
 	  startRequest.setContainer(mockContainer);
@@ -373,7 +398,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
   
   @Test
-  public void testContainerLaunchAndExitSuccess() throws IOException, InterruptedException {
+  public void testContainerLaunchAndExitSuccess() throws IOException,
+      InterruptedException, YarnRemoteException {
 	  containerManager.start();
 	  int exitCode = 0; 
 
@@ -383,7 +409,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
 
   @Test
-  public void testContainerLaunchAndExitFailure() throws IOException, InterruptedException {
+  public void testContainerLaunchAndExitFailure() throws IOException,
+      InterruptedException, YarnRemoteException {
 	  containerManager.start();
 	  int exitCode = 50; 
 
@@ -394,14 +421,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
   
   @Test
   public void testLocalFilesCleanup() throws InterruptedException,
-      IOException {
+      IOException, YarnRemoteException {
     // Real del service
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);
 
-    containerManager =
-        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-          metrics, new ApplicationACLsManager(conf), dirsHandler);
+    containerManager = createContainerManager(delSrvc);
     containerManager.init(conf);
     containerManager.start();
 
@@ -418,8 +443,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // ////// Construct the Container-id
     ContainerId cId = createContainerId();
     ApplicationId appId = cId.getApplicationAttemptId().getApplicationId();
-
-    container.setUser(user);
 
     // ////// Construct the container-spec.
     ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -439,14 +462,22 @@ public class TestContainerManager extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    containerLaunchContext.setUser(container.getUser());
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cId);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(100, 1));
+    Resource r = BuilderUtils.newResource(100, 1);
+    when(mockContainer.getResource()).thenReturn(r);
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":" + port);
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
 //    containerLaunchContext.command = new ArrayList<CharSequence>();
-
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest request = recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(containerLaunchContext);
     request.setContainer(mockContainer);
@@ -510,5 +541,76 @@ public class TestContainerManager extends BaseContainerManagerTest {
     }
     Assert.assertFalse(targetFile.getAbsolutePath() + " exists!!",
         targetFile.exists());
+  }
+
+  @Test
+  public void testContainerLaunchFromPreviousRM() throws IOException,
+      InterruptedException {
+    containerManager.start();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    String host = "127.0.0.1";
+    int port = 1234;
+    ContainerId cId1 = createContainerId();
+    ContainerId cId2 = createContainerId();
+    containerLaunchContext
+      .setLocalResources(new HashMap<String, LocalResource>());
+    Resource mockResource = BuilderUtils.newResource(1024, 1);
+
+    Container mockContainer1 = mock(Container.class);
+    when(mockContainer1.getId()).thenReturn(cId1);
+    // Construct the Container with Invalid RMIdentifier
+    when(mockContainer1.getRMIdentifer()).thenReturn(
+      (long) ResourceManagerConstants.RM_INVALID_IDENTIFIER);
+    StartContainerRequest startRequest1 =
+        recordFactory.newRecordInstance(StartContainerRequest.class);
+    startRequest1.setContainerLaunchContext(containerLaunchContext);
+    
+    ContainerToken containerToken1 =
+        BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
+          System.currentTimeMillis() + 10000, 123, "password".getBytes());
+    when(mockContainer1.getContainerToken()).thenReturn(containerToken1);
+    startRequest1.setContainer(mockContainer1);
+    boolean catchException = false;
+    try {
+      containerManager.startContainer(startRequest1);
+    } catch (YarnRemoteException e) {
+      catchException = true;
+      Assert.assertTrue(e.getMessage().contains(
+        "Container " + cId1 + " rejected as it is allocated by a previous RM"));
+      // TO DO: This should be replaced to explicitly check exception
+      // class name after YARN-142
+      Assert.assertTrue(e.getMessage().contains(
+        InvalidContainerException.class.getName()));
+    }
+
+    // Verify that startContainer fail because of invalid container request
+    Assert.assertTrue(catchException);
+
+    // Construct the Container with a RMIdentifier within current RM
+    Container mockContainer2 = mock(Container.class);
+    when(mockContainer2.getId()).thenReturn(cId2);
+    when(mockContainer2.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+
+    when(mockContainer2.getResource()).thenReturn(mockResource);
+    StartContainerRequest startRequest2 =
+        recordFactory.newRecordInstance(StartContainerRequest.class);
+    startRequest2.setContainerLaunchContext(containerLaunchContext);
+    ContainerToken containerToken2 =
+        BuilderUtils.newContainerToken(cId1, host, port, user, mockResource,
+          System.currentTimeMillis() + 10000, 123, "password".getBytes());
+    when(mockContainer2.getContainerToken()).thenReturn(containerToken2);
+
+    startRequest2.setContainer(mockContainer2);
+    boolean noException = true;
+    try {
+      containerManager.startContainer(startRequest2);
+    } catch (YarnRemoteException e) {
+      noException = false;
+    }
+    // Verify that startContainer get no YarnRemoteException
+    Assert.assertTrue(noException);
   }
 }

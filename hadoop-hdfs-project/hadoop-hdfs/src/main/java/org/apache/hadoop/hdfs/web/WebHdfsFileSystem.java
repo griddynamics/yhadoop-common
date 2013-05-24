@@ -45,21 +45,16 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.ByteRangeInputStream;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
@@ -95,13 +90,11 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
@@ -126,6 +119,18 @@ public class WebHdfsFileSystem extends FileSystem
 
   /** SPNEGO authenticator */
   private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
+  /** Default connection factory may be overriden in tests to use smaller timeout values */
+  URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+  /** Configures connections for AuthenticatedURL */
+  private final ConnectionConfigurator CONN_CONFIGURATOR =
+    new ConnectionConfigurator() {
+      @Override
+      public HttpURLConnection configure(HttpURLConnection conn)
+          throws IOException {
+        connectionFactory.setTimeouts(conn);
+        return conn;
+      }
+    };
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
   /** Token selector */
@@ -133,6 +138,8 @@ public class WebHdfsFileSystem extends FileSystem
       = new WebHdfsDelegationTokenSelector();
 
   private DelegationTokenRenewer dtRenewer = null;
+  @VisibleForTesting
+  DelegationTokenRenewer.RenewAction<?> action;
 
   @VisibleForTesting
   protected synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
@@ -140,7 +147,7 @@ public class WebHdfsFileSystem extends FileSystem
       dtRenewer = DelegationTokenRenewer.getInstance();
     }
 
-    dtRenewer.addRenewAction(webhdfs);
+    action = dtRenewer.addRenewAction(webhdfs);
   }
 
   /** Is WebHDFS enabled in conf? */
@@ -208,7 +215,8 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   protected synchronized Token<?> getDelegationToken() throws IOException {
-    if (!hasInitedToken) {
+    // we haven't inited yet, or we used to have a token but it expired
+    if (!hasInitedToken || (action != null && !action.isValid())) {
       //since we don't already have a token, go get one
       Token<?> token = getDelegationToken(null);
       // security might be disabled
@@ -337,18 +345,7 @@ public class WebHdfsFileSystem extends FileSystem
       return ioe;
     }
 
-    final RemoteException re = (RemoteException)ioe;
-    return re.unwrapRemoteException(AccessControlException.class,
-        InvalidToken.class,
-        AuthenticationException.class,
-        AuthorizationException.class,
-        FileAlreadyExistsException.class,
-        FileNotFoundException.class,
-        ParentNotDirectoryException.class,
-        UnresolvedPathException.class,
-        SafeModeException.class,
-        DSQuotaExceededException.class,
-        NSQuotaExceededException.class);
+    return ((RemoteException)ioe).unwrapRemoteException();
   }
 
   /**
@@ -482,10 +479,11 @@ public class WebHdfsFileSystem extends FileSystem
           LOG.debug("open AuthenticatedURL connection");
           UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
           final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
-          conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
+          conn = new AuthenticatedURL(AUTH, CONN_CONFIGURATOR).openConnection(
+            url, authToken);
         } else {
           LOG.debug("open URL connection");
-          conn = (HttpURLConnection)url.openConnection();
+          conn = (HttpURLConnection)connectionFactory.openConnection(url);
         }
       } catch (AuthenticationException e) {
         throw new IOException(e);
@@ -580,7 +578,7 @@ public class WebHdfsFileSystem extends FileSystem
       checkRetry = false;
       
       //Step 2) Submit another Http request with the URL from the Location header with data.
-      conn = (HttpURLConnection)new URL(redirect).openConnection();
+      conn = (HttpURLConnection)connectionFactory.openConnection(new URL(redirect));
       conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
       conn.setChunkedStreamingMode(32 << 10); //32kB-chunk
       connect();
@@ -603,7 +601,7 @@ public class WebHdfsFileSystem extends FileSystem
           disconnect();
   
           checkRetry = false;
-          conn = (HttpURLConnection)new URL(redirect).openConnection();
+          conn = (HttpURLConnection)connectionFactory.openConnection(new URL(redirect));
           connect();
         }
 

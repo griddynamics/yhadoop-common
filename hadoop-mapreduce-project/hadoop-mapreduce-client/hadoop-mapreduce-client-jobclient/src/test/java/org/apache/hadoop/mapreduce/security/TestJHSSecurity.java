@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
@@ -48,7 +47,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -125,7 +123,7 @@ public class TestJHSSecurity {
       jobReportRequest.setJobId(MRBuilderUtils.newJobId(123456, 1, 1));
       try {
         clientUsingDT.getJobReport(jobReportRequest);
-      } catch (YarnRemoteException e) {
+      } catch (IOException e) {
         Assert.assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
       
@@ -148,7 +146,7 @@ public class TestJHSSecurity {
       // Valid token because of renewal.
       try {
         clientUsingDT.getJobReport(jobReportRequest);
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
         Assert.assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
       
@@ -162,7 +160,7 @@ public class TestJHSSecurity {
       try {
         clientUsingDT.getJobReport(jobReportRequest);
         fail("Should not have succeeded with an expired token");
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
         assertTrue(e.getCause().getMessage().contains("is expired"));
       }
       
@@ -184,7 +182,7 @@ public class TestJHSSecurity {
       
       try {
         clientUsingDT.getJobReport(jobReportRequest);
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
         fail("Unexpected exception" + e);
       }
       cancelDelegationToken(loggedInUser, hsService, token);
@@ -201,7 +199,7 @@ public class TestJHSSecurity {
       try {
         clientUsingDT.getJobReport(jobReportRequest);
         fail("Should not have succeeded with a cancelled delegation token");
-      } catch (UndeclaredThrowableException e) {
+      } catch (IOException e) {
       }
 
 
@@ -220,7 +218,7 @@ public class TestJHSSecurity {
     DelegationToken token = loggedInUser
         .doAs(new PrivilegedExceptionAction<DelegationToken>() {
           @Override
-          public DelegationToken run() throws YarnRemoteException {
+          public DelegationToken run() throws IOException {
             GetDelegationTokenRequest request = Records
                 .newRecord(GetDelegationTokenRequest.class);
             request.setRenewer(renewerString);
@@ -237,7 +235,7 @@ public class TestJHSSecurity {
     long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
 
       @Override
-      public Long run() throws YarnRemoteException {
+      public Long run() throws IOException {
         RenewDelegationTokenRequest request = Records
             .newRecord(RenewDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -253,7 +251,7 @@ public class TestJHSSecurity {
 
     loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
-      public Void run() throws YarnRemoteException {
+      public Void run() throws IOException {
         CancelDelegationTokenRequest request = Records
             .newRecord(CancelDelegationTokenRequest.class);
         request.setDelegationToken(dToken);

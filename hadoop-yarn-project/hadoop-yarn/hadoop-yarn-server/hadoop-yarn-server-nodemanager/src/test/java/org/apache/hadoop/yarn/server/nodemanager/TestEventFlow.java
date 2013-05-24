@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -31,10 +34,12 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -43,8 +48,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerM
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 
 public class TestEventFlow {
@@ -58,10 +63,11 @@ public class TestEventFlow {
       TestEventFlow.class.getName() + "-localLogDir").getAbsoluteFile();
   private static File remoteLogDir = new File("target",
       TestEventFlow.class.getName() + "-remoteLogDir").getAbsoluteFile();
+  private static final long SIMULATED_RM_IDENTIFIER = 1234;
 
   @Test
   public void testSuccessfulContainerLaunch() throws InterruptedException,
-      IOException {
+      IOException, YarnRemoteException {
 
     FileContext localFS = FileContext.getLocalFSFileContext();
 
@@ -73,6 +79,7 @@ public class TestEventFlow {
     remoteLogDir.mkdir();
 
     YarnConfiguration conf = new YarnConfiguration();
+    
     Context context = new NMContext(new NMContainerTokenSecretManager(conf));
 
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
@@ -100,11 +107,19 @@ public class TestEventFlow {
       protected void startStatusUpdater() {
         return; // Don't start any updating thread.
       }
+
+      @Override
+      public long getRMIdentifier() {
+        return SIMULATED_RM_IDENTIFIER;
+      }
     };
 
     DummyContainerManager containerManager =
         new DummyContainerManager(context, exec, del, nodeStatusUpdater,
           metrics, new ApplicationACLsManager(conf), dirsHandler);
+    nodeStatusUpdater.init(conf);
+    ((NMContext)context).setContainerManager(containerManager);
+    nodeStatusUpdater.start();
     containerManager.init(conf);
     containerManager.start();
 
@@ -122,9 +137,16 @@ public class TestEventFlow {
     cID.setApplicationAttemptId(applicationAttemptId);
     Container mockContainer = mock(Container.class);
     when(mockContainer.getId()).thenReturn(cID);
-    when(mockContainer.getResource()).thenReturn(recordFactory
-        .newRecordInstance(Resource.class));
-    launchContext.setUser("testing");
+    Resource r = BuilderUtils.newResource(1024, 1);
+    when(mockContainer.getResource()).thenReturn(r);
+    when(mockContainer.getRMIdentifer()).thenReturn(SIMULATED_RM_IDENTIFIER);
+    String user = "testing";
+    String host = "127.0.0.1";
+    int port = 1234;
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cID, host, port, user, r,
+          System.currentTimeMillis() + 10000L, 123, "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);

@@ -40,7 +40,6 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.web.URLUtils;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -149,17 +148,13 @@ public class HsftpFileSystem extends HftpFileSystem {
   }
   
   @Override
-  protected HttpURLConnection openConnection(String path, String query, Integer socketTimeout)
+  protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     query = addDelegationTokenParam(query);
     final URL url = new URL("https", nnUri.getHost(), 
         nnUri.getPort(), path + '?' + query);
     HttpsURLConnection conn;
-    if (socketTimeout == null) {
-      conn = (HttpsURLConnection)URLUtils.openConnection(url);
-    } else {
-      conn = (HttpsURLConnection)URLUtils.openConnection(url, socketTimeout);
-    }
+    conn = (HttpsURLConnection)connectionFactory.openConnection(url);
     // bypass hostname verification
     conn.setHostnameVerifier(new DummyHostnameVerifier());
     conn.setRequestMethod("GET");

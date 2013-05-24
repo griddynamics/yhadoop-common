@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
-import org.apache.hadoop.hdfs.web.URLUtils;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -85,6 +85,8 @@ public class HftpFileSystem extends FileSystem
   static {
     HttpURLConnection.setFollowRedirects(true);
   }
+
+  URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
 
   public static final Text TOKEN_KIND = new Text("HFTP delegation");
 
@@ -327,27 +329,12 @@ public class HftpFileSystem extends FileSystem
    * @param path The path component of the URL
    * @param query The query component of the URL
    */
-  protected final HttpURLConnection openConnection(String path, String query) 
-      throws IOException {
-    return openConnection(path, query, null); 
-  }
-  
-  /**
-   * Open an HTTP connection to the namenode to read file data and metadata.
-   * @param path The path component of the URL
-   * @param query The query component of the URL
-   * @param socketTimeout connection timeout or null if default timeout should be used 
-   */
-  protected HttpURLConnection openConnection(String path, String query, Integer socketTimeout)
+  protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     query = addDelegationTokenParam(query);
     final URL url = getNamenodeURL(path, query);
     final HttpURLConnection connection;
-    if (socketTimeout != null) {
-      connection = (HttpURLConnection)URLUtils.openConnection(url, socketTimeout);
-    } else {
-      connection = (HttpURLConnection)URLUtils.openConnection(url);
-    }
+    connection = (HttpURLConnection)connectionFactory.openConnection(url);
     connection.setRequestMethod("GET");
     connection.connect();
     return connection;
@@ -367,12 +354,14 @@ public class HftpFileSystem extends FileSystem
   }
 
   static class RangeHeaderUrlOpener extends ByteRangeInputStream.URLOpener {
+    URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+    
     RangeHeaderUrlOpener(final URL url) {
       super(url);
     }
 
     protected HttpURLConnection openConnection() throws IOException {
-      return (HttpURLConnection)URLUtils.openConnection(url);
+      return (HttpURLConnection)connectionFactory.openConnection(url);
     }
 
     /** Use HTTP Range header for specifying offset. */
