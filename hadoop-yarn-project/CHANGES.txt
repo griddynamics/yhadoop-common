@@ -57,6 +57,13 @@ Release 2.0.5-beta - UNRELEASED
     YARN-45. Add protocol for schedulers to request containers back from
     ApplicationMasters. (Carlo Curino, cdouglas)
 
+    YARN-563. Add the concept of an application-type for each application.
+    (Mayank Bansal via vinodkv)
+
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event
@@ -181,6 +188,12 @@ Release 2.0.5-beta - UNRELEASED
     YARN-617. Made ContainerTokens to be used for validation at NodeManager
     also in unsecure mode to prevent AMs from faking resource requirements in
     unsecure mode. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-708. Moved RecordFactory classes to hadoop-yarn-api, and put some
+    miscellaneous fixes to the interfaces. (Siddharth Seth via vinodkv)
+
+    YARN-711. Copied BuilderUtil methods in individual API records as
+    BuilderUtils is going to be dismantled. (Jian He via vinodkv)
 
   OPTIMIZATIONS
 
@@ -316,6 +329,52 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-628. Fix the way YarnRemoteException is being unrolled to extract out
     the underlying exception. (Siddharth Seth via vinodkv)
+
+    YARN-695. Remove masterContainer and status unused fields from
+    ApplicationReportProto and fix bugs in ApplicationReportPBImpl. (Zhijie Shen
+    via vinodkv)
+
+    YARN-706. Fixed race conditions in TestFSDownload. (Zhijie Shen via vinodkv).
+
+    YARN-715. Fixed unit test failures - TestDistributedShell and
+    TestUnmanagedAMLauncher. (Vinod Kumar Vavilapalli via sseth)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS
+
+    YARN-158. Yarn creating package-info.java must not depend on sh.
+    (Chris Nauroth via suresh)
+
+    YARN-176. Some YARN tests fail to find winutils. (Chris Nauroth via suresh)
+    
+    YARN-207. YARN distribution build fails on Windows. (Chris Nauroth via
+    suresh)
+
+    YARN-199. Yarn cmd line scripts for windows. (Ivan Mitic via suresh)
+
+    YARN-213. YARN build script would be more readable using abspath.
+    (Chris Nauroth via suresh)
+
+    YARN-233. Added support for running containers in MS Windows to YARN. (Chris
+    Nauroth via acmurthy)
+
+    YARN-234. Added support for process tree and resource calculator in MS Windows 
+    to YARN. (Chris Nauroth via acmurthy)
+
+    YARN-259. Fix LocalDirsHandlerService to use Path rather than URIs. (Xuan
+    Gong via acmurthy) 
+
+    YARN-316. YARN container launch may exceed maximum Windows command line 
+    length due to long classpath. (Chris Nauroth via suresh)
+
+    YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
+    via vinodkv)
+
+    YARN-488. TestContainerManagerSecurity fails on Windows. (Chris Nauroth
+    via hitesh)
+
+    YARN-490. TestDistributedShell fails on Windows. (Chris Nauroth via hitesh)
+
+    YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
 
 Release 2.0.4-alpha - 2013-04-25 
 
@@ -604,6 +663,9 @@ Release 0.23.8 - UNRELEASED
   IMPROVEMENTS
 
   OPTIMIZATIONS
+
+    YARN-548. Add tests for YarnUncaughtExceptionHandler (Vadim Bondarev via
+    jeagles)
 
   BUG FIXES
 
