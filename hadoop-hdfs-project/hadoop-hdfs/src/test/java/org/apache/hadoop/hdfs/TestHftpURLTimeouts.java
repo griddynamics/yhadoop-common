@@ -33,23 +33,38 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestHftpURLTimeouts {
 
-  @Test
-  public void testHftpSocketTimeout() throws Exception {
+  private HftpFileSystem fs;
+  
+  @Before
+  public void setup() throws Exception {
     Configuration conf = new Configuration();
     ServerSocket socket = new ServerSocket(0,1);
     URI uri = new URI("hftp", null,
         InetAddress.getByName(null).getHostAddress(),
         socket.getLocalPort(),
         null, null, null);
-    boolean timedout = false;
 
-    HftpFileSystem fs = (HftpFileSystem)FileSystem.get(uri, conf);
+    fs = (HftpFileSystem)FileSystem.get(uri, conf);
+    fs.connectionFactory = new URLConnectionFactory(5);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+  }
+  
+  @Test
+  public void testHftpSocketTimeout() throws Exception {
+    boolean timedout = false;
     try {
-      HttpURLConnection conn = fs.openConnection("/", "", 1);
+      HttpURLConnection conn = fs.openConnection("/", "");
       timedout = false;
       try {
         // this will consume the only slot in the backlog
@@ -69,21 +84,13 @@ public class TestHftpURLTimeouts {
 
   @Test
   public void testHsftpSocketTimeout() throws Exception {
-    Configuration conf = new Configuration();
-    ServerSocket socket = new ServerSocket(0,1);
-    URI uri = new URI("hsftp", null,
-        InetAddress.getByName(null).getHostAddress(),
-        socket.getLocalPort(),
-        null, null, null);
     boolean timedout = false;
-
-    HsftpFileSystem fs = (HsftpFileSystem)FileSystem.get(uri, conf);
     try {
       HttpURLConnection conn = null;
       timedout = false;
       try {
         // this will consume the only slot in the backlog
-        conn = fs.openConnection("/", "", 1);
+        conn = fs.openConnection("/", "");
       } catch (SocketTimeoutException ste) {
         // SSL expects a negotiation, so it will timeout on read, unlike hftp
         timedout = true;
@@ -108,7 +115,7 @@ public class TestHftpURLTimeouts {
       // socket's listen backlog so we have to try a bunch of times
       for (int n=32; !timedout && n > 0; n--) {
         try {
-          conns.add(fs.openConnection("/", "", 1));
+          conns.add(fs.openConnection("/", ""));
         } catch (SocketTimeoutException ste) {
           String message = ste.getMessage();
           assertNotNull(message);

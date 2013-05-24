@@ -30,32 +30,29 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
-public class URLUtils {
+public class URLConnectionFactory {
   /**
    * Timeout for socket connects and reads
    */
-  private final static int DEFAULT_SOCKET_TIMEOUT = 1*60*1000; // 1 minute
+  public final static int DEFAULT_SOCKET_TIMEOUT = 1*60*1000; // 1 minute
 
-  /**
-   * Opens a url with read and connect timeouts
-   * @param url to open
-   * @return URLConnection
-   * @throws IOException
-   */
-  public static URLConnection openConnection(URL url) throws IOException {
-      return openConnection(url, DEFAULT_SOCKET_TIMEOUT);
+  public static final URLConnectionFactory DEFAULT_CONNECTION_FACTORY = new URLConnectionFactory(DEFAULT_SOCKET_TIMEOUT);
+  
+  private int socketTimeout;
+
+  public URLConnectionFactory(int socketTimeout) {
+    this.socketTimeout = socketTimeout;
   }
   
   /**
    * Opens a url with read and connect timeouts
    * @param url to open
-   * @param socketTimeout connection timeout
    * @return URLConnection
    * @throws IOException
    */
-  public static URLConnection openConnection(URL url, int socketTimeout) throws IOException {
+  public URLConnection openConnection(URL url) throws IOException {
     URLConnection connection = url.openConnection();
-    setTimeouts(connection, socketTimeout);
+    setTimeouts(connection);
     return connection;    
   }
 
@@ -64,18 +61,7 @@ public class URLUtils {
    * 
    * @param connection URLConnection to set
    */
-  static void setTimeouts(URLConnection connection) {
-    connection.setConnectTimeout(DEFAULT_SOCKET_TIMEOUT);
-    connection.setReadTimeout(DEFAULT_SOCKET_TIMEOUT);
-  }
-
-  /**
-   * Sets timeout parameters on the given URLConnection.
-   * 
-   * @param connection URLConnection to set
-   * @param socketTimeout timeout to set
-   */
-  static void setTimeouts(URLConnection connection, int socketTimeout) {
+  public void setTimeouts(URLConnection connection) {
     connection.setConnectTimeout(socketTimeout);
     connection.setReadTimeout(socketTimeout);
   }
