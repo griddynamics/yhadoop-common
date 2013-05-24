@@ -127,6 +127,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-615. Rename ContainerLaunchContext.containerTokens to tokens.
     (Vinod Kumar Vavilapalli via sseth)
 
+    YARN-571. Remove user from ContainerLaunchContext. (Omkar Vinit Joshi via
+    vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -134,6 +137,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-45. Add protocol for schedulers to request containers back from
     ApplicationMasters. (Carlo Curino, cdouglas)
+
+    YARN-563. Add the concept of an application-type for each application.
+    (Mayank Bansal via vinodkv)
 
   IMPROVEMENTS
 
@@ -262,6 +268,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-708. Moved RecordFactory classes to hadoop-yarn-api, and put some
     miscellaneous fixes to the interfaces. (Siddharth Seth via vinodkv)
+
+    YARN-711. Copied BuilderUtil methods in individual API records as
+    BuilderUtils is going to be dismantled. (Jian He via vinodkv)
 
   OPTIMIZATIONS
 
@@ -694,6 +703,9 @@ Release 0.23.8 - UNRELEASED
   IMPROVEMENTS
 
   OPTIMIZATIONS
+
+    YARN-548. Add tests for YarnUncaughtExceptionHandler (Vadim Bondarev via
+    jeagles)
 
   BUG FIXES
 

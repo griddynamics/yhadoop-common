@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
@@ -36,8 +35,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
-public class ApplicationReportPBImpl extends ProtoBase<ApplicationReportProto>
-implements ApplicationReport {
+public class ApplicationReportPBImpl extends ApplicationReport {
   ApplicationReportProto proto = ApplicationReportProto.getDefaultInstance();
   ApplicationReportProto.Builder builder = null;
   boolean viaProto = false;
@@ -220,6 +218,15 @@ implements ApplicationReport {
   }
 
   @Override
+  public String getApplicationType() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasApplicationType()) {
+      return null;
+    }
+    return p.getApplicationType();
+  }
+  
+  @Override
   public void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
     if (applicationId == null)
@@ -318,6 +325,16 @@ implements ApplicationReport {
     }
     builder.setUser((user));
   }
+  
+  @Override
+  public void setApplicationType(String applicationType) {
+    maybeInitBuilder();
+    if (applicationType == null) {
+      builder.clearApplicationType();
+      return;
+    }
+    builder.setApplicationType((applicationType));
+  }
 
   @Override
   public void setDiagnostics(String diagnostics) {
@@ -357,12 +374,31 @@ implements ApplicationReport {
     builder.setProgress(progress);
   }
 
-  @Override
   public ApplicationReportProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToBuilder() {

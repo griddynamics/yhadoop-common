@@ -1612,14 +1612,14 @@ public class TestFairScheduler {
         new ApplicationMasterService(resourceManager.getRMContext(), scheduler);
     ApplicationSubmissionContext submissionContext = new ApplicationSubmissionContextPBImpl();
     ContainerLaunchContext clc =
-        BuilderUtils.newContainerLaunchContext(user, null, null, null, null,
+        BuilderUtils.newContainerLaunchContext(null, null, null, null,
             null, null);
     submissionContext.setApplicationId(applicationId);
     submissionContext.setAMContainerSpec(clc);
     RMApp application =
         new RMAppImpl(applicationId, resourceManager.getRMContext(), conf, name, user, 
           queue, submissionContext, scheduler, masterService,
-          System.currentTimeMillis());
+          System.currentTimeMillis(), "YARN");
     resourceManager.getRMContext().getRMApps().putIfAbsent(applicationId, application);
     application.handle(new RMAppEvent(applicationId, RMAppEventType.START));
 

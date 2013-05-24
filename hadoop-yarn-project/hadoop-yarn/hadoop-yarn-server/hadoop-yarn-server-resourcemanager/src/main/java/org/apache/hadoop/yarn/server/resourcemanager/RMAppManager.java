@@ -239,7 +239,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      boolean isRecovered) throws YarnRemoteException {
+      boolean isRecovered, String user) throws YarnRemoteException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     // Validation of the ApplicationSubmissionContext needs to be completed
@@ -265,11 +265,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Create RMApp
     RMApp application =
         new RMAppImpl(applicationId, rmContext, this.conf,
-            submissionContext.getApplicationName(),
-            submissionContext.getAMContainerSpec().getUser(),
+            submissionContext.getApplicationName(), user,
             submissionContext.getQueue(),
             submissionContext, this.scheduler, this.masterService,
-            submitTime);
+            submitTime, submissionContext.getApplicationType());
 
     // Concurrent app submissions with same applicationId will fail here
     // Concurrent app submissions with different applicationIds will not
@@ -370,7 +369,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       if(shouldRecover) {
         LOG.info("Recovering application " + appState.getAppId());
         submitApplication(appState.getApplicationSubmissionContext(), 
-                        appState.getSubmitTime(), true);
+                        appState.getSubmitTime(), true, appState.getUser());
         // re-populate attempt information in application
         RMAppImpl appImpl = (RMAppImpl) rmContext.getRMApps().get(
                                                         appState.getAppId());

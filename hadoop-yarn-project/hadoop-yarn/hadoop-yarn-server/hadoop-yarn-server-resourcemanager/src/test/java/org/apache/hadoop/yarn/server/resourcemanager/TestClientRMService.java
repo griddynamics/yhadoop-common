@@ -381,8 +381,6 @@ public class TestClientRMService {
 
   private SubmitApplicationRequest mockSubmitAppRequest(ApplicationId appId,
       String name, String queue) {
-    String user = MockApps.newUserName();
-
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
 
     Resource resource = Resources.createResource(
@@ -391,7 +389,6 @@ public class TestClientRMService {
     ApplicationSubmissionContext submissionContext =
         recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     submissionContext.setAMContainerSpec(amContainerSpec);
-    submissionContext.getAMContainerSpec().setUser(user);
     submissionContext.setApplicationName(name);
     submissionContext.setQueue(queue);
     submissionContext.setApplicationId(appId);
@@ -449,7 +446,7 @@ public class TestClientRMService {
     when(asContext.getMaxAppAttempts()).thenReturn(1);
     return new RMAppImpl(applicationId3, rmContext, config, null, null,
         queueName, asContext, yarnScheduler, null , System
-            .currentTimeMillis());
+            .currentTimeMillis(), "YARN");
   }
 
   private static YarnScheduler mockYarnScheduler() {

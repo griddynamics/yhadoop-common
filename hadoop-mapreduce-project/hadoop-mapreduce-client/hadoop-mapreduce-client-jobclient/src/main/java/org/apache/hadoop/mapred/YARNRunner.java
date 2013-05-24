@@ -476,8 +476,7 @@ public class YARNRunner implements ClientProtocol {
 
     // Setup ContainerLaunchContext for AM container
     ContainerLaunchContext amContainer = BuilderUtils
-        .newContainerLaunchContext(UserGroupInformation
-            .getCurrentUser().getShortUserName(), localResources,
+        .newContainerLaunchContext(localResources,
             environment, vargsFinal, null, securityTokens, acls);
 
     // Set up the ApplicationSubmissionContext
@@ -497,6 +496,7 @@ public class YARNRunner implements ClientProtocol {
         conf.getInt(MRJobConfig.MR_AM_MAX_ATTEMPTS,
             MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS));
     appContext.setResource(capability);
+    appContext.setApplicationType(MRJobConfig.MR_APPLICATION_TYPE);
     return appContext;
   }
 

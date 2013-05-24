@@ -788,6 +788,7 @@ public class TestRMWebServicesApps extends JerseyTest {
           WebServicesTestUtils.getXmlString(element, "id"),
           WebServicesTestUtils.getXmlString(element, "user"),
           WebServicesTestUtils.getXmlString(element, "name"),
+          WebServicesTestUtils.getXmlString(element, "applicationType"),
           WebServicesTestUtils.getXmlString(element, "queue"),
           WebServicesTestUtils.getXmlString(element, "state"),
           WebServicesTestUtils.getXmlString(element, "finalStatus"),
@@ -807,20 +808,20 @@ public class TestRMWebServicesApps extends JerseyTest {
       Exception {
 
     // 15 because trackingUrl not assigned yet
-    assertEquals("incorrect number of elements", 15, info.length());
+    assertEquals("incorrect number of elements", 16, info.length());
 
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
-        info.getString("name"), info.getString("queue"),
-        info.getString("state"), info.getString("finalStatus"),
-        (float) info.getDouble("progress"), info.getString("trackingUI"),
-        info.getString("diagnostics"), info.getLong("clusterId"),
-        info.getLong("startedTime"), info.getLong("finishedTime"),
-        info.getLong("elapsedTime"), info.getString("amHostHttpAddress"),
-        info.getString("amContainerLogs"));
+      info.getString("name"), info.getString("applicationType"), info.getString("queue"),
+      info.getString("state"), info.getString("finalStatus"),
+      (float) info.getDouble("progress"), info.getString("trackingUI"),
+      info.getString("diagnostics"), info.getLong("clusterId"),
+      info.getLong("startedTime"), info.getLong("finishedTime"),
+      info.getLong("elapsedTime"), info.getString("amHostHttpAddress"),
+      info.getString("amContainerLogs"));
   }
 
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
-      String name, String queue, String state, String finalStatus,
+      String name, String applicationType, String queue, String state, String finalStatus,
       float progress, String trackingUI, String diagnostics, long clusterId,
       long startedTime, long finishedTime, long elapsedTime,
       String amHostHttpAddress, String amContainerLogs) throws JSONException,
@@ -830,6 +831,8 @@ public class TestRMWebServicesApps extends JerseyTest {
         .toString(), id);
     WebServicesTestUtils.checkStringMatch("user", app.getUser(), user);
     WebServicesTestUtils.checkStringMatch("name", app.getName(), name);
+    WebServicesTestUtils.checkStringMatch("applicationType",
+      app.getApplicationType(), applicationType);
     WebServicesTestUtils.checkStringMatch("queue", app.getQueue(), queue);
     WebServicesTestUtils.checkStringMatch("state", app.getState().toString(),
         state);
@@ -1006,7 +1009,7 @@ public class TestRMWebServicesApps extends JerseyTest {
     // Verify these parallel arrays are the same
     int i = 0;
     for (RMAppAttempt attempt : attempts) {
-      verifyAppAttemptsInfo(jsonArray.getJSONObject(i), attempt);
+      verifyAppAttemptsInfo(jsonArray.getJSONObject(i), attempt, app.getUser());
       ++i;
     }
   }
@@ -1014,8 +1017,9 @@ public class TestRMWebServicesApps extends JerseyTest {
   @Test
   public void testAppAttemptsXML() throws JSONException, Exception {
     rm.start();
+    String user = "user1";
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
-    RMApp app1 = rm.submitApp(1024, "testwordcount", "user1");
+    RMApp app1 = rm.submitApp(1024, "testwordcount", user);
     amNodeManager.nodeHeartbeat(true);
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
@@ -1034,11 +1038,12 @@ public class TestRMWebServicesApps extends JerseyTest {
     assertEquals("incorrect number of elements", 1, nodes.getLength());
     NodeList attempt = dom.getElementsByTagName("appAttempt");
     assertEquals("incorrect number of elements", 1, attempt.getLength());
-    verifyAppAttemptsXML(attempt, app1.getCurrentAppAttempt());
+    verifyAppAttemptsXML(attempt, app1.getCurrentAppAttempt(), user);
     rm.stop();
   }
 
-  public void verifyAppAttemptsXML(NodeList nodes, RMAppAttempt appAttempt)
+  public void verifyAppAttemptsXML(NodeList nodes, RMAppAttempt appAttempt,
+      String user)
       throws JSONException, Exception {
 
     for (int i = 0; i < nodes.getLength(); i++) {
@@ -1050,11 +1055,12 @@ public class TestRMWebServicesApps extends JerseyTest {
           WebServicesTestUtils.getXmlString(element, "containerId"),
           WebServicesTestUtils.getXmlString(element, "nodeHttpAddress"),
           WebServicesTestUtils.getXmlString(element, "nodeId"),
-          WebServicesTestUtils.getXmlString(element, "logsLink"));
+          WebServicesTestUtils.getXmlString(element, "logsLink"), user);
     }
   }
 
-  public void verifyAppAttemptsInfo(JSONObject info, RMAppAttempt appAttempt)
+  public void verifyAppAttemptsInfo(JSONObject info, RMAppAttempt appAttempt,
+      String user)
       throws JSONException, Exception {
 
     assertEquals("incorrect number of elements", 6, info.length());
@@ -1062,12 +1068,12 @@ public class TestRMWebServicesApps extends JerseyTest {
     verifyAppAttemptInfoGeneric(appAttempt, info.getInt("id"),
         info.getLong("startTime"), info.getString("containerId"),
         info.getString("nodeHttpAddress"), info.getString("nodeId"),
-        info.getString("logsLink"));
+        info.getString("logsLink"), user);
   }
 
   public void verifyAppAttemptInfoGeneric(RMAppAttempt appAttempt, int id,
       long startTime, String containerId, String nodeHttpAddress, String nodeId,
-      String logsLink)
+      String logsLink, String user)
           throws JSONException, Exception {
 
     assertEquals("id doesn't match", appAttempt.getAppAttemptId()
@@ -1084,7 +1090,7 @@ public class TestRMWebServicesApps extends JerseyTest {
         logsLink.startsWith("http://"));
     assertTrue(
         "logsLink doesn't contain user info", logsLink.endsWith("/"
-        + appAttempt.getSubmissionContext().getAMContainerSpec().getUser()));
+        + user));
   }
 
 }
