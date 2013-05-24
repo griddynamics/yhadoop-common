@@ -34,16 +34,12 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 public class TestHftpURLTimeouts {
 
-  private HftpFileSystem fs;
-  
-  @Before
-  public void setup() throws Exception {
+  @Test
+  public void testHftpSocketTimeout() throws Exception {
     Configuration conf = new Configuration();
     ServerSocket socket = new ServerSocket(0,1);
     URI uri = new URI("hftp", null,
@@ -51,17 +47,9 @@ public class TestHftpURLTimeouts {
         socket.getLocalPort(),
         null, null, null);
 
-    fs = (HftpFileSystem)FileSystem.get(uri, conf);
+    HftpFileSystem fs = (HftpFileSystem)FileSystem.get(uri, conf);
     fs.connectionFactory = new URLConnectionFactory(5);
-  }
 
-  @After
-  public void tearDown() throws Exception {
-    fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
-  }
-  
-  @Test
-  public void testHftpSocketTimeout() throws Exception {
     boolean timedout = false;
     try {
       HttpURLConnection conn = fs.openConnection("/", "");
@@ -78,13 +66,24 @@ public class TestHftpURLTimeouts {
       assertTrue("read timedout", timedout);
       assertTrue("connect timedout", checkConnectTimeout(fs, false));
     } finally {
+      fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
       fs.close();
     }
   }
 
   @Test
   public void testHsftpSocketTimeout() throws Exception {
+    Configuration conf = new Configuration();
+    ServerSocket socket = new ServerSocket(0,1);
+    URI uri = new URI("hsftp", null,
+        InetAddress.getByName(null).getHostAddress(),
+        socket.getLocalPort(),
+        null, null, null);
     boolean timedout = false;
+
+    HsftpFileSystem fs = (HsftpFileSystem)FileSystem.get(uri, conf);
+    fs.connectionFactory = new URLConnectionFactory(5);
+    
     try {
       HttpURLConnection conn = null;
       timedout = false;
@@ -101,6 +100,7 @@ public class TestHftpURLTimeouts {
       assertTrue("ssl read connect timedout", timedout);
       assertTrue("connect timedout", checkConnectTimeout(fs, true));
     } finally {
+      fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
       fs.close();
     }
   }
