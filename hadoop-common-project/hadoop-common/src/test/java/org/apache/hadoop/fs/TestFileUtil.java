@@ -20,21 +20,28 @@ package org.apache.hadoop.fs;
 import org.junit.Before;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarOutputStream;
 import org.junit.After;
@@ -129,7 +136,7 @@ public class TestFileUtil {
     return newFile;
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testListFiles() throws IOException {
     setupDirs();
     //Test existing files case 
@@ -156,7 +163,7 @@ public class TestFileUtil {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testListAPI() throws IOException {
     setupDirs();
     //Test existing files case 
@@ -204,7 +211,7 @@ public class TestFileUtil {
     Assert.assertTrue(!partitioned.exists());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDelete() throws IOException {
     setupDirs();
     boolean ret = FileUtil.fullyDelete(del);
@@ -219,7 +226,7 @@ public class TestFileUtil {
    * (b) symlink to dir only and not the dir pointed to by symlink.
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDeleteSymlinks() throws IOException {
     setupDirs();
     
@@ -249,7 +256,7 @@ public class TestFileUtil {
    * (b) dangling symlink to directory properly
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDeleteDanglingSymlinks() throws IOException {
     setupDirs();
     // delete the directory tmp to make tmpDir a dangling link to dir tmp and
@@ -276,7 +283,7 @@ public class TestFileUtil {
     Assert.assertEquals(3, del.list().length);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDeleteContents() throws IOException {
     setupDirs();
     boolean ret = FileUtil.fullyDeleteContents(del);
@@ -392,15 +399,19 @@ public class TestFileUtil {
         zlink.exists());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDelete() throws IOException {
+    if(Shell.WINDOWS) {
+      // windows Dir.setWritable(false) does not work for directories
+      return;
+    }
     LOG.info("Running test to verify failure of fullyDelete()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDelete(new MyFile(del));
     validateAndSetWritablePermissions(true, ret);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDeleteGrantPermissions() throws IOException {
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDelete(new MyFile(del), true);
@@ -469,15 +480,19 @@ public class TestFileUtil {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDeleteContents() throws IOException {
+    if(Shell.WINDOWS) {
+      // windows Dir.setWritable(false) does not work for directories
+      return;
+    }
     LOG.info("Running test to verify failure of fullyDeleteContents()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del));
     validateAndSetWritablePermissions(true, ret);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDeleteContentsGrantPermissions() throws IOException {
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del), true);
@@ -485,7 +500,7 @@ public class TestFileUtil {
     validateAndSetWritablePermissions(false, ret);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testCopyMergeSingleDirectory() throws IOException {
     setupDirs();
     boolean copyMergeResult = copyMerge("partitioned", "tmp/merged");
@@ -822,5 +837,70 @@ public class TestFileUtil {
     assertEquals(2, paths.length);
     assertEquals(paths[0], path1);
     assertEquals(paths[1], path2);
+  }
+  
+  @Test (timeout = 30000)
+  public void testCreateJarWithClassPath() throws Exception {
+    // setup test directory for files
+    Assert.assertFalse(tmp.exists());
+    Assert.assertTrue(tmp.mkdirs());
+
+    // create files expected to match a wildcard
+    List<File> wildcardMatches = Arrays.asList(new File(tmp, "wildcard1.jar"),
+      new File(tmp, "wildcard2.jar"), new File(tmp, "wildcard3.JAR"),
+      new File(tmp, "wildcard4.JAR"));
+    for (File wildcardMatch: wildcardMatches) {
+      Assert.assertTrue("failure creating file: " + wildcardMatch,
+        wildcardMatch.createNewFile());
+    }
+
+    // create non-jar files, which we expect to not be included in the classpath
+    Assert.assertTrue(new File(tmp, "text.txt").createNewFile());
+    Assert.assertTrue(new File(tmp, "executable.exe").createNewFile());
+    Assert.assertTrue(new File(tmp, "README").createNewFile());
+
+    // create classpath jar
+    String wildcardPath = tmp.getCanonicalPath() + File.separator + "*";
+    List<String> classPaths = Arrays.asList("cp1.jar", "cp2.jar", wildcardPath,
+      "cp3.jar");
+    String inputClassPath = StringUtils.join(File.pathSeparator, classPaths);
+    String classPathJar = FileUtil.createJarWithClassPath(inputClassPath,
+      new Path(tmp.getCanonicalPath()));
+
+    // verify classpath by reading manifest from jar file
+    JarFile jarFile = null;
+    try {
+      jarFile = new JarFile(classPathJar);
+      Manifest jarManifest = jarFile.getManifest();
+      Assert.assertNotNull(jarManifest);
+      Attributes mainAttributes = jarManifest.getMainAttributes();
+      Assert.assertNotNull(mainAttributes);
+      Assert.assertTrue(mainAttributes.containsKey(Attributes.Name.CLASS_PATH));
+      String classPathAttr = mainAttributes.getValue(Attributes.Name.CLASS_PATH);
+      Assert.assertNotNull(classPathAttr);
+      List<String> expectedClassPaths = new ArrayList<String>();
+      for (String classPath: classPaths) {
+        if (!wildcardPath.equals(classPath)) {
+          expectedClassPaths.add(new File(classPath).toURI().toURL()
+            .toExternalForm());
+        } else {
+          // add wildcard matches
+          for (File wildcardMatch: wildcardMatches) {
+            expectedClassPaths.add(wildcardMatch.toURI().toURL()
+              .toExternalForm());
+          }
+        }
+      }
+      List<String> actualClassPaths = Arrays.asList(classPathAttr.split(" "));
+      Assert.assertEquals(expectedClassPaths, actualClassPaths);
+    } finally {
+      if (jarFile != null) {
+        try {
+          jarFile.close();
+        } catch (IOException e) {
+          LOG.warn("exception closing jarFile: " + classPathJar, e);
+        }
+      }
+    }
   }
 }
