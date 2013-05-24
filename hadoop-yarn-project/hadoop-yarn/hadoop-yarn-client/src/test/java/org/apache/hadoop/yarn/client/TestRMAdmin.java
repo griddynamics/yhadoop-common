@@ -272,8 +272,7 @@ public class TestRMAdmin {
       // test IllegalArgumentException
       assertEquals(-1, test.run(args));
       assertTrue(dataErr.toString().contains(
-          "refreshQueues: Does not contain a valid host:"
-              + "port authority: fake adderss"));
+          "refreshQueues: Does not contain a valid host:port authority:"));
 
     } finally {
       FakeRpcClientClassFactory.FakeRMAdminProtocol.resultCode = 
