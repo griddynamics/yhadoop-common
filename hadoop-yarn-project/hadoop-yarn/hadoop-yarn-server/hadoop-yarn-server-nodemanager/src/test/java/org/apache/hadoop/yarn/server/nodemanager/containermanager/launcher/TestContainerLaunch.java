@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -26,14 +28,15 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import junit.framework.Assert;
+
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.util.Shell;
@@ -49,13 +52,16 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
+import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -65,9 +71,6 @@ import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Before;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
-
-import junit.framework.Assert;
 
 public class TestContainerLaunch extends BaseContainerManagerTest {
 
@@ -89,15 +92,17 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     File shellFile = null;
     File tempFile = null;
-    String badSymlink = "foo@zz%_#*&!-+= bar()";
+    String badSymlink = Shell.WINDOWS ? "foo@zz_#!-+bar.cmd" :
+      "foo@zz%_#*&!-+= bar()";
     File symLinkFile = null;
 
     try {
-      shellFile = new File(tmpDir, "hello.sh");
-      tempFile = new File(tmpDir, "temp.sh");
-      String timeoutCommand = "echo \"hello\"";
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      tempFile = Shell.appendScriptExtension(tmpDir, "temp");
+      String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
+        "echo \"hello\"";
       PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));    
-      shellFile.setExecutable(true);
+      FileUtil.setExecutable(shellFile, true);
       writer.println(timeoutCommand);
       writer.close();
 
@@ -110,12 +115,18 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
       Map<String, String> env = new HashMap<String, String>();
       List<String> commands = new ArrayList<String>();
-      commands.add("/bin/sh ./\\\"" + badSymlink + "\\\"");
+      if (Shell.WINDOWS) {
+        commands.add("cmd");
+        commands.add("/c");
+        commands.add("\"" + badSymlink + "\"");
+      } else {
+        commands.add("/bin/sh ./\\\"" + badSymlink + "\\\"");
+      }
 
       ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
       fos.flush();
       fos.close();
-      tempFile.setExecutable(true);
+      FileUtil.setExecutable(tempFile, true);
 
       Shell.ShellCommandExecutor shexc 
       = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, tmpDir);
@@ -147,7 +158,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
    * See if environment variable is forwarded using sanitizeEnv.
    * @throws Exception
    */
-  @Test (timeout = 5000)
+  @Test (timeout = 60000)
   public void testContainerEnvVariables() throws Exception {
     containerManager.start();
 
@@ -165,11 +176,13 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     appAttemptId.setAttemptId(1);
     ContainerId cId = 
         recordFactory.newRecordInstance(ContainerId.class);
+    int port = 12345;
     cId.setApplicationAttemptId(appAttemptId);
     when(mockContainer.getId()).thenReturn(cId);
+
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
     Map<String, String> userSetEnv = new HashMap<String, String>();
@@ -178,26 +191,39 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     userSetEnv.put(Environment.NM_PORT.name(), "user_set_NM_PORT");
     userSetEnv.put(Environment.NM_HTTP_PORT.name(), "user_set_NM_HTTP_PORT");
     userSetEnv.put(Environment.LOCAL_DIRS.name(), "user_set_LOCAL_DIR");
-    containerLaunchContext.setUser(user);
     containerLaunchContext.setEnvironment(userSetEnv);
 
     File scriptFile = new File(tmpDir, "scriptFile.sh");
     PrintWriter fileWriter = new PrintWriter(scriptFile);
     File processStartFile =
         new File(tmpDir, "env_vars.txt").getAbsoluteFile();
-    fileWriter.write("\numask 0"); // So that start file is readable by the test
-    fileWriter.write("\necho $" + Environment.CONTAINER_ID.name() + " > "
-        + processStartFile);
-    fileWriter.write("\necho $" + Environment.NM_HOST.name() + " >> "
-        + processStartFile);
-    fileWriter.write("\necho $" + Environment.NM_PORT.name() + " >> "
-        + processStartFile);
-    fileWriter.write("\necho $" + Environment.NM_HTTP_PORT.name() + " >> "
-        + processStartFile);
-    fileWriter.write("\necho $" + Environment.LOCAL_DIRS.name() + " >> "
-        + processStartFile);
-    fileWriter.write("\necho $$ >> " + processStartFile);
-    fileWriter.write("\nexec sleep 100");
+    if (Shell.WINDOWS) {
+      fileWriter.println("@echo " + Environment.CONTAINER_ID.$() + "> "
+          + processStartFile);
+      fileWriter.println("@echo " + Environment.NM_HOST.$() + ">> "
+          + processStartFile);
+      fileWriter.println("@echo " + Environment.NM_PORT.$() + ">> "
+          + processStartFile);
+      fileWriter.println("@echo " + Environment.NM_HTTP_PORT.$() + ">> "
+          + processStartFile);
+      fileWriter.println("@echo " + Environment.LOCAL_DIRS.$() + ">> "
+          + processStartFile);
+      fileWriter.println("@ping -n 100 127.0.0.1 >nul");
+    } else {
+      fileWriter.write("\numask 0"); // So that start file is readable by the test
+      fileWriter.write("\necho $" + Environment.CONTAINER_ID.name() + " > "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.NM_HOST.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.NM_PORT.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.NM_HTTP_PORT.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $" + Environment.LOCAL_DIRS.name() + " >> "
+          + processStartFile);
+      fileWriter.write("\necho $$ >> " + processStartFile);
+      fileWriter.write("\nexec sleep 100");
+    }
     fileWriter.close();
 
     // upload the script file so that the container can run it
@@ -218,15 +244,17 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setLocalResources(localResources);
 
     // set up the rest of the container
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
-    List<String> commands = new ArrayList<String>();
-    commands.add("/bin/bash");
-    commands.add(scriptFile.getAbsolutePath());
+    List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(1024, 1));
+    Resource r = BuilderUtils.newResource(1024, 1);
+    when(mockContainer.getResource()).thenReturn(r);
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 1234,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     startRequest.setContainer(mockContainer);
     containerManager.startContainer(startRequest);
 
@@ -282,12 +310,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // Assert that the process is alive
     Assert.assertTrue("Process is not alive!",
-        exec.signalContainer(user,
-            pid, Signal.NULL));
+      DefaultContainerExecutor.containerIsAlive(pid));
     // Once more
     Assert.assertTrue("Process is not alive!",
-        exec.signalContainer(user,
-            pid, Signal.NULL));
+      DefaultContainerExecutor.containerIsAlive(pid));
 
     StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
     stopRequest.setContainerId(cId);
@@ -301,38 +327,19 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     gcsRequest.setContainerId(cId);
     ContainerStatus containerStatus = 
         containerManager.getContainerStatus(gcsRequest).getStatus();
-    Assert.assertEquals(ExitCode.TERMINATED.getExitCode(),
-        containerStatus.getExitStatus());
+    int expectedExitCode = Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
+      ExitCode.TERMINATED.getExitCode();
+    Assert.assertEquals(expectedExitCode, containerStatus.getExitStatus());
 
     // Assert that the process is not alive anymore
     Assert.assertFalse("Process is still alive!",
-        exec.signalContainer(user,
-            pid, Signal.NULL));
+      DefaultContainerExecutor.containerIsAlive(pid));
   }
 
   @Test
   public void testDelayedKill() throws Exception {
     containerManager.start();
 
-    File processStartFile =
-        new File(tmpDir, "pid.txt").getAbsoluteFile();
-
-    // setup a script that can handle sigterm gracefully
-    File scriptFile = new File(tmpDir, "testscript.sh");
-    PrintWriter writer = new PrintWriter(new FileOutputStream(scriptFile));
-    writer.println("#!/bin/bash\n\n");
-    writer.println("echo \"Running testscript for delayed kill\"");
-    writer.println("hello=\"Got SIGTERM\"");
-    writer.println("umask 0");
-    writer.println("trap \"echo $hello >> " + processStartFile + "\" SIGTERM");
-    writer.println("echo \"Writing pid to start file\"");
-    writer.println("echo $$ >> " + processStartFile);
-    writer.println("while true; do\nsleep 1s;\ndone");
-    writer.close();
-    scriptFile.setExecutable(true);
-
-    ContainerLaunchContext containerLaunchContext = 
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
     Container mockContainer = mock(Container.class);
     // ////// Construct the Container-id
     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
@@ -345,13 +352,39 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ContainerId cId = 
         recordFactory.newRecordInstance(ContainerId.class);
     cId.setApplicationAttemptId(appAttemptId);
+
+    File processStartFile =
+        new File(tmpDir, "pid.txt").getAbsoluteFile();
+
+    // setup a script that can handle sigterm gracefully
+    File scriptFile = Shell.appendScriptExtension(tmpDir, "testscript");
+    PrintWriter writer = new PrintWriter(new FileOutputStream(scriptFile));
+    if (Shell.WINDOWS) {
+      writer.println("@echo \"Running testscript for delayed kill\"");
+      writer.println("@echo \"Writing pid to start file\"");
+      writer.println("@echo " + cId + "> " + processStartFile);
+      writer.println("@ping -n 100 127.0.0.1 >nul");
+    } else {
+      writer.println("#!/bin/bash\n\n");
+      writer.println("echo \"Running testscript for delayed kill\"");
+      writer.println("hello=\"Got SIGTERM\"");
+      writer.println("umask 0");
+      writer.println("trap \"echo $hello >> " + processStartFile + "\" SIGTERM");
+      writer.println("echo \"Writing pid to start file\"");
+      writer.println("echo $$ >> " + processStartFile);
+      writer.println("while true; do\nsleep 1s;\ndone");
+    }
+    writer.close();
+    FileUtil.setExecutable(scriptFile, true);
+
+    ContainerLaunchContext containerLaunchContext = 
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
     when(mockContainer.getId()).thenReturn(cId);
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    int port = 12345;
     when(mockContainer.getNodeHttpAddress()).thenReturn(
-        context.getNodeId().getHost() + ":12345");
+        context.getNodeId().getHost() + ":" + port);
     when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
-
-    containerLaunchContext.setUser(user);
 
     // upload the script file so that the container can run it
     URL resource_alpha =
@@ -371,12 +404,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setLocalResources(localResources);
 
     // set up the rest of the container
-    containerLaunchContext.setUser(containerLaunchContext.getUser());
-    List<String> commands = new ArrayList<String>();
-    commands.add(scriptFile.getAbsolutePath());
+    List<String> commands = Arrays.asList(Shell.getRunScriptCommand(scriptFile));
     containerLaunchContext.setCommands(commands);
-    when(mockContainer.getResource()).thenReturn(
-        BuilderUtils.newResource(1024, 1));
+    Resource r = BuilderUtils.newResource(1024, 1);
+    when(mockContainer.getResource()).thenReturn(r);
+    ContainerToken containerToken =
+        BuilderUtils.newContainerToken(cId, context.getNodeId().getHost(),
+          port, user, r, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes());
+    when(mockContainer.getContainerToken()).thenReturn(containerToken);
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     startRequest.setContainer(mockContainer);
@@ -407,25 +443,32 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertEquals(ExitCode.FORCE_KILLED.getExitCode(),
         containerStatus.getExitStatus());
 
-    // Now verify the contents of the file
-    // Script generates a message when it receives a sigterm
-    // so we look for that
-    BufferedReader reader =
-        new BufferedReader(new FileReader(processStartFile));
+    // Now verify the contents of the file.  Script generates a message when it
+    // receives a sigterm so we look for that.  We cannot perform this check on
+    // Windows, because the process is not notified when killed by winutils.
+    // There is no way for the process to trap and respond.  Instead, we can
+    // verify that the job object with ID matching container ID no longer exists.
+    if (Shell.WINDOWS) {
+      Assert.assertFalse("Process is still alive!",
+        DefaultContainerExecutor.containerIsAlive(cId.toString()));
+    } else {
+      BufferedReader reader =
+          new BufferedReader(new FileReader(processStartFile));
 
-    boolean foundSigTermMessage = false;
-    while (true) {
-      String line = reader.readLine();
-      if (line == null) {
-        break;
+      boolean foundSigTermMessage = false;
+      while (true) {
+        String line = reader.readLine();
+        if (line == null) {
+          break;
+        }
+        if (line.contains("SIGTERM")) {
+          foundSigTermMessage = true;
+          break;
+        }
       }
-      if (line.contains("SIGTERM")) {
-        foundSigTermMessage = true;
-        break;
-      }
+      Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
+      reader.close();
     }
-    Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
-    reader.close();
   }
 
 }
