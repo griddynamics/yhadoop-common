@@ -101,7 +101,7 @@ public class TestRMAdminProtocolPBClientImpl {
   /**
    * Test method refreshQueues. This method is present and it works.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testRefreshQueues() throws Exception {
 
     RefreshQueuesRequest request = recordFactory
