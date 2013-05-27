@@ -24,8 +24,6 @@ import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequ
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CancelDelegationTokenRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -125,16 +123,5 @@ public class TestYarnApiClasses {
     return token;
   }
 
-  private ApplicationAttemptId getApplicationAttemptId() {
-    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(getApplicationId());
-    appAttemptId.setAttemptId(5);
-    return appAttemptId;
-  }
 
-  private ApplicationId getApplicationId() {
-    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setId(4);
-    return appId;
-  }
 }
