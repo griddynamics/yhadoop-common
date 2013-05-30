@@ -221,6 +221,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-711. Copied BuilderUtil methods in individual API records as
     BuilderUtils is going to be dismantled. (Jian He via vinodkv)
 
+    YARN-714. Added NMTokens to be sent to AMs as part of heart-beat response.
+    (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-512. Log aggregation root directory check is more expensive than it
@@ -367,6 +370,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-715. Fixed unit test failures - TestDistributedShell and
     TestUnmanagedAMLauncher. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-578. Fixed NM to use SecureIOUtils for reading and aggregating logs.
+    (Omkar Vinit Joshi via vinodkv) 
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
