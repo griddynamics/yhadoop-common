@@ -33,7 +33,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
@@ -51,7 +50,7 @@ public class TestAppController {
   public void setUp() throws IOException {
     AppContext context = mock(AppContext.class);
     when(context.getApplicationID()).thenReturn(
-        Records.newRecord(ApplicationId.class));
+        ApplicationId.newInstance(0, 0));
     when(context.getApplicationName()).thenReturn("AppName");
     when(context.getUser()).thenReturn("User");
     when(context.getStartTime()).thenReturn(System.currentTimeMillis());
