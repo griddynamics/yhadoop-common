@@ -84,14 +84,19 @@ public class TestBlocks {
 
   }
 
+  private static class ApplicationIdPBImplWithId extends ApplicationIdPBImpl {
+    private ApplicationIdPBImplWithId(int id) {
+      super();
+      setId(id);
+    }
+  }
   /**
    * Test rendering for TasksBlock
    */
   @Test (timeout=10000)
   public void testTasksBlock() throws Exception {
 
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setId(1);
+    ApplicationId appId = new ApplicationIdPBImplWithId(1);
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
     jobId.setAppId(appId);
