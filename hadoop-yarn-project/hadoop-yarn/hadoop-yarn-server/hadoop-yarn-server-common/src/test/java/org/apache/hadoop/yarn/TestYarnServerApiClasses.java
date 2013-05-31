@@ -178,10 +178,15 @@ public class TestYarnServerApiClasses {
   }
 
   private ApplicationId getApplicationId(int applicationId) {
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setClusterTimestamp(1000);
-    appId.setId(applicationId);
-    return appId;
+    ApplicationIdPBImpl appId = new ApplicationIdPBImpl(){
+      public ApplicationIdPBImpl setParameters(int id,long timestamp){
+        setClusterTimestamp(timestamp);
+        setId(id);
+        build();
+        return this;
+      }
+    }.setParameters(applicationId, 1000);
+    return new ApplicationIdPBImpl(appId.getProto());
   }
 
   private NodeStatus getNodeStatus() {
