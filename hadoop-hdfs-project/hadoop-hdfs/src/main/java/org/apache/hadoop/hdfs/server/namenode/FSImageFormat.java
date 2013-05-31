@@ -407,7 +407,7 @@ public class FSImageFormat {
       int numChildren = in.readInt();
       for (int i = 0; i < numChildren; i++) {
         // load single inode
-        INode newNode = loadINodeWithLocalName(false, in);
+        INode newNode = loadINodeWithLocalName(false, in, true);
         addToParent(parent, newNode);
       }
       return numChildren;
@@ -435,13 +435,16 @@ public class FSImageFormat {
       if (numSnapshots >= 0) {
         final INodeDirectorySnapshottable snapshottableParent
             = INodeDirectorySnapshottable.valueOf(parent, parent.getLocalName());
-        if (snapshottableParent.getParent() != null) { // not root
-          this.namesystem.getSnapshotManager().addSnapshottable(
-              snapshottableParent);
-        }
         // load snapshots and snapshotQuota
         SnapshotFSImageFormat.loadSnapshotList(snapshottableParent,
             numSnapshots, in, this);
+        if (snapshottableParent.getSnapshotQuota() > 0) {
+          // add the directory to the snapshottable directory list in 
+          // SnapshotManager. Note that we only add root when its snapshot quota
+          // is positive.
+          this.namesystem.getSnapshotManager().addSnapshottable(
+              snapshottableParent);
+        }
       }
 
       // Step 3. Load children nodes under parent
@@ -556,10 +559,11 @@ public class FSImageFormat {
     }
 
     public INode loadINodeWithLocalName(boolean isSnapshotINode,
-        DataInput in) throws IOException {
+        DataInput in, boolean updateINodeMap) throws IOException {
       final byte[] localName = FSImageSerialization.readLocalName(in);
       INode inode = loadINode(localName, isSnapshotINode, in);
-      if (LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
+      if (updateINodeMap
+          && LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
         namesystem.dir.addToInodeMap(inode);
       }
       return inode;
