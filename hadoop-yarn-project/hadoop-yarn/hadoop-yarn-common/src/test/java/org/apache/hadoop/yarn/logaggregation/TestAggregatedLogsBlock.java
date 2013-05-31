@@ -208,8 +208,13 @@ public class TestAggregatedLogsBlock {
       throws Exception {
     ContainerId containerId = new ContainerIdPBImpl();
     ApplicationAttemptId appAttemptId = new ApplicationAttemptIdPBImpl();
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setId(1);
+    ApplicationId appId = new ApplicationIdPBImpl(){
+      public ApplicationIdPBImpl setParam(int id){
+        setId(id);
+        build();
+        return this;
+      }
+    }.setParam(1);
     appAttemptId.setApplicationId(appId);
     appAttemptId.setAttemptId(1);
     containerId.setApplicationAttemptId(appAttemptId);
@@ -232,7 +237,7 @@ public class TestAggregatedLogsBlock {
     writer.writeApplicationACLs(appAcls);
 
     writer.append(new AggregatedLogFormat.LogKey("container_0_0001_01_000001"),
-        new AggregatedLogFormat.LogValue(rootLogDirs, containerId));
+        new AggregatedLogFormat.LogValue(rootLogDirs, containerId,UserGroupInformation.getCurrentUser().getShortUserName()));
     writer.closeWriter();
   }
 
