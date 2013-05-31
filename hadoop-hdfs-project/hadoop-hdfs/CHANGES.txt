@@ -429,7 +429,7 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
-  BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS
+  BREAKDOWN OF HDFS-2802 HDFS SNAPSHOT SUBTASKS AND RELATED JIRAS
 
     HDFS-4076. Support snapshot of single files.  (szetszwo)
 
@@ -767,6 +767,21 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4809. When a QuotaExceededException is thrown during rename, the quota
     usage should be subtracted back.  (Jing Zhao via szetszwo)
+
+    HDFS-4842. Identify the correct prior snapshot when deleting a 
+    snapshot under a renamed subtree. (jing9)
+
+    HDFS-4846. Clean up snapshot CLI commands output stacktrace for invalid
+    arguments. (Jing Zhao via brandonli)
+
+    HDFS-4857. Snapshot.Root and AbstractINodeDiff#snapshotINode should not be 
+    put into INodeMap when loading FSImage. (jing9)
+
+    HDFS-4863. The root directory should be added to the snapshottable 
+    directory list while loading fsimage. (jing9)
+
+    HDFS-4848. copyFromLocal and renaming a file to ".snapshot" should output 
+    that ".snapshot" is a reserved name. (Jing Zhao via brandonli)
 
 Release 2.0.4-alpha - 2013-04-25
 
