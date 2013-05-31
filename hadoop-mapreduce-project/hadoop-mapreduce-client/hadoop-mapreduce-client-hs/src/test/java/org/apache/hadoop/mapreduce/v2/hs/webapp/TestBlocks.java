@@ -133,9 +133,13 @@ public class TestBlocks {
     containerId.setId(1);
     ApplicationAttemptId appAId = new ApplicationAttemptIdPBImpl();
     appAId.setAttemptId(1);
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setClusterTimestamp(System.currentTimeMillis());
-    appId.setId(5);
+    ApplicationId appId = new ApplicationIdPBImpl(){
+      public ApplicationIdPBImpl setParams(int id, long clusterTimestamp) {
+        super.setId(id);
+        super.setClusterTimestamp(clusterTimestamp);
+        return this;
+      }
+    }.setParams(5, System.currentTimeMillis());
     appAId.setApplicationId(appId);
     containerId.setApplicationAttemptId(appAId);
     when(attempt.getAssignedContainerID()).thenReturn(containerId);
@@ -205,9 +209,13 @@ public class TestBlocks {
   @Test (timeout=10000)
   public void testHsController() throws Exception {
     AppContext ctx = mock(AppContext.class);
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setClusterTimestamp(System.currentTimeMillis());
-    appId.setId(5);
+    ApplicationId appId = new ApplicationIdPBImpl(){
+      public ApplicationIdPBImpl setParams(int id, long clusterTimestamp) {
+        super.setId(id);
+        super.setClusterTimestamp(clusterTimestamp);
+        return this;
+      }
+    }.setParams(5, System.currentTimeMillis());
     when(ctx.getApplicationID()).thenReturn(appId);
 
     AppForTest app = new AppForTest(ctx);
@@ -318,9 +326,13 @@ public class TestBlocks {
 
     JobId jobId = new JobIdPBImpl();
 
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setClusterTimestamp(System.currentTimeMillis());
-    appId.setId(4);
+    ApplicationId appId = new ApplicationIdPBImpl(){
+      public ApplicationIdPBImpl setParams(int id, long clusterTimestamp) {
+        super.setId(id);
+        super.setClusterTimestamp(clusterTimestamp);
+        return this;
+      }
+    }.setParams(4, System.currentTimeMillis());
     jobId.setAppId(appId);
     jobId.setId(1);
     when(job.getID()).thenReturn(jobId);
@@ -343,8 +355,12 @@ public class TestBlocks {
   }
 
   private Task getTask() {
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setId(1);
+    ApplicationId appId = new ApplicationIdPBImpl(){
+      public ApplicationIdPBImpl setParams(int id) {
+        super.setId(id);
+        return this;
+      }
+    }.setParams(1);
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
     jobId.setAppId(appId);

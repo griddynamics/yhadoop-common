@@ -91,11 +91,11 @@ public class TestBlocks {
   public void testTasksBlock() throws Exception {
 
     ApplicationId appId = new ApplicationIdPBImpl(){
-      @Override
-      protected void setId(int id) {
-        super.setId(1);
+      public ApplicationIdPBImpl setParams(int id) {
+        super.setId(id);
+        return this;
       }
-    };
+    }.setParams(1);
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
     jobId.setAppId(appId);
