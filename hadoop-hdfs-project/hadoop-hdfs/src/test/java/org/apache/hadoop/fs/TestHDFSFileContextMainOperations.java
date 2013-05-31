@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.exists;
-import static org.apache.hadoop.fs.FileContextTestHelper.getTestRootPath;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -44,6 +43,7 @@ import org.junit.Test;
 
 public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
+  private static FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static HdfsConfiguration CONF = new HdfsConfiguration();
@@ -51,8 +51,6 @@ public class TestHDFSFileContextMainOperations extends
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
-    FileContextTestHelper.TEST_ROOT_DIR =
-      "/tmp/TestHDFSFileContextMainOperations";
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
     URI uri0 = cluster.getURI(0);
@@ -107,6 +105,10 @@ public class TestHDFSFileContextMainOperations extends
       return ((RemoteException) e).unwrapRemoteException();
     }
     return e;
+  }
+  
+  private Path getTestRootPath(FileContext fc, String path) {
+    return fileContextTestHelper.getTestRootPath(fc, path);
   }
   
   @Test

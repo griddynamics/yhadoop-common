@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.util.EnumSet;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.CreateOpts.BlockSize;
 import org.apache.hadoop.io.IOUtils;
@@ -32,25 +33,18 @@ import org.junit.Assert;
  * Helper class for unit tests.
  */
 public final class FileContextTestHelper {
-  // The test root is relative to the <wd>/build/test/data by default
-  public static String TEST_ROOT_DIR = calculateTestRootDir();
-
-  private static String calculateTestRootDir() {
-    String x = System.getProperty("test.build.data", "build/test/data") + "/test";
-    File f = new File(x);
-    if (!f.isAbsolute()) {
-      // absolutize the path:
-      x = f.getAbsolutePath();
-    }
-    return x;
-  }
-
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final int DEFAULT_NUM_BLOCKS = 2;
-  private static String absTestRootDir = null;
 
-  /** Hidden constructor */
-  private FileContextTestHelper() {}
+  private final String testRootDir;
+  private String absTestRootDir = null;
+
+  /**
+   * Create a context with test root relative to the <wd>/build/test/data
+   */
+  public FileContextTestHelper() {
+      testRootDir = System.getProperty("test.build.data", "target/test/data") + "/" + RandomStringUtils.randomAlphanumeric(10);
+  }
   
   public static int getDefaultBlockSize() {
     return DEFAULT_BLOCK_SIZE;
@@ -64,36 +58,36 @@ public final class FileContextTestHelper {
     return data;
   }
   
-  public static Path getTestRootPath(FileContext fc) {
-    return fc.makeQualified(new Path(TEST_ROOT_DIR));
+  public Path getTestRootPath(FileContext fc) {
+    return fc.makeQualified(new Path(testRootDir));
   }
 
-  public static Path getTestRootPath(FileContext fc, String pathString) {
-    return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
+  public Path getTestRootPath(FileContext fc, String pathString) {
+    return fc.makeQualified(new Path(testRootDir, pathString));
   }
   
   
   // the getAbsolutexxx method is needed because the root test dir
   // can be messed up by changing the working dir.
 
-  public static String getAbsoluteTestRootDir(FileContext fc)
+  public String getAbsoluteTestRootDir(FileContext fc)
       throws IOException {
     if (absTestRootDir == null) {
-      if (new Path(TEST_ROOT_DIR).isAbsolute()) {
-        absTestRootDir = TEST_ROOT_DIR;
+      if (new Path(testRootDir).isAbsolute()) {
+        absTestRootDir = testRootDir;
       } else {
         absTestRootDir = fc.getWorkingDirectory().toString() + "/"
-            + TEST_ROOT_DIR;
+            + testRootDir;
       }
     }
     return absTestRootDir;
   }
   
-  public static Path getAbsoluteTestRootPath(FileContext fc) throws IOException {
+  public Path getAbsoluteTestRootPath(FileContext fc) throws IOException {
     return fc.makeQualified(new Path(getAbsoluteTestRootDir(fc)));
   }
 
-  public static Path getDefaultWorkingDirectory(FileContext fc)
+  public Path getDefaultWorkingDirectory(FileContext fc)
       throws IOException {
     return getTestRootPath(fc, "/user/" + System.getProperty("user.name"))
         .makeQualified(fc.getDefaultFileSystem().getUri(),
@@ -127,12 +121,12 @@ public final class FileContextTestHelper {
     return createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.createParent());
   }
 
-  public static long createFile(FileContext fc, String name) throws IOException {
+  public long createFile(FileContext fc, String name) throws IOException {
     Path path = getTestRootPath(fc, name);
     return createFile(fc, path);
   }
   
-  public static long createFileNonRecursive(FileContext fc, String name)
+  public long createFileNonRecursive(FileContext fc, String name)
   throws IOException {
     Path path = getTestRootPath(fc, name);
     return createFileNonRecursive(fc, path);
@@ -201,7 +195,7 @@ public final class FileContextTestHelper {
     return buffer;
   }
 
-  public static FileStatus containsPath(FileContext fc, Path path,
+  public FileStatus containsPath(FileContext fc, Path path,
       FileStatus[] dirList)
     throws IOException {
     return containsPath(getTestRootPath(fc, path.toString()), dirList);
@@ -217,7 +211,7 @@ public final class FileContextTestHelper {
     return null;
   }
   
-  public static FileStatus containsPath(FileContext fc, String path,
+  public FileStatus containsPath(FileContext fc, String path,
       FileStatus[] dirList)
      throws IOException {
     return containsPath(fc, new Path(path), dirList);
