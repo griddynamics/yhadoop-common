@@ -83,6 +83,12 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
 
+    HADOOP-9574. Added new methods in AbstractDelegationTokenSecretManager for
+    helping YARN ResourceManager to reuse code for RM restart. (Jian He via
+    vinodkv)
+
+    HADOOP-7391 Document Interface Classification from HADOOP-5073 (sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
@@ -368,6 +374,10 @@ Release 2.0.5-beta - UNRELEASED
     (Arpit Agarwal via suresh)
 
     HADOOP-9397. Incremental dist tar build fails. (Chris Nauroth via jlowe)
+
+    HADOOP-9607. Fixes in Javadoc build (Timothy St. Clair via cos)
+
+    HADOOP-9605. Update junit dependency. (Timothy St. Clair via cos)
 
 Release 2.0.4-alpha - 2013-04-25 
 

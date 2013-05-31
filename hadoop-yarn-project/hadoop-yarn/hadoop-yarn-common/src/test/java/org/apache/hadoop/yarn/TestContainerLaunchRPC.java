@@ -91,19 +91,16 @@ public class TestContainerLaunchRPC {
           .newRecordInstance(ContainerLaunchContext.class);
       ContainerId containerId = recordFactory
           .newRecordInstance(ContainerId.class);
-      ApplicationId applicationId = recordFactory
-          .newRecordInstance(ApplicationId.class);
+      ApplicationId applicationId = ApplicationId.newInstance(0, 0);
       ApplicationAttemptId applicationAttemptId = recordFactory
           .newRecordInstance(ApplicationAttemptId.class);
-      applicationId.setClusterTimestamp(0);
-      applicationId.setId(0);
       applicationAttemptId.setApplicationId(applicationId);
       applicationAttemptId.setAttemptId(0);
       containerId.setApplicationAttemptId(applicationAttemptId);
       containerId.setId(100);
       Container container =
           BuilderUtils.newContainer(containerId, null, null, recordFactory
-              .newRecordInstance(Resource.class), null, null, 0);
+              .newRecordInstance(Resource.class), null, null);
 
       StartContainerRequest scRequest = recordFactory
           .newRecordInstance(StartContainerRequest.class);

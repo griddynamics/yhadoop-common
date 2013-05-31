@@ -128,9 +128,7 @@ public class MRApp extends MRAppMaster {
   static ApplicationId applicationId;
 
   static {
-    applicationId = recordFactory.newRecordInstance(ApplicationId.class);
-    applicationId.setClusterTimestamp(0);
-    applicationId.setId(0);
+    applicationId = ApplicationId.newInstance(0, 0);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
@@ -519,7 +517,7 @@ public class MRApp extends MRAppMaster {
         cId.setId(containerCount++);
         NodeId nodeId = NodeId.newInstance(NM_HOST, NM_PORT);
         Container container = Container.newInstance(cId, nodeId,
-            NM_HOST + ":" + NM_HTTP_PORT, null, null, null, 0);
+            NM_HOST + ":" + NM_HTTP_PORT, null, null, null);
         JobID id = TypeConverter.fromYarn(applicationId);
         JobId jobId = TypeConverter.toYarn(id);
         getContext().getEventHandler().handle(new JobHistoryEvent(jobId, 

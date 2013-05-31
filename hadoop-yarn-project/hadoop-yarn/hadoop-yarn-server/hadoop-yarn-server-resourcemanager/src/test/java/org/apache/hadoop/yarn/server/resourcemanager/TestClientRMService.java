@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -90,7 +91,9 @@ public class TestClientRMService {
   
   @BeforeClass
   public static void setupSecretManager() throws IOException {
-    dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
+    dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000, rmContext);
     dtsm.startThreads();  
   }
 
@@ -154,8 +157,7 @@ public class TestClientRMService {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
-    request.setApplicationId(recordFactory
-        .newRecordInstance(ApplicationId.class));
+    request.setApplicationId(ApplicationId.newInstance(0, 0));
     GetApplicationReportResponse applicationReport = rmService
         .getApplicationReport(request);
     Assert.assertNull("It should return null as application report for absent application.",
@@ -433,11 +435,7 @@ public class TestClientRMService {
   }
 
   private ApplicationId getApplicationId(int id) {
-    ApplicationId applicationId = recordFactory
-        .newRecordInstance(ApplicationId.class);
-    applicationId.setClusterTimestamp(123456);
-    applicationId.setId(id);
-    return applicationId;
+    return ApplicationId.newInstance(123456, id);
   }
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
