@@ -90,8 +90,12 @@ public class TestBlocks {
   @Test (timeout=10000)
   public void testTasksBlock() throws Exception {
 
-    ApplicationId appId = new ApplicationIdPBImpl();
-    appId.setId(1);
+    ApplicationId appId = new ApplicationIdPBImpl(){
+      @Override
+      protected void setId(int id) {
+        super.setId(1);
+      }
+    };
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
     jobId.setAppId(appId);
