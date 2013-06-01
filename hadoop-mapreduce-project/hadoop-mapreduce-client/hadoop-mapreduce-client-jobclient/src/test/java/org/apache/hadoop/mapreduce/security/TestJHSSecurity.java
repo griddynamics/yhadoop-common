@@ -45,7 +45,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.ProtoUtils;
@@ -109,7 +109,7 @@ public class TestJHSSecurity {
       loggedInUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
 
 
-      DelegationToken token = getDelegationToken(loggedInUser, hsService,
+      Token token = getDelegationToken(loggedInUser, hsService,
           loggedInUser.getShortUserName());
       tokenFetchTime = System.currentTimeMillis();
       LOG.info("Got delegation token at: " + tokenFetchTime);
@@ -209,16 +209,16 @@ public class TestJHSSecurity {
     }
   }
 
-  private DelegationToken getDelegationToken(
+  private Token getDelegationToken(
       final UserGroupInformation loggedInUser,
       final MRClientProtocol hsService, final String renewerString)
       throws IOException, InterruptedException {
     // Get the delegation token directly as it is a little difficult to setup
     // the kerberos based rpc.
-    DelegationToken token = loggedInUser
-        .doAs(new PrivilegedExceptionAction<DelegationToken>() {
+    Token token = loggedInUser
+        .doAs(new PrivilegedExceptionAction<Token>() {
           @Override
-          public DelegationToken run() throws IOException {
+          public Token run() throws IOException {
             GetDelegationTokenRequest request = Records
                 .newRecord(GetDelegationTokenRequest.class);
             request.setRenewer(renewerString);
@@ -230,7 +230,7 @@ public class TestJHSSecurity {
   }
 
   private long renewDelegationToken(final UserGroupInformation loggedInUser,
-      final MRClientProtocol hsService, final DelegationToken dToken)
+      final MRClientProtocol hsService, final Token dToken)
       throws IOException, InterruptedException {
     long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
 
@@ -246,7 +246,7 @@ public class TestJHSSecurity {
   }
 
   private void cancelDelegationToken(final UserGroupInformation loggedInUser,
-      final MRClientProtocol hsService, final DelegationToken dToken)
+      final MRClientProtocol hsService, final Token dToken)
       throws IOException, InterruptedException {
 
     loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
@@ -261,7 +261,7 @@ public class TestJHSSecurity {
     });
   }
 
-  private MRClientProtocol getMRClientProtocol(DelegationToken token,
+  private MRClientProtocol getMRClientProtocol(Token token,
       final InetSocketAddress hsAddress, String user, final Configuration conf) {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
     ugi.addToken(ProtoUtils.convertFromProtoFormat(token, hsAddress));
