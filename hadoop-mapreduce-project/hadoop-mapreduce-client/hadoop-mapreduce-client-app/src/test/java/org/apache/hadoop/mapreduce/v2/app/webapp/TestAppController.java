@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -48,14 +44,17 @@ public class TestAppController {
     appController = new AppController(app, conf, ctx);
   }
 
-  @Test
+  /**
+   * test bad request  should be status 400...
+   */
+  @Test (timeout=10000)
   public void testBadRequest() {
     String message = "test string";
     appController.badRequest(message);
     verifyExpectations(message);
   }
 
-  @Test
+  @Test (timeout=10000)
   public void testBadRequestWithNullMessage() {
     // It should not throw NullPointerException
     appController.badRequest(null);
