@@ -206,13 +206,7 @@ public class TestAggregatedLogsBlock {
 
   private void writeLog(Configuration configuration, String user)
       throws Exception {
-    ApplicationId appId = new ApplicationIdPBImpl(){
-      public ApplicationIdPBImpl setParam(int id){
-        setId(id);
-        build();
-        return this;
-      }
-    }.setParam(1);
+    ApplicationId appId =  ApplicationIdPBImpl.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =  ApplicationAttemptIdPBImpl.newInstance(appId, 1);
     ContainerId containerId= ContainerIdPBImpl.newInstance(appAttemptId, 1);
 
