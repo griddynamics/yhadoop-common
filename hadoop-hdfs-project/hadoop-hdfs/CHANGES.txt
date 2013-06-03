@@ -40,6 +40,9 @@ Release 2.1.0-beta - UNRELEASED
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
     
+    HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
+    with 4-layer network topology.  (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -1031,6 +1034,10 @@ Release 2.0.3-alpha - 2013-02-06
     HDFS-4053. Increase the default block size. (eli)
 
     HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
+
+    HDFS-3498. Support replica removal in BlockPlacementPolicy and make
+    BlockPlacementPolicyDefault extensible for reusing code in subclasses.
+    (Junping Du via szetszwo)
 
   OPTIMIZATIONS
 
