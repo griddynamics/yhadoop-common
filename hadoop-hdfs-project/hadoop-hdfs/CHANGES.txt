@@ -43,6 +43,9 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
     with 4-layer network topology.  (Junping Du via szetszwo)
 
+    HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
+    (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -124,6 +127,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4698. Provide client-side metrics for remote reads, local reads, and
     short-circuit reads. (Colin Patrick McCabe via atm)
+
+    HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
   OPTIMIZATIONS
 
@@ -302,11 +307,20 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4865. Remove sub resource warning from httpfs log at startup time. 
     (ywskycn via tucu)
 
+    HDFS-4240. For nodegroup-aware block placement, when a node is excluded,
+    the nodes in the same nodegroup should also be excluded.  (Junping Du
+    via szetszwo)
+
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
+    HDFS-4382. Fix typo MAX_NOT_CHANGED_INTERATIONS. (Ted Yu via suresh)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
     (Colin Patrick McCabe via todd)
-    
+
     HDFS-4354. Create DomainSocket and DomainPeer and associated unit tests.
     (Colin Patrick McCabe via todd)
     
