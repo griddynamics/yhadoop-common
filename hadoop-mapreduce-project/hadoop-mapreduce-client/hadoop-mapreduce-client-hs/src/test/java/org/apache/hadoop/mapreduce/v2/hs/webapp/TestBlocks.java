@@ -80,7 +80,7 @@ public class TestBlocks {
   /**
    * test HsTasksBlock's rendering.
    */
-  @Test (timeout=10000)
+  @Test (timeout=10000000)
   public void testHsTasksBlock() {
 
     Task task = getTask(0);
@@ -129,13 +129,10 @@ public class TestBlocks {
     when(attempt.getID()).thenReturn(taId);
     when(attempt.getNodeHttpAddress()).thenReturn("Node address");
 
-    ContainerId containerId = new ContainerIdPBImpl();
-    containerId.setId(1);
-    ApplicationAttemptId appAId = new ApplicationAttemptIdPBImpl();
-    appAId.setAttemptId(1);
-    ApplicationId appId = getApplicationId(5,0);
-    appAId.setApplicationId(appId);
-    containerId.setApplicationAttemptId(appAId);
+    ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 5);
+    ApplicationAttemptId appAttemptId =  ApplicationAttemptIdPBImpl.newInstance(appId, 1);
+
+    ContainerId containerId =  ContainerIdPBImpl.newInstance(appAttemptId, 1);
     when(attempt.getAssignedContainerID()).thenReturn(containerId);
 
     when(attempt.getAssignedContainerMgrAddress()).thenReturn(
@@ -203,7 +200,7 @@ public class TestBlocks {
   @Test (timeout=10000)
   public void testHsController() throws Exception {
     AppContext ctx = mock(AppContext.class);
-    ApplicationId appId = getApplicationId(5,0);
+    ApplicationId appId =  ApplicationIdPBImpl.newInstance(0,5);
     
     when(ctx.getApplicationID()).thenReturn(appId);
 
@@ -315,7 +312,7 @@ public class TestBlocks {
 
     JobId jobId = new JobIdPBImpl();
 
-    ApplicationId appId =getApplicationId(4,System.currentTimeMillis());
+    ApplicationId appId = ApplicationIdPBImpl.newInstance(System.currentTimeMillis(),4);
     jobId.setAppId(appId);
     jobId.setId(1);
     when(job.getID()).thenReturn(jobId);
@@ -337,23 +334,12 @@ public class TestBlocks {
     return job;
   }
 
-  private ApplicationId getApplicationId(int param, long timestamp) {
-    ApplicationIdPBImpl appId = new ApplicationIdPBImpl() {
-      public ApplicationIdPBImpl setParams(int id, long timeStamp) {
-        super.setId(id);
-        super.setClusterTimestamp(timeStamp);
-        build();
-        return this;
-      }
-    }.setParams(param,timestamp);
-    return new ApplicationIdPBImpl(appId.getProto());
-  }
 
   private Task getTask(long timestamp) {
     
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
-    jobId.setAppId( getApplicationId(1,timestamp));
+    jobId.setAppId(  ApplicationIdPBImpl.newInstance(timestamp,1));
 
     TaskId taskId = new TaskIdPBImpl();
     taskId.setId(0);
