@@ -168,17 +168,12 @@ public class TestYarnServerApiClasses {
   }
 
   private ApplicationAttemptId getApplicationAttemptId(int appAttemptId) {
-    ApplicationAttemptIdPBImpl result = new ApplicationAttemptIdPBImpl();
-
-    result.setApplicationId(getApplicationId(appAttemptId));
-    result.setAttemptId(1);
+    ApplicationAttemptId result =  ApplicationAttemptIdPBImpl.newInstance(getApplicationId(appAttemptId), appAttemptId);
     return result;
   }
 
   private ContainerId getContainerId(int containerID, int appAttemptId) {
-    ContainerIdPBImpl containerId = new ContainerIdPBImpl();
-    containerId.setId(containerID);
-    containerId.setApplicationAttemptId(getApplicationAttemptId(appAttemptId));
+    ContainerId containerId =  ContainerIdPBImpl.newInstance(getApplicationAttemptId(appAttemptId), containerID);
     return containerId;
   }
 
@@ -206,9 +201,7 @@ public class TestYarnServerApiClasses {
   }
 
   private NodeId getNodeId() {
-    NodeId id = recordFactory.newRecordInstance(NodeId.class);
-    id.setHost("localhost");
-    id.setPort(9090);
+    NodeId id = NodeId.newInstance("localhost", 9090);
     return id;
   }
 
