@@ -206,8 +206,6 @@ public class TestAggregatedLogsBlock {
 
   private void writeLog(Configuration configuration, String user)
       throws Exception {
-    ContainerId containerId = new ContainerIdPBImpl();
-    ApplicationAttemptId appAttemptId = new ApplicationAttemptIdPBImpl();
     ApplicationId appId = new ApplicationIdPBImpl(){
       public ApplicationIdPBImpl setParam(int id){
         setId(id);
@@ -215,10 +213,9 @@ public class TestAggregatedLogsBlock {
         return this;
       }
     }.setParam(1);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    containerId.setApplicationAttemptId(appAttemptId);
-    containerId.setId(1);
+    ApplicationAttemptId appAttemptId =  ApplicationAttemptIdPBImpl.newInstance(appId, 1);
+    ContainerId containerId= ContainerIdPBImpl.newInstance(appAttemptId, 1);
+
     String path = "target/logs/" + user
         + "/logs/application_0_0001/localhost_1234";
     File f = new File(path);
