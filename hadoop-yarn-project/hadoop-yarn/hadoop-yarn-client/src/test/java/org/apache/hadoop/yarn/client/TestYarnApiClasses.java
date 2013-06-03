@@ -18,16 +18,15 @@
 package org.apache.hadoop.yarn.client;
 
 
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CancelDelegationTokenRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
 
@@ -48,17 +47,9 @@ public class TestYarnApiClasses {
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     Priority priority = recordFactory.newRecordInstance(Priority.class);
 
-    ResourceRequest original = recordFactory.newRecordInstance(ResourceRequest.class);
-    original.setHostName("localhost");
-    original.setNumContainers(2);
-    original.setPriority(priority);
-    original.setCapability(resource);
+    ResourceRequest original = ResourceRequest.newInstance(priority, "localhost", resource, 2) ;
 
-    ResourceRequest copy = recordFactory.newRecordInstance(ResourceRequest.class);
-    copy.setHostName("localhost");
-    copy.setNumContainers(2);
-    copy.setPriority(priority);
-    copy.setCapability(resource);
+    ResourceRequest copy = ResourceRequest.newInstance(priority, "localhost", resource, 2);
 
     assertTrue(original.equals(copy));
     assertEquals(0, original.compareTo(copy));
@@ -79,7 +70,7 @@ public class TestYarnApiClasses {
   @Test(timeout = 500)
   public void testCancelDelegationTokenRequestPBImpl() {
 
-    DelegationToken token = getDelegationToken();
+    Token token = getDelegationToken();
 
     CancelDelegationTokenRequestPBImpl original = new CancelDelegationTokenRequestPBImpl();
     original.setDelegationToken(token);
@@ -100,7 +91,7 @@ public class TestYarnApiClasses {
   @Test(timeout = 500)
   public void testRenewDelegationTokenRequestPBImpl() {
 
-    DelegationToken token = getDelegationToken();
+    Token token = getDelegationToken();
 
     RenewDelegationTokenRequestPBImpl original = new RenewDelegationTokenRequestPBImpl();
     original.setDelegationToken(token);
@@ -114,13 +105,8 @@ public class TestYarnApiClasses {
   }
 
  
-  private DelegationToken getDelegationToken() {
-    DelegationToken token = recordFactory.newRecordInstance(DelegationToken.class);
-    token.setKind("");
-    token.setService("");
-    token.setIdentifier(ByteBuffer.allocate(0));
-    token.setPassword(ByteBuffer.allocate(0));
-    return token;
+  private Token getDelegationToken() {
+    return Token.newInstance(new byte[0], "", new byte[0], "");
   }
 
 
