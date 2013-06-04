@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
@@ -64,7 +65,7 @@ public abstract class AllocateResponse {
   public static AllocateResponse newInstance(int responseId,
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,
-      Resource availResources, boolean reboot, int numClusterNodes,
+      Resource availResources, boolean resync, int numClusterNodes,
       PreemptionMessage preempt) {
     AllocateResponse response = Records.newRecord(AllocateResponse.class);
     response.setNumClusterNodes(numClusterNodes);
@@ -73,26 +74,32 @@ public abstract class AllocateResponse {
     response.setAllocatedContainers(allocatedContainers);
     response.setUpdatedNodes(updatedNodes);
     response.setAvailableResources(availResources);
-    response.setReboot(reboot);
+    response.setResync(resync);
     response.setPreemptionMessage(preempt);
     return response;
   }
 
   /**
-   * Should the <code>ApplicationMaster</code> reboot for being horribly
+   * Should the <code>ApplicationMaster</code> take action because of being 
    * out-of-sync with the <code>ResourceManager</code> as deigned by
-   * {@link #getResponseId()}?
+   * {@link #getResponseId()}
+   * This can be due to application errors or because the ResourceManager 
+   * has restarted. The action to be taken by the <code>ApplicationMaster</code> 
+   * is to shutdown without unregistering with the <code>ResourceManager</code>. 
+   * The ResourceManager will start a new attempt. If the application is already 
+   * done when it gets the resync command, then it may choose to shutdown after 
+   * unregistering in which case the ResourceManager will not start a new attempt. 
    *
    * @return <code>true</code> if the <code>ApplicationMaster</code> should
-   *         reboot, <code>false</code> otherwise
+   *         take action, <code>false</code> otherwise
    */
   @Public
   @Stable
-  public abstract boolean getReboot();
+  public abstract boolean getResync();
 
   @Private
   @Unstable
-  public abstract void setReboot(boolean reboot);
+  public abstract void setResync(boolean value);
 
   /**
    * Get the <em>last response id</em>.
