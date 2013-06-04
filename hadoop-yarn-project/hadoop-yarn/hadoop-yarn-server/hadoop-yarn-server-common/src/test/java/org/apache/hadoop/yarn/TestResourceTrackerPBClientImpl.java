@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -47,8 +45,8 @@ public class TestResourceTrackerPBClientImpl {
 
   private static ResourceTracker client;
   private static Server server;
-  private final static org.apache.hadoop.yarn.factories.RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
+  private final static org.apache.hadoop.yarn.factories.RecordFactory 
+  recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   @BeforeClass
   public static void start() {
