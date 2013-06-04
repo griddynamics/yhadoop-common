@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
@@ -24,7 +25,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -60,14 +61,9 @@ public class TestResourceTrackerPBClientImpl {
     System.err.println(server.getListenerAddress());
     System.err.println(NetUtils.getConnectAddress(server));
 
-    try {
       client = (ResourceTracker) RpcClientFactoryPBImpl.get().getClient(
           ResourceTracker.class, 1, NetUtils.getConnectAddress(server),
           configuration);
-    } catch (YarnException e) {
-      e.printStackTrace();
-      Assert.fail("Failed to create client");
-    }
 
   }
 
@@ -108,13 +104,13 @@ public class TestResourceTrackerPBClientImpl {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException {
+        RegisterNodeManagerRequest request) throws YarnException, IOException {
       return recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
     }
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException {
+        throws YarnException, IOException {
 
       return recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
     }
