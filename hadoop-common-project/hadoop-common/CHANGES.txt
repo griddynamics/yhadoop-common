@@ -145,8 +145,6 @@ Trunk (Unreleased)
     HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
     for Unit testing. (Hari via stevel)
 
-    HADOOP-9287. Parallel-testing hadoop-common (Andrey Klochkov via jlowe)
-
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -346,9 +344,6 @@ Trunk (Unreleased)
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
 
-    HADOOP-9481. Broken conditional logic with HADOOP_SNAPPY_LIBRARY. (Vadim
-    Bondarev via atm)
-
     HADOOP-9593. stack trace printed at ERROR for all yarn clients without
     hadoop.home set (stevel)
 
@@ -452,6 +447,8 @@ Release 2.1.0-beta - UNRELEASED
     vinodkv)
 
     HADOOP-7391 Document Interface Classification from HADOOP-5073 (sanjay Radia)
+
+    HADOOP-9287. Parallel-testing hadoop-common (Andrey Klochkov via jlowe)
 
   OPTIMIZATIONS
 
@@ -564,6 +561,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9566. Performing direct read using libhdfs sometimes raises SIGPIPE
     (which in turn throws SIGABRT) causing client crashes. (Colin Patrick
     McCabe via atm)
+
+    HADOOP-9481. Broken conditional logic with HADOOP_SNAPPY_LIBRARY. (Vadim
+    Bondarev via atm)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
