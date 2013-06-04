@@ -15,21 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.PreemptionContract;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Description of resources requested back by the cluster.
  * @see PreemptionContract
  * @see AllocateRequest#setAskList(java.util.List)
  */
-public interface PreemptionResourceRequest {
+public abstract class PreemptionResourceRequest {
+
+  public static PreemptionResourceRequest newInstance(ResourceRequest req) {
+    PreemptionResourceRequest request =
+        Records.newRecord(PreemptionResourceRequest.class);
+    request.setResourceRequest(req);
+    return request;
+  }
 
   /**
    * @return Resource described in this request, to be matched against running
@@ -37,10 +44,9 @@ public interface PreemptionResourceRequest {
    */
   @Public
   @Evolving
-  public ResourceRequest getResourceRequest();
+  public abstract ResourceRequest getResourceRequest();
 
   @Private
   @Unstable
-  public void setResourceRequest(ResourceRequest req);
-
+  public abstract void setResourceRequest(ResourceRequest req);
 }
