@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.records.impl;
+package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -24,9 +24,9 @@ import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.PreemptionContainer;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionContainerProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.StrictPreemptionContractProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.StrictPreemptionContractProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionContainerProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StrictPreemptionContractProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StrictPreemptionContractProtoOrBuilder;
 
 public class StrictPreemptionContractPBImpl extends StrictPreemptionContract {
 
@@ -51,6 +51,26 @@ public class StrictPreemptionContractPBImpl extends StrictPreemptionContract {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private void mergeLocalToProto() {
