@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
@@ -169,10 +169,10 @@ public class TestAppManager{
       super.setCompletedAppsMax(max);
     }
     public void submitApplication(
-        ApplicationSubmissionContext submissionContext)
-            throws YarnRemoteException {
+        ApplicationSubmissionContext submissionContext, String user)
+            throws YarnException {
       super.submitApplication(submissionContext, System.currentTimeMillis(),
-          false);
+          false, user);
     }
   }
 
@@ -375,7 +375,7 @@ public class TestAppManager{
 
   @Test
   public void testRMAppSubmit() throws Exception {
-    appMonitor.submitApplication(asContext);
+    appMonitor.submitApplication(asContext, "test");
     RMApp app = rmContext.getRMApps().get(appId);
     Assert.assertNotNull("app is null", app);
     Assert.assertEquals("app id doesn't match", appId, app.getApplicationId());
@@ -416,7 +416,7 @@ public class TestAppManager{
         if (individualMaxAppAttempts[i][j] != 0) {
           asContext.setMaxAppAttempts(individualMaxAppAttempts[i][j]);
         }
-        appMonitor.submitApplication(asContext);
+        appMonitor.submitApplication(asContext, "test");
         RMApp app = rmContext.getRMApps().get(appID);
         Assert.assertEquals("max application attempts doesn't match",
             expectedNums[i][j], app.getMaxAppAttempts());
@@ -441,9 +441,9 @@ public class TestAppManager{
 
     // our testApp1 should be rejected and original app with same id should be left in place
     try {
-      appMonitor.submitApplication(asContext);
+      appMonitor.submitApplication(asContext, "test");
       Assert.fail("Exception is expected when applicationId is duplicate.");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.assertTrue("The thrown exception is not the expectd one.",
           e.getMessage().contains("Cannot add a duplicate!"));
     }
@@ -462,10 +462,10 @@ public class TestAppManager{
 
     // submit an app
     try {
-      appMonitor.submitApplication(asContext);
+      appMonitor.submitApplication(asContext, "test");
       Assert.fail("Application submission should fail because resource" +
           " request is invalid.");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       // Exception is expected
       // TODO Change this to assert the expected exception type - post YARN-142
       // sub-task related to specialized exceptions.

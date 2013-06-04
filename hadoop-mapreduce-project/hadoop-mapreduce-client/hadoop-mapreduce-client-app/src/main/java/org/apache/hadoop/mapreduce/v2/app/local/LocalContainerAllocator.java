@@ -35,7 +35,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -45,8 +45,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Allocates containers locally. Doesn't allocate a real container;
@@ -95,7 +93,7 @@ public class LocalContainerAllocator extends RMCommunicator
   @SuppressWarnings("unchecked")
   @Override
   protected synchronized void heartbeat() throws Exception {
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
+    AllocateRequest allocateRequest = AllocateRequest.newInstance(
         this.applicationAttemptId, this.lastResponseID, super
             .getApplicationProgress(), new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
@@ -111,20 +109,20 @@ public class LocalContainerAllocator extends RMCommunicator
         LOG.error("Could not contact RM after " + retryInterval + " milliseconds.");
         eventHandler.handle(new JobEvent(this.getJob().getID(),
                                          JobEventType.INTERNAL_ERROR));
-        throw new YarnException("Could not contact RM after " +
+        throw new YarnRuntimeException("Could not contact RM after " +
                                 retryInterval + " milliseconds.");
       }
       // Throw this up to the caller, which may decide to ignore it and
       // continue to attempt to contact the RM.
       throw e;
     }
-    if (allocateResponse.getReboot()) {
+    if (allocateResponse.getResync()) {
       LOG.info("Event from RM: shutting down Application Master");
       // This can happen if the RM has been restarted. If it is in that state,
       // this application must clean itself up.
       eventHandler.handle(new JobEvent(this.getJob().getID(),
                                        JobEventType.JOB_AM_REBOOT));
-      throw new YarnException("Resource Manager doesn't recognize AttemptId: " +
+      throw new YarnRuntimeException("Resource Manager doesn't recognize AttemptId: " +
                                this.getContext().getApplicationID());
     }
   }
@@ -134,16 +132,13 @@ public class LocalContainerAllocator extends RMCommunicator
   public void handle(ContainerAllocatorEvent event) {
     if (event.getType() == ContainerAllocator.EventType.CONTAINER_REQ) {
       LOG.info("Processing the event " + event.toString());
-      ContainerId cID = recordFactory.newRecordInstance(ContainerId.class);
-      cID.setApplicationAttemptId(applicationAttemptId);
       // Assign the same container ID as the AM
-      cID.setId(this.containerId.getId());
-      
+      ContainerId cID =
+          ContainerId.newInstance(applicationAttemptId,
+            this.containerId.getId());
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setId(cID);
-      NodeId nodeId = Records.newRecord(NodeId.class);
-      nodeId.setHost(this.nmHost);
-      nodeId.setPort(this.nmPort);
+      NodeId nodeId = NodeId.newInstance(this.nmHost, this.nmPort);
       container.setNodeId(nodeId);
       container.setContainerToken(null);
       container.setNodeHttpAddress(this.nmHost + ":" + this.nmHttpPort);

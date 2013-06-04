@@ -181,7 +181,7 @@ public class TestCheckpoint {
       
       try {
         // Simulate the mount going read-only
-        dir.setWritable(false);
+        FileUtil.setWritable(dir, false);
         cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
             .format(false).build();
         fail("NN should have failed to start with " + dir + " set unreadable");
@@ -191,7 +191,7 @@ public class TestCheckpoint {
       } finally {
         cleanup(cluster);
         cluster = null;
-        dir.setWritable(true);
+        FileUtil.setWritable(dir, true);
       }
     }
   }
@@ -770,9 +770,12 @@ public class TestCheckpoint {
   @Test
   public void testSeparateEditsDirLocking() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    File editsDir = new File(MiniDFSCluster.getBaseDirectory() +
-        "/testSeparateEditsDirLocking");
-    
+    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+    File editsDir = new File(MiniDFSCluster.getBaseDirectory(),
+        "testSeparateEditsDirLocking");
+
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        nameDir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         editsDir.getAbsolutePath());
     MiniDFSCluster cluster = null;
@@ -1550,9 +1553,10 @@ public class TestCheckpoint {
       if (fs != null) {
         fs.close();
       }
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cleanup(secondary);
+      secondary = null;
+      cleanup(cluster);
+      cluster = null;
       Mockito.reset(faultInjector);
     }
   }
@@ -1963,7 +1967,7 @@ public class TestCheckpoint {
       StorageDirectory sd1 = storage.getStorageDir(1);
       
       currentDir = sd0.getCurrentDir();
-      currentDir.setExecutable(false);
+      FileUtil.setExecutable(currentDir, false);
 
       // Upload checkpoint when NN has a bad storage dir. This should
       // succeed and create the checkpoint in the good dir.
@@ -1973,7 +1977,7 @@ public class TestCheckpoint {
           new File(sd1.getCurrentDir(), NNStorage.getImageFileName(2)));
       
       // Restore the good dir
-      currentDir.setExecutable(true);
+      FileUtil.setExecutable(currentDir, true);
       nn.restoreFailedStorage("true");
       nn.rollEditLog();
 
@@ -1984,7 +1988,7 @@ public class TestCheckpoint {
       assertParallelFilesInvariant(cluster, ImmutableList.of(secondary));
     } finally {
       if (currentDir != null) {
-        currentDir.setExecutable(true);
+        FileUtil.setExecutable(currentDir, true);
       }
       cleanup(secondary);
       secondary = null;
@@ -2034,7 +2038,7 @@ public class TestCheckpoint {
       StorageDirectory sd0 = storage.getStorageDir(0);
       assertEquals(NameNodeDirType.IMAGE, sd0.getStorageDirType());
       currentDir = sd0.getCurrentDir();
-      currentDir.setExecutable(false);
+      FileUtil.setExecutable(currentDir, false);
 
       // Try to upload checkpoint -- this should fail since there are no
       // valid storage dirs
@@ -2047,7 +2051,7 @@ public class TestCheckpoint {
       }
       
       // Restore the good dir
-      currentDir.setExecutable(true);
+      FileUtil.setExecutable(currentDir, true);
       nn.restoreFailedStorage("true");
       nn.rollEditLog();
 
@@ -2058,7 +2062,7 @@ public class TestCheckpoint {
       assertParallelFilesInvariant(cluster, ImmutableList.of(secondary));
     } finally {
       if (currentDir != null) {
-        currentDir.setExecutable(true);
+        FileUtil.setExecutable(currentDir, true);
       }
       cleanup(secondary);
       secondary = null;

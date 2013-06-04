@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.0.5-beta - UNRELEASED
+Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -16,7 +16,7 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-486. Changed NM's startContainer API to accept Container record given by
     RM as a direct parameter instead of as part of the ContainerLaunchContext
-    record. (Xuan Gong via vinodkv) 
+    record. (Xuan Gong via vinodkv)
 
     YARN-444. Moved special container exit codes from YarnConfiguration to API
     where they belong. (Sandy Ryza via vinodkv)
@@ -49,6 +49,33 @@ Release 2.0.5-beta - UNRELEASED
     YARN-615. Rename ContainerLaunchContext.containerTokens to tokens.
     (Vinod Kumar Vavilapalli via sseth)
 
+    YARN-571. Remove user from ContainerLaunchContext. (Omkar Vinit Joshi via
+    vinodkv)
+
+    YARN-716. Making ApplicationID immutable. (Siddharth Seth via vinodkv)
+
+    YARN-684. ContainerManager.startContainer should use
+    ContainerTokenIdentifier instead of the entire Container.
+    (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-735. Make ApplicationAttemptId, ContaienrId and NodeId immutable.
+    (Jian He via sseth)
+
+    YARN-749. Rename ResourceRequest.(get,set)HostName to
+    ResourceRequest.(get,set)ResourceName. (acmurthy)
+
+    YARN-720. container-log4j.properties should not refer to mapreduce
+    property names. (Zhijie Shen via sseth)
+
+    YARN-748. Moved BuilderUtils from yarn-common to yarn-server-common for
+    eventual retirement. (Jian He via vinodkv)
+
+    YARN-635. Renamed YarnRemoteException to YarnException. (Siddharth Seth via
+    vinodkv)
+
+    YARN-755. Renamed AllocateResponse.reboot to AllocateResponse.resync. (Bikas
+    Saha via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -63,6 +90,18 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
+
+    YARN-422. Add a NM Client library to help application-writers. (Zhijie Shen
+    via vinodkv)
+
+    YARN-392. Make it possible to specify hard locality constraints in resource
+    requests. (sandyr via tucu)
+
+    YARN-326. Add multi-resource scheduling to the fair scheduler. 
+    (sandyr via tucu)
+
+    YARN-398. Make it possible to specify hard locality constraints in resource
+    requests for CapacityScheduler. (acmurthy)
 
   IMPROVEMENTS
 
@@ -195,7 +234,27 @@ Release 2.0.5-beta - UNRELEASED
     YARN-711. Copied BuilderUtil methods in individual API records as
     BuilderUtils is going to be dismantled. (Jian He via vinodkv)
 
+    YARN-714. Added NMTokens to be sent to AMs as part of heart-beat response.
+    (Omkar Vinit Joshi via vinodkv)
+
+    YARN-638. Modified ResourceManager to restore RMDelegationTokens after
+    restarting. (Jian He via vinodkv)
+
+    YARN-660. Improve AMRMClient with matching requests (bikas)
+
+    YARN-717. Put object creation factories for Token in the class itself and
+    remove useless derivations for specific tokens. (Jian He via vinodkv)
+
+    YARN-756. Move Preemption* records to yarn.api where they really belong.
+    (Jian He via vinodkv)
+
   OPTIMIZATIONS
+
+    YARN-512. Log aggregation root directory check is more expensive than it
+    needs to be. (Maysam Yabandeh via jlowe)
+
+    YARN-719. Move RMIdentifier from Container to ContainerTokenIdentifier.
+    (Vinod Kumar Vavilapalli via sseth)
 
   BUG FIXES
 
@@ -339,7 +398,22 @@ Release 2.0.5-beta - UNRELEASED
     YARN-715. Fixed unit test failures - TestDistributedShell and
     TestUnmanagedAMLauncher. (Vinod Kumar Vavilapalli via sseth)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS
+    YARN-578. Fixed NM to use SecureIOUtils for reading and aggregating logs.
+    (Omkar Vinit Joshi via vinodkv) 
+
+    YARN-733. Fixed TestNMClient from failing occasionally. (Zhijie Shen via
+    vinodkv)
+
+    YARN-730. Fix NMClientAsync to remove completed containers. (Zhijie Shen
+    via acmurthy)
+
+    YARN-726. Fix queue & finish time fields in web-ui for ResourceManager.
+    (Mayank Bansal via acmurthy) 
+
+    YARN-757. Changed TestRMRestart to use the default scheduler to avoid test
+    failures. (Bikas Saha via vinodkv)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
     (Chris Nauroth via suresh)
@@ -369,12 +443,37 @@ Release 2.0.5-beta - UNRELEASED
     YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
     via vinodkv)
 
+    YARN-506. Move to common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
     YARN-488. TestContainerManagerSecurity fails on Windows. (Chris Nauroth
     via hitesh)
 
     YARN-490. TestDistributedShell fails on Windows. (Chris Nauroth via hitesh)
 
     YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
+
+    YARN-487. Modify path manipulation in LocalDirsHandlerService to let
+    TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
+
+    YARN-593. container launch on Windows does not correctly populate
+    classpath with new process's environment variables and localized resources
+    (Chris Nauroth via bikas)
+
+    YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
+    via vinodkv)
+
+Release 2.0.5-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.4-alpha - 2013-04-25 
 

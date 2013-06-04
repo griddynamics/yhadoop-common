@@ -61,7 +61,7 @@ public class TestLocalFileSystem {
   
   @After
   public void after() throws IOException {
-    base.setWritable(true);
+    FileUtil.setWritable(base, true);
     FileUtil.fullyDelete(base);
     assertTrue(!base.exists());
   }
@@ -69,7 +69,7 @@ public class TestLocalFileSystem {
   /**
    * Test the capability of setting the working directory.
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testWorkingDirectory() throws IOException {
     Path origDir = fileSys.getWorkingDirectory();
     Path subdir = new Path(TEST_ROOT_DIR, "new");
@@ -156,7 +156,7 @@ public class TestLocalFileSystem {
     }
   }
   
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testCopy() throws IOException {
     Path src = new Path(TEST_ROOT_DIR, "dingo");
     Path dst = new Path(TEST_ROOT_DIR, "yak");
@@ -271,7 +271,7 @@ public class TestLocalFileSystem {
         stats[0].getPath().toUri().getPath());
   }
   
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testReportChecksumFailure() throws IOException {
     base.mkdirs();
     assertTrue(base.exists() && base.isDirectory());
@@ -279,7 +279,7 @@ public class TestLocalFileSystem {
     final File dir1 = new File(base, "dir1");
     final File dir2 = new File(dir1, "dir2");
     dir2.mkdirs();
-    assertTrue(dir2.exists() && dir2.canWrite());
+    assertTrue(dir2.exists() && FileUtil.canWrite(dir2));
     
     final String dataFileName = "corruptedData";
     final Path dataPath = new Path(new File(dir2, dataFileName).toURI());
@@ -302,7 +302,7 @@ public class TestLocalFileSystem {
     // this is a hack to force the #reportChecksumFailure() method to stop
     // climbing up at the 'base' directory and use 'dir1/bad_files' as the 
     // corrupted files storage:
-    base.setWritable(false);
+    FileUtil.setWritable(base, false);
     
     FSDataInputStream dataFsdis = fileSys.open(dataPath);
     FSDataInputStream checksumFsdis = fileSys.open(checksumPath);

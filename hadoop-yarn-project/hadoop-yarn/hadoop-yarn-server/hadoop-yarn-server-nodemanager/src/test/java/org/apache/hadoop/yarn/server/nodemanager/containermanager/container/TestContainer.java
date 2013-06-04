@@ -25,6 +25,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap.SimpleEntry;
@@ -48,11 +49,12 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
@@ -70,7 +72,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
@@ -374,7 +376,7 @@ public class TestContainer {
           public boolean matches(Object o) {
             ContainersLauncherEvent evt = (ContainersLauncherEvent) o;
             return evt.getType() == ContainersLauncherEventType.LAUNCH_CONTAINER
-              && wcf.cId == evt.getContainer().getContainer().getId();
+              && wcf.cId == evt.getContainer().getContainerId();
           }
         };
       verify(wc.launcherBus).handle(argThat(matchesLaunchReq));
@@ -523,11 +525,6 @@ public class TestContainer {
     return serviceData;
   }
 
-  private Container newContainer(Dispatcher disp, ContainerLaunchContext ctx,
-      org.apache.hadoop.yarn.api.records.Container container) {
-    return new ContainerImpl(conf, disp, ctx, container, null, metrics);
-  }
-  
   @SuppressWarnings("unchecked")
   private class WrappedContainer {
     final DrainDispatcher dispatcher;
@@ -543,14 +540,14 @@ public class TestContainer {
     final Container c;
     final Map<String, LocalResource> localResources;
     final Map<String, ByteBuffer> serviceData;
-    final String user;
 
-    WrappedContainer(int appId, long timestamp, int id, String user) {
+    WrappedContainer(int appId, long timestamp, int id, String user)
+        throws IOException {
       this(appId, timestamp, id, user, true, false);
     }
 
     WrappedContainer(int appId, long timestamp, int id, String user,
-        boolean withLocalRes, boolean withServiceData) {
+        boolean withLocalRes, boolean withServiceData) throws IOException {
       dispatcher = new DrainDispatcher();
       dispatcher.init(new Configuration());
 
@@ -566,18 +563,25 @@ public class TestContainer {
       dispatcher.register(AuxServicesEventType.class, auxBus);
       dispatcher.register(ApplicationEventType.class, appBus);
       dispatcher.register(LogHandlerEventType.class, LogBus);
-      this.user = user;
 
       ctxt = mock(ContainerLaunchContext.class);
       org.apache.hadoop.yarn.api.records.Container mockContainer =
           mock(org.apache.hadoop.yarn.api.records.Container.class);
       cId = BuilderUtils.newContainerId(appId, 1, timestamp, id);
-      when(ctxt.getUser()).thenReturn(this.user);
       when(mockContainer.getId()).thenReturn(cId);
 
       Resource resource = BuilderUtils.newResource(1024, 1);
       when(mockContainer.getResource()).thenReturn(resource);
-
+      String host = "127.0.0.1";
+      int port = 1234;
+      long currentTime = System.currentTimeMillis();
+      ContainerTokenIdentifier identifier =
+          new ContainerTokenIdentifier(cId, "127.0.0.1", user, resource,
+            currentTime + 10000L, 123, currentTime);
+      Token token =
+          BuilderUtils.newContainerToken(BuilderUtils.newNodeId(host, port),
+            "password".getBytes(), identifier);
+      when(mockContainer.getContainerToken()).thenReturn(token);
       if (withLocalRes) {
         Random r = new Random();
         long seed = r.nextLong();
@@ -600,7 +604,7 @@ public class TestContainer {
       }
       when(ctxt.getServiceData()).thenReturn(serviceData);
 
-      c = newContainer(dispatcher, ctxt, mockContainer);
+      c = new ContainerImpl(conf, dispatcher, ctxt, null, metrics, identifier);
       dispatcher.start();
     }
 
@@ -637,7 +641,7 @@ public class TestContainer {
         Path p = new Path(cache, rsrc.getKey());
         localPaths.put(p, Arrays.asList(rsrc.getKey()));
         // rsrc copied to p
-        c.handle(new ContainerResourceLocalizedEvent(c.getContainer().getId(),
+        c.handle(new ContainerResourceLocalizedEvent(c.getContainerId(),
                  req, p));
       }
       drainDispatcherEvents();
@@ -660,8 +664,8 @@ public class TestContainer {
       LocalResource rsrc = localResources.get(rsrcKey);
       LocalResourceRequest req = new LocalResourceRequest(rsrc);
       Exception e = new Exception("Fake localization error");
-      c.handle(new ContainerResourceFailedEvent(c.getContainer()
-          .getId(), req, e.getMessage()));
+      c.handle(new ContainerResourceFailedEvent(c.getContainerId(), req, e
+        .getMessage()));
       drainDispatcherEvents();
     }
 
@@ -676,7 +680,7 @@ public class TestContainer {
         ++counter;
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
         Exception e = new Exception("Fake localization error");
-        c.handle(new ContainerResourceFailedEvent(c.getContainer().getId(),
+        c.handle(new ContainerResourceFailedEvent(c.getContainerId(),
                  req, e.getMessage()));
       }
       drainDispatcherEvents();     

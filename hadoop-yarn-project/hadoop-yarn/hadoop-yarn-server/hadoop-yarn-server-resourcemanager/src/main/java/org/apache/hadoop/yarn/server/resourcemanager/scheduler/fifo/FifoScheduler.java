@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -56,7 +56,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
@@ -87,7 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -550,20 +549,20 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         NodeId nodeId = node.getRMNode().getNodeID();
         ContainerId containerId = BuilderUtils.newContainerId(application
             .getApplicationAttemptId(), application.getNewContainerId());
-        ContainerToken containerToken = null;
+        Token containerToken = null;
 
         containerToken =
             this.rmContext.getContainerTokenSecretManager()
-                .createContainerToken(containerId, nodeId,
-                    application.getUser(), capability);
+              .createContainerToken(containerId, nodeId, application.getUser(),
+                capability);
         if (containerToken == null) {
           return i; // Try again later.
         }
 
         // Create the container
-        Container container = BuilderUtils.newContainer(containerId, nodeId,
-            node.getRMNode().getHttpAddress(), capability, priority,
-            containerToken, ResourceManager.clusterTimeStamp);
+        Container container =
+            BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
+              .getHttpAddress(), capability, priority, containerToken);
         
         // Allocate!
         

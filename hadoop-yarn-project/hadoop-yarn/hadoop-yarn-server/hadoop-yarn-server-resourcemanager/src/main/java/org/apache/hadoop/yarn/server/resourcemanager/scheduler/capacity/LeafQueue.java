@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -51,9 +50,9 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -65,7 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 @Private
 @Unstable
@@ -785,6 +784,8 @@ public class LeafQueue implements CSQueue {
   private static final CSAssignment NULL_ASSIGNMENT =
       new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
   
+  private static final CSAssignment SKIP_ASSIGNMENT = new CSAssignment(true);
+  
   @Override
   public synchronized CSAssignment 
   assignContainers(Resource clusterResource, FiCaSchedulerNode node) {
@@ -854,6 +855,13 @@ public class LeafQueue implements CSQueue {
             assignContainersOnNode(clusterResource, node, application, priority, 
                 null);
 
+          // Did the application skip this node?
+          if (assignment.getSkipped()) {
+            // Don't count 'skipped nodes' as a scheduling opportunity!
+            application.subtractSchedulingOpportunity(priority);
+            continue;
+          }
+          
           // Did we schedule or reserve a container?
           Resource assigned = assignment.getResource();
           if (Resources.greaterThan(
@@ -1105,73 +1113,88 @@ public class LeafQueue implements CSQueue {
     Resource assigned = Resources.none();
 
     // Data-local
-    assigned = 
-        assignNodeLocalContainers(clusterResource, node, application, priority,
-            reservedContainer); 
-    if (Resources.greaterThan(resourceCalculator, clusterResource, 
-            assigned, Resources.none())) {
-      return new CSAssignment(assigned, NodeType.NODE_LOCAL);
+    ResourceRequest nodeLocalResourceRequest =
+        application.getResourceRequest(priority, node.getHostName());
+    if (nodeLocalResourceRequest != null) {
+      assigned = 
+          assignNodeLocalContainers(clusterResource, nodeLocalResourceRequest, 
+              node, application, priority, reservedContainer); 
+      if (Resources.greaterThan(resourceCalculator, clusterResource, 
+          assigned, Resources.none())) {
+        return new CSAssignment(assigned, NodeType.NODE_LOCAL);
+      }
     }
 
     // Rack-local
-    assigned = 
-        assignRackLocalContainers(clusterResource, node, application, priority, 
-            reservedContainer);
-    if (Resources.greaterThan(resourceCalculator, clusterResource, 
-            assigned, Resources.none())) {
-      return new CSAssignment(assigned, NodeType.RACK_LOCAL);
+    ResourceRequest rackLocalResourceRequest =
+        application.getResourceRequest(priority, node.getRackName());
+    if (rackLocalResourceRequest != null) {
+      if (!rackLocalResourceRequest.getRelaxLocality()) {
+        return SKIP_ASSIGNMENT;
+      }
+      
+      assigned = 
+          assignRackLocalContainers(clusterResource, rackLocalResourceRequest, 
+              node, application, priority, reservedContainer);
+      if (Resources.greaterThan(resourceCalculator, clusterResource, 
+          assigned, Resources.none())) {
+        return new CSAssignment(assigned, NodeType.RACK_LOCAL);
+      }
     }
     
     // Off-switch
-    return new CSAssignment(
-        assignOffSwitchContainers(clusterResource, node, application, 
-            priority, reservedContainer), 
-        NodeType.OFF_SWITCH);
+    ResourceRequest offSwitchResourceRequest =
+        application.getResourceRequest(priority, ResourceRequest.ANY);
+    if (offSwitchResourceRequest != null) {
+      if (!offSwitchResourceRequest.getRelaxLocality()) {
+        return SKIP_ASSIGNMENT;
+      }
+
+      return new CSAssignment(
+          assignOffSwitchContainers(clusterResource, offSwitchResourceRequest,
+              node, application, priority, reservedContainer), 
+              NodeType.OFF_SWITCH);
+    }
+    
+    return SKIP_ASSIGNMENT;
   }
 
-  private Resource assignNodeLocalContainers(Resource clusterResource, 
+  private Resource assignNodeLocalContainers(
+      Resource clusterResource, ResourceRequest nodeLocalResourceRequest, 
       FiCaSchedulerNode node, FiCaSchedulerApp application, 
       Priority priority, RMContainer reservedContainer) {
-    ResourceRequest request = 
-        application.getResourceRequest(priority, node.getHostName());
-    if (request != null) {
-      if (canAssign(application, priority, node, NodeType.NODE_LOCAL, 
-          reservedContainer)) {
-        return assignContainer(clusterResource, node, application, priority, 
-            request, NodeType.NODE_LOCAL, reservedContainer);
-      }
+    if (canAssign(application, priority, node, NodeType.NODE_LOCAL, 
+        reservedContainer)) {
+      return assignContainer(clusterResource, node, application, priority, 
+          nodeLocalResourceRequest, NodeType.NODE_LOCAL, reservedContainer);
     }
     
     return Resources.none();
   }
 
-  private Resource assignRackLocalContainers(Resource clusterResource,  
+  private Resource assignRackLocalContainers(
+      Resource clusterResource, ResourceRequest rackLocalResourceRequest,  
       FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer) {
-    ResourceRequest request = 
-      application.getResourceRequest(priority, node.getRackName());
-    if (request != null) {
-      if (canAssign(application, priority, node, NodeType.RACK_LOCAL, 
-          reservedContainer)) {
-        return assignContainer(clusterResource, node, application, priority, request, 
-            NodeType.RACK_LOCAL, reservedContainer);
-      } 
+    if (canAssign(application, priority, node, NodeType.RACK_LOCAL, 
+        reservedContainer)) {
+      return assignContainer(clusterResource, node, application, priority, 
+          rackLocalResourceRequest, NodeType.RACK_LOCAL, reservedContainer);
     }
+    
     return Resources.none();
   }
 
-  private Resource assignOffSwitchContainers(Resource clusterResource, FiCaSchedulerNode node, 
-      FiCaSchedulerApp application, Priority priority, 
+  private Resource assignOffSwitchContainers(
+      Resource clusterResource, ResourceRequest offSwitchResourceRequest,
+      FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority, 
       RMContainer reservedContainer) {
-    ResourceRequest request = 
-      application.getResourceRequest(priority, ResourceRequest.ANY);
-    if (request != null) {
-      if (canAssign(application, priority, node, NodeType.OFF_SWITCH, 
-          reservedContainer)) {
-        return assignContainer(clusterResource, node, application, priority, request, 
-            NodeType.OFF_SWITCH, reservedContainer);
-      }
+    if (canAssign(application, priority, node, NodeType.OFF_SWITCH, 
+        reservedContainer)) {
+      return assignContainer(clusterResource, node, application, priority, 
+          offSwitchResourceRequest, NodeType.OFF_SWITCH, reservedContainer);
     }
+    
     return Resources.none();
   }
 
@@ -1242,9 +1265,9 @@ public class LeafQueue implements CSQueue {
         .getApplicationAttemptId(), application.getNewContainerId());
   
     // Create the container
-    Container container = BuilderUtils.newContainer(containerId, nodeId,
-        node.getRMNode().getHttpAddress(), capability, priority,
-        null, ResourceManager.clusterTimeStamp);
+    Container container =
+        BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
+          .getHttpAddress(), capability, priority, null);
   
     return container;
   }
@@ -1252,7 +1275,7 @@ public class LeafQueue implements CSQueue {
   /**
    * Create <code>ContainerToken</code>, only in secure-mode
    */
-  ContainerToken createContainerToken(
+  Token createContainerToken(
       FiCaSchedulerApp application, Container container) {
     return containerTokenSecretManager.createContainerToken(
         container.getId(), container.getNodeId(),
@@ -1296,7 +1319,7 @@ public class LeafQueue implements CSQueue {
         unreserve(application, priority, node, rmContainer);
       }
 
-      ContainerToken containerToken =
+      Token containerToken =
           createContainerToken(application, container);
       if (containerToken == null) {
         // Something went wrong...

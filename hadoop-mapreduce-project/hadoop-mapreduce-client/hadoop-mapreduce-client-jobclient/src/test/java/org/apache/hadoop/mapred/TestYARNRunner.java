@@ -79,7 +79,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -87,7 +86,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
@@ -140,9 +138,7 @@ public class TestYARNRunner extends TestCase {
         ).when(yarnRunner).createApplicationSubmissionContext(any(Configuration.class),
             any(String.class), any(Credentials.class));
 
-    appId = recordFactory.newRecordInstance(ApplicationId.class);
-    appId.setClusterTimestamp(System.currentTimeMillis());
-    appId.setId(1);
+    appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     jobId = TypeConverter.fromYarn(appId);
     if (testWorkDir.exists()) {
       FileContext.getLocalFSFileContext().delete(new Path(testWorkDir.toString()), true);
@@ -285,11 +281,12 @@ public class TestYARNRunner extends TestCase {
       token.setKind(RMDelegationTokenIdentifier.KIND_NAME);
 
       // Setup mock history token
-      DelegationToken historyToken = BuilderUtils.newDelegationToken(
-          new byte[0], MRDelegationTokenIdentifier.KIND_NAME.toString(),
-          new byte[0], hsTokenSevice.toString());
-      GetDelegationTokenResponse getDtResponse = Records
-          .newRecord(GetDelegationTokenResponse.class);
+      org.apache.hadoop.yarn.api.records.Token historyToken =
+          org.apache.hadoop.yarn.api.records.Token.newInstance(new byte[0],
+            MRDelegationTokenIdentifier.KIND_NAME.toString(), new byte[0],
+            hsTokenSevice.toString());
+      GetDelegationTokenResponse getDtResponse =
+          Records.newRecord(GetDelegationTokenResponse.class);
       getDtResponse.setDelegationToken(historyToken);
 
       // mock services
@@ -361,8 +358,8 @@ public class TestYARNRunner extends TestCase {
             // check that the renewer matches the cluster's RM principal
             assertEquals(masterPrincipal, request.getRenewer() );
 
-            DelegationToken token =
-                recordFactory.newRecordInstance(DelegationToken.class);
+            org.apache.hadoop.yarn.api.records.Token token =
+                recordFactory.newRecordInstance(org.apache.hadoop.yarn.api.records.Token.class);
             // none of these fields matter for the sake of the test
             token.setKind("");
             token.setService("");

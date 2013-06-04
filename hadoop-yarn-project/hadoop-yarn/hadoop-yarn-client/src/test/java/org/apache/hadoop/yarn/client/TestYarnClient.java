@@ -39,11 +39,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -90,14 +89,13 @@ public class TestYarnClient {
     for (int i = 0; i < exitStates.length; ++i) {
       ApplicationSubmissionContext context =
           mock(ApplicationSubmissionContext.class);
-      ApplicationId applicationId = Records.newRecord(ApplicationId.class);
-      applicationId.setClusterTimestamp(System.currentTimeMillis());
-      applicationId.setId(i);
+      ApplicationId applicationId = ApplicationId.newInstance(
+          System.currentTimeMillis(), i);
       when(context.getApplicationId()).thenReturn(applicationId);
       ((MockYarnClient) client).setYarnApplicationState(exitStates[i]);
       try {
         client.submitApplication(context);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
         Assert.fail("Exception is not expected.");
@@ -155,7 +153,7 @@ public class TestYarnClient {
       try{
         when(rmClient.getApplicationReport(any(
             GetApplicationReportRequest.class))).thenReturn(mockResponse);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
         Assert.fail("Exception is not expected.");

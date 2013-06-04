@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.0.5-beta - UNRELEASED
+Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -31,6 +31,12 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
+
+    HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
+    szetszwo)
+
+    HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
+    of NetworkTopology.  (Junping Du via szetszwo)
 
   IMPROVEMENTS
 
@@ -82,6 +88,14 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
 
     HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
+
+    HADOOP-9574. Added new methods in AbstractDelegationTokenSecretManager for
+    helping YARN ResourceManager to reuse code for RM restart. (Jian He via
+    vinodkv)
+
+    HADOOP-7391 Document Interface Classification from HADOOP-5073 (sanjay Radia)
+
+    HADOOP-9287. Parallel-testing hadoop-common (Andrey Klochkov via jlowe)
 
   OPTIMIZATIONS
 
@@ -195,7 +209,10 @@ Release 2.0.5-beta - UNRELEASED
     (which in turn throws SIGABRT) causing client crashes. (Colin Patrick
     McCabe via atm)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS
+    HADOOP-9481. Broken conditional logic with HADOOP_SNAPPY_LIBRARY. (Vadim
+    Bondarev via atm)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
     sh. (Chris Nauroth via suresh)
@@ -319,8 +336,76 @@ Release 2.0.5-beta - UNRELEASED
     Windows with NTFS ACLs. (Chris Nauroth via suresh)
 
     HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-9387. Fix DF so that it won't execute a shell command on Windows
+    to compute the file system/mount point.  (Ivan Mitic via szetszwo)
+
+    HADOOP-9353. Activate native-win maven profile by default on Windows.
+    (Arpit Agarwal via szetszwo)
+
+    HADOOP-9437. TestNativeIO#testRenameTo fails on Windows due to assumption
+    that POSIX errno is embedded in NativeIOException. (Chris Nauroth via
+    suresh)
+
+    HADOOP-9443. Port winutils static code analysis change to trunk.
+    (Chuan Liu via suresh)
+
+    HADOOP-9290. Some tests cannot load native library on windows.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9500. TestUserGroupInformation#testGetServerSideGroups fails on 
+    Windows due to failure to find winutils.exe. (Chris Nauroth via suresh)
+
+    HADOOP-9490. LocalFileSystem#reportChecksumFailure not closing the 
+    checksum file handle before rename. (Ivan Mitic via suresh)
+
+    HADOOP-9524. Fix ShellCommandFencer to work on Windows.
+    (Arpit Agarwal via suresh)
+
+    HADOOP-9413. Add common utils for File#setReadable/Writable/Executable &
+    File#canRead/Write/Execute that work cross-platform. (Ivan Mitic via suresh)
+
+    HADOOP-9532. HADOOP_CLIENT_OPTS is appended twice by Windows cmd scripts.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
+    (Chris Nauroth and Arpit Agarwal via suresh)
+
+    HADOOP-9483. winutils support for readlink command.
+    (Arpit Agarwal via suresh)
     
-Release 2.0.4-beta - UNRELEASED
+    HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
+    variables from current process environment/does not support overriding
+    when launching new process (Chris Nauroth via bikas)
+
+    HADOOP-9556. disable HA tests on Windows that fail due to ZooKeeper client
+    connection management bug. (Chris Nauroth via suresh)
+
+    HADOOP-9553. TestAuthenticationToken fails on Windows.
+    (Arpit Agarwal via suresh)
+
+    HADOOP-9397. Incremental dist tar build fails. (Chris Nauroth via jlowe)
+
+    HADOOP-9607. Fixes in Javadoc build (Timothy St. Clair via cos)
+
+    HADOOP-9605. Update junit dependency. (Timothy St. Clair via cos)
+
+Release 2.0.5-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+  HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
+  build issues. (Sangjin Lee via suresh)
+
+Release 2.0.4-alpha - 2013-04-25
 
   INCOMPATIBLE CHANGES
 
@@ -333,7 +418,7 @@ Release 2.0.4-beta - UNRELEASED
   BUG FIXES
 
     HADOOP-9467. Metrics2 record filter should check name as well as tags.
-    (Ganeshan Iyler via llu)
+    (Chris Nauroth and Ganeshan Iyler via llu)
 
     HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
 
@@ -1357,6 +1442,9 @@ Release 0.23.8 - UNRELEASED
 
     HADOOP-9504. MetricsDynamicMBeanBase has concurrency issues in
     createMBeanInfo (Liang Xie via jlowe)
+
+    HADOOP-9614. smart-test-patch.sh hangs for new version of patch (2.7.1)
+    (Ravi Prakash via jeagles)
 
 Release 0.23.7 - UNRELEASED
 

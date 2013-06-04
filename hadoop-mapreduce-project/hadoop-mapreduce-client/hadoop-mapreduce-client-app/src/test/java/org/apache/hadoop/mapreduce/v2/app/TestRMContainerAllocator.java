@@ -45,7 +45,6 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -72,11 +71,10 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -100,9 +98,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("unchecked")
@@ -113,17 +109,9 @@ public class TestRMContainerAllocator {
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
-  @Before
-  public void setup() {
-    // This is done to make sure token service doesn't use ip.
-    SecurityUtil.setTokenServiceUseIp(false);
-  }
-
   @After
   public void tearDown() {
     DefaultMetricsSystem.shutdown();
-    SecurityUtil.setTokenServiceUseIp(
-        CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
   }
 
   @Test
@@ -496,7 +484,7 @@ public class TestRMContainerAllocator {
     rm.sendAMLaunched(appAttemptId);
     rmDispatcher.await();
 
-    MRApp mrApp = new MRApp(appAttemptId, BuilderUtils.newContainerId(
+    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newInstance(
       appAttemptId, 0), 10, 10, false, this.getClass().getName(), true, 1) {
       @Override
       protected Dispatcher createDispatcher() {
@@ -612,7 +600,7 @@ public class TestRMContainerAllocator {
       MRApp mrApp, Task task) throws Exception {
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
     List<ContainerStatus> contStatus = new ArrayList<ContainerStatus>(1);
-    contStatus.add(BuilderUtils.newContainerStatus(attempt.getAssignedContainerID(),
+    contStatus.add(ContainerStatus.newInstance(attempt.getAssignedContainerID(),
         ContainerState.COMPLETE, "", 0));
     Map<ApplicationId,List<ContainerStatus>> statusUpdate =
         new HashMap<ApplicationId,List<ContainerStatus>>(1);
@@ -648,7 +636,7 @@ public class TestRMContainerAllocator {
     rm.sendAMLaunched(appAttemptId);
     rmDispatcher.await();
 
-    MRApp mrApp = new MRApp(appAttemptId, BuilderUtils.newContainerId(
+    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newInstance(
       appAttemptId, 0), 10, 0, false, this.getClass().getName(), true, 1) {
       @Override
         protected Dispatcher createDispatcher() {
@@ -1229,8 +1217,8 @@ public class TestRMContainerAllocator {
         List<ContainerId> release) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
-        ResourceRequest reqCopy = BuilderUtils.newResourceRequest(req
-            .getPriority(), req.getHostName(), req.getCapability(), req
+        ResourceRequest reqCopy = ResourceRequest.newInstance(req
+            .getPriority(), req.getResourceName(), req.getCapability(), req
             .getNumContainers());
         askCopy.add(reqCopy);
       }
@@ -1255,7 +1243,7 @@ public class TestRMContainerAllocator {
     }
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId,
         taskAttemptId);
-    Resource containerNeed = BuilderUtils.newResource(memory, 1);
+    Resource containerNeed = Resource.newInstance(memory, 1);
     if (earlierFailedAttempt) {
       return ContainerRequestEvent
           .createContainerRequestEventForFailedContainer(attemptId,
@@ -1338,8 +1326,8 @@ public class TestRMContainerAllocator {
       when(context.getApplicationAttemptId()).thenReturn(appAttemptId);
       when(context.getJob(isA(JobId.class))).thenReturn(job);
       when(context.getClusterInfo()).thenReturn(
-          new ClusterInfo(BuilderUtils.newResource(1024, 1), BuilderUtils
-              .newResource(10240, 1)));
+        new ClusterInfo(Resource.newInstance(1024, 1), Resource.newInstance(
+          10240, 1)));
       when(context.getEventHandler()).thenReturn(new EventHandler() {
         @Override
         public void handle(Event event) {
@@ -1412,12 +1400,12 @@ public class TestRMContainerAllocator {
 
     @Override
     protected Resource getMinContainerCapability() {
-      return BuilderUtils.newResource(1024, 1);
+      return Resource.newInstance(1024, 1);
     }
 
     @Override
     protected Resource getMaxContainerCapability() {
-      return BuilderUtils.newResource(10240, 1);
+      return Resource.newInstance(10240, 1);
     }
 
     public void sendRequest(ContainerRequestEvent req) {
@@ -1441,7 +1429,7 @@ public class TestRMContainerAllocator {
         super.heartbeat();
       } catch (Exception e) {
         LOG.error("error in heartbeat ", e);
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
 
       List<TaskAttemptContainerAssignedEvent> result
@@ -1607,7 +1595,7 @@ public class TestRMContainerAllocator {
     AppContext appContext = mock(AppContext.class);
     when(appContext.getClock()).thenReturn(clock);
     when(appContext.getApplicationID()).thenReturn(
-        BuilderUtils.newApplicationId(1, 1));
+        ApplicationId.newInstance(1, 1));
 
     RMContainerAllocator allocator = new RMContainerAllocator(
         mock(ClientService.class), appContext) {
@@ -1665,11 +1653,14 @@ public class TestRMContainerAllocator {
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(
         MRBuilderUtils.newTaskId(
             MRBuilderUtils.newJobId(1, 1, 1), 1, TaskType.MAP), 1);
-    ContainerId containerId = BuilderUtils.newContainerId(1, 1, 1, 1);
-    ContainerStatus status = BuilderUtils.newContainerStatus(
+    ApplicationId applicationId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId applicationAttemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ContainerId containerId = ContainerId.newInstance(applicationAttemptId, 1);
+    ContainerStatus status = ContainerStatus.newInstance(
         containerId, ContainerState.RUNNING, "", 0);
 
-    ContainerStatus abortedStatus = BuilderUtils.newContainerStatus(
+    ContainerStatus abortedStatus = ContainerStatus.newInstance(
         containerId, ContainerState.RUNNING, "",
         ContainerExitStatus.ABORTED);
     

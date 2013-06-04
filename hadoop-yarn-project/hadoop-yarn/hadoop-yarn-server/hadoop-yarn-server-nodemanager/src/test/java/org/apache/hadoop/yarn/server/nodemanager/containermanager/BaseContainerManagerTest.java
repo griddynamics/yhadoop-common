@@ -33,14 +33,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -80,23 +80,28 @@ public abstract class BaseContainerManagerTest {
   public BaseContainerManagerTest() throws UnsupportedFileSystemException {
     localFS = FileContext.getLocalFSFileContext();
     localDir =
-        new File("target", this.getClass().getName() + "-localDir")
+        new File("target", this.getClass().getSimpleName() + "-localDir")
             .getAbsoluteFile();
     localLogDir =
-        new File("target", this.getClass().getName() + "-localLogDir")
+        new File("target", this.getClass().getSimpleName() + "-localLogDir")
             .getAbsoluteFile();
     remoteLogDir =
-      new File("target", this.getClass().getName() + "-remoteLogDir")
+      new File("target", this.getClass().getSimpleName() + "-remoteLogDir")
           .getAbsoluteFile();
-    tmpDir = new File("target", this.getClass().getName() + "-tmpDir");
+    tmpDir = new File("target", this.getClass().getSimpleName() + "-tmpDir");
   }
 
   protected static Log LOG = LogFactory
       .getLog(BaseContainerManagerTest.class);
 
+  protected static final int HTTP_PORT = 5412;
   protected Configuration conf = new YarnConfiguration();
   protected Context context = new NMContext(new NMContainerTokenSecretManager(
-    conf));
+    conf)) {
+    public int getHttpPort() {
+      return HTTP_PORT;
+    };
+  };
   protected ContainerExecutor exec;
   protected DeletionService delSrvc;
   protected String user = "nobody";
@@ -177,20 +182,9 @@ public abstract class BaseContainerManagerTest {
 
       @Override
       protected void authorizeRequest(String containerIDStr,
-          ContainerLaunchContext launchContext, Container container,
-          UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
-          throws YarnRemoteException {
+          ContainerLaunchContext launchContext, UserGroupInformation remoteUgi,
+          ContainerTokenIdentifier tokenId) throws YarnException {
         // do nothing
-      }
-
-      @Override
-      protected ContainerTokenIdentifier getContainerTokenIdentifier(
-          UserGroupInformation remoteUgi,
-          org.apache.hadoop.yarn.api.records.Container container)
-          throws YarnRemoteException {
-        return new ContainerTokenIdentifier(container.getId(),
-          container.getNodeHttpAddress(), remoteUgi.getUserName(),
-          container.getResource(), System.currentTimeMillis(), 123);
       }
     };
   }
@@ -218,13 +212,13 @@ public abstract class BaseContainerManagerTest {
 
   public static void waitForContainerState(ContainerManager containerManager,
       ContainerId containerID, ContainerState finalState)
-      throws InterruptedException, YarnRemoteException, IOException {
+      throws InterruptedException, YarnException, IOException {
     waitForContainerState(containerManager, containerID, finalState, 20);
   }
 
   public static void waitForContainerState(ContainerManager containerManager,
           ContainerId containerID, ContainerState finalState, int timeOutMax)
-          throws InterruptedException, YarnRemoteException, IOException {
+          throws InterruptedException, YarnException, IOException {
     GetContainerStatusRequest request =
         recordFactory.newRecordInstance(GetContainerStatusRequest.class);
         request.setContainerId(containerID);

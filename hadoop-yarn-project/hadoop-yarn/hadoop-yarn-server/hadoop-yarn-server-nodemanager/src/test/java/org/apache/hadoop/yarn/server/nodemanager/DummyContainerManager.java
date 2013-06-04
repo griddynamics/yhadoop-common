@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -92,10 +92,10 @@ public class DummyContainerManager extends ContainerManagerImpl {
                 .getRequestedResources().values()) {
               for (LocalResourceRequest req : rc) {
                 LOG.info("DEBUG: " + req + ":"
-                    + rsrcReqs.getContainer().getContainer().getId());
+                    + rsrcReqs.getContainer().getContainerId());
                 dispatcher.getEventHandler().handle(
                     new ContainerResourceLocalizedEvent(rsrcReqs.getContainer()
-                        .getContainer().getId(), req, new Path("file:///local"
+                        .getContainerId(), req, new Path("file:///local"
                         + req.getPath().toUri().getPath())));
               }
             }
@@ -105,7 +105,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
               ((ContainerLocalizationEvent) event).getContainer();
           // TODO: delete the container dir
           this.dispatcher.getEventHandler().handle(
-              new ContainerEvent(container.getContainer().getId(),
+              new ContainerEvent(container.getContainerId(),
                   ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
           break;
         case DESTROY_APPLICATION_RESOURCES:
@@ -134,7 +134,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
       @Override
       public void handle(ContainersLauncherEvent event) {
         Container container = event.getContainer();
-        ContainerId containerId = container.getContainer().getId();
+        ContainerId containerId = container.getContainerId();
         switch (event.getType()) {
         case LAUNCH_CONTAINER:
           dispatcher.getEventHandler().handle(
@@ -181,19 +181,15 @@ public class DummyContainerManager extends ContainerManagerImpl {
   @Override
   protected void authorizeRequest(String containerIDStr,
       ContainerLaunchContext launchContext,
-      org.apache.hadoop.yarn.api.records.Container container,
       UserGroupInformation remoteUgi, ContainerTokenIdentifier tokenId)
-      throws YarnRemoteException {
+      throws YarnException {
     // do Nothing
   }
 
   @Override
-  protected ContainerTokenIdentifier getContainerTokenIdentifier(
-      UserGroupInformation remoteUgi,
-      org.apache.hadoop.yarn.api.records.Container container)
-      throws YarnRemoteException {
-    return new ContainerTokenIdentifier(container.getId(),
-      container.getNodeHttpAddress(), remoteUgi.getUserName(),
-      container.getResource(), System.currentTimeMillis(), 123);
+  protected ContainerTokenIdentifier
+      getContainerTokenIdentifier(UserGroupInformation remoteUgi,
+          ContainerTokenIdentifier containerTokenId) throws YarnException {
+    return containerTokenId;
   }
 }

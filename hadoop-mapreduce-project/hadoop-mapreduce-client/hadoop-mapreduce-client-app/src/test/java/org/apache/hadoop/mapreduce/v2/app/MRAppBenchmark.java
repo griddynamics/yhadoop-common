@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -44,11 +44,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -126,7 +126,7 @@ public class MRAppBenchmark {
         try {
           eventQueue.put(event);
         } catch (InterruptedException e) {
-          throw new YarnException(e);
+          throw new YarnRuntimeException(e);
         }
       }
       @Override
@@ -139,19 +139,16 @@ public class MRAppBenchmark {
               try {
                 if (concurrentRunningTasks < maxConcurrentRunningTasks) {
                   event = eventQueue.take();
-                  ContainerId cId = 
-                      recordFactory.newRecordInstance(ContainerId.class);
-                  cId.setApplicationAttemptId(
-                      getContext().getApplicationAttemptId());
-                  cId.setId(containerCount++);
+                  ContainerId cId =
+                      ContainerId.newInstance(getContext()
+                        .getApplicationAttemptId(), containerCount++);
+
                   //System.out.println("Allocating " + containerCount);
                   
                   Container container = 
                       recordFactory.newRecordInstance(Container.class);
                   container.setId(cId);
-                  NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
-                  nodeId.setHost("dummy");
-                  nodeId.setPort(1234);
+                  NodeId nodeId = NodeId.newInstance("dummy", 1234);
                   container.setNodeId(nodeId);
                   container.setContainerToken(null);
                   container.setNodeHttpAddress("localhost:8042");
@@ -205,10 +202,10 @@ public class MRAppBenchmark {
                       throws IOException {
                 RegisterApplicationMasterResponse response =
                     Records.newRecord(RegisterApplicationMasterResponse.class);
-                response.setMinimumResourceCapability(BuilderUtils
-                  .newResource(1024, 1));
-                response.setMaximumResourceCapability(BuilderUtils
-                  .newResource(10240, 1));
+                response.setMinimumResourceCapability(Resource.newInstance(
+                  1024, 1));
+                response.setMaximumResourceCapability(Resource.newInstance(
+                  10240, 1));
                 return response;
               }
 
@@ -230,20 +227,19 @@ public class MRAppBenchmark {
                 List<ResourceRequest> askList = request.getAskList();
                 List<Container> containers = new ArrayList<Container>();
                 for (ResourceRequest req : askList) {
-                  if (!ResourceRequest.isAnyLocation(req.getHostName())) {
+                  if (!ResourceRequest.isAnyLocation(req.getResourceName())) {
                     continue;
                   }
                   int numContainers = req.getNumContainers();
                   for (int i = 0; i < numContainers; i++) {
                     ContainerId containerId =
-                        BuilderUtils.newContainerId(
+                        ContainerId.newInstance(
                           request.getApplicationAttemptId(),
                           request.getResponseId() + i);
-                    containers.add(BuilderUtils
-                      .newContainer(containerId, BuilderUtils.newNodeId("host"
-                          + containerId.getId(), 2345),
-                        "host" + containerId.getId() + ":5678", req
-                          .getCapability(), req.getPriority(), null, 0));
+                    containers.add(Container.newInstance(containerId,
+                      NodeId.newInstance("host" + containerId.getId(), 2345),
+                      "host" + containerId.getId() + ":5678",
+                      req.getCapability(), req.getPriority(), null));
                   }
                 }
 

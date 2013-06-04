@@ -51,15 +51,16 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
@@ -97,7 +98,7 @@ public class TestNodeManagerReboot {
 
   @Test(timeout = 2000000)
   public void testClearLocalDirWhenNodeReboot() throws IOException,
-      YarnRemoteException, InterruptedException {
+      YarnException, InterruptedException {
     nm = new MyNodeManager();
     nm.start();
 
@@ -111,11 +112,6 @@ public class TestNodeManagerReboot {
         Records.newRecord(ContainerLaunchContext.class);
     // Construct the Container-id
     ContainerId cId = createContainerId();
-    org.apache.hadoop.yarn.api.records.Container mockContainer =
-        Records.newRecord(org.apache.hadoop.yarn.api.records.Container.class);
-    mockContainer.setId(cId);
-
-    containerLaunchContext.setUser(user);
 
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
@@ -137,23 +133,21 @@ public class TestNodeManagerReboot {
     containerLaunchContext.setCommands(commands);
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(1024);
-    mockContainer.setResource(resource);
     NodeId nodeId = BuilderUtils.newNodeId("127.0.0.1", 12345);
-    mockContainer.setContainerToken(nm.getNMContext()
-      .getContainerTokenSecretManager()
-      .createContainerToken(cId, nodeId, user, resource));
-    mockContainer.setNodeHttpAddress("127.0.0.1");
-    mockContainer.setNodeId(nodeId);
+    Token containerToken =
+        BuilderUtils.newContainerToken(cId, nodeId.getHost(), nodeId.getPort(),
+          user, resource, System.currentTimeMillis() + 10000L, 123,
+          "password".getBytes(), 0);
     
     final StartContainerRequest startRequest =
         Records.newRecord(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
-    startRequest.setContainer(mockContainer);
+    startRequest.setContainerToken(containerToken);
     final UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(cId.toString());
     currentUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
-      public Void run() throws YarnRemoteException, IOException {
+      public Void run() throws YarnException, IOException {
         containerManager.startContainer(startRequest);
         return null;
       }
@@ -248,16 +242,9 @@ public class TestNodeManagerReboot {
   }
 
   private ContainerId createContainerId() {
-    ApplicationId appId = Records.newRecord(ApplicationId.class);
-    appId.setClusterTimestamp(0);
-    appId.setId(0);
-    ApplicationAttemptId appAttemptId =
-        Records.newRecord(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId containerId =
-        Records.newRecord(ContainerId.class);
-    containerId.setApplicationAttemptId(appAttemptId);
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
     return containerId;
   }
 

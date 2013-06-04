@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -188,7 +188,6 @@ public class MockRM extends ResourceManager {
     capability.setMemory(masterMemory);
     sub.setResource(capability);
     clc.setApplicationACLs(acls);
-    clc.setUser(user);
     if (ts != null && UserGroupInformation.isSecurityEnabled()) {
       DataOutputBuffer dob = new DataOutputBuffer();
       ts.writeTokenStorageToStream(dob);
@@ -207,7 +206,7 @@ public class MockRM extends ResourceManager {
       public SubmitApplicationResponse run() {
         try {
           return client.submitApplication(req);
-        } catch (YarnRemoteException e) {
+        } catch (YarnException e) {
           e.printStackTrace();
         } catch (IOException e) {
           e.printStackTrace();
@@ -292,7 +291,7 @@ public class MockRM extends ResourceManager {
   @Override
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
-        rmAppManager, applicationACLsManager, null) {
+        rmAppManager, applicationACLsManager, rmDTSecretManager) {
       @Override
       public void start() {
         // override to not start rpc handler

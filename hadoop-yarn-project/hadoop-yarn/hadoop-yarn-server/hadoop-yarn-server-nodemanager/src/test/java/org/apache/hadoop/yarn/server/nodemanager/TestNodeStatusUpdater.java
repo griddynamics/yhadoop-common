@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -54,10 +54,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -75,10 +76,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.Service.STATE;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -133,7 +134,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       NodeId nodeId = request.getNodeId();
       Resource resource = request.getResource();
@@ -150,15 +151,6 @@ public class TestNodeStatusUpdater {
       response.setMasterKey(createMasterKey());
       return response;
     }
-
-    ApplicationId applicationID = recordFactory
-        .newRecordInstance(ApplicationId.class);
-    ApplicationAttemptId appAttemptID = recordFactory
-        .newRecordInstance(ApplicationAttemptId.class);
-    ContainerId firstContainerID = recordFactory
-        .newRecordInstance(ContainerId.class);
-    ContainerId secondContainerID = recordFactory
-        .newRecordInstance(ContainerId.class);
 
     private Map<ApplicationId, List<ContainerStatus>> getAppToContainerStatusMap(
         List<ContainerStatus> containers) {
@@ -179,7 +171,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       LOG.info("Got heartbeat number " + heartBeatID);
       NodeManagerMetrics mockMetrics = mock(NodeManagerMetrics.class);
@@ -189,31 +181,38 @@ public class TestNodeStatusUpdater {
       nodeStatus.setResponseId(heartBeatID++);
       Map<ApplicationId, List<ContainerStatus>> appToContainers =
           getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
-      org.apache.hadoop.yarn.api.records.Container mockContainer =
-          mock(org.apache.hadoop.yarn.api.records.Container.class);
+      
+      ApplicationId appId1 = ApplicationId.newInstance(0, 1);
+      ApplicationId appId2 = ApplicationId.newInstance(0, 2);
+      
       if (heartBeatID == 1) {
         Assert.assertEquals(0, nodeStatus.getContainersStatuses().size());
 
         // Give a container to the NM.
-        applicationID.setId(heartBeatID);
-        appAttemptID.setApplicationId(applicationID);
-        firstContainerID.setApplicationAttemptId(appAttemptID);
-        firstContainerID.setId(heartBeatID);
+        ApplicationAttemptId appAttemptID =
+            ApplicationAttemptId.newInstance(appId1, 0);
+        ContainerId firstContainerID =
+            ContainerId.newInstance(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        when(mockContainer.getId()).thenReturn(firstContainerID);
         Resource resource = BuilderUtils.newResource(2, 1);
-        when(mockContainer.getResource()).thenReturn(resource);
+        long currentTime = System.currentTimeMillis();
+        String user = "testUser";
+        ContainerTokenIdentifier containerToken =
+            BuilderUtils.newContainerTokenIdentifier(BuilderUtils
+              .newContainerToken(firstContainerID, "127.0.0.1", 1234, user,
+                resource, currentTime + 10000, 123, "password".getBytes(),
+                currentTime));
         Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext,
-                mockContainer, null, mockMetrics);
+            new ContainerImpl(conf, mockDispatcher, launchContext, null,
+              mockMetrics, containerToken);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
         Assert.assertEquals("Number of applications should only be one!", 1,
             nodeStatus.getContainersStatuses().size());
         Assert.assertEquals("Number of container for the app should be one!",
-            1, appToContainers.get(applicationID).size());
+            1, appToContainers.get(appId1).size());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =
@@ -221,25 +220,30 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals(1, activeContainers.size());
 
         // Give another container to the NM.
-        applicationID.setId(heartBeatID);
-        appAttemptID.setApplicationId(applicationID);
-        secondContainerID.setApplicationAttemptId(appAttemptID);
-        secondContainerID.setId(heartBeatID);
+        ApplicationAttemptId appAttemptID =
+            ApplicationAttemptId.newInstance(appId2, 0);
+        ContainerId secondContainerID =
+            ContainerId.newInstance(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        when(mockContainer.getId()).thenReturn(secondContainerID);
+        long currentTime = System.currentTimeMillis();
+        String user = "testUser";
         Resource resource = BuilderUtils.newResource(3, 1);
-        when(mockContainer.getResource()).thenReturn(resource);
+        ContainerTokenIdentifier containerToken =
+            BuilderUtils.newContainerTokenIdentifier(BuilderUtils
+              .newContainerToken(secondContainerID, "127.0.0.1", 1234, user,
+                resource, currentTime + 10000, 123,
+                "password".getBytes(), currentTime));
         Container container =
-            new ContainerImpl(conf, mockDispatcher, launchContext,
-                mockContainer, null, mockMetrics);
+            new ContainerImpl(conf, mockDispatcher, launchContext, null,
+              mockMetrics, containerToken);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
         Assert.assertEquals("Number of applications should only be one!", 1,
             appToContainers.size());
         Assert.assertEquals("Number of container for the app should be two!",
-            2, appToContainers.get(applicationID).size());
+            2, appToContainers.get(appId2).size());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =
@@ -330,7 +334,7 @@ public class TestNodeStatusUpdater {
     protected ResourceTracker getRMClient() {
       if(System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
           || rmNeverStart) {
-        throw new YarnException("Faking RM start failure as start " +
+        throw new YarnRuntimeException("Faking RM start failure as start " +
             "delay timer has not expired.");
       } else {
         return resourceTracker;
@@ -403,7 +407,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       
       RegisterNodeManagerResponse response = recordFactory
@@ -415,7 +419,7 @@ public class TestNodeStatusUpdater {
     }
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
       
@@ -441,7 +445,7 @@ public class TestNodeStatusUpdater {
     
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
 
       RegisterNodeManagerResponse response =
@@ -453,7 +457,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       LOG.info("Got heartBeatId: [" + heartBeatID +"]");
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
@@ -493,7 +497,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -504,7 +508,7 @@ public class TestNodeStatusUpdater {
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       try {
         if (heartBeatID == 0) {
           Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
@@ -533,7 +537,7 @@ public class TestNodeStatusUpdater {
               .get(4).getState() == ContainerState.RUNNING
               && request.getNodeStatus().getContainersStatuses().get(4)
                   .getContainerId().getId() == 5);
-          throw new YarnException("Lost the heartbeat response");
+          throw new YarnRuntimeException("Lost the heartbeat response");
         } else if (heartBeatID == 2) {
           Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
               .size(), 7);
@@ -585,7 +589,7 @@ public class TestNodeStatusUpdater {
     public NodeAction registerNodeAction = NodeAction.NORMAL;
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       
       RegisterNodeManagerResponse response = recordFactory
@@ -598,7 +602,7 @@ public class TestNodeStatusUpdater {
     
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       heartBeatID++;
       throw RPCUtil.getRemoteException("NodeHeartbeat exception");
     }
@@ -642,7 +646,7 @@ public class TestNodeStatusUpdater {
           nm.start();
         } catch (Throwable e) {
           TestNodeStatusUpdater.this.nmStartError = e;
-          throw new YarnException(e);
+          throw new YarnRuntimeException(e);
         }
       }
     }.start();
@@ -665,8 +669,8 @@ public class TestNodeStatusUpdater {
     }
 
     waitCount = 0;
-    while (heartBeatID <= 3 && waitCount++ != 20) {
-      Thread.sleep(500);
+    while (heartBeatID <= 3 && waitCount++ != 200) {
+      Thread.sleep(1000);
     }
     Assert.assertFalse(heartBeatID <= 3);
     Assert.assertEquals("Number of registered NMs is wrong!!", 1,
@@ -761,7 +765,7 @@ public class TestNodeStatusUpdater {
         return nodeStatusUpdater;
       }
     };
-    verifyNodeStartFailure("org.apache.hadoop.yarn.YarnException: "
+    verifyNodeStartFailure("org.apache.hadoop.yarn.YarnRuntimeException: "
         + "Recieved SHUTDOWN signal from Resourcemanager ,"
         + "Registration of NodeManager failed, "
         + "Message from ResourceManager: RM Shutting Down Node");
@@ -863,7 +867,7 @@ public class TestNodeStatusUpdater {
           @Override
           public void start() {
             // Simulating failure of starting RPC server
-            throw new YarnException("Starting of RPC Server failed");
+            throw new YarnRuntimeException("Starting of RPC Server failed");
           }
         };
       }

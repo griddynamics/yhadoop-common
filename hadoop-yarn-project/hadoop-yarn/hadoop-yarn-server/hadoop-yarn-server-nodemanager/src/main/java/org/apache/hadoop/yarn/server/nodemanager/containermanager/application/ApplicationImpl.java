@@ -77,7 +77,7 @@ public class ApplicationImpl implements Application {
       ApplicationACLsManager aclsManager, String user, ApplicationId appId,
       Credentials credentials, Context context) {
     this.dispatcher = dispatcher;
-    this.user = user.toString();
+    this.user = user;
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = aclsManager;
@@ -273,14 +273,14 @@ public class ApplicationImpl implements Application {
       ApplicationContainerInitEvent initEvent =
         (ApplicationContainerInitEvent) event;
       Container container = initEvent.getContainer();
-      app.containers.put(container.getContainer().getId(), container);
-      LOG.info("Adding " + container.getContainer().getId()
+      app.containers.put(container.getContainerId(), container);
+      LOG.info("Adding " + container.getContainerId()
           + " to application " + app.toString());
       
       switch (app.getApplicationState()) {
       case RUNNING:
         app.dispatcher.getEventHandler().handle(new ContainerInitEvent(
-            container.getContainer().getId()));
+            container.getContainerId()));
         break;
       case INITING:
       case NEW:
@@ -301,7 +301,7 @@ public class ApplicationImpl implements Application {
       // Start all the containers waiting for ApplicationInit
       for (Container container : app.containers.values()) {
         app.dispatcher.getEventHandler().handle(new ContainerInitEvent(
-              container.getContainer().getId()));
+              container.getContainerId()));
       }
     }
   }

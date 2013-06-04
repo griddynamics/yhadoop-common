@@ -64,7 +64,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -72,7 +72,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -80,11 +79,10 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMTokenSelector;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -208,7 +206,7 @@ public class YARNRunner implements ClientProtocol {
     GetDelegationTokenRequest request = recordFactory
       .newRecordInstance(GetDelegationTokenRequest.class);
     request.setRenewer(Master.getMasterPrincipal(conf));
-    DelegationToken mrDelegationToken;
+    org.apache.hadoop.yarn.api.records.Token mrDelegationToken;
     mrDelegationToken = hsProxy.getDelegationToken(request)
         .getDelegationToken();
     return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
@@ -289,7 +287,7 @@ public class YARNRunner implements ClientProtocol {
     try {
       ts.writeTokenStorageFile(applicationTokensFile, conf);
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     // Construct necessary information to start the MR AM
@@ -313,7 +311,7 @@ public class YARNRunner implements ClientProtocol {
             diagnostics);
       }
       return clientCache.getClient(jobId).getJobStatus(jobId);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
   }
@@ -475,10 +473,10 @@ public class YARNRunner implements ClientProtocol {
         MRJobConfig.DEFAULT_JOB_ACL_MODIFY_JOB));
 
     // Setup ContainerLaunchContext for AM container
-    ContainerLaunchContext amContainer = BuilderUtils
-        .newContainerLaunchContext(UserGroupInformation
-            .getCurrentUser().getShortUserName(), localResources,
-            environment, vargsFinal, null, securityTokens, acls);
+    ContainerLaunchContext amContainer =
+        ContainerLaunchContext.newInstance(localResources, environment,
+          vargsFinal, null, securityTokens, acls);
+
 
     // Set up the ApplicationSubmissionContext
     ApplicationSubmissionContext appContext =
@@ -563,7 +561,7 @@ public class YARNRunner implements ClientProtocol {
     if (status.getState() != JobStatus.State.RUNNING) {
       try {
         resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         throw new IOException(e);
       }
       return;
@@ -591,7 +589,7 @@ public class YARNRunner implements ClientProtocol {
     if (status.getState() != JobStatus.State.KILLED) {
       try {
         resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         throw new IOException(e);
       }
     }

@@ -32,11 +32,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -56,8 +55,6 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecret
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.CompositeService;
-import org.apache.hadoop.yarn.service.Service;
-import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -148,7 +145,7 @@ public class NodeManager extends CompositeService
     try {
       exec.init();
     } catch (IOException e) {
-      throw new YarnException("Failed to initialize container executor", e);
+      throw new YarnRuntimeException("Failed to initialize container executor", e);
     }    
     DeletionService del = createDeletionService(exec);
     addService(del);
@@ -173,9 +170,10 @@ public class NodeManager extends CompositeService
     addService(containerManager);
     ((NMContext) context).setContainerManager(containerManager);
 
-    Service webServer = createWebServer(context, containerManager
+    WebServer webServer = createWebServer(context, containerManager
         .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
+    ((NMContext) context).setWebServer(webServer);
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -203,7 +201,7 @@ public class NodeManager extends CompositeService
     try {
       doSecureLogin();
     } catch (IOException e) {
-      throw new YarnException("Failed NodeManager login", e);
+      throw new YarnRuntimeException("Failed NodeManager login", e);
     }
     super.start();
   }
@@ -289,7 +287,7 @@ public class NodeManager extends CompositeService
 
   public static class NMContext implements Context {
 
-    private final NodeId nodeId = Records.newRecord(NodeId.class);
+    private NodeId nodeId = null;
     private final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
     private final ConcurrentMap<ContainerId, Container> containers =
@@ -297,6 +295,7 @@ public class NodeManager extends CompositeService
 
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private ContainerManager containerManager;
+    private WebServer webServer;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
 
@@ -313,6 +312,11 @@ public class NodeManager extends CompositeService
     @Override
     public NodeId getNodeId() {
       return this.nodeId;
+    }
+
+    @Override
+    public int getHttpPort() {
+      return this.webServer.getPort();
     }
 
     @Override
@@ -342,6 +346,14 @@ public class NodeManager extends CompositeService
     public void setContainerManager(ContainerManager containerManager) {
       this.containerManager = containerManager;
     }
+
+    public void setWebServer(WebServer webServer) {
+      this.webServer = webServer;
+    }
+
+    public void setNodeId(NodeId nodeId) {
+      this.nodeId = nodeId;
+    }
   }
 
 
@@ -352,12 +364,6 @@ public class NodeManager extends CompositeService
     return nodeHealthChecker;
   }
 
-  private void reboot() {
-    LOG.info("Rebooting the node manager.");
-    NodeManager nodeManager = createNewNodeManager();
-    nodeManager.initAndStartNodeManager(this.getConfig(), true);
-  }
-  
   private void initAndStartNodeManager(Configuration conf, boolean hasToReboot) {
     try {
 

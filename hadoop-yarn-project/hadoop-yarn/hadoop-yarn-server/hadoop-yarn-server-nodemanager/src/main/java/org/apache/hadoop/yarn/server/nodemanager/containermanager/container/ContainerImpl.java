@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -36,14 +37,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -58,12 +62,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerImpl implements Container {
@@ -74,7 +78,10 @@ public class ContainerImpl implements Container {
   private final Credentials credentials;
   private final NodeManagerMetrics metrics;
   private final ContainerLaunchContext launchContext;
-  private final org.apache.hadoop.yarn.api.records.Container container;
+  private final ContainerTokenIdentifier containerTokenIdentifier;
+  private final ContainerId containerId;
+  private final Resource resource;
+  private final String user;
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
 
@@ -93,18 +100,20 @@ public class ContainerImpl implements Container {
   private final List<LocalResourceRequest> appRsrcs =
     new ArrayList<LocalResourceRequest>();
 
-  public ContainerImpl(Configuration conf,
-      Dispatcher dispatcher, ContainerLaunchContext launchContext,
-      org.apache.hadoop.yarn.api.records.Container container,
-      Credentials creds, NodeManagerMetrics metrics) {
+  public ContainerImpl(Configuration conf, Dispatcher dispatcher,
+      ContainerLaunchContext launchContext, Credentials creds,
+      NodeManagerMetrics metrics,
+      ContainerTokenIdentifier containerTokenIdentifier) throws IOException {
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.launchContext = launchContext;
-    this.container = container;
+    this.containerTokenIdentifier = containerTokenIdentifier;
+    this.containerId = containerTokenIdentifier.getContainerID();
+    this.resource = containerTokenIdentifier.getResource();
     this.diagnostics = new StringBuilder();
     this.credentials = creds;
     this.metrics = metrics;
-
+    user = containerTokenIdentifier.getApplicationSubmitter();
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     this.readLock = readWriteLock.readLock();
     this.writeLock = readWriteLock.writeLock();
@@ -311,7 +320,7 @@ public class ContainerImpl implements Container {
   public String getUser() {
     this.readLock.lock();
     try {
-      return this.launchContext.getUser();
+      return this.user;
     } finally {
       this.readLock.unlock();
     }
@@ -362,7 +371,7 @@ public class ContainerImpl implements Container {
   public ContainerStatus cloneAndGetContainerStatus() {
     this.readLock.lock();
     try {
-      return BuilderUtils.newContainerStatus(this.container.getId(),
+      return BuilderUtils.newContainerStatus(this.containerId,
         getCurrentState(), diagnostics.toString(), exitCode);
     } finally {
       this.readLock.unlock();
@@ -370,10 +379,20 @@ public class ContainerImpl implements Container {
   }
 
   @Override
-  public org.apache.hadoop.yarn.api.records.Container getContainer() {
+  public ContainerId getContainerId() {
+    return this.containerId;
+  }
+
+  @Override
+  public Resource getResource() {
+    return this.resource;
+  }
+
+  @Override
+  public ContainerTokenIdentifier getContainerTokenIdentifier() {
     this.readLock.lock();
     try {
-      return this.container;
+      return this.containerTokenIdentifier;
     } finally {
       this.readLock.unlock();
     }
@@ -381,16 +400,15 @@ public class ContainerImpl implements Container {
 
   @SuppressWarnings({"fallthrough", "unchecked"})
   private void finished() {
-    ContainerId containerID = this.container.getId();
-    String user = this.launchContext.getUser();
+    ApplicationId applicationId =
+        containerId.getApplicationAttemptId().getApplicationId();
     switch (getContainerState()) {
       case EXITED_WITH_SUCCESS:
         metrics.endRunningContainer();
         metrics.completedContainer();
         NMAuditLogger.logSuccess(user,
             AuditConstants.FINISH_SUCCESS_CONTAINER, "ContainerImpl",
-            containerID.getApplicationAttemptId()
-                .getApplicationId(), containerID);
+            applicationId, containerId);
         break;
       case EXITED_WITH_FAILURE:
         metrics.endRunningContainer();
@@ -400,8 +418,7 @@ public class ContainerImpl implements Container {
         NMAuditLogger.logFailure(user,
             AuditConstants.FINISH_FAILED_CONTAINER, "ContainerImpl",
             "Container failed with state: " + getContainerState(),
-            containerID.getApplicationAttemptId()
-                .getApplicationId(), containerID);
+            applicationId, containerId);
         break;
       case CONTAINER_CLEANEDUP_AFTER_KILL:
         metrics.endRunningContainer();
@@ -410,21 +427,21 @@ public class ContainerImpl implements Container {
         metrics.killedContainer();
         NMAuditLogger.logSuccess(user,
             AuditConstants.FINISH_KILLED_CONTAINER, "ContainerImpl",
-            containerID.getApplicationAttemptId().getApplicationId(),
-            containerID);
+            applicationId,
+            containerId);
     }
 
-    metrics.releaseContainer(this.container.getResource());
+    metrics.releaseContainer(this.resource);
 
     // Inform the application
     @SuppressWarnings("rawtypes")
     EventHandler eventHandler = dispatcher.getEventHandler();
-    eventHandler.handle(new ApplicationContainerFinishedEvent(containerID));
+    eventHandler.handle(new ApplicationContainerFinishedEvent(containerId));
     // Remove the container from the resource-monitor
-    eventHandler.handle(new ContainerStopMonitoringEvent(containerID));
+    eventHandler.handle(new ContainerStopMonitoringEvent(containerId));
     // Tell the logService too
     eventHandler.handle(new LogHandlerContainerFinishedEvent(
-        containerID, exitCode));
+      containerId, exitCode));
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed
@@ -486,7 +503,7 @@ public class ContainerImpl implements Container {
         for (Map.Entry<String,ByteBuffer> service : csd.entrySet()) {
           container.dispatcher.getEventHandler().handle(
               new AuxServicesEvent(AuxServicesEventType.APPLICATION_INIT,
-                  ctxt.getUser(), container.container.getId()
+                  container.user, container.containerId
                       .getApplicationAttemptId().getApplicationId(),
                   service.getKey().toString(), service.getValue()));
         }
@@ -571,7 +588,7 @@ public class ContainerImpl implements Container {
           container.pendingResources.remove(rsrcEvent.getResource());
       if (null == syms) {
         LOG.warn("Localized unknown resource " + rsrcEvent.getResource() +
-                 " for container " + container.container.getId());
+                 " for container " + container.containerId);
         assert false;
         // fail container?
         return ContainerState.LOCALIZING;
@@ -599,14 +616,14 @@ public class ContainerImpl implements Container {
       // Inform the ContainersMonitor to start monitoring the container's
       // resource usage.
       long pmemBytes =
-          container.container.getResource().getMemory() * 1024 * 1024L;
+          container.getResource().getMemory() * 1024 * 1024L;
       float pmemRatio = container.daemonConf.getFloat(
           YarnConfiguration.NM_VMEM_PMEM_RATIO,
           YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
       long vmemBytes = (long) (pmemRatio * pmemBytes);
       
       container.dispatcher.getEventHandler().handle(
-          new ContainerStartMonitoringEvent(container.container.getId(),
+          new ContainerStartMonitoringEvent(container.containerId,
               vmemBytes, pmemBytes));
       container.metrics.runningContainer();
     }
@@ -740,7 +757,7 @@ public class ContainerImpl implements Container {
           container.pendingResources.remove(rsrcEvent.getResource());
       if (null == syms) {
         LOG.warn("Localized unknown resource " + rsrcEvent.getResource() +
-                 " for container " + container.container.getId());
+                 " for container " + container.containerId);
         assert false;
         // fail container?
         return;
@@ -845,7 +862,7 @@ public class ContainerImpl implements Container {
   public String toString() {
     this.readLock.lock();
     try {
-      return ConverterUtils.toString(container.getId());
+      return ConverterUtils.toString(this.containerId);
     } finally {
       this.readLock.unlock();
     }

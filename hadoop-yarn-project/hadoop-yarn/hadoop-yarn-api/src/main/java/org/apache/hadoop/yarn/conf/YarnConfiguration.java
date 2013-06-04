@@ -695,6 +695,14 @@ public class YarnConfiguration extends Configuration {
    */
   public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
 
+
+  /** The log directory for the containers */
+  public static final String YARN_APP_CONTAINER_LOG_DIR =
+      YARN_PREFIX + "app.container.log.dir";
+
+  public static final String YARN_APP_CONTAINER_LOG_SIZE =
+      YARN_PREFIX + "app.container.log.filesize";
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
@@ -707,6 +715,14 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "client.app-submission.poll-interval";
   public static final long DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
       1000;
+
+  /**
+   * Max number of threads in NMClientAsync to process container management
+   * events
+   */
+  public static final String NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE =
+      YARN_PREFIX + "client.nodemanager-client-async.thread-pool-max-size";
+  public static final int DEFAULT_NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE = 500;
 
   public YarnConfiguration() {
     super();

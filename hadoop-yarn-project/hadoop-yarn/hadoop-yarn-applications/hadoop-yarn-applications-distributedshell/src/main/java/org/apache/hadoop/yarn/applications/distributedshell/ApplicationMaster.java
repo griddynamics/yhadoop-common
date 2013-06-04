@@ -72,7 +72,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -151,7 +151,7 @@ public class ApplicationMaster {
   private YarnRPC rpc;
 
   // Handle to communicate with the Resource Manager
-  private AMRMClientAsync resourceManager;
+  private AMRMClientAsync<ContainerRequest> resourceManager;
   
   // Application Attempt Id ( combination of attemptId and fail count )
   private ApplicationAttemptId appAttemptID;
@@ -434,15 +434,17 @@ public class ApplicationMaster {
   /**
    * Main run function for the application master
    *
-   * @throws YarnRemoteException
+   * @throws YarnException
    * @throws IOException
    */
-  public boolean run() throws YarnRemoteException, IOException {
+  public boolean run() throws YarnException, IOException {
     LOG.info("Starting ApplicationMaster");
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
     
-    resourceManager = new AMRMClientAsync(appAttemptID, 1000, allocListener);
+    resourceManager = new AMRMClientAsync<ContainerRequest>(appAttemptID, 
+                                                            1000, 
+                                                            allocListener);
     resourceManager.init(conf);
     resourceManager.start();
 
@@ -522,7 +524,8 @@ public class ApplicationMaster {
     FinalApplicationStatus appStatus;
     String appMessage = null;
     success = true;
-    if (numFailedContainers.get() == 0) {
+    if (numFailedContainers.get() == 0 && 
+        numCompletedContainers.get() == numTotalContainers) {
       appStatus = FinalApplicationStatus.SUCCEEDED;
     } else {
       appStatus = FinalApplicationStatus.FAILED;
@@ -534,7 +537,7 @@ public class ApplicationMaster {
     }
     try {
       resourceManager.unregisterApplicationMaster(appStatus, appMessage, null);
-    } catch (YarnRemoteException ex) {
+    } catch (YarnException ex) {
       LOG.error("Failed to unregister application", ex);
     } catch (IOException e) {
       LOG.error("Failed to unregister application", e);
@@ -594,11 +597,6 @@ public class ApplicationMaster {
         resourceManager.addContainerRequest(containerAsk);
       }
       
-      // set progress to deliver to RM on next heartbeat
-      float progress = (float) numCompletedContainers.get()
-          / numTotalContainers;
-      resourceManager.setProgress(progress);
-      
       if (numCompletedContainers.get() == numTotalContainers) {
         done = true;
       }
@@ -637,6 +635,19 @@ public class ApplicationMaster {
 
     @Override
     public void onNodesUpdated(List<NodeReport> updatedNodes) {}
+
+    @Override
+    public float getProgress() {
+      // set progress to deliver to RM on next heartbeat
+      float progress = (float) numCompletedContainers.get()
+          / numTotalContainers;
+      return progress;
+    }
+
+    @Override
+    public void onError(Exception e) {
+      done = true;
+    }
   }
 
   /**
@@ -697,11 +708,6 @@ public class ApplicationMaster {
           + container.getId());
       ContainerLaunchContext ctx = Records
           .newRecord(ContainerLaunchContext.class);
-
-      String jobUserName = System.getenv(ApplicationConstants.Environment.USER
-          .name());
-      ctx.setUser(jobUserName);
-      LOG.info("Setting user in ContainerLaunchContext to: " + jobUserName);
 
       // Set the environment
       ctx.setEnvironment(shellEnv);
@@ -768,10 +774,10 @@ public class ApplicationMaster {
       StartContainerRequest startReq = Records
           .newRecord(StartContainerRequest.class);
       startReq.setContainerLaunchContext(ctx);
-      startReq.setContainer(container);
+      startReq.setContainerToken(container.getContainerToken());
       try {
         cm.startContainer(startReq);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         LOG.info("Start container failed for :" + ", containerId="
             + container.getId());
         e.printStackTrace();
@@ -796,7 +802,7 @@ public class ApplicationMaster {
       // LOG.info("Container Status"
       // + ", id=" + container.getId()
       // + ", status=" +statusResp.getStatus());
-      // } catch (YarnRemoteException e) {
+      // } catch (YarnException e) {
       // e.printStackTrace();
       // }
     }

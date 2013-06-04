@@ -37,14 +37,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Test;
@@ -260,9 +259,7 @@ public class TestResourceTrackerService {
     ResourceTrackerService resourceTrackerService = rm.getResourceTrackerService();
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
-    NodeId nodeId = Records.newRecord(NodeId.class);
-    nodeId.setHost("host2");
-    nodeId.setPort(1234);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     // trying to register a invalid node.

@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -60,11 +59,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -73,7 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -90,7 +90,9 @@ public class TestClientRMService {
   
   @BeforeClass
   public static void setupSecretManager() throws IOException {
-    dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
+    dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000, rmContext);
     dtsm.startThreads();  
   }
 
@@ -145,7 +147,7 @@ public class TestClientRMService {
   }
   
   @Test
-  public void testGetApplicationReport() throws YarnRemoteException {
+  public void testGetApplicationReport() throws YarnException {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getRMApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, RMApp>());
@@ -154,8 +156,7 @@ public class TestClientRMService {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
-    request.setApplicationId(recordFactory
-        .newRecordInstance(ApplicationId.class));
+    request.setApplicationId(ApplicationId.newInstance(0, 0));
     GetApplicationReportResponse applicationReport = rmService
         .getApplicationReport(request);
     Assert.assertNull("It should return null as application report for absent application.",
@@ -208,7 +209,7 @@ public class TestClientRMService {
           try {
             checkTokenRenewal(owner, other);
             return null;
-          } catch (YarnRemoteException ex) {
+          } catch (YarnException ex) {
             Assert.assertTrue(ex.getMessage().contains(
                 "Client " + owner.getUserName() +
                 " tries to renew a token with renewer specified as " +
@@ -236,13 +237,13 @@ public class TestClientRMService {
   }
 
   private void checkTokenRenewal(UserGroupInformation owner,
-      UserGroupInformation renewer) throws IOException, YarnRemoteException {
+      UserGroupInformation renewer) throws IOException, YarnException {
     RMDelegationTokenIdentifier tokenIdentifier =
         new RMDelegationTokenIdentifier(
             new Text(owner.getUserName()), new Text(renewer.getUserName()), null);
     Token<?> token =
         new Token<RMDelegationTokenIdentifier>(tokenIdentifier, dtsm);
-    DelegationToken dToken = BuilderUtils.newDelegationToken(
+    org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils.newDelegationToken(
         token.getIdentifier(), token.getKind().toString(),
         token.getPassword(), token.getService().toString());
     RenewDelegationTokenRequest request =
@@ -278,7 +279,7 @@ public class TestClientRMService {
         appId1, null, null);
     try {
       rmService.submitApplication(submitRequest1);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.fail("Exception is not expected.");
     }
     RMApp app1 = rmContext.getRMApps().get(appId1);
@@ -296,7 +297,7 @@ public class TestClientRMService {
         appId2, name, queue);
     try {
       rmService.submitApplication(submitRequest2);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.fail("Exception is not expected.");
     }
     RMApp app2 = rmContext.getRMApps().get(appId2);
@@ -308,7 +309,7 @@ public class TestClientRMService {
     try {
       rmService.submitApplication(submitRequest2);
       Assert.fail("Exception is expected.");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.assertTrue("The thrown exception is not expected.",
           e.getMessage().contains("Cannot add a duplicate!"));
     }
@@ -317,7 +318,7 @@ public class TestClientRMService {
   @Test(timeout=4000)
   public void testConcurrentAppSubmit()
       throws IOException, InterruptedException, BrokenBarrierException,
-      YarnRemoteException {
+      YarnException {
     YarnScheduler yarnScheduler = mockYarnScheduler();
     RMContext rmContext = mock(RMContext.class);
     mockRMContext(yarnScheduler, rmContext);
@@ -367,7 +368,7 @@ public class TestClientRMService {
       public void run() {
         try {
           rmService.submitApplication(submitRequest1);
-        } catch (YarnRemoteException e) {}
+        } catch (YarnException e) {}
       }
     };
     t.start();
@@ -381,8 +382,6 @@ public class TestClientRMService {
 
   private SubmitApplicationRequest mockSubmitAppRequest(ApplicationId appId,
       String name, String queue) {
-    String user = MockApps.newUserName();
-
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
 
     Resource resource = Resources.createResource(
@@ -391,7 +390,6 @@ public class TestClientRMService {
     ApplicationSubmissionContext submissionContext =
         recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     submissionContext.setAMContainerSpec(amContainerSpec);
-    submissionContext.getAMContainerSpec().setUser(user);
     submissionContext.setApplicationName(name);
     submissionContext.setQueue(queue);
     submissionContext.setApplicationId(appId);
@@ -436,11 +434,7 @@ public class TestClientRMService {
   }
 
   private ApplicationId getApplicationId(int id) {
-    ApplicationId applicationId = recordFactory
-        .newRecordInstance(ApplicationId.class);
-    applicationId.setClusterTimestamp(123456);
-    applicationId.setId(id);
-    return applicationId;
+    return ApplicationId.newInstance(123456, id);
   }
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,

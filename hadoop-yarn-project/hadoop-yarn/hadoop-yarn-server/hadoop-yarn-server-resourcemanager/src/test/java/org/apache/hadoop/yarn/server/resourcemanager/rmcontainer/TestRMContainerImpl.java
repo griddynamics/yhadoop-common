@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -69,7 +69,7 @@ public class TestRMContainerImpl {
     Priority priority = BuilderUtils.newPriority(5);
 
     Container container = BuilderUtils.newContainer(containerId, nodeId,
-        "host:3465", resource, priority, null, 0);
+        "host:3465", resource, priority, null);
 
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
         nodeId, eventHandler, expirer);
@@ -139,7 +139,7 @@ public class TestRMContainerImpl {
     Priority priority = BuilderUtils.newPriority(5);
 
     Container container = BuilderUtils.newContainer(containerId, nodeId,
-        "host:3465", resource, priority, null, 0);
+        "host:3465", resource, priority, null);
 
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
         nodeId, eventHandler, expirer);

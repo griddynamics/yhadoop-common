@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -60,7 +60,7 @@ public class TestResourceMgrDelegate {
     try {
       Mockito.when(applicationsManager.getQueueInfo(Mockito.any(
         GetQueueInfoRequest.class))).thenReturn(response);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
 
@@ -78,7 +78,7 @@ public class TestResourceMgrDelegate {
     try {
       Mockito.verify(applicationsManager).getQueueInfo(
         argument.capture());
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
 
@@ -129,7 +129,7 @@ public class TestResourceMgrDelegate {
     ApplicationResourceUsageReport appResources = Mockito
         .mock(ApplicationResourceUsageReport.class);
     Mockito.when(appReport.getApplicationId()).thenReturn(
-        Records.newRecord(ApplicationId.class));
+        ApplicationId.newInstance(0, 0));
     Mockito.when(appResources.getNeededResources()).thenReturn(
         Records.newRecord(Resource.class));
     Mockito.when(appResources.getReservedResources()).thenReturn(

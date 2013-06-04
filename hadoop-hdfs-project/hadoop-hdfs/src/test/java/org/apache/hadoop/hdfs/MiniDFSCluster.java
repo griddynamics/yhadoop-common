@@ -320,7 +320,7 @@ public class MiniDFSCluster {
   /**
    * Used by builder to create and return an instance of MiniDFSCluster
    */
-  private MiniDFSCluster(Builder builder) throws IOException {
+  protected MiniDFSCluster(Builder builder) throws IOException {
     if (builder.nnTopology == null) {
       // If no topology is specified, build a single NN. 
       builder.nnTopology = MiniDFSNNTopology.simpleSingleNN(
@@ -368,7 +368,7 @@ public class MiniDFSCluster {
 
   private Configuration conf;
   private NameNodeInfo[] nameNodes;
-  private int numDataNodes;
+  protected int numDataNodes;
   protected ArrayList<DataNodeProperties> dataNodes = 
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
@@ -679,9 +679,9 @@ public class MiniDFSCluster {
       sb.append("\tabsolute:").append(path.getAbsolutePath()).append("\n");
       sb.append("\tpermissions: ");
       sb.append(path.isDirectory() ? "d": "-");
-      sb.append(path.canRead() ? "r" : "-");
-      sb.append(path.canWrite() ? "w" : "-");
-      sb.append(path.canExecute() ? "x" : "-");
+      sb.append(FileUtil.canRead(path) ? "r" : "-");
+      sb.append(FileUtil.canWrite(path) ? "w" : "-");
+      sb.append(FileUtil.canExecute(path) ? "x" : "-");
       sb.append("\n");
       path = path.getParentFile();
     }
@@ -2318,7 +2318,7 @@ public class MiniDFSCluster {
     return nameNodes[nnIndex].nameNode;
   }
   
-  private void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,
+  protected void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,
                            boolean checkDataNodeAddrConfig) throws IOException {
     if (setupHostsFile) {
       String hostsFile = conf.get(DFS_HOSTS, "").trim();

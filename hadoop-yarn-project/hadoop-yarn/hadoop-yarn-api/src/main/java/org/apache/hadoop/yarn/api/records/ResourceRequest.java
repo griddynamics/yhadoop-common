@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.io.Serializable;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
@@ -57,10 +59,29 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       String hostName, Resource capability, int numContainers) {
     ResourceRequest request = Records.newRecord(ResourceRequest.class);
     request.setPriority(priority);
-    request.setHostName(hostName);
+    request.setResourceName(hostName);
     request.setCapability(capability);
     request.setNumContainers(numContainers);
     return request;
+  }
+
+  public static class ResourceRequestComparator implements
+      java.util.Comparator<ResourceRequest>, Serializable {
+    @Override
+    public int compare(ResourceRequest r1, ResourceRequest r2) {
+
+      // Compare priority, host and capability
+      int ret = r1.getPriority().compareTo(r2.getPriority());
+      if (ret == 0) {
+        String h1 = r1.getResourceName();
+        String h2 = r2.getResourceName();
+        ret = h1.compareTo(h2);
+      }
+      if (ret == 0) {
+        ret = r1.getCapability().compareTo(r2.getCapability());
+      }
+      return ret;
+    }
   }
 
   /**
@@ -99,28 +120,32 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public abstract void setPriority(Priority priority);
   
   /**
-   * Get the <em>host/rack</em> on which the allocation is desired.
+   * Get the resource (e.g. <em>host/rack</em>) on which the allocation 
+   * is desired.
    * 
-   * A special value of <em>*</em> signifies that <em>any</em> host/rack is 
-   * acceptable.
+   * A special value of <em>*</em> signifies that <em>any</em> resource 
+   * (host/rack) is acceptable.
    * 
-   * @return <em>host/rack</em> on which the allocation is desired
+   * @return resource (e.g. <em>host/rack</em>) on which the allocation 
+   *                  is desired
    */
   @Public
   @Stable
-  public abstract String getHostName();
+  public abstract String getResourceName();
 
   /**
-   * Set <em>host/rack</em> on which the allocation is desired.
+   * Set the resource (e.g. <em>host/rack</em>) on which the allocation 
+   * is desired.
    * 
-   * A special value of <em>*</em> signifies that <em>any</em> host/rack is 
-   * acceptable.
+   * A special value of <em>*</em> signifies that <em>any</em> resource 
+   * (e.g. host/rack) is acceptable. 
    * 
-   * @param hostName <em>host/rack</em> on which the allocation is desired
+   * @param resourceName (e.g. <em>host/rack</em>) on which the 
+   *                     allocation is desired
    */
   @Public
   @Stable
-  public abstract void setHostName(String hostName);
+  public abstract void setResourceName(String resourceName);
   
   /**
    * Get the <code>Resource</code> capability of the request.
@@ -155,12 +180,50 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Stable
   public abstract void setNumContainers(int numContainers);
 
+  /**
+   * Get whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>. Defaults to true.
+   * 
+   * @return whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>.
+   */
+  @Public
+  @Stable
+  public abstract boolean getRelaxLocality();
+  
+  /**
+   * For a request at a network hierarchy level, set whether locality can be relaxed
+   * to that level and beyond.
+   * 
+   * If the flag is off on a rack-level <code>ResourceRequest</code>,
+   * containers at that request's priority will not be assigned to nodes on that
+   * request's rack unless requests specifically for those nodes have also been
+   * submitted.
+   * 
+   * If the flag is off on an {@link ResourceRequest#ANY}-level
+   * <code>ResourceRequest</code>, containers at that request's priority will
+   * only be assigned on racks for which specific requests have also been
+   * submitted.
+   * 
+   * For example, to request a container strictly on a specific node, the
+   * corresponding rack-level and any-level requests should have locality
+   * relaxation set to false.  Similarly, to request a container strictly on a
+   * specific rack, the corresponding any-level request should have locality
+   * relaxation set to false.
+   * 
+   * @param relaxLocality whether locality relaxation is enabled with this
+   * <code>ResourceRequest</code>.
+   */
+  @Public
+  @Stable
+  public abstract void setRelaxLocality(boolean relaxLocality);
+  
   @Override
   public int hashCode() {
     final int prime = 2153;
     int result = 2459;
     Resource capability = getCapability();
-    String hostName = getHostName();
+    String hostName = getResourceName();
     Priority priority = getPriority();
     result =
         prime * result + ((capability == null) ? 0 : capability.hashCode());
@@ -185,11 +248,11 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         return false;
     } else if (!capability.equals(other.getCapability()))
       return false;
-    String hostName = getHostName();
+    String hostName = getResourceName();
     if (hostName == null) {
-      if (other.getHostName() != null)
+      if (other.getResourceName() != null)
         return false;
-    } else if (!hostName.equals(other.getHostName()))
+    } else if (!hostName.equals(other.getResourceName()))
       return false;
     if (getNumContainers() != other.getNumContainers())
       return false;
@@ -207,7 +270,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     int priorityComparison = this.getPriority().compareTo(other.getPriority());
     if (priorityComparison == 0) {
       int hostNameComparison =
-          this.getHostName().compareTo(other.getHostName());
+          this.getResourceName().compareTo(other.getResourceName());
       if (hostNameComparison == 0) {
         int capabilityComparison =
             this.getCapability().compareTo(other.getCapability());

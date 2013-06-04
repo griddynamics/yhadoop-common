@@ -113,7 +113,7 @@ public class DatanodeManager {
       = new TreeMap<String, DatanodeDescriptor>();
 
   /** Cluster network topology */
-  private final NetworkTopology networktopology = new NetworkTopology();
+  private final NetworkTopology networktopology;
 
   /** Host names to datanode descriptors mapping. */
   private final Host2NodesMap host2DatanodeMap = new Host2NodesMap();
@@ -161,6 +161,8 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
+    
+    networktopology = NetworkTopology.getInstance(conf);
 
     this.heartbeatManager = new HeartbeatManager(namesystem, blockManager, conf);
 
@@ -291,7 +293,16 @@ public class DatanodeManager {
   public void sortLocatedBlocks(final String targethost,
       final List<LocatedBlock> locatedblocks) {
     //sort the blocks
-    final DatanodeDescriptor client = getDatanodeByHost(targethost);
+    // As it is possible for the separation of node manager and datanode, 
+    // here we should get node but not datanode only .
+    Node client = getDatanodeByHost(targethost);
+    if (client == null) {
+      List<String> hosts = new ArrayList<String> (1);
+      hosts.add(targethost);
+      String rName = dnsToSwitchMapping.resolve(hosts).get(0);
+      if (rName != null)
+        client = new NodeBase(rName + NodeBase.PATH_SEPARATOR_STR + targethost);
+    }
     
     Comparator<DatanodeInfo> comparator = avoidStaleDataNodesForRead ?
         new DFSUtil.DecomStaleComparator(staleInterval) : 
@@ -301,7 +312,7 @@ public class DatanodeManager {
       networktopology.pseudoSortByDistance(client, b.getLocations());
       // Move decommissioned/stale datanodes to the bottom
       Arrays.sort(b.getLocations(), comparator);
-    }    
+    }
   }
   
   CyclicIteration<String, DatanodeDescriptor> getDatanodeCyclicIteration(
@@ -330,20 +341,15 @@ public class DatanodeManager {
    * @return the best match for the given datanode
    */
   DatanodeDescriptor getDatanodeDescriptor(String address) {
-    DatanodeDescriptor node = null;
-    int colon = address.indexOf(":");
-    int xferPort;
-    String host = address;
-    if (colon > 0) {
-      host = address.substring(0, colon);
-      xferPort = Integer.parseInt(address.substring(colon+1));
-      node = getDatanodeByXferAddr(host, xferPort);
-    }
+    DatanodeID dnId = parseDNFromHostsEntry(address);
+    String host = dnId.getIpAddr();
+    int xferPort = dnId.getXferPort();
+    DatanodeDescriptor node = getDatanodeByXferAddr(host, xferPort);
     if (node == null) {
       node = getDatanodeByHost(host);
     }
     if (node == null) {
-      String networkLocation = resolveNetworkLocation(host);
+      String networkLocation = resolveNetworkLocation(dnId);
 
       // If the current cluster doesn't contain the node, fallback to
       // something machine local and then rack local.
@@ -503,11 +509,6 @@ public class DatanodeManager {
           + node + "): storage " + key 
           + " is removed from datanodeMap.");
     }
-  }
-
-  public String resolveNetworkLocation(String host) {
-    DatanodeID d = parseDNFromHostsEntry(host);
-    return resolveNetworkLocation(d);
   }
 
   /* Resolve a node's network location */

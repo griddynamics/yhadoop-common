@@ -59,7 +59,7 @@ message AllocateRequestProto {
 }
 
 message AllocateResponseProto {
-  optional bool reboot = 1;
+  optional bool resync = 1;
   optional int32 response_id = 2;
   repeated ContainerProto allocated_containers = 3;
   repeated ContainerStatusProto completed_container_statuses = 4;
@@ -67,6 +67,7 @@ message AllocateResponseProto {
   repeated NodeReportProto updated_nodes = 6;
   optional int32 num_cluster_nodes = 7;
   optional PreemptionMessageProto preempt = 8;
+  repeated hadoop.common.TokenProto nm_tokens = 9;
 }
 
 message PreemptionMessageProto {
@@ -172,7 +173,7 @@ message GetQueueUserAclsInfoResponseProto {
 
 message StartContainerRequestProto {
   optional ContainerLaunchContextProto container_launch_context = 1;
-  optional ContainerProto container = 2;
+  optional hadoop.common.TokenProto container_token = 2;
 }
 
 message StartContainerResponseProto {

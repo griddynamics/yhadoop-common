@@ -44,7 +44,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -57,10 +57,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientTokenSelector;
@@ -69,8 +68,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMWithCustomAMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
@@ -81,7 +80,7 @@ public class TestClientTokens {
     @SuppressWarnings("unused")
     public static final long versionID = 1L;
 
-    public void ping() throws YarnRemoteException, IOException;
+    public void ping() throws YarnException, IOException;
   }
 
   private static class CustomSecurityInfo extends SecurityInfo {
@@ -124,7 +123,7 @@ public class TestClientTokens {
     }
 
     @Override
-    public void ping() throws YarnRemoteException, IOException {
+    public void ping() throws YarnException, IOException {
       this.pinged = true;
     }
 
@@ -142,7 +141,7 @@ public class TestClientTokens {
               .setNumHandlers(1).setSecretManager(secretManager)
               .setInstance(this).build();
       } catch (Exception e) {
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
       server.start();
       this.address = NetUtils.getConnectAddress(server);
@@ -156,7 +155,7 @@ public class TestClientTokens {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException {
+        throws YarnException {
       this.clientTokensSecret =
           request.getContainerLaunchContext().getEnvironment()
             .get(ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME);
@@ -165,13 +164,13 @@ public class TestClientTokens {
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws YarnException {
       return null;
     }
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws YarnException {
       return null;
     }
 
@@ -222,7 +221,7 @@ public class TestClientTokens {
     GetApplicationReportResponse reportResponse =
         rm.getClientRMService().getApplicationReport(request);
     ApplicationReport appReport = reportResponse.getApplicationReport();
-    ClientToken clientToken = appReport.getClientToken();
+    org.apache.hadoop.yarn.api.records.Token clientToken = appReport.getClientToken();
 
     // Wait till AM is 'launched'
     int waitTime = 0;
@@ -284,7 +283,7 @@ public class TestClientTokens {
             fail("Connection initiation with illegally modified "
                 + "tokens is expected to fail.");
             return null;
-          } catch (YarnRemoteException ex) {
+          } catch (YarnException ex) {
             fail("Cannot get a YARN remote exception as "
                 + "it will indicate RPC success");
             throw ex;

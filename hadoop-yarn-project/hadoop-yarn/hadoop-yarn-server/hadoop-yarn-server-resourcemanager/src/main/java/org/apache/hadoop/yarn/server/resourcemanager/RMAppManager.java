@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.InvalidResourceRe
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -239,7 +239,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      boolean isRecovered) throws YarnRemoteException {
+      boolean isRecovered, String user) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     // Validation of the ApplicationSubmissionContext needs to be completed
@@ -265,8 +265,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Create RMApp
     RMApp application =
         new RMAppImpl(applicationId, rmContext, this.conf,
-            submissionContext.getApplicationName(),
-            submissionContext.getAMContainerSpec().getUser(),
+            submissionContext.getApplicationName(), user,
             submissionContext.getQueue(),
             submissionContext, this.scheduler, this.masterService,
             submitTime, submissionContext.getApplicationType());
@@ -370,7 +369,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       if(shouldRecover) {
         LOG.info("Recovering application " + appState.getAppId());
         submitApplication(appState.getApplicationSubmissionContext(), 
-                        appState.getSubmitTime(), true);
+                        appState.getSubmitTime(), true, appState.getUser());
         // re-populate attempt information in application
         RMAppImpl appImpl = (RMAppImpl) rmContext.getRMApps().get(
                                                         appState.getAppId());
