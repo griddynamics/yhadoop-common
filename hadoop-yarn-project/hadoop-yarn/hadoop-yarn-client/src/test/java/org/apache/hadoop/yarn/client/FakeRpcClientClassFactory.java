@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
@@ -42,7 +41,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshQueuesResponseP
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshServiceAclsResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshSuperUserGroupsConfigurationResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RefreshUserToGroupsMappingsResponsePBImpl;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 
 import com.sun.jersey.api.container.ContainerException;
@@ -60,7 +59,7 @@ public class FakeRpcClientClassFactory {
 
     @Override
     public Object getClient(Class<?> protocol, long clientVersion,
-        InetSocketAddress addr, Configuration conf) throws YarnException {
+        InetSocketAddress addr, Configuration conf)  {
 
       return new FakeRMAdminProtocol();
 
@@ -90,7 +89,7 @@ public class FakeRpcClientClassFactory {
 
     @Override
     public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
-        throws YarnRemoteException {
+        throws YarnException, IOException  {
       functionCall = FunctionCall.refreshQueues;
       if (ResultCode.OK.equals(resultCode)) {
         return new RefreshQueuesResponsePBImpl();
@@ -101,7 +100,7 @@ public class FakeRpcClientClassFactory {
 
     @Override
     public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-        throws YarnRemoteException {
+        throws YarnException, IOException {
       functionCall = FunctionCall.refreshNodes;
 
       return new RefreshNodesResponsePBImpl();
@@ -111,14 +110,15 @@ public class FakeRpcClientClassFactory {
     public RefreshSuperUserGroupsConfigurationResponse 
     refreshSuperUserGroupsConfiguration(
         RefreshSuperUserGroupsConfigurationRequest request)
-        throws YarnRemoteException {
+            throws YarnException, IOException {
       functionCall = FunctionCall.refreshSuperUserGroupsConfiguration;
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl();
     }
 
     @Override
     public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
-        RefreshUserToGroupsMappingsRequest request) throws YarnRemoteException {
+        RefreshUserToGroupsMappingsRequest request) 
+            throws YarnException, IOException {
       functionCall = FunctionCall.refreshUserToGroupsMappings;
 
       return new RefreshUserToGroupsMappingsResponsePBImpl();
@@ -126,7 +126,7 @@ public class FakeRpcClientClassFactory {
 
     @Override
     public RefreshAdminAclsResponse refreshAdminAcls(
-        RefreshAdminAclsRequest request) throws YarnRemoteException {
+        RefreshAdminAclsRequest request) throws YarnException, IOException {
       functionCall = FunctionCall.refreshAdminAcls;
 
       return new RefreshAdminAclsResponsePBImpl();
@@ -134,7 +134,7 @@ public class FakeRpcClientClassFactory {
 
     @Override
     public RefreshServiceAclsResponse refreshServiceAcls(
-        RefreshServiceAclsRequest request) throws YarnRemoteException {
+        RefreshServiceAclsRequest request) throws YarnException, IOException {
       functionCall = FunctionCall.refreshServiceAcls;
 
       return new RefreshServiceAclsResponsePBImpl();
