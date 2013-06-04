@@ -276,6 +276,12 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5274. Bring back SecureShuffleUtils.toHex in mapreduce for binary
     compatibility with 1.x APIs. (Mayank Bansal via vinodkv)
 
+    MAPREDUCE-5300. Fix backward incompatibility for
+    o.a.h.mapreduce.filecache.DistributedCache. (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5283. Over 10 different tests have near identical
+    implementations of AppContext (Sandy Ryza via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
@@ -481,11 +487,17 @@ Release 2.1.0-beta - UNRELEASED
     of the entire Container in the startContainer call - YARN-684.
     (Vinod Kumar Vavilapalli via sseth)
 
-    MAPREDUCE-5220. Fix backward incompatibility for TaskCompletionEvent by
+    MAPREDUCE-5299. Fix backward incompatibility for TaskCompletionEvent by
     adding back setTaskID. (Zhijie Shen via acmurthy) 
 
     MAPREDUCE-5296. Fix backward incompatibility for JobControl by adding the
     omitted addJob. (Zhijie Shen via acmurthy) 
+
+    MAPREDUCE-5245. Added back constants to JobConf to fix incompatibilities.  
+    (Zhijie Shen via acmurthy) 
+
+    MAPREDUCE-5297. Updated MR App since BuilderUtils is no longer public
+    after YARN-748. (Jian He via vinodkv)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
