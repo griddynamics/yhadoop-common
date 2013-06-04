@@ -95,6 +95,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HADOOP-7391 Document Interface Classification from HADOOP-5073 (sanjay Radia)
 
+    HADOOP-9287. Parallel-testing hadoop-common (Andrey Klochkov via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
@@ -206,6 +208,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9566. Performing direct read using libhdfs sometimes raises SIGPIPE
     (which in turn throws SIGABRT) causing client crashes. (Colin Patrick
     McCabe via atm)
+
+    HADOOP-9481. Broken conditional logic with HADOOP_SNAPPY_LIBRARY. (Vadim
+    Bondarev via atm)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
