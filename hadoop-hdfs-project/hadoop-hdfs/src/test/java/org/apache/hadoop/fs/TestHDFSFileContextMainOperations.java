@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.exists;
-import static org.apache.hadoop.fs.FileContextTestHelper.getTestRootPath;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
