@@ -136,68 +136,76 @@ public abstract class FileContextMainOperationsBaseTest  {
   
   @Test
   public void testWorkingDirectory() throws Exception {
-
-    // First we cd to our test root
-    Path workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
-    fc.setWorkingDirectory(workDir);
-    Assert.assertEquals(workDir, fc.getWorkingDirectory());
-
-    fc.setWorkingDirectory(new Path("."));
-    Assert.assertEquals(workDir, fc.getWorkingDirectory());
-
-    fc.setWorkingDirectory(new Path(".."));
-    Assert.assertEquals(workDir.getParent(), fc.getWorkingDirectory());
-    
-    // cd using a relative path
-
-    // Go back to our test root
-    workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
-    fc.setWorkingDirectory(workDir);
-    Assert.assertEquals(workDir, fc.getWorkingDirectory());
-    
-    Path relativeDir = new Path("existingDir1");
-    Path absoluteDir = new Path(workDir,"existingDir1");
-    fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
-    fc.setWorkingDirectory(relativeDir);
-    Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
-    // cd using a absolute path
-    absoluteDir = getTestRootPath(fc, "test/existingDir2");
-    fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
-    fc.setWorkingDirectory(absoluteDir);
-    Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
-    
-    // Now open a file relative to the wd we just set above.
-    Path absolutePath = new Path(absoluteDir, "foo");
-    fc.create(absolutePath, EnumSet.of(CREATE)).close();
-    fc.open(new Path("foo")).close();
-    
-    
-    // Now mkdir relative to the dir we cd'ed to
-    fc.mkdir(new Path("newDir"), FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(isDir(fc, new Path(absoluteDir, "newDir")));
-
-    absoluteDir = getTestRootPath(fc, "nonexistingPath");
+    // NB: save initial work dir to restore it in "finally" block.
+    // Otherwise the "fc" (which is a static context) gets corrupted, and
+    // after that fileContextTestHelper.getTestRootPath(fc, pathString) returns 
+    // incorrect path.
+    final Path wd0 = fc.getWorkingDirectory();
     try {
+      // First we cd to our test root
+      Path workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
+      fc.setWorkingDirectory(workDir);
+      Assert.assertEquals(workDir, fc.getWorkingDirectory());
+
+      fc.setWorkingDirectory(new Path("."));
+      Assert.assertEquals(workDir, fc.getWorkingDirectory());
+
+      fc.setWorkingDirectory(new Path(".."));
+      Assert.assertEquals(workDir.getParent(), fc.getWorkingDirectory());
+    
+      // cd using a relative path
+
+      // Go back to our test root
+      workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
+      fc.setWorkingDirectory(workDir);
+      Assert.assertEquals(workDir, fc.getWorkingDirectory());
+    
+      Path relativeDir = new Path("existingDir1");
+      Path absoluteDir = new Path(workDir,"existingDir1");
+      fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
+      fc.setWorkingDirectory(relativeDir);
+      Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
+      // cd using a absolute path
+      absoluteDir = getTestRootPath(fc, "test/existingDir2");
+      fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
       fc.setWorkingDirectory(absoluteDir);
-      Assert.fail("cd to non existing dir should have failed");
-    } catch (Exception e) {
-      // Exception as expected
-    }
+      Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
     
-    // Try a URI
+      // Now open a file relative to the wd we just set above.
+      Path absolutePath = new Path(absoluteDir, "foo");
+      fc.create(absolutePath, EnumSet.of(CREATE)).close();
+      fc.open(new Path("foo")).close();
+    
+    
+      // Now mkdir relative to the dir we cd'ed to
+      fc.mkdir(new Path("newDir"), FileContext.DEFAULT_PERM, true);
+      Assert.assertTrue(isDir(fc, new Path(absoluteDir, "newDir")));
 
-    absoluteDir = new Path(localFsRootPath, "existingDir");
-    fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
-    fc.setWorkingDirectory(absoluteDir);
-    Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
+      absoluteDir = getTestRootPath(fc, "nonexistingPath");
+      try {
+        fc.setWorkingDirectory(absoluteDir);
+        Assert.fail("cd to non existing dir should have failed");
+      } catch (Exception e) {
+        // Exception as expected
+      }
+    
+      // Try a URI
 
-    Path aRegularFile = new Path("aRegualrFile");
-    createFile(aRegularFile);
-    try {
-      fc.setWorkingDirectory(aRegularFile);
-      assertTrue("An IOException expected.", false);
-    } catch (IOException ioe) {
-      // okay
+      absoluteDir = new Path(localFsRootPath, "existingDir");
+      fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
+      fc.setWorkingDirectory(absoluteDir);
+      Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
+
+      Path aRegularFile = new Path("aRegualrFile");
+      createFile(aRegularFile);
+      try {
+        fc.setWorkingDirectory(aRegularFile);
+        assertTrue("An IOException expected.", false);
+      } catch (IOException ioe) {
+        // okay
+      }
+    } finally {
+      fc.setWorkingDirectory(wd0);
     }
   }
   

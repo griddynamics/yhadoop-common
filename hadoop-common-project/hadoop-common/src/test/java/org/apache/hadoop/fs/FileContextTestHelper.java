@@ -90,8 +90,13 @@ public final class FileContextTestHelper {
       if (new Path(testRootDir).isAbsolute()) {
         absTestRootDir = testRootDir;
       } else {
-        absTestRootDir = fc.getWorkingDirectory().toString() + "/"
-            + testRootDir;
+        String fcWdPath = fc.getWorkingDirectory().toString();
+        // NB: we must return local file path without the schema
+        // because tests expect it: 
+        if (fcWdPath.startsWith("file:")) {
+          fcWdPath = fcWdPath.substring("file:".length());
+        }
+        absTestRootDir = fcWdPath + "/" + testRootDir;
       }
     }
     return absTestRootDir;
