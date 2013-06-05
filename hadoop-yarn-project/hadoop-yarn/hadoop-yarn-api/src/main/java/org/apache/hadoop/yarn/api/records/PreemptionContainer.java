@@ -15,31 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
- * Description of resources requested back by the cluster.
+ * Specific container requested back by the <code>ResourceManager</code>.
  * @see PreemptionContract
- * @see AllocateRequest#setAskList(java.util.List)
+ * @see StrictPreemptionContract
  */
-public interface PreemptionResourceRequest {
+public abstract class PreemptionContainer {
+
+  public static PreemptionContainer newInstance(ContainerId id) {
+    PreemptionContainer container = Records.newRecord(PreemptionContainer.class);
+    container.setId(id);
+    return container;
+  }
 
   /**
-   * @return Resource described in this request, to be matched against running
-   * containers.
+   * @return Container referenced by this handle.
    */
   @Public
   @Evolving
-  public ResourceRequest getResourceRequest();
+  public abstract ContainerId getId();
 
   @Private
   @Unstable
-  public void setResourceRequest(ResourceRequest req);
+  public abstract void setId(ContainerId id);
 
 }

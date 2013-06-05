@@ -30,16 +30,15 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.yarn.ClusterInfo;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -56,13 +55,13 @@ public class TestLocalContainerAllocator {
     try {
       lca.heartbeat();
       Assert.fail("heartbeat was supposed to throw");
-    } catch (YarnRemoteException e) {
-      // YarnRemoteException is expected
+    } catch (YarnException e) {
+      // YarnException is expected
     } finally {
       lca.stop();
     }
 
-    // verify YarnException is thrown when the retry interval has expired
+    // verify YarnRuntimeException is thrown when the retry interval has expired
     conf.setLong(MRJobConfig.MR_AM_TO_RM_WAIT_INTERVAL_MS, 0);
     lca = new StubbedLocalContainerAllocator();
     lca.init(conf);
@@ -70,8 +69,8 @@ public class TestLocalContainerAllocator {
     try {
       lca.heartbeat();
       Assert.fail("heartbeat was supposed to throw");
-    } catch (YarnException e) {
-      // YarnException is expected
+    } catch (YarnRuntimeException e) {
+      // YarnRuntimeException is expected
     } finally {
       lca.stop();
     }
@@ -100,14 +99,14 @@ public class TestLocalContainerAllocator {
       try {
         when(scheduler.allocate(isA(AllocateRequest.class)))
           .thenThrow(RPCUtil.getRemoteException(new IOException("forcefail")));
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
       } catch (IOException e) {
       }
       return scheduler;
     }
 
     private static AppContext createAppContext() {
-      ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+      ApplicationId appId = ApplicationId.newInstance(1, 1);
       ApplicationAttemptId attemptId =
           ApplicationAttemptId.newInstance(appId, 1);
       Job job = mock(Job.class);

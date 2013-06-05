@@ -25,29 +25,28 @@ import java.util.List;
 
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.PreemptionMessageProto;
 
     
-public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
-    implements AllocateResponse {
+public class AllocateResponsePBImpl extends AllocateResponse {
   AllocateResponseProto proto = AllocateResponseProto.getDefaultInstance();
   AllocateResponseProto.Builder builder = null;
   boolean viaProto = false;
@@ -76,6 +75,26 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
   }
 
   private synchronized void mergeLocalToBuilder() {
@@ -126,15 +145,15 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
   }
   
   @Override
-  public synchronized boolean getReboot() {
+  public synchronized boolean getResync() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getReboot());
+    return (p.getResync());
   }
 
   @Override
-  public synchronized void setReboot(boolean reboot) {
+  public synchronized void setResync(boolean resync) {
     maybeInitBuilder();
-    builder.setReboot((reboot));
+    builder.setResync((resync));
   }
 
   @Override

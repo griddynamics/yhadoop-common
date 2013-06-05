@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.api.records;
 
 import java.util.List;
 import java.util.Set;
@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Description of resources requested back by the <code>ResourceManager</code>.
@@ -32,7 +34,15 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  * the platform.
  * @see PreemptionMessage
  */
-public interface PreemptionContract {
+public abstract class PreemptionContract {
+
+  public static PreemptionContract newInstance(
+      List<PreemptionResourceRequest> req, Set<PreemptionContainer> containers) {
+    PreemptionContract contract = Records.newRecord(PreemptionContract.class);
+    contract.setResourceRequest(req);
+    contract.setContainers(containers);
+    return contract;
+  }
 
   /**
    * If the AM releases resources matching these requests, then the {@link
@@ -47,11 +57,11 @@ public interface PreemptionContract {
    */
   @Public
   @Evolving
-  public List<PreemptionResourceRequest> getResourceRequest();
+  public abstract List<PreemptionResourceRequest> getResourceRequest();
 
   @Private
   @Unstable
-  public void setResourceRequest(List<PreemptionResourceRequest> req);
+  public abstract void setResourceRequest(List<PreemptionResourceRequest> req);
 
   /**
    * Assign the set of {@link PreemptionContainer} specifying which containers
@@ -63,11 +73,11 @@ public interface PreemptionContract {
    */
   @Public
   @Evolving
-  public Set<PreemptionContainer> getContainers();
+  public abstract Set<PreemptionContainer> getContainers();
 
 
   @Private
   @Unstable
-  public void setContainers(Set<PreemptionContainer> containers);
+  public abstract void setContainers(Set<PreemptionContainer> containers);
 
 }

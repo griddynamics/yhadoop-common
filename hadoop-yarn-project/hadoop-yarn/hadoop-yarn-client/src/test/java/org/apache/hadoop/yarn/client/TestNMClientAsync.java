@@ -45,14 +45,13 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 
@@ -137,7 +136,7 @@ public class TestNMClientAsync {
         Collections.synchronizedSet(new HashSet<String>());
 
     protected MockNMClientAsync1(int expectedSuccess, int expectedFailure)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       super(MockNMClientAsync1.class.getName(), mockNMClient(0),
           new TestCallbackHandler1(expectedSuccess, expectedFailure));
     }
@@ -362,7 +361,7 @@ public class TestNMClientAsync {
   }
 
   private NMClient mockNMClient(int mode)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     NMClient client = mock(NMClient.class);
     switch (mode) {
       case 0:
@@ -437,7 +436,7 @@ public class TestNMClientAsync {
     private CyclicBarrier barrierB;
 
     protected MockNMClientAsync2(CyclicBarrier barrierA, CyclicBarrier barrierB,
-        CyclicBarrier barrierC) throws YarnRemoteException, IOException {
+        CyclicBarrier barrierC) throws YarnException, IOException {
       super(MockNMClientAsync2.class.getName(), mockNMClient(0),
           new TestCallbackHandler2(barrierC));
       this.barrierA = barrierA;
@@ -528,14 +527,14 @@ public class TestNMClientAsync {
 
   private Container mockContainer(int i) {
     ApplicationId appId =
-        BuilderUtils.newApplicationId(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(attemptId, i);
     nodeId = NodeId.newInstance("localhost", 0);
     // Create an empty record
     containerToken = recordFactory.newRecordInstance(Token.class);
-    return BuilderUtils.newContainer(containerId, nodeId, null, null, null,
+    return Container.newInstance(containerId, nodeId, null, null, null,
       containerToken);
   }
 }

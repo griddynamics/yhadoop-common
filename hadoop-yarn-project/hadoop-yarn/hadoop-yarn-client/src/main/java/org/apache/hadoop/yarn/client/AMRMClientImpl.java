@@ -40,7 +40,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -55,12 +55,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 // TODO check inputs for null etc. YARN-654
 
@@ -86,7 +85,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
     
     ResourceRequestInfo(Priority priority, String resourceName,
         Resource capability) {
-      remoteRequest = BuilderUtils.newResourceRequest(priority, resourceName,
+      remoteRequest = ResourceRequest.newInstance(priority, resourceName,
           capability, 0);
       containerRequests = new LinkedHashSet<T>();
     }
@@ -143,7 +142,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
     new TreeMap<Priority, Map<String, TreeMap<Resource, ResourceRequestInfo>>>();
 
   protected final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>(
-      new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
+      new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
   protected final Set<ContainerId> release = new TreeSet<ContainerId>();
   
   public AMRMClientImpl(ApplicationAttemptId appAttemptId) {
@@ -169,7 +168,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
     try {
       currentUser = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
     // CurrentUser should already have AMToken loaded.
@@ -195,7 +194,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     // do this only once ???
     RegisterApplicationMasterRequest request = recordFactory
         .newRecordInstance(RegisterApplicationMasterRequest.class);
@@ -214,7 +213,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
 
   @Override
   public AllocateResponse allocate(float progressIndicator) 
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     AllocateResponse allocateResponse = null;
     ArrayList<ResourceRequest> askList = null;
     ArrayList<ContainerId> releaseList = null;
@@ -227,9 +226,9 @@ public class AMRMClientImpl<T extends ContainerRequest>
         // optimistically clear this collection assuming no RPC failure
         ask.clear();
         release.clear();
-        allocateRequest = BuilderUtils
-            .newAllocateRequest(appAttemptId, lastResponseId, progressIndicator,
-                askList, releaseList);
+        allocateRequest =
+            AllocateRequest.newInstance(appAttemptId, lastResponseId,
+              progressIndicator, askList, releaseList);
       }
 
       allocateResponse = rmClient.allocate(allocateRequest);
@@ -268,7 +267,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
 
   @Override
   public void unregisterApplicationMaster(FinalApplicationStatus appStatus,
-      String appMessage, String appTrackingUrl) throws YarnRemoteException,
+      String appMessage, String appTrackingUrl) throws YarnException,
       IOException {
     FinishApplicationMasterRequest request = recordFactory
                   .newRecordInstance(FinishApplicationMasterRequest.class);

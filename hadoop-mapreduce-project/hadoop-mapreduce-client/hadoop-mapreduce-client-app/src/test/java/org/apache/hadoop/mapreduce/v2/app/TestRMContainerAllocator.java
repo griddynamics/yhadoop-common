@@ -74,7 +74,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -98,7 +98,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -1430,7 +1429,7 @@ public class TestRMContainerAllocator {
         super.heartbeat();
       } catch (Exception e) {
         LOG.error("error in heartbeat ", e);
-        throw new YarnException(e);
+        throw new YarnRuntimeException(e);
       }
 
       List<TaskAttemptContainerAssignedEvent> result
@@ -1596,7 +1595,7 @@ public class TestRMContainerAllocator {
     AppContext appContext = mock(AppContext.class);
     when(appContext.getClock()).thenReturn(clock);
     when(appContext.getApplicationID()).thenReturn(
-        BuilderUtils.newApplicationId(1, 1));
+        ApplicationId.newInstance(1, 1));
 
     RMContainerAllocator allocator = new RMContainerAllocator(
         mock(ClientService.class), appContext) {
@@ -1654,7 +1653,7 @@ public class TestRMContainerAllocator {
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(
         MRBuilderUtils.newTaskId(
             MRBuilderUtils.newJobId(1, 1, 1), 1, TaskType.MAP), 1);
-    ApplicationId applicationId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationId applicationId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId applicationAttemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
     ContainerId containerId = ContainerId.newInstance(applicationAttemptId, 1);

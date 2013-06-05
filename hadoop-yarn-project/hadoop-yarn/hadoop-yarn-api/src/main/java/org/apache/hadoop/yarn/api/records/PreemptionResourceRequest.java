@@ -15,40 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.api.records;
 
-import java.util.Set;
-
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
- * Enumeration of particular allocations to be reclaimed. The platform will
- * reclaim exactly these resources, so the <code>ApplicationMaster</code> (AM)
- * may attempt to checkpoint work or adjust its execution plan to accommodate
- * it. In contrast to {@link PreemptionContract}, the AM has no flexibility in
- * selecting which resources to return to the cluster.
- * @see PreemptionMessage
+ * Description of resources requested back by the cluster.
+ * @see PreemptionContract
+ * @see AllocateRequest#setAskList(java.util.List)
  */
-@Public
-@Evolving
-public interface StrictPreemptionContract {
+public abstract class PreemptionResourceRequest {
+
+  public static PreemptionResourceRequest newInstance(ResourceRequest req) {
+    PreemptionResourceRequest request =
+        Records.newRecord(PreemptionResourceRequest.class);
+    request.setResourceRequest(req);
+    return request;
+  }
 
   /**
-   * Get the set of {@link PreemptionContainer} specifying containers owned by
-   * the <code>ApplicationMaster</code> that may be reclaimed by the
-   * <code>ResourceManager</code>.
-   * @return the set of {@link ContainerId} to be preempted.
+   * @return Resource described in this request, to be matched against running
+   * containers.
    */
   @Public
   @Evolving
-  public Set<PreemptionContainer> getContainers();
+  public abstract ResourceRequest getResourceRequest();
 
   @Private
   @Unstable
-  public void setContainers(Set<PreemptionContainer> containers);
-
+  public abstract void setResourceRequest(ResourceRequest req);
 }

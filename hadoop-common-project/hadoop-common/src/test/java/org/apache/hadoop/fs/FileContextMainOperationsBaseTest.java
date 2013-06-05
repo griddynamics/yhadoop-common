@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.NoSuchElementException;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
@@ -63,17 +64,10 @@ public abstract class FileContextMainOperationsBaseTest  {
   private static String TEST_DIR_AXA = "test/hadoop/axa";
   private static String TEST_DIR_AXX = "test/hadoop/axx";
   private static int numBlocks = 2;
-  
-  public static final Path LOCAL_FS_ROOT_PATH;
-      
-  static {
-    File testBuildData = new File(System.getProperty("test.build.data",
-                                    "build/test/data"));
-    Path localFsRootPath = new Path(testBuildData.getAbsolutePath(), 
-                                    "root-uri");
-    LOCAL_FS_ROOT_PATH = localFsRootPath.makeQualified(LocalFileSystem.NAME, null);
-  }
-  
+
+  public Path localFsRootPath;
+
+  protected final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
   protected static FileContext fc;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
@@ -99,14 +93,19 @@ public abstract class FileContextMainOperationsBaseTest  {
   
   @Before
   public void setUp() throws Exception {
+    File testBuildData = new File(System.getProperty("test.build.data",
+            "build/test/data"), RandomStringUtils.randomAlphanumeric(10));
+    Path rootPath = new Path(testBuildData.getAbsolutePath(), 
+            "root-uri");
+    localFsRootPath = rootPath.makeQualified(LocalFileSystem.NAME, null);
     fc.mkdir(getTestRootPath(fc, "test"), FileContext.DEFAULT_PERM, true);
   }
   
   @After
   public void tearDown() throws Exception {
-    boolean del = fc.delete(new Path(getAbsoluteTestRootPath(fc), new Path("test")), true);
+    boolean del = fc.delete(new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test")), true);
     assertTrue(del);
-    fc.delete(LOCAL_FS_ROOT_PATH, true);
+    fc.delete(localFsRootPath, true);
   }
   
   
@@ -139,7 +138,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   public void testWorkingDirectory() throws Exception {
 
     // First we cd to our test root
-    Path workDir = new Path(getAbsoluteTestRootPath(fc), new Path("test"));
+    Path workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
     fc.setWorkingDirectory(workDir);
     Assert.assertEquals(workDir, fc.getWorkingDirectory());
 
@@ -152,7 +151,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     // cd using a relative path
 
     // Go back to our test root
-    workDir = new Path(getAbsoluteTestRootPath(fc), new Path("test"));
+    workDir = new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test"));
     fc.setWorkingDirectory(workDir);
     Assert.assertEquals(workDir, fc.getWorkingDirectory());
     
@@ -187,7 +186,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     // Try a URI
 
-    absoluteDir = new Path(LOCAL_FS_ROOT_PATH, "existingDir");
+    absoluteDir = new Path(localFsRootPath, "existingDir");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
@@ -1201,7 +1200,7 @@ public abstract class FileContextMainOperationsBaseTest  {
         return true;
       }
     return false;
- }
+  }
   
   @Test
   public void testOpen2() throws IOException {
@@ -1332,5 +1331,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path pathResolved = fc2.resolvePath(path);
     assertEquals(pathResolved.toUri().getPath(), path.toUri().getPath());
   }
-  
+ 
+  private Path getTestRootPath(FileContext fc, String pathString) {
+    return fileContextTestHelper.getTestRootPath(fc, pathString);
+  }
 }

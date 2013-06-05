@@ -38,7 +38,7 @@ public class TestFcMainOperationsLocalFs  extends
   @Override
   @Before
   public void setUp() throws Exception {
-    fc = ViewFsTestSetup.setupForViewFsLocalFs();
+    fc = ViewFsTestSetup.setupForViewFsLocalFs(fileContextTestHelper);
     super.setUp();
   }
   
@@ -46,7 +46,7 @@ public class TestFcMainOperationsLocalFs  extends
   @After
   public void tearDown() throws Exception {
     super.tearDown();
-    ViewFsTestSetup.tearDownForViewFsLocalFs();
+    ViewFsTestSetup.tearDownForViewFsLocalFs(fileContextTestHelper);
   }
   
   @Override

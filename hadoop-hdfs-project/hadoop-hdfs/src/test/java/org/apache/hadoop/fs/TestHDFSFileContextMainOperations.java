@@ -44,6 +44,7 @@ import org.junit.Test;
 
 public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
+  private static FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static HdfsConfiguration CONF = new HdfsConfiguration();
@@ -105,6 +106,10 @@ public class TestHDFSFileContextMainOperations extends
       return ((RemoteException) e).unwrapRemoteException();
     }
     return e;
+  }
+  
+  private Path getTestRootPath(FileContext fc, String path) {
+    return fileContextTestHelper.getTestRootPath(fc, path);
   }
   
   @Test

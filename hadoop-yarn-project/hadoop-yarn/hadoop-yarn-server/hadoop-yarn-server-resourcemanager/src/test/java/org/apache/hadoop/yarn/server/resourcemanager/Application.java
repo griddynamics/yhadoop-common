@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
@@ -81,7 +81,7 @@ public class Application {
   
   final private Set<ResourceRequest> ask = 
     new TreeSet<ResourceRequest>(
-        new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
+        new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
 
   final private Map<String, NodeManager> nodes = 
     new HashMap<String, NodeManager>();
@@ -127,7 +127,7 @@ public class Application {
     return used;
   }
   
-  public synchronized void submit() throws IOException, YarnRemoteException {
+  public synchronized void submit() throws IOException, YarnException {
     ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     context.setApplicationId(this.applicationId);
     context.setQueue(this.queue);
@@ -201,7 +201,7 @@ public class Application {
   }
   
   public synchronized void finishTask(Task task) throws IOException,
-      YarnRemoteException {
+      YarnException {
     Set<Task> tasks = this.tasks.get(task.getPriority());
     if (!tasks.remove(task)) {
       throw new IllegalStateException(
@@ -230,7 +230,7 @@ public class Application {
     ResourceRequest request = requests.get(resourceName);
     if (request == null) {
       request = 
-        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
+        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
             priority, resourceName, capability, 1);
       requests.put(resourceName, request);
     } else {
@@ -240,7 +240,7 @@ public class Application {
     // Note this down for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
+        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
             request)); // clone to ensure the RM doesn't manipulate the same obj
     
     if(LOG.isDebugEnabled()) {
@@ -288,7 +288,7 @@ public class Application {
   }
   
   public synchronized void assign(List<Container> containers) 
-  throws IOException, YarnRemoteException {
+  throws IOException, YarnException {
     
     int numContainers = containers.size();
     // Schedule in priority order
@@ -307,12 +307,12 @@ public class Application {
         assignedContainers + "/" + numContainers);
   }
   
-  public synchronized void schedule() throws IOException, YarnRemoteException {
+  public synchronized void schedule() throws IOException, YarnException {
     assign(getResources());
   }
   
   private synchronized void assign(Priority priority, NodeType type, 
-      List<Container> containers) throws IOException, YarnRemoteException {
+      List<Container> containers) throws IOException, YarnException {
     for (Iterator<Container> i=containers.iterator(); i.hasNext();) {
       Container container = i.next();
       String host = container.getNodeId().toString();
@@ -388,7 +388,7 @@ public class Application {
     // Note this for next interaction with ResourceManager
     ask.remove(request);
     ask.add(
-        org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
+        org.apache.hadoop.yarn.server.utils.BuilderUtils.newResourceRequest(
         request)); // clone to ensure the RM doesn't manipulate the same obj
 
     if(LOG.isDebugEnabled()) {
