@@ -4,8 +4,6 @@ Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
 
-    HDFS-4053. Increase the default block size. (eli)
-
     HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
 
   NEW FEATURES
@@ -244,6 +242,8 @@ Trunk (Unreleased)
 Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+    HDFS-4053. Increase the default block size. (eli)
 
     HDFS-4305. Add a configurable limit on number of blocks per file, and min
     block size. (Andrew Wang via atm)
@@ -1052,6 +1052,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4876. Fix the javadoc of FileWithSnapshot and move FileDiffList to
     FileWithSnapshot.  (szetszwo)
+
+    HDFS-4850. Fix OfflineImageViewer to work on fsimages with empty files or 
+    snapshots. (jing9) 
 
 Release 2.0.5-alpha - UNRELEASED
 
