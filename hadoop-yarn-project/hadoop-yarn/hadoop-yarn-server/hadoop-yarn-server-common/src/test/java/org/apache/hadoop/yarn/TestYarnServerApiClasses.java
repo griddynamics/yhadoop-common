@@ -50,7 +50,7 @@ import java.util.Arrays;
 import static org.junit.Assert.*;
 
 /**
- * Simple test some classes from org.apache.hadoop.yarn.server.api
+ * Simple test classes from org.apache.hadoop.yarn.server.api
  */
 public class TestYarnServerApiClasses {
 
@@ -58,17 +58,18 @@ public class TestYarnServerApiClasses {
       .getRecordFactory(null);
 
   /**
-   * Test RegisterNodeManagerResponsePBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test RegisterNodeManagerResponsePBImpl. Test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and data
+   * restore from prototype
    */
-  @Test(timeout = 500)
+  @Test
   public void testRegisterNodeManagerResponsePBImpl() {
     RegisterNodeManagerResponsePBImpl original = new RegisterNodeManagerResponsePBImpl();
     RegistrationResponse response = recordFactory
         .newRecordInstance(RegistrationResponse.class);
     original.setRegistrationResponse(response);
     response.setMasterKey(getMasterKey());
+    
 
     RegisterNodeManagerResponsePBImpl copy = new RegisterNodeManagerResponsePBImpl(
         original.getProto());
@@ -77,11 +78,9 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test NodeHeartbeatRequestPBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test NodeHeartbeatRequestPBImpl.
    */
-  @Test(timeout = 500)
+  @Test
   public void testNodeHeartbeatRequestPBImpl() {
     NodeHeartbeatRequestPBImpl original = new NodeHeartbeatRequestPBImpl();
     original.setLastKnownMasterKey(getMasterKey());
@@ -112,15 +111,16 @@ public class TestYarnServerApiClasses {
     NodeHeartbeatResponsePBImpl copy = new NodeHeartbeatResponsePBImpl(
         original.getProto());
     assertEquals(NodeAction.REBOOT, copy.getHeartbeatResponse().getNodeAction());
+    assertEquals(1, copy.getHeartbeatResponse().getResponseId());
+    assertEquals(1, copy.getHeartbeatResponse().getMasterKey().getKeyId());
+    
   }
 
   /**
-   * Test RegisterNodeManagerRequestPBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test RegisterNodeManagerRequestPBImpl.
    */
 
-  @Test(timeout = 500)
+  @Test
   public void testRegisterNodeManagerRequestPBImpl() {
     RegisterNodeManagerRequestPBImpl original = new RegisterNodeManagerRequestPBImpl();
     original.setHttpPort(8080);
@@ -137,17 +137,15 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test MasterKeyPBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test MasterKeyPBImpl.
    */
 
-  @Test(timeout = 500)
+  @Test
   public void testMasterKeyPBImpl() {
     MasterKeyPBImpl original = new MasterKeyPBImpl();
-
     original.setBytes(ByteBuffer.allocate(0));
     original.setKeyId(1);
+
     MasterKeyPBImpl copy = new MasterKeyPBImpl(original.getProto());
     assertEquals(1, copy.getKeyId());
 
@@ -159,7 +157,7 @@ public class TestYarnServerApiClasses {
    * data from prototype
    */
 
-  @Test(timeout = 500)
+  @Test
   public void testNodeStatusPBImpl() {
     NodeStatusPBImpl original = new NodeStatusPBImpl();
 
@@ -253,7 +251,6 @@ public class TestYarnServerApiClasses {
 
   private ApplicationAttemptId getApplicationAttemptId(int appAttemptId) {
     ApplicationAttemptIdPBImpl result = new ApplicationAttemptIdPBImpl();
-
     result.setApplicationId(getApplicationId(appAttemptId));
     result.setAttemptId(1);
     return result;

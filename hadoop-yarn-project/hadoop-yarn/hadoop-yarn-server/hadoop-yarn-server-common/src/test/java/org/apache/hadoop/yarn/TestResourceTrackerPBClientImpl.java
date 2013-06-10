@@ -19,12 +19,11 @@ package org.apache.hadoop.yarn;
 
 import java.net.InetSocketAddress;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -57,17 +56,10 @@ public class TestResourceTrackerPBClientImpl {
     server = RpcServerFactoryPBImpl.get().getServer(ResourceTracker.class,
         instance, address, configuration, null, 1);
     server.start();
-    System.err.println(server.getListenerAddress());
-    System.err.println(NetUtils.getConnectAddress(server));
 
-    try {
-      client = (ResourceTracker) RpcClientFactoryPBImpl.get().getClient(
-          ResourceTracker.class, 1, NetUtils.getConnectAddress(server),
-          configuration);
-    } catch (YarnException e) {
-      e.printStackTrace();
-      Assert.fail("Failed to create client");
-    }
+    client = (ResourceTracker) RpcClientFactoryPBImpl.get().getClient(
+        ResourceTracker.class, 1, NetUtils.getConnectAddress(server),
+        configuration);
 
   }
 
@@ -82,40 +74,69 @@ public class TestResourceTrackerPBClientImpl {
    * Test the method registerNodeManager. Method should return a not null
    * result.
    * 
-   * @throws Exception
    */
-  @Test(timeout=500)
+  @Test
   public void testResourceTrackerPBClientImpl() throws Exception {
     RegisterNodeManagerRequest request = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
     assertNotNull(client.registerNodeManager(request));
+    
+    ResourceTrackerTestImpl.exception = true;
+    try {
+      client.registerNodeManager(request);
+      fail("there  should be YarnException");
+    } catch (YarnRemoteException e) {
+      assertTrue(e.getMessage().startsWith("testMessage"));
+    }finally{
+      ResourceTrackerTestImpl.exception = false;
+    }
+
   }
 
   /**
    * Test the method nodeHeartbeat. Method should return a not null result.
    * 
-   * @throws Exception
    */
 
-  @Test(timeout=500)
+  @Test
   public void testNodeHeartbeat() throws Exception {
     NodeHeartbeatRequest request = recordFactory
         .newRecordInstance(NodeHeartbeatRequest.class);
     assertNotNull(client.nodeHeartbeat(request));
+    
+    ResourceTrackerTestImpl.exception = true;
+    try {
+      client.nodeHeartbeat(request);
+      fail("there  should be YarnException");
+    } catch (YarnRemoteException e) {
+      assertTrue(e.getMessage().startsWith("testMessage"));
+    }finally{
+      ResourceTrackerTestImpl.exception = false;
+    }
+
   }
 
+  
+
   public static class ResourceTrackerTestImpl implements ResourceTracker {
+
+    public static boolean exception = false;
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
         RegisterNodeManagerRequest request) throws YarnRemoteException {
+      if (exception) {
+        throw new YarnRemoteExceptionPBImpl("testMessage");
+      }
       return recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
     }
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnRemoteException {
-
+      if (exception) {
+        throw new YarnRemoteExceptionPBImpl("testMessage");
+      }
       return recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
     }
 
