@@ -45,7 +45,7 @@ import java.util.Arrays;
 import static org.junit.Assert.*;
 
 /**
- * Simple test some classes from org.apache.hadoop.yarn.server.api
+ * Simple test  classes from org.apache.hadoop.yarn.server.api
  */
 public class TestYarnServerApiClasses {
 
