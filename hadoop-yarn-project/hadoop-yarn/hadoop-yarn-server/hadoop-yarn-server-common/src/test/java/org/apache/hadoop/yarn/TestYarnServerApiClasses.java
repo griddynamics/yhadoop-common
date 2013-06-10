@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.NodeStatusPBImpl;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.SerializedExceptionPBImpl;
 import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -45,7 +47,7 @@ import java.util.Arrays;
 import static org.junit.Assert.*;
 
 /**
- * Simple test some classes from org.apache.hadoop.yarn.server.api
+ * Simple test classes from org.apache.hadoop.yarn.server.api
  */
 public class TestYarnServerApiClasses {
 
@@ -53,29 +55,31 @@ public class TestYarnServerApiClasses {
       .getRecordFactory(null);
 
   /**
-   * Test RegisterNodeManagerResponsePBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test RegisterNodeManagerResponsePBImpl. Test getters and setters. The
+   * RegisterNodeManagerResponsePBImpl should generate a prototype and data
+   * restore from prototype
    */
-  @Test(timeout = 500)
+  @Test
   public void testRegisterNodeManagerResponsePBImpl() {
-    RegisterNodeManagerResponsePBImpl original = new RegisterNodeManagerResponsePBImpl();
-    original.setNodeAction(NodeAction.NORMAL);
+    RegisterNodeManagerResponsePBImpl original =
+        new RegisterNodeManagerResponsePBImpl();
     original.setMasterKey(getMasterKey());
+    original.setNodeAction(NodeAction.NORMAL);
+    original.setDiagnosticsMessage("testDiagnosticMessage");
 
-    RegisterNodeManagerResponsePBImpl copy = new RegisterNodeManagerResponsePBImpl(
-        original.getProto());
+    RegisterNodeManagerResponsePBImpl copy =
+        new RegisterNodeManagerResponsePBImpl(
+            original.getProto());
     assertEquals(1, copy.getMasterKey().getKeyId());
     assertEquals(NodeAction.NORMAL, copy.getNodeAction());
+    assertEquals("testDiagnosticMessage", copy.getDiagnosticsMessage());
 
   }
 
   /**
-   * Test NodeHeartbeatRequestPBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test NodeHeartbeatRequestPBImpl.
    */
-  @Test(timeout = 500)
+  @Test
   public void testNodeHeartbeatRequestPBImpl() {
     NodeHeartbeatRequestPBImpl original = new NodeHeartbeatRequestPBImpl();
     original.setLastKnownMasterKey(getMasterKey());
@@ -87,18 +91,40 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test RegisterNodeManagerRequestPBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test NodeHeartbeatResponsePBImpl.
    */
 
-  @Test(timeout = 500)
+  @Test
+  public void testNodeHeartbeatResponsePBImpl() {
+    NodeHeartbeatResponsePBImpl original = new NodeHeartbeatResponsePBImpl();
+
+    original.setDiagnosticsMessage("testDiagnosticMessage");
+    original.setMasterKey(getMasterKey());
+    original.setNextHeartBeatInterval(1000);
+    original.setNodeAction(NodeAction.NORMAL);
+    original.setResponseId(100);
+
+    NodeHeartbeatResponsePBImpl copy = new NodeHeartbeatResponsePBImpl(
+        original.getProto());
+    assertEquals(100, copy.getResponseId());
+    assertEquals(NodeAction.NORMAL, copy.getNodeAction());
+    assertEquals(1000, copy.getNextHeartBeatInterval());
+    assertEquals(1, copy.getMasterKey().getKeyId());
+    assertEquals("testDiagnosticMessage", copy.getDiagnosticsMessage());
+  }
+
+  /**
+   * Test RegisterNodeManagerRequestPBImpl.
+   */
+
+  @Test
   public void testRegisterNodeManagerRequestPBImpl() {
     RegisterNodeManagerRequestPBImpl original = new RegisterNodeManagerRequestPBImpl();
     original.setHttpPort(8080);
     original.setNodeId(getNodeId());
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(10000);
+    resource.setVirtualCores(2);
     original.setResource(resource);
     RegisterNodeManagerRequestPBImpl copy = new RegisterNodeManagerRequestPBImpl(
         original.getProto());
@@ -106,32 +132,53 @@ public class TestYarnServerApiClasses {
     assertEquals(8080, copy.getHttpPort());
     assertEquals(9090, copy.getNodeId().getPort());
     assertEquals(10000, copy.getResource().getMemory());
+    assertEquals(2, copy.getResource().getVirtualCores());
+
   }
 
   /**
-   * Test MasterKeyPBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test MasterKeyPBImpl.
    */
 
-  @Test(timeout = 500)
+  @Test
   public void testMasterKeyPBImpl() {
     MasterKeyPBImpl original = new MasterKeyPBImpl();
-
     original.setBytes(ByteBuffer.allocate(0));
     original.setKeyId(1);
+
     MasterKeyPBImpl copy = new MasterKeyPBImpl(original.getProto());
     assertEquals(1, copy.getKeyId());
+    assertTrue(original.equals(copy));
+    assertEquals(original.hashCode(), copy.hashCode());
 
   }
 
   /**
-   * Test NodeStatusPBImpl. test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and restore a
-   * data from prototype
+   * Test SerializedExceptionPBImpl.
+   */
+  @Test
+  public void testSerializedExceptionPBImpl() {
+    SerializedExceptionPBImpl original = new SerializedExceptionPBImpl();
+    original.init("testMessage");
+    SerializedExceptionPBImpl copy = new SerializedExceptionPBImpl(
+        original.getProto());
+    assertEquals("testMessage", copy.getMessage());
+
+    original = new SerializedExceptionPBImpl();
+    original.init("testMessage", new Throwable(new Throwable("parent")));
+    copy = new SerializedExceptionPBImpl(original.getProto());
+    assertEquals("testMessage", copy.getMessage());
+    assertEquals("parent", copy.getCause().getMessage());
+    assertTrue( copy.getRemoteTrace().startsWith(
+        "java.lang.Throwable: java.lang.Throwable: parent"));
+
+  }
+
+  /**
+   * Test NodeStatusPBImpl.
    */
 
-  @Test(timeout = 500)
+  @Test
   public void testNodeStatusPBImpl() {
     NodeStatusPBImpl original = new NodeStatusPBImpl();
 
@@ -153,7 +200,6 @@ public class TestYarnServerApiClasses {
 
   }
 
-
   private ContainerStatus getContainerStatus(int applicationId,
       int containerID, int appAttemptId) {
     ContainerStatus status = recordFactory
@@ -163,17 +209,20 @@ public class TestYarnServerApiClasses {
   }
 
   private ApplicationAttemptId getApplicationAttemptId(int appAttemptId) {
-
-    return ApplicationAttemptIdPBImpl.newInstance(getApplicationId(appAttemptId), appAttemptId);
+    ApplicationAttemptId result = ApplicationAttemptIdPBImpl.newInstance(
+        getApplicationId(appAttemptId), appAttemptId);
+    return result;
   }
 
   private ContainerId getContainerId(int containerID, int appAttemptId) {
-    return ContainerIdPBImpl.newInstance(getApplicationAttemptId(appAttemptId), containerID);
+    ContainerId containerId = ContainerIdPBImpl.newInstance(
+        getApplicationAttemptId(appAttemptId), containerID);
+    return containerId;
   }
 
   private ApplicationId getApplicationId(int applicationId) {
-    ApplicationIdPBImpl appId = new ApplicationIdPBImpl(){
-      public ApplicationIdPBImpl setParameters(int id,long timestamp){
+    ApplicationIdPBImpl appId = new ApplicationIdPBImpl() {
+      public ApplicationIdPBImpl setParameters(int id, long timestamp) {
         setClusterTimestamp(timestamp);
         setId(id);
         build();
