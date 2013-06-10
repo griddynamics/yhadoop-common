@@ -75,7 +75,7 @@ public class TestResourceTrackerPBClientImpl {
    * result.
    * 
    */
-  @Test(timeout = 1000)
+  @Test
   public void testResourceTrackerPBClientImpl() throws Exception {
     RegisterNodeManagerRequest request = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
@@ -98,7 +98,7 @@ public class TestResourceTrackerPBClientImpl {
    * 
    */
 
-  @Test(timeout = 1000)
+  @Test
   public void testNodeHeartbeat() throws Exception {
     NodeHeartbeatRequest request = recordFactory
         .newRecordInstance(NodeHeartbeatRequest.class);
