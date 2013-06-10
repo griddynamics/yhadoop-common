@@ -244,8 +244,7 @@ public class TestYarnServerApiClasses {
   }
 
   private NodeId getNodeId() {
-    NodeId id = NodeId.newInstance("localhost", 9090);
-    return id;
+    return NodeId.newInstance("localhost", 9090);
   }
 
   private NodeHealthStatus getNodeHealthStatus() {
