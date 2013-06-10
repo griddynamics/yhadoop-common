@@ -77,7 +77,7 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test NodeHeartbeatRequestPBImpl. 
+   * Test NodeHeartbeatRequestPBImpl.
    */
   @Test
   public void testNodeHeartbeatRequestPBImpl() {
@@ -91,7 +91,7 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test NodeHeartbeatResponsePBImpl. 
+   * Test NodeHeartbeatResponsePBImpl.
    */
 
   @Test
@@ -114,7 +114,7 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test RegisterNodeManagerRequestPBImpl. 
+   * Test RegisterNodeManagerRequestPBImpl.
    */
 
   @Test
@@ -137,7 +137,7 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test MasterKeyPBImpl. 
+   * Test MasterKeyPBImpl.
    */
 
   @Test
@@ -154,7 +154,7 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test SerializedExceptionPBImpl
+   * Test SerializedExceptionPBImpl.
    */
   @Test
   public void testSerializedExceptionPBImpl() {
@@ -175,9 +175,7 @@ public class TestYarnServerApiClasses {
   }
 
   /**
-   * Test NodeStatusPBImpl. Test getters and setters. The
-   * RegisterNodeManagerResponsePBImpl should generate a prototype and data
-   * restore from prototype
+   * Test NodeStatusPBImpl.
    */
 
   @Test
