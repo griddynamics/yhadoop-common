@@ -41,7 +41,7 @@ public class TestYarnApiClasses {
    * Simple test Resource request.
    * Test hashCode, equals and compare.
    */
-  @Test(timeout = 1000)
+  @Test
   public void testResourceRequest() {
 
     Resource resource = recordFactory.newRecordInstance(Resource.class);
@@ -67,7 +67,7 @@ public class TestYarnApiClasses {
   * Test CancelDelegationTokenRequestPBImpl.
   * Test a transformation to prototype and back
   */
-  @Test(timeout = 500)
+  @Test
   public void testCancelDelegationTokenRequestPBImpl() {
 
     Token token = getDelegationToken();
@@ -88,7 +88,7 @@ public class TestYarnApiClasses {
   * Test a transformation to prototype and back
   */
 
-  @Test(timeout = 500)
+  @Test
   public void testRenewDelegationTokenRequestPBImpl() {
 
     Token token = getDelegationToken();

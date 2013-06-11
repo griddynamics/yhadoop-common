@@ -101,7 +101,7 @@ public class TestRMAdminProtocolPBClientImpl {
   /**
    * Test method refreshQueues. This method is present and it works.
    */
-  @Test(timeout = 10000)
+  @Test
   public void testRefreshQueues() throws Exception {
 
     RefreshQueuesRequest request = recordFactory
@@ -114,7 +114,7 @@ public class TestRMAdminProtocolPBClientImpl {
    * Test method refreshNodes. This method is present and it works.
    */
 
-  @Test(timeout = 500)
+  @Test
   public void testRefreshNodes() throws Exception {
     resourceManager.getClientRMService();
     RefreshNodesRequest request = recordFactory
@@ -126,7 +126,7 @@ public class TestRMAdminProtocolPBClientImpl {
   /**
    * Test method refreshSuperUserGroupsConfiguration. This method present and it works.
    */
-  @Test(timeout = 500)
+  @Test
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
 
     RefreshSuperUserGroupsConfigurationRequest request = recordFactory
@@ -139,7 +139,7 @@ public class TestRMAdminProtocolPBClientImpl {
   /**
    * Test method refreshUserToGroupsMappings. This method is present and it works.
    */
-  @Test(timeout = 500)
+  @Test
   public void testRefreshUserToGroupsMappings() throws Exception {
     RefreshUserToGroupsMappingsRequest request = recordFactory
             .newRecordInstance(RefreshUserToGroupsMappingsRequest.class);
@@ -152,7 +152,7 @@ public class TestRMAdminProtocolPBClientImpl {
    * Test method refreshAdminAcls. This method is present and it works.
    */
 
-  @Test(timeout = 500)
+  @Test
   public void testRefreshAdminAcls() throws Exception {
     RefreshAdminAclsRequest request = recordFactory
             .newRecordInstance(RefreshAdminAclsRequest.class);
@@ -160,7 +160,7 @@ public class TestRMAdminProtocolPBClientImpl {
     assertNotNull(response);
   }
 
-  @Test(timeout = 1000)
+  @Test
   public void testRefreshServiceAcls() throws Exception {
     RefreshServiceAclsRequest request = recordFactory
             .newRecordInstance(RefreshServiceAclsRequest.class);
