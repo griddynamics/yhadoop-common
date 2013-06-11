@@ -125,7 +125,7 @@ public class TestClientRMProtocolPBClientImpl {
    * Test the cancelDelegationToken method in ClientRMProtocolPBClientImpl and ClientRMProtocolPBServiceImpl classes
    * should be  result != null or YarnRemoteException or   UndeclaredThrowableException
    */
-  @Test(timeout = 100)
+  @Test
   public void testCancelDelegationToken() throws YarnRemoteException {
     CancelDelegationTokenRequest request = recordFactory
             .newRecordInstance(CancelDelegationTokenRequest.class);
@@ -160,7 +160,7 @@ public class TestClientRMProtocolPBClientImpl {
    * Test the renewDelegationToken method in ClientRMProtocolPBClientImpl and ClientRMProtocolPBServiceImpl classes
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
-  @Test(timeout = 100)
+  @Test
   public void testRenewDelegationToken() throws YarnRemoteException {
     RenewDelegationTokenRequest request = recordFactory
             .newRecordInstance(RenewDelegationTokenRequest.class);
@@ -196,7 +196,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetDelegationToken() throws YarnRemoteException {
     GetDelegationTokenRequest request = recordFactory
             .newRecordInstance(GetDelegationTokenRequest.class);
@@ -231,7 +231,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetQueueUserAcls() throws YarnRemoteException {
     GetQueueUserAclsInfoRequest request = recordFactory
             .newRecordInstance(GetQueueUserAclsInfoRequest.class);
@@ -266,7 +266,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetQueueInfo() throws YarnRemoteException {
     GetQueueInfoRequest request = recordFactory
             .newRecordInstance(GetQueueInfoRequest.class);
@@ -301,7 +301,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetClusterNodes() throws YarnRemoteException {
     GetClusterNodesRequest request = recordFactory
             .newRecordInstance(GetClusterNodesRequest.class);
@@ -336,7 +336,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetAllApplications() throws YarnRemoteException {
     GetAllApplicationsRequest request = recordFactory
             .newRecordInstance(GetAllApplicationsRequest.class);
@@ -371,7 +371,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testSubmitApplication() throws YarnRemoteException {
     SubmitApplicationRequest request = recordFactory
             .newRecordInstance(SubmitApplicationRequest.class);
@@ -406,7 +406,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetNewApplication() throws YarnRemoteException {
     GetNewApplicationRequest request = recordFactory
             .newRecordInstance(GetNewApplicationRequest.class);
@@ -441,7 +441,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetClusterMetrics() throws YarnRemoteException {
     GetClusterMetricsRequest request = recordFactory
             .newRecordInstance(GetClusterMetricsRequest.class);
@@ -476,7 +476,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testGetApplicationReport() throws YarnRemoteException {
     GetApplicationReportRequest request = recordFactory
             .newRecordInstance(GetApplicationReportRequest.class);
@@ -511,7 +511,7 @@ public class TestClientRMProtocolPBClientImpl {
    * should be   result != null or YarnRemoteException or   UndeclaredThrowableException
    */
 
-  @Test(timeout = 100)
+  @Test
   public void testForceKillApplication() throws YarnRemoteException {
     KillApplicationRequest request = recordFactory
             .newRecordInstance(KillApplicationRequest.class);
@@ -544,7 +544,7 @@ public class TestClientRMProtocolPBClientImpl {
   /**
    * test the method key in ApplicationConstants.Environment enum. This method should return enums name.
    */
-  @Test(timeout = 100)
+  @Test
   public void testApplicationConstants() {
     ApplicationConstants.Environment env = ApplicationConstants.Environment.PATH;
     assertEquals("PATH", env.key());
