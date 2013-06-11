@@ -116,7 +116,7 @@ public class TestWebAppProxyServlet {
    * Test the proxy servlet. Test an answers in different situations.
    * 
    */
-  @Test (timeout=10000)
+  @Test
   public void testWebAppProxyServlet() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -168,7 +168,7 @@ public class TestWebAppProxyServlet {
    * Test simple start/ stop WebAppProxyServer. server should listen the 9098
    * port
    */
-  @Test (timeout=1000)
+  @Test
   public void testWebAppProxyServer() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -195,7 +195,7 @@ public class TestWebAppProxyServlet {
   /**
    * Test main method of WebAppProxyServer
    */
-  @Test (timeout=10000)
+  @Test
   public void testWebAppProxyServerMainMethod() throws Exception {
     try {
       Thread thread = new Thread(new Runnable() {
