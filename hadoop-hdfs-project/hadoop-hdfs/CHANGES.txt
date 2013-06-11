@@ -23,6 +23,8 @@ Release 2.2.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
+                via cmccabe)
 
 Release 2.1.0-beta - UNRELEASED
 
@@ -854,6 +856,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4877. Snapshot: fix the scenario where a directory is renamed under 
     its prior descendant. (jing9)
+
+    HDFS-4873. callGetBlockLocations returns incorrect number of blocks for 
+    snapshotted files. (jing9)
 
 Release 2.0.5-alpha - 06/06/2013
 
