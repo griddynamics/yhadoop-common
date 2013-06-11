@@ -37,13 +37,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnRuntimeException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -307,7 +307,7 @@ public class TestWebAppProxyServlet {
         System.out.println("port:" + port);
       } catch (Exception e) {
         LOG.fatal("Could not start proxy web server", e);
-        throw new YarnException("Could not start proxy web server", e);
+        throw new YarnRuntimeException("Could not start proxy web server", e);
       }
     }
 
@@ -326,7 +326,7 @@ public class TestWebAppProxyServlet {
     }
 
     public ApplicationReport getApplicationReport(ApplicationId appId)
-        throws YarnRemoteException {
+        throws YarnException {
       if (answer == 0) {
         return getDefaultApplicationReport(appId);
       } else if (answer == 1) {
