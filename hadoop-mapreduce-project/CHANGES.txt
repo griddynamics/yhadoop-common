@@ -395,6 +395,9 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5315.  DistCp reports success even on failure. (mithun and jlowe
     via daryn)
 
+    MAPREDUCE-5259. TestTaskLog fails on Windows because of path separators
+    missmatch. (Ivan Mitic via cnauroth)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
@@ -429,6 +432,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-724. (Jian He via vinodkv)
 
     MAPREDUCE-5312. TestRMNMInfo is failing. (sandyr via tucu)
+
+    MAPREDUCE-5304. mapreduce.Job killTask/failTask/getTaskCompletionEvents 
+    methods have incompatible signature changes. (kkambatl via tucu)
 
 Release 2.0.5-alpha - 06/06/2013
 
