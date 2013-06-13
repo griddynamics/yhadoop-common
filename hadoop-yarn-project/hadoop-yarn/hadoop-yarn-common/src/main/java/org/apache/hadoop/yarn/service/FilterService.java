@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.service;
 
 import org.apache.hadoop.conf.Configuration;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 public class FilterService implements Service {
 
   private final Service service;
@@ -45,13 +49,18 @@ public class FilterService implements Service {
   }
 
   @Override
-  public void register(ServiceStateChangeListener listener) {
-    service.register(listener);
+  public void close() throws IOException {
+    service.close();
   }
 
   @Override
-  public void unregister(ServiceStateChangeListener listener) {
-    service.unregister(listener);
+  public void registerServiceListener(ServiceStateChangeListener listener) {
+    service.registerServiceListener(listener);
+  }
+
+  @Override
+  public void unregisterServiceListener(ServiceStateChangeListener listener) {
+    service.unregisterServiceListener(listener);
   }
 
   @Override
@@ -72,5 +81,35 @@ public class FilterService implements Service {
   @Override
   public long getStartTime() {
     return startTime;
+  }
+
+  @Override
+  public boolean isInState(STATE state) {
+    return service.isInState(state);
+  }
+
+  @Override
+  public Throwable getFailureCause() {
+    return service.getFailureCause();
+  }
+
+  @Override
+  public STATE getFailureState() {
+    return service.getFailureState();
+  }
+
+  @Override
+  public boolean waitForServiceToStop(long timeout) {
+    return service.waitForServiceToStop(timeout);
+  }
+
+  @Override
+  public List<LifecycleEvent> getLifecycleHistory() {
+    return service.getLifecycleHistory();
+  }
+
+  @Override
+  public Map<String, String> getBlockers() {
+    return service.getBlockers();
   }
 }
