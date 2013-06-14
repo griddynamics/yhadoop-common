@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -56,6 +55,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
@@ -147,7 +148,8 @@ public class TestNodeStatusUpdater {
 
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
-      response.setMasterKey(createMasterKey());
+      response.setContainerTokenMasterKey(createMasterKey());
+      response.setNMTokenMasterKey(createMasterKey());
       return response;
     }
 
@@ -251,7 +253,8 @@ public class TestNodeStatusUpdater {
       }
 
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
-          newNodeHeartbeatResponse(heartBeatID, null, null, null, null, 1000L);
+          newNodeHeartbeatResponse(heartBeatID, null, null, null, null, null,
+            1000L);
       return nhResponse;
     }
   }
@@ -447,7 +450,8 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction );
-      response.setMasterKey(createMasterKey());
+      response.setContainerTokenMasterKey(createMasterKey());
+      response.setNMTokenMasterKey(createMasterKey());
       response.setDiagnosticsMessage(shutDownMessage);
       return response;
     }
@@ -459,7 +463,7 @@ public class TestNodeStatusUpdater {
       
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
           newNodeHeartbeatResponse(heartBeatID, heartBeatNodeAction, null,
-              null, null, 1000L);
+              null, null, null, 1000L);
       nhResponse.setDiagnosticsMessage(shutDownMessage);
       return nhResponse;
     }
@@ -485,7 +489,8 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response =
           recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction);
-      response.setMasterKey(createMasterKey());
+      response.setContainerTokenMasterKey(createMasterKey());
+      response.setNMTokenMasterKey(createMasterKey());
       return response;
     }
 
@@ -497,7 +502,7 @@ public class TestNodeStatusUpdater {
       nodeStatus.setResponseId(heartBeatID++);
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
           newNodeHeartbeatResponse(heartBeatID, heartBeatNodeAction, null,
-              null, null, 1000L);
+              null, null, null, 1000L);
 
       if (nodeStatus.getKeepAliveApplications() != null
           && nodeStatus.getKeepAliveApplications().size() > 0) {
@@ -536,7 +541,8 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction);
-      response.setMasterKey(createMasterKey());
+      response.setContainerTokenMasterKey(createMasterKey());
+      response.setNMTokenMasterKey(createMasterKey());
       return response;
     }
 
@@ -616,7 +622,7 @@ public class TestNodeStatusUpdater {
           YarnServerBuilderUtils.newNodeHeartbeatResponse(heartBeatID,
                                                           heartBeatNodeAction,
                                                           null, null, null,
-                                                          1000L);
+                                                          null, 1000L);
       return nhResponse;
     }
   }
@@ -631,8 +637,8 @@ public class TestNodeStatusUpdater {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
       response.setNodeAction(registerNodeAction );
-      response.setMasterKey(createMasterKey());
-
+      response.setContainerTokenMasterKey(createMasterKey());
+      response.setNMTokenMasterKey(createMasterKey());
       return response;
     }
     
@@ -1004,10 +1010,11 @@ public class TestNodeStatusUpdater {
 
       @Override
       protected NMContext createNMContext(
-          NMContainerTokenSecretManager containerTokenSecretManager) {
-        return new MyNMContext(containerTokenSecretManager);
+          NMContainerTokenSecretManager containerTokenSecretManager,
+          NMTokenSecretManagerInNM nmTokenSecretManager) {
+        return new MyNMContext(containerTokenSecretManager,
+          nmTokenSecretManager);
       }
-
     };
 
     YarnConfiguration conf = createNMConfig();
@@ -1052,9 +1059,10 @@ public class TestNodeStatusUpdater {
     ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
-    public MyNMContext(NMContainerTokenSecretManager
-        containerTokenSecretManager) {
-      super(containerTokenSecretManager);
+    public MyNMContext(
+        NMContainerTokenSecretManager containerTokenSecretManager,
+        NMTokenSecretManagerInNM nmTokenSecretManager) {
+      super(containerTokenSecretManager, nmTokenSecretManager);
     }
 
     @Override
