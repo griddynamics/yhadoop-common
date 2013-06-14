@@ -23,12 +23,12 @@ Release 2.2.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-    HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
-                via cmccabe)
 
 Release 2.1.0-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+    HDFS-4053. Increase the default block size. (eli)
 
     HDFS-4305. Add a configurable limit on number of blocks per file, and min
     block size. (Andrew Wang via atm)
@@ -71,6 +71,8 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
     (Junping Du via szetszwo)
+
+    HDFS-4659 Support setting execution bit for regular files (Brandon Li via sanjay)
 
   IMPROVEMENTS
 
@@ -154,12 +156,21 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4698. Provide client-side metrics for remote reads, local reads, and
     short-circuit reads. (Colin Patrick McCabe via atm)
 
+    HDFS-3498. Support replica removal in BlockPlacementPolicy and make
+    BlockPlacementPolicyDefault extensible for reusing code in subclasses.
+    (Junping Du via szetszwo)
+
     HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
     HDFS-4880. Print the image and edits file loaded by the namenode in the
     logs. (Arpit Agarwal via suresh)
 
     HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
+
+    HDFS-2857. Cleanup BlockInfo class. (suresh)
+
+    HDFS-3009. Remove duplicate code in DFSClient#isLocalAddress by using 
+    NetUtils. (Hari Mankude via suresh)
 
   OPTIMIZATIONS
 
@@ -357,6 +368,15 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4586. TestDataDirs.testGetDataDirsFromURIs fails with all directories
     in dfs.datanode.data.dir are invalid. (Ivan Mitic via atm)
+
+    HDFS-3792. Fix two findbugs introduced by HDFS-3695 (todd)
+
+    HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
+                via cmccabe)
+
+    HDFS-3163. TestHDFSCLI.testAll fails if the user name is not all lowercase.
+    (Brandon Li via atm)
+
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
@@ -1110,13 +1130,7 @@ Release 2.0.3-alpha - 2013-02-06
 
     HDFS-4456. Add concat to HttpFS and WebHDFS REST API docs. (plamenj2003 via tucu)
 
-    HDFS-4053. Increase the default block size. (eli)
-
     HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
-
-    HDFS-3498. Support replica removal in BlockPlacementPolicy and make
-    BlockPlacementPolicyDefault extensible for reusing code in subclasses.
-    (Junping Du via szetszwo)
 
   OPTIMIZATIONS
 
