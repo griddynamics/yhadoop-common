@@ -15,11 +15,18 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-package org.apache.hadoop.yarn;
 
-public class SystemClock implements Clock {
+package org.apache.hadoop.yarn.util;
 
-  public long getTime() {
-    return System.currentTimeMillis();
-  }
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+
+/**
+ * A simple clock interface that gives you time.
+ */
+@Public
+@Stable
+public interface Clock {
+
+  long getTime();
 }
