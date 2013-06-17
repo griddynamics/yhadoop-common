@@ -15,21 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.service;
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
+package org.apache.hadoop.yarn.webapp.hamlet;
+import org.apache.hadoop.classification.InterfaceAudience;
 
-import java.io.Serializable;
-
-/**
- * A serializable lifecycle event: the time a state
- * transition occurred, and what state was entered.
- */
-public class LifecycleEvent implements Serializable {
-  /**
-   * Local time in milliseconds when the event occurred
-   */
-  public long time;
-  /**
-   * new state
-   */
-  public Service.STATE state;
-}
