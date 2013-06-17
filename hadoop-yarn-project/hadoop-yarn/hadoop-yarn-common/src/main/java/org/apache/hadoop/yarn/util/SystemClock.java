@@ -15,10 +15,20 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+package org.apache.hadoop.yarn.util;
 
-package org.apache.hadoop.yarn;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 
-public interface Clock {
+/**
+ * Implementation of {@link Clock} that gives the current time from the system
+ * clock in milliseconds.
+ */
+@Public
+@Stable
+public class SystemClock implements Clock {
 
-  long getTime();
+  public long getTime() {
+    return System.currentTimeMillis();
+  }
 }
