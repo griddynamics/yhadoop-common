@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -42,8 +42,8 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -76,7 +76,7 @@ import org.apache.hadoop.yarn.util.Records;
  * {@link #stopContainer}.
  * </p>
  */
-public class NMClientImpl extends AbstractService implements NMClient {
+public class NMClientImpl extends NMClient {
 
   private static final Log LOG = LogFactory.getLog(NMClientImpl.class);
 
@@ -160,7 +160,7 @@ public class NMClientImpl extends AbstractService implements NMClient {
     private ContainerId containerId;
     private NodeId nodeId;
     private Token containerToken;
-    private ContainerManager containerManager;
+    private ContainerManagementProtocol containerManager;
 
     public NMCommunicator(ContainerId containerId, NodeId nodeId,
         Token containerToken) {
@@ -186,10 +186,10 @@ public class NMClientImpl extends AbstractService implements NMClient {
       currentUser.addToken(token);
 
       containerManager = currentUser
-          .doAs(new PrivilegedAction<ContainerManager>() {
+          .doAs(new PrivilegedAction<ContainerManagementProtocol>() {
             @Override
-            public ContainerManager run() {
-              return (ContainerManager) rpc.getProxy(ContainerManager.class,
+            public ContainerManagementProtocol run() {
+              return (ContainerManagementProtocol) rpc.getProxy(ContainerManagementProtocol.class,
                   containerAddress, getConfig());
             }
           });
