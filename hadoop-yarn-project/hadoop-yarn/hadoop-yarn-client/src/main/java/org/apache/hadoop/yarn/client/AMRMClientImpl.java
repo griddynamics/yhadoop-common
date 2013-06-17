@@ -43,7 +43,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -64,18 +64,15 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.RackResolver;
 
-import com.google.common.base.Joiner;
-
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 
 // TODO check inputs for null etc. YARN-654
 
 @Unstable
-public class AMRMClientImpl<T extends ContainerRequest> 
-                          extends AbstractService implements AMRMClient<T> {
+public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
   private static final Log LOG = LogFactory.getLog(AMRMClientImpl.class);
   
@@ -85,7 +82,7 @@ public class AMRMClientImpl<T extends ContainerRequest>
   private int lastResponseId = 0;
   private ConcurrentHashMap<String, Token> nmTokens;
 
-  protected AMRMProtocol rmClient;
+  protected ApplicationMasterProtocol rmClient;
   protected final ApplicationAttemptId appAttemptId;  
   protected Resource clusterAvailableResources;
   protected int clusterNodeCount;
@@ -185,10 +182,10 @@ public class AMRMClientImpl<T extends ContainerRequest>
     }
 
     // CurrentUser should already have AMToken loaded.
-    rmClient = currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
+    rmClient = currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
       @Override
-      public AMRMProtocol run() {
-        return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rmAddress,
+      public ApplicationMasterProtocol run() {
+        return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rmAddress,
             conf);
       }
     });
