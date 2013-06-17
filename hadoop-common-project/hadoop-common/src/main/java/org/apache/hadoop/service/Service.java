@@ -16,8 +16,10 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.service;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.Closeable;
@@ -28,6 +30,8 @@ import java.util.Map;
 /**
  * Service LifeCycle.
  */
+@Public
+@Evolving
 public interface Service extends Closeable {
 
   /**
