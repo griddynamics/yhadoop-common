@@ -155,6 +155,11 @@ Release 2.1.0-beta - UNRELEASED
     YARN-829. Renamed RMTokenSelector to be RMDelegationTokenSelector. (Zhijie
     Shen via vinodkv)
 
+    YARN-828. Removed the unsed YarnVersionAnnotation. (Zhijie Shen via vinodkv)
+
+    YARN-823. Moved RMAdmin from yarn.client to yarn.client.cli and renamed it to
+    be RMAdminCLI. (Jian He via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -366,6 +371,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-693. Modified RM to send NMTokens on allocate call so that AMs can then
     use them for authentication with NMs. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-752. In AMRMClient, automatically add corresponding rack requests for 
+    requested nodes. (sandyr via tucu)
 
   OPTIMIZATIONS
 
