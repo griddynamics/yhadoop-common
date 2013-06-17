@@ -140,6 +140,18 @@ Release 2.1.0-beta - UNRELEASED
     YARN-823. Moved RMAdmin from yarn.client to yarn.client.cli and renamed it to
     be RMAdminCLI. (Jian He via vinodkv)
 
+    YARN-387. Renamed YARN protocols for consistency.
+    ClientRMProtocol -> ApplicationClientProtocol
+    AMRMProtocol -> ApplicationMasterProtocol
+    ContainerManager -> ContainerManagementProtocol
+    (vinodkv via acmurthy)
+
+    YARN-831. Removed minimum resource from GetNewApplicationResponse as a
+    follow-up to YARN-787. (Jian He via acmurthy)
+
+    YARN-824. Added static factory methods to hadoop-yarn-client interfaces. 
+    (Jian He via acmurthy)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
