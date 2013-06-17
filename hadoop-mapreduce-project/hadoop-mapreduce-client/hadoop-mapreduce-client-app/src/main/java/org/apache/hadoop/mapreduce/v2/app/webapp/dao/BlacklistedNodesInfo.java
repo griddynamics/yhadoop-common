@@ -15,14 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api;
+package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
-import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.yarn.proto.RMAdminProtocol.RMAdminProtocolService;
+import java.util.Set;
 
-@ProtocolInfo(
-    protocolName = "org.apache.hadoop.yarn.api.RMAdminProtocolPB",
-    protocolVersion = 1)
-public interface RMAdminProtocolPB extends RMAdminProtocolService.BlockingInterface {
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
+
+@XmlRootElement(name = "blacklistednodesinfo")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class BlacklistedNodesInfo {
+  private Set<String> blacklistedNodes;
+  
+  public BlacklistedNodesInfo() { }
+  
+  public BlacklistedNodesInfo(AppContext appContext) {
+    blacklistedNodes = appContext.getBlacklistedNodes();
+  }
+  
+  public Set<String> getBlacklistedNodes() {
+    return blacklistedNodes;
+  }
 }

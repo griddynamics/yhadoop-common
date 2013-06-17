@@ -36,7 +36,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -83,7 +83,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
 @SuppressWarnings("unchecked")
 @Private
 public class ApplicationMasterService extends AbstractService implements
-    AMRMProtocol {
+    ApplicationMasterProtocol {
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
@@ -117,7 +117,7 @@ public class ApplicationMasterService extends AbstractService implements
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
     this.server =
-      rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
+      rpc.getServer(ApplicationMasterProtocol.class, this, masterServiceAddress,
           conf, this.rmContext.getApplicationTokenSecretManager(),
           conf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
@@ -210,8 +210,6 @@ public class ApplicationMasterService extends AbstractService implements
       // Pick up min/max resource from scheduler...
       RegisterApplicationMasterResponse response = recordFactory
           .newRecordInstance(RegisterApplicationMasterResponse.class);
-      response.setMinimumResourceCapability(rScheduler
-          .getMinimumResourceCapability());
       response.setMaximumResourceCapability(rScheduler
           .getMaximumResourceCapability());
       response.setApplicationACLs(app.getRMAppAttempt(applicationAttemptId)
@@ -373,6 +371,12 @@ public class ApplicationMasterService extends AbstractService implements
       // add preemption to the allocateResponse message (if any)
       allocateResponse.setPreemptionMessage(generatePreemptionMessage(allocation));
       
+      // Adding NMTokens for allocated containers.
+      if (!allocation.getContainers().isEmpty()) {
+        allocateResponse.setNMTokens(rmContext.getNMTokenSecretManager()
+            .getNMTokens(app.getUser(), appAttemptId,
+                allocation.getContainers()));
+      }
       return allocateResponse;
     }
   }
@@ -433,12 +437,15 @@ public class ApplicationMasterService extends AbstractService implements
     AllocateResponse response =
         recordFactory.newRecordInstance(AllocateResponse.class);
     response.setResponseId(0);
-    LOG.info("Registering " + attemptId);
+    LOG.info("Registering app attempt : " + attemptId);
     responseMap.put(attemptId, response);
+    rmContext.getNMTokenSecretManager().registerApplicationAttempt(attemptId);
   }
 
   public void unregisterAttempt(ApplicationAttemptId attemptId) {
+    LOG.info("Unregistering app attempt : " + attemptId);
     responseMap.remove(attemptId);
+    rmContext.getNMTokenSecretManager().unregisterApplicationAttempt(attemptId);
   }
 
   public void refreshServiceAcls(Configuration configuration, 

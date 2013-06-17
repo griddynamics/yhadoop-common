@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.yarn.ClusterInfo;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -94,8 +94,8 @@ public class TestLocalContainerAllocator {
     }
 
     @Override
-    protected AMRMProtocol createSchedulerProxy() {
-      AMRMProtocol scheduler = mock(AMRMProtocol.class);
+    protected ApplicationMasterProtocol createSchedulerProxy() {
+      ApplicationMasterProtocol scheduler = mock(ApplicationMasterProtocol.class);
       try {
         when(scheduler.allocate(isA(AllocateRequest.class)))
           .thenThrow(RPCUtil.getRemoteException(new IOException("forcefail")));
@@ -117,8 +117,7 @@ public class TestLocalContainerAllocator {
       when(ctx.getApplicationAttemptId()).thenReturn(attemptId);
       when(ctx.getJob(isA(JobId.class))).thenReturn(job);
       when(ctx.getClusterInfo()).thenReturn(
-        new ClusterInfo(Resource.newInstance(1024, 1), Resource.newInstance(
-          10240, 1)));
+        new ClusterInfo(Resource.newInstance(10240, 1)));
       when(ctx.getEventHandler()).thenReturn(eventHandler);
       return ctx;
     }

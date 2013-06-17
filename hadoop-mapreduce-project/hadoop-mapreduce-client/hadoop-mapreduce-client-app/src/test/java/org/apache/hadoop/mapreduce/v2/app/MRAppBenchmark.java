@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -194,8 +194,8 @@ public class MRAppBenchmark {
           ClientService clientService, AppContext context) {
         return new RMContainerAllocator(clientService, context) {
           @Override
-          protected AMRMProtocol createSchedulerProxy() {
-            return new AMRMProtocol() {
+          protected ApplicationMasterProtocol createSchedulerProxy() {
+            return new ApplicationMasterProtocol() {
 
               @Override
               public RegisterApplicationMasterResponse
@@ -204,8 +204,6 @@ public class MRAppBenchmark {
                       throws IOException {
                 RegisterApplicationMasterResponse response =
                     Records.newRecord(RegisterApplicationMasterResponse.class);
-                response.setMinimumResourceCapability(Resource.newInstance(
-                  1024, 1));
                 response.setMaximumResourceCapability(Resource.newInstance(
                   10240, 1));
                 return response;

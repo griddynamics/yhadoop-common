@@ -23,7 +23,7 @@ import java.util.List;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -44,19 +44,19 @@ public class MockAM {
   private volatile int responseId = 0;
   private final ApplicationAttemptId attemptId;
   private final RMContext context;
-  private AMRMProtocol amRMProtocol;
+  private ApplicationMasterProtocol amRMProtocol;
 
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
   private final List<ContainerId> releases = new ArrayList<ContainerId>();
 
-  MockAM(RMContext context, AMRMProtocol amRMProtocol,
+  MockAM(RMContext context, ApplicationMasterProtocol amRMProtocol,
       ApplicationAttemptId attemptId) {
     this.context = context;
     this.amRMProtocol = amRMProtocol;
     this.attemptId = attemptId;
   }
   
-  void setAMRMProtocol(AMRMProtocol amRMProtocol) {
+  void setAMRMProtocol(ApplicationMasterProtocol amRMProtocol) {
     this.amRMProtocol = amRMProtocol;
   }
 
@@ -65,12 +65,12 @@ public class MockAM {
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
     int timeoutSecs = 0;
     while (!finalState.equals(attempt.getAppAttemptState())
-        && timeoutSecs++ < 20) {
+        && timeoutSecs++ < 40) {
       System.out
           .println("AppAttempt : " + attemptId + " State is : " 
               + attempt.getAppAttemptState()
               + " Waiting for state : " + finalState);
-      Thread.sleep(500);
+      Thread.sleep(1000);
     }
     System.out.println("AppAttempt State is : " + attempt.getAppAttemptState());
     Assert.assertEquals("AppAttempt state is not correct (timedout)",

@@ -74,7 +74,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -1329,8 +1329,7 @@ public class TestRMContainerAllocator {
       when(context.getApplicationAttemptId()).thenReturn(appAttemptId);
       when(context.getJob(isA(JobId.class))).thenReturn(job);
       when(context.getClusterInfo()).thenReturn(
-        new ClusterInfo(Resource.newInstance(1024, 1), Resource.newInstance(
-          10240, 1)));
+        new ClusterInfo(Resource.newInstance(10240, 1)));
       when(context.getEventHandler()).thenReturn(new EventHandler() {
         @Override
         public void handle(Event event) {
@@ -1388,7 +1387,7 @@ public class TestRMContainerAllocator {
     }
 
     @Override
-    protected AMRMProtocol createSchedulerProxy() {
+    protected ApplicationMasterProtocol createSchedulerProxy() {
       return this.rm.getApplicationMasterService();
     }
 
@@ -1601,8 +1600,8 @@ public class TestRMContainerAllocator {
           protected void register() {
           }
           @Override
-          protected AMRMProtocol createSchedulerProxy() {
-            return mock(AMRMProtocol.class);
+          protected ApplicationMasterProtocol createSchedulerProxy() {
+            return mock(ApplicationMasterProtocol.class);
           }
           @Override
           protected synchronized void heartbeat() throws Exception {

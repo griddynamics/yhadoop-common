@@ -16,27 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The request from clients to get a report of all nodes
- * in the cluster from the <code>ResourceManager</code>.</p>
- *
- * <p>Currently, this is empty.</p>
- *
- * @see ApplicationClientProtocol#getClusterNodes(GetClusterNodesRequest) 
+ * NMToken is returned by RM on AllocateResponse.
  */
-@Public
-@Stable
-public abstract class GetClusterNodesRequest {
-  public static GetClusterNodesRequest newInstance() {
-    GetClusterNodesRequest request =
-        Records.newRecord(GetClusterNodesRequest.class);
-    return request;
+public abstract class NMToken {
+
+  @Public
+  @Stable
+  public abstract NodeId getNodeId();
+  
+  @Public
+  @Stable
+  public abstract void setNodeId(NodeId nodeId);
+  
+  @Public
+  @Stable
+  public abstract Token getToken();
+  
+  @Public
+  @Stable
+  public abstract void setToken(Token token);
+  
+  @Private
+  public static NMToken newInstance(NodeId nodeId, Token token) {
+    NMToken nmToken = Records.newRecord(NMToken.class);
+    nmToken.setNodeId(nodeId);
+    nmToken.setToken(token);
+    return nmToken;
   }
 }
