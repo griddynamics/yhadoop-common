@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,14 +25,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
- * This is the base implementation class for YARN services.
+ * This is the base implementation class for services.
  */
+@Public
+@Evolving
 public abstract class AbstractService implements Service {
 
   private static final Log LOG = LogFactory.getLog(AbstractService.class);

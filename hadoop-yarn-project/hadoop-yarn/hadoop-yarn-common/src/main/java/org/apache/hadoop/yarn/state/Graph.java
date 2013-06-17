@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.util;
+package org.apache.hadoop.yarn.state;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 
+@Private
 public class Graph {
   public class Edge {
     Node from;
