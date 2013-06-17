@@ -16,15 +16,19 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.yarn.service;
+package org.apache.hadoop.service;
 
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * Exception that is raised on state change operations.
  */
-public class ServiceStateException extends YarnRuntimeException {
+@Public
+@Evolving
+public class ServiceStateException extends RuntimeException {
+
+  private static final long serialVersionUID = 1110000352259232646L;
 
   public ServiceStateException(String message) {
     super(message);
@@ -40,9 +44,8 @@ public class ServiceStateException extends YarnRuntimeException {
 
   /**
    * Convert any exception into a {@link RuntimeException}.
-   * If the caught exception already is of that type -including
-   * a {@link YarnException} it is typecast to a {@link RuntimeException}
-   * and returned.
+   * If the caught exception is already of that type, it is typecast to a
+   * {@link RuntimeException} and returned.
    *
    * All other exception types are wrapped in a new instance of
    * ServiceStateException
@@ -59,9 +62,8 @@ public class ServiceStateException extends YarnRuntimeException {
 
   /**
    * Convert any exception into a {@link RuntimeException}.
-   * If the caught exception already is of that type -including
-   * a {@link YarnException} it is typecast to a {@link RuntimeException}
-   * and returned.
+   * If the caught exception is already of that type, it is typecast to a
+   * {@link RuntimeException} and returned.
    *
    * All other exception types are wrapped in a new instance of
    * ServiceStateException
