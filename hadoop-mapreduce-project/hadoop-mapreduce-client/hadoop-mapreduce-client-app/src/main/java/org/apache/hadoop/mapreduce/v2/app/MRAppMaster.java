@@ -127,7 +127,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -884,9 +885,12 @@ public class MRAppMaster extends CompositeService {
     private final Map<JobId, Job> jobs = new ConcurrentHashMap<JobId, Job>();
     private final Configuration conf;
     private final ClusterInfo clusterInfo = new ClusterInfo();
+    private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
 
     public RunningAppContext(Configuration config) {
       this.conf = config;
+      this.clientToAMTokenSecretManager =
+          new ClientToAMTokenSecretManager(appAttemptID, null);
     }
 
     @Override
@@ -942,6 +946,11 @@ public class MRAppMaster extends CompositeService {
     @Override
     public Set<String> getBlacklistedNodes() {
       return ((RMContainerRequestor) containerAllocator).getBlacklistedNodes();
+    }
+    
+    @Override
+    public ClientToAMTokenSecretManager getClientToAMTokenSecretManager() {
+      return clientToAMTokenSecretManager;
     }
   }
 
@@ -1380,7 +1389,7 @@ public class MRAppMaster extends CompositeService {
     Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
     while (iter.hasNext()) {
       Token<?> token = iter.next();
-      if (token.getKind().equals(ApplicationTokenIdentifier.KIND_NAME)) {
+      if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
         iter.remove();
       }
     }
