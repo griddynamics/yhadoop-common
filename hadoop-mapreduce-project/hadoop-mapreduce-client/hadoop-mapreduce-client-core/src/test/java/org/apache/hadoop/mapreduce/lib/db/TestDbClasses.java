@@ -40,7 +40,7 @@ public class TestDbClasses {
    * test splitters from DataDrivenDBInputFormat. For different data types may
    * be different splitter
    */
-  @Test(timeout = 1000)
+  @Test
   public void testDataDrivenDBInputFormatSplitter() {
     DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<NullDBWritable>();
     assertEquals(BigDecimalSplitter.class, format.getSplitter(Types.DECIMAL)
@@ -82,7 +82,7 @@ public class TestDbClasses {
    * test DataDrivenDBInputFormat and his splitters.
    */
 
-  @Test(timeout = 1000)
+  @Test
   public void testDataDrivenDBInputFormat() throws Exception {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
@@ -117,7 +117,7 @@ public class TestDbClasses {
    * test OracleDataDrivenDBInputFormat class. Small change in a split
    * generation and record reader.
    */
-  @Test(timeout = 1000)
+  @Test
   public void testOracleDataDrivenDBInputFormat() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -137,7 +137,7 @@ public class TestDbClasses {
    * test generate sql script for OracleDBRecordReader.
    */
 
-  @Test(timeout = 2000)
+  @Test
   public void testOracleDBRecordReader() throws Exception {
     DBInputSplit splitter = new DBInputSplit(1, 10);
     Configuration configuration = new Configuration();

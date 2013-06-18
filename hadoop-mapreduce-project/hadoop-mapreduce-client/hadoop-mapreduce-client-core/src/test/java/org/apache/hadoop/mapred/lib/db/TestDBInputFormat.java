@@ -40,7 +40,7 @@ public class TestDBInputFormat {
  * test DBInputFormat class. Class should split result for chunks
  * @throws Exception
  */
-  @Test(timeout = 10000)
+  @Test
   public void testDBInputFormat() throws Exception {
 
     JobConf configuration = new JobConf();
@@ -71,7 +71,7 @@ public class TestDBInputFormat {
 /** 
  * test configuration for db. should works DBConfiguration.* parameters. 
  */
-  @Test (timeout = 5000)
+  @Test
   public void testSetInput() {
     JobConf configuration = new JobConf();
 
@@ -127,7 +127,7 @@ public class TestDBInputFormat {
    * test DBRecordReader. This reader should creates keys, values, know about position.. 
    */
   @SuppressWarnings("unchecked")
-  @Test (timeout = 5000)
+  @Test
   public void testDBRecordReader() throws Exception {
 
     JobConf job = mock(JobConf.class);

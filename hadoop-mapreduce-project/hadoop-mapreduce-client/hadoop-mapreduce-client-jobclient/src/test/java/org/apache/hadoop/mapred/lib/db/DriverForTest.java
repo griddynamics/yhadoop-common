@@ -18,10 +18,17 @@
 package org.apache.hadoop.mapred.lib.db;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverPropertyInfo;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 /**
  * class emulates a connection to database
  *
@@ -35,8 +42,28 @@ public class DriverForTest implements Driver {
 
   @Override
   public Connection connect(String arg0, Properties arg1) throws SQLException {
+    Connection connection= mock(Connection.class);
+    
+    Statement statement= mock(Statement.class);
+    ResultSet results =mock(ResultSet.class);
+    when(results.getLong(1)).thenReturn(15L);
+    when(statement.executeQuery(any(String.class))).thenReturn(results);
+    when(connection.createStatement()).thenReturn(statement);
 
-    return new ConnectionForTest();
+    DatabaseMetaData metadata =mock(DatabaseMetaData.class);
+    when(metadata.getDatabaseProductName()).thenReturn("Test");
+    when(connection.getMetaData()).thenReturn(metadata);
+    
+    when(connection.prepareStatement(anyString())).thenReturn(mock(PreparedStatement.class));
+    
+    PreparedStatement preparedStatement= mock(PreparedStatement.class);
+    ResultSet resultSet = mock(ResultSet.class);
+    when( resultSet.next()).thenReturn(false);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    
+    when(connection.prepareStatement(anyString(), anyInt(), anyInt())).thenReturn(preparedStatement);
+    
+    return connection;
   }
 
   @Override
