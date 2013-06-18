@@ -74,8 +74,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
@@ -180,9 +180,10 @@ public class ClientServiceDelegate {
           serviceAddr = NetUtils.createSocketAddrForHost(
               application.getHost(), application.getRpcPort());
           if (UserGroupInformation.isSecurityEnabled()) {
-            org.apache.hadoop.yarn.api.records.Token clientToken = application.getClientToken();
-            Token<ClientTokenIdentifier> token =
-                ProtoUtils.convertFromProtoFormat(clientToken, serviceAddr);
+            org.apache.hadoop.yarn.api.records.Token clientToAMToken =
+                application.getClientToAMToken();
+            Token<ClientToAMTokenIdentifier> token =
+                ConverterUtils.convertFromYarn(clientToAMToken, serviceAddr);
             newUgi.addToken(token);
           }
           LOG.debug("Connecting to " + serviceAddr);

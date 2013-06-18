@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -33,8 +35,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 
+@Private
+@Unstable
 public class ApplicationReportPBImpl extends ApplicationReport {
   ApplicationReportProto proto = ApplicationReportProto.getDefaultInstance();
   ApplicationReportProto.Builder builder = null;
@@ -42,7 +45,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
 
   private ApplicationId applicationId;
   private ApplicationAttemptId currentApplicationAttemptId;
-  private Token clientToken = null;
+  private Token clientToAMToken = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -160,16 +163,16 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
-  public Token getClientToken() {
+  public Token getClientToAMToken() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.clientToken != null) {
-      return this.clientToken;
+    if (this.clientToAMToken != null) {
+      return this.clientToAMToken;
     }
-    if (!p.hasClientToken()) {
+    if (!p.hasClientToAmToken()) {
       return null;
     }
-    this.clientToken = convertFromProtoFormat(p.getClientToken());
-    return this.clientToken;
+    this.clientToAMToken = convertFromProtoFormat(p.getClientToAmToken());
+    return this.clientToAMToken;
   }
 
   @Override
@@ -309,11 +312,11 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
-  public void setClientToken(Token clientToken) {
+  public void setClientToAMToken(Token clientToAMToken) {
     maybeInitBuilder();
-    if (clientToken == null) 
-      builder.clearClientToken();
-    this.clientToken = clientToken;
+    if (clientToAMToken == null) 
+      builder.clearClientToAmToken();
+    this.clientToAMToken = clientToAMToken;
   }
 
   @Override
@@ -412,10 +415,10 @@ public class ApplicationReportPBImpl extends ApplicationReport {
             builder.getCurrentApplicationAttemptId())) {
       builder.setCurrentApplicationAttemptId(convertToProtoFormat(this.currentApplicationAttemptId));
     }
-    if (this.clientToken != null
-        && !((TokenPBImpl) this.clientToken).getProto().equals(
-            builder.getClientToken())) {
-      builder.setClientToken(convertToProtoFormat(this.clientToken));
+    if (this.clientToAMToken != null
+        && !((TokenPBImpl) this.clientToAMToken).getProto().equals(
+            builder.getClientToAmToken())) {
+      builder.setClientToAmToken(convertToProtoFormat(this.clientToAMToken));
     }
   }
 

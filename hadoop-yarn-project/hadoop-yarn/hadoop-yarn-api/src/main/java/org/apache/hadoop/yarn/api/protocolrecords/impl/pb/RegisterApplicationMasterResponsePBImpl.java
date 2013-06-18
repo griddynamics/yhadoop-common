@@ -19,22 +19,29 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+
+import com.google.protobuf.ByteString;
 
 
+@Private
+@Unstable
 public class RegisterApplicationMasterResponsePBImpl extends
     RegisterApplicationMasterResponse {
   RegisterApplicationMasterResponseProto proto =
@@ -200,7 +207,23 @@ public class RegisterApplicationMasterResponsePBImpl extends
     this.applicationACLS.clear();
     this.applicationACLS.putAll(appACLs);
   }
-
+  
+  @Override
+  public void setClientToAMTokenMasterKey(ByteBuffer key) {
+    if (key == null) {
+      return;
+    }
+    maybeInitBuilder();
+    builder.setClientToAmTokenMasterKey(ByteString.copyFrom(key));
+  }
+  
+  @Override
+  public ByteBuffer getClientToAMTokenMasterKey() {
+    ByteBuffer key =
+        ByteBuffer.wrap(builder.getClientToAmTokenMasterKey().toByteArray());
+    return key;
+  }
+  
   private Resource convertFromProtoFormat(ResourceProto resource) {
     return new ResourcePBImpl(resource);
   }

@@ -48,8 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.client.YarnClient;
-import org.apache.hadoop.yarn.client.YarnClientImpl;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
@@ -388,8 +387,8 @@ public class UnmanagedAMLauncher {
 
       LOG.info("Got application report from ASM for" + ", appId="
           + appId.getId() + ", appAttemptId="
-          + report.getCurrentApplicationAttemptId() + ", clientToken="
-          + report.getClientToken() + ", appDiagnostics="
+          + report.getCurrentApplicationAttemptId() + ", clientToAMToken="
+          + report.getClientToAMToken() + ", appDiagnostics="
           + report.getDiagnostics() + ", appMasterHost=" + report.getHost()
           + ", appQueue=" + report.getQueue() + ", appMasterRpcPort="
           + report.getRpcPort() + ", appStartTime=" + report.getStartTime()

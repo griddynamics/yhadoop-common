@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -45,7 +46,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class RegisterApplicationMasterResponse {
-
+  @Private
+  @Unstable
   public static RegisterApplicationMasterResponse newInstance(
       Resource minCapability, Resource maxCapability,
       Map<ApplicationAccessType, String> acls) {
@@ -55,7 +57,7 @@ public abstract class RegisterApplicationMasterResponse {
     response.setApplicationACLs(acls);
     return response;
   }
-  
+
   /**
    * Get the maximum capability for any {@link Resource} allocated by the 
    * <code>ResourceManager</code> in the cluster.
@@ -84,4 +86,21 @@ public abstract class RegisterApplicationMasterResponse {
   @Private
   @Unstable
   public abstract void setApplicationACLs(Map<ApplicationAccessType, String> acls);
+
+  /**
+   * <p>Get ClientToAMToken master key.</p>
+   * <p>The ClientToAMToken master key is sent to <code>ApplicationMaster</code>
+   * by <code>ResourceManager</code> via {@link RegisterApplicationMasterResponse}
+   * , used to verify corresponding ClientToAMToken.</p>
+   */
+  @Public
+  @Stable
+  public abstract ByteBuffer getClientToAMTokenMasterKey();
+
+  /**
+   * Set ClientToAMToken master key.
+   */
+  @Public
+  @Stable
+  public abstract void setClientToAMTokenMasterKey(ByteBuffer key);
 }

@@ -23,6 +23,8 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -30,6 +32,8 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 
 import com.google.common.base.Joiner;
 
+@Public
+@Evolving
 public class YarnConfiguration extends Configuration {
 
   private static final Joiner JOINER = Joiner.on("");
@@ -274,10 +278,10 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_METRICS_RUNTIME_BUCKETS = 
     "60,300,1440";
 
-  public static final String RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS = RM_PREFIX
-      + "application-tokens.master-key-rolling-interval-secs";
+  public static final String RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS = RM_PREFIX
+      + "am-rm-tokens.master-key-rolling-interval-secs";
 
-  public static final long DEFAULT_RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
+  public static final long DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
       24 * 60 * 60;
 
   public static final String RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =

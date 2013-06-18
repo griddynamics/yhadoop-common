@@ -24,9 +24,6 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.Map;
 
-import javax.crypto.SecretKey;
-
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,14 +49,14 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * The launch of the AM itself.
@@ -138,7 +135,7 @@ public class AMLauncher implements Runnable {
         .createRemoteUser(containerId.toString());
     if (UserGroupInformation.isSecurityEnabled()) {
       Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(masterContainer
+          ConverterUtils.convertFromYarn(masterContainer
               .getContainerToken(), containerManagerBindAddress);
       currentUser.addToken(token);
     }
@@ -165,12 +162,12 @@ public class AMLauncher implements Runnable {
             new String[0])));
     
     // Finalize the container
-    setupTokensAndEnv(container, containerID);
+    setupTokens(container, containerID);
     
     return container;
   }
 
-  private void setupTokensAndEnv(
+  private void setupTokens(
       ContainerLaunchContext container, ContainerId containerID)
       throws IOException {
     Map<String, String> environment = container.getEnvironment();
@@ -201,24 +198,15 @@ public class AMLauncher implements Runnable {
       }
 
       // Add application token
-      Token<ApplicationTokenIdentifier> applicationToken =
-          application.getApplicationToken();
-      if(applicationToken != null) {
-        credentials.addToken(applicationToken.getService(), applicationToken);
+      Token<AMRMTokenIdentifier> amrmToken =
+          application.getAMRMToken();
+      if(amrmToken != null) {
+        credentials.addToken(amrmToken.getService(), amrmToken);
       }
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
       container.setTokens(ByteBuffer.wrap(dob.getData(), 0,
         dob.getLength()));
-
-      SecretKey clientSecretKey =
-          this.rmContext.getClientToAMTokenSecretManager().getMasterKey(
-            application.getAppAttemptId());
-      String encoded =
-          Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
-      environment.put(
-          ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME, 
-          encoded);
     }
   }
   
