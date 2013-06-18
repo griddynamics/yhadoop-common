@@ -23,8 +23,9 @@ import java.net.InetSocketAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.RMAdminProtocol;
-import org.apache.hadoop.yarn.api.impl.pb.client.RMAdminProtocolPBClientImpl;
+import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.api.impl.pb.client.ResourceManagerAdministrationProtocolPBClientImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshNodesRequest;
@@ -41,7 +42,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,7 +58,7 @@ public class TestRMAdminProtocolPBClientImpl {
   private final RecordFactory recordFactory = RecordFactoryProvider
           .getRecordFactory(null);
 
-  private static RMAdminProtocol client;
+  private static ResourceManagerAdministrationProtocol client;
 
   /**
    * Start resource manager server
@@ -93,7 +93,7 @@ public class TestRMAdminProtocolPBClientImpl {
     LOG.info("ResourceManager RMAdmin address: "
             + configuration.get(YarnConfiguration.RM_ADMIN_ADDRESS));
 
-    client = new RMAdminProtocolPBClientImpl(1L,
+    client = new ResourceManagerAdministrationProtocolPBClientImpl(1L,
             getProtocolAddress(configuration), configuration);
 
   }
