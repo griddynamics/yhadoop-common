@@ -126,6 +126,8 @@ Release 2.1.0-beta - UNRELEASED
     YARN-724. Moved ProtoBase from api.records to api.records.impl.pb. (Jian He
     via vinodkv)
 
+    YARN-759. Create Command enum in AllocateResponse (bikas)
+
     YARN-777. Removed unreferenced objects from .proto files. (Jian He via
     vinodkv) 
 
@@ -177,6 +179,12 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-837. Moved yarn.ClusterInfo into MapReduce project as it doesn't belong
     to YARN. (Zhijie Shen via vinodkv)
+
+    YARN-822. Renamed ApplicationToken to be AMRMToken, and similarly the
+    corresponding TokenSelector and SecretManager. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-610. ClientToken is no longer set in the environment of the Containers.
+    (Omkar Vinit Joshi via vinodkv)
 
   NEW FEATURES
 
@@ -635,6 +643,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
     via vinodkv)
+
+    YARN-839. TestContainerLaunch.testContainerEnvVariables fails on Windows.
+    (Chuan Liu via cnauroth)
 
     YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
     available vCores. (ywskycn via tucu) 
