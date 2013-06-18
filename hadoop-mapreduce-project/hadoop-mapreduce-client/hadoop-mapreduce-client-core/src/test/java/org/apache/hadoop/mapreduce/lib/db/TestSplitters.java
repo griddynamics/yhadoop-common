@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -51,7 +52,7 @@ public class TestSplitters {
   /**
    * test BooleanSplitter .
    */
-  @Test(timeout = 2000)
+  @Test
   public void testBooleanSplitter() throws Exception {
     BooleanSplitter splitter = new BooleanSplitter();
     Configuration configuration = new Configuration();
@@ -100,7 +101,7 @@ public class TestSplitters {
   /**
    * test FloatSplitter.
    */
-  @Test(timeout = 2000)
+  @Test
   public void testFloatSplitter() throws Exception {
     Configuration configuration = new Configuration();
     ResultSet result = mock(ResultSet.class);
@@ -130,7 +131,7 @@ public class TestSplitters {
   /**
    * test BigDecimalSplitter.
    */
-  @Test(timeout = 2000)
+  @Test
   public void testBigDecimalSplitter() throws Exception {
 
     BigDecimalSplitter splitter = new BigDecimalSplitter();
@@ -162,7 +163,7 @@ public class TestSplitters {
   /**
    * test IntegerSplitter
    */
-  @Test(timeout = 2000)
+  @Test
   public void testIntegerSplitter() throws Exception {
     IntegerSplitter splitter = new IntegerSplitter();
     Configuration configuration = new Configuration();
@@ -192,7 +193,7 @@ public class TestSplitters {
   /**
    * test TextSplitter
    */
-  @Test(timeout = 2000)
+  @Test
   public void testTextSplitter() throws Exception {
     TextSplitter splitter = new TextSplitter();
     Configuration configuration = new Configuration();
@@ -219,7 +220,7 @@ public class TestSplitters {
   /**
    * test OracleDateSplitter.
    */
-  @Test(timeout = 2000)
+  @Test
   public void testDBSplitter() throws Exception {
     OracleDataDrivenDBInputFormat<NullDBWritable> format = new OracleDataDrivenDBInputFormatForTest();
     assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP)
@@ -235,7 +236,7 @@ public class TestSplitters {
 
   }
 
-  @Test(timeout = 2000)
+  @Test
   public void testDateSplitter() throws Exception {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
@@ -315,8 +316,7 @@ public class TestSplitters {
 
     @Override
     public Connection getConnection() {
-
-      return new ConnectionForTest();
+        return FakeConnectionFactory.getConnection();
     }
 
   }

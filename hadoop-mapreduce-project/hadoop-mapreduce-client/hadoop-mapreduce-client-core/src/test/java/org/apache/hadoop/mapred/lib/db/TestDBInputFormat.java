@@ -30,7 +30,7 @@ import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBRecordReader;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.lib.db.ConnectionForTest;
+import org.apache.hadoop.mapreduce.lib.db.FakeConnectionFactory;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -137,7 +137,7 @@ public class TestDBInputFormat {
     @SuppressWarnings("rawtypes")
     DBRecordReader reader = new DBInputFormat<NullDBWritable>().new DBRecordReader(
         new DBInputSplit(),  NullDBWritable.class, job,
-        new ConnectionForTest(), dbConfig, "condition", fields, "table");
+        FakeConnectionFactory.getConnection(), dbConfig, "condition", fields, "table");
     LongWritable key = reader.createKey();
     assertEquals(0, key.get());
     DBWritable value = reader.createValue();
@@ -154,7 +154,9 @@ public class TestDBInputFormat {
 
     @Override
     public Connection getConnection() {
-      Connection result = new ConnectionForTest();
+
+      Connection result = FakeConnectionFactory.getConnection();
+      
       try {
         Field field = org.apache.hadoop.mapreduce.lib.db.DBInputFormat.class
             .getDeclaredField("connection");

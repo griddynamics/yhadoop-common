@@ -152,7 +152,7 @@ public class TestDbClasses {
   public void testOracleDBRecordReader() throws Exception {
     DBInputSplit splitter = new DBInputSplit(1, 10);
     Configuration configuration = new Configuration();
-    ConnectionForTest connect = new ConnectionForTest();
+    Connection connect = FakeConnectionFactory.getConnection();
 
     DBConfiguration dbConfiguration = new DBConfiguration(configuration);
     dbConfiguration.setInputOrderBy("Order");
@@ -164,7 +164,6 @@ public class TestDbClasses {
     assertEquals(
         "SELECT * FROM (SELECT a.*,ROWNUM dbif_rno FROM ( SELECT f1, f2 FROM table WHERE condition ORDER BY Order ) a WHERE rownum <= 1 + 9 ) WHERE dbif_rno >= 1",
         recorder.getSelectQuery());
-    assertEquals("GMT", connect.getSessionTimeZone());
 
   }
 private class DataDrivenDBInputFormatForTest extends DataDrivenDBInputFormat<NullDBWritable>{
@@ -180,7 +179,7 @@ private class DataDrivenDBInputFormatForTest extends DataDrivenDBInputFormat<Nul
 
   @Override
   public Connection getConnection() {
-    return new ConnectionForTest();
+    return FakeConnectionFactory.getConnection();
   }
   
 }
@@ -201,7 +200,7 @@ private class DataDrivenDBInputFormatForTest extends DataDrivenDBInputFormat<Nul
 
     @Override
     public Connection getConnection() {
-      return new ConnectionForTest();
+      return FakeConnectionFactory.getConnection();
     }
 
   }

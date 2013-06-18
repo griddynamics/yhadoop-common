@@ -42,7 +42,7 @@ public class TestConstructQuery {
 
   private DBOutputFormat<DBWritable, NullWritable> format = new DBOutputFormat<DBWritable, NullWritable>();
 
-  @Test(timeout = 2000)
+  @Test
   public void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);
     assertEquals(expected, actual);
@@ -51,7 +51,7 @@ public class TestConstructQuery {
     assertEquals(nullExpected, actual);
   }
 
-  @Test(timeout = 2000)
+  @Test
   public void testSetOutput() throws IOException {
     JobConf job = new JobConf();
     DBOutputFormat.setOutput(job, "hadoop_output", fieldNames);
@@ -77,7 +77,7 @@ public class TestConstructQuery {
   /**
    * test DBOutputFormat. Should works with DBRecordWriter.
    */
-  @Test(timeout = 2000)
+  @Test
   public void testGetRecordWriter() throws Exception {
     FileSystem fs = new RawLocalFileSystem();
     JobConf jobConf = new JobConf();
