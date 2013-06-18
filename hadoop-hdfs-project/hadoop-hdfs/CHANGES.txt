@@ -386,6 +386,8 @@ Release 2.1.0-beta - UNRELEASED
     HDFS-4845. FSNamesystem.deleteInternal should acquire write-lock before
     changing the inode map.  (Arpit Agarwal via szetszwo)
 
+    HDFS-4910. TestPermission failed in branch-2. (Chuan Liu via cnauroth)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
@@ -895,6 +897,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4902. DFSClient.getSnapshotDiffReport should use string path rather 
     than o.a.h.fs.Path. (Binglin Chang via jing9) 
+
+    HDFS-4875. Add a test for testing snapshot file length. 
+    (Arpit Agarwal via jing9)
 
 Release 2.0.5-alpha - 06/06/2013
 
