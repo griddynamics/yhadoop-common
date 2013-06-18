@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.client.cli.RMAdminCLI;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.AfterClass;
@@ -54,7 +55,7 @@ public class TestRMAdmin {
    */
   @Test
   public void testRefreshQueues() throws Exception {
-    RMAdmin test = new RMAdmin();
+    RMAdminCLI test = new RMAdminCLI();
     test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshQueues" };
     assertEquals(0, test.run(args));
@@ -70,7 +71,7 @@ public class TestRMAdmin {
    */
   @Test
   public void testRefreshUserToGroupsMappings() throws Exception {
-    RMAdmin test = new RMAdmin();
+    RMAdminCLI test = new RMAdminCLI();
     test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshUserToGroupsMappings" };
     assertEquals(0, test.run(args));
@@ -85,7 +86,7 @@ public class TestRMAdmin {
    */
   @Test
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
-    RMAdmin test = new RMAdmin();
+    RMAdminCLI test = new RMAdminCLI();
     test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshSuperUserGroupsConfiguration" };
     assertEquals(0, test.run(args));
@@ -100,7 +101,7 @@ public class TestRMAdmin {
    */
   @Test
   public void testRefreshAdminAcls() throws Exception {
-    RMAdmin test = new RMAdmin();
+    RMAdminCLI test = new RMAdminCLI();
     test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshAdminAcls" };
     assertEquals(0, test.run(args));
@@ -115,7 +116,7 @@ public class TestRMAdmin {
    */
   @Test
   public void testRefreshServiceAcl() throws Exception {
-    RMAdmin test = new RMAdmin();
+    RMAdminCLI test = new RMAdminCLI();
     test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshServiceAcl" };
     assertEquals(0, test.run(args));
@@ -131,7 +132,7 @@ public class TestRMAdmin {
   @Test
   public void testRefreshNodes() throws Exception {
 
-    RMAdmin test = new RMAdmin();
+    RMAdminCLI test = new RMAdminCLI();
     test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshNodes" };
     assertEquals(0, test.run(args));
@@ -145,7 +146,7 @@ public class TestRMAdmin {
   @Test
   public void testgetGroups() throws Exception {
 
-    RMAdmin test = new RMAdmin();
+    RMAdminCLI test = new RMAdminCLI();
     test.setConf(resourceManager.getConfig());
     String[] args = { "-getGroups","admin" };
     assertEquals(0, test.run(args));
@@ -167,7 +168,7 @@ public class TestRMAdmin {
     System.setErr(new PrintStream(dataErr));
     try {
       String[] args = { "-help" };
-      assertEquals(0, new RMAdmin().run(args));
+      assertEquals(0, new RMAdminCLI().run(args));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -258,7 +259,7 @@ public class TestRMAdmin {
           FakeRpcClientClassFactory.FakeRMAdminProtocol.ResultCode.
           RemoteException;
       String[] args = { "-refreshQueues" };
-      RMAdmin test = new RMAdmin();
+      RMAdminCLI test = new RMAdminCLI();
       Configuration configuration = resourceManager.getConfig();
       test.setConf(configuration);
 
@@ -285,7 +286,7 @@ public class TestRMAdmin {
 
   private void testError(String[] args, String template,
       ByteArrayOutputStream data, int resultCode) throws Exception {
-    assertEquals(resultCode, new RMAdmin().run(args));
+    assertEquals(resultCode, new RMAdminCLI().run(args));
     assertTrue(data.toString().contains(template));
     data.reset();
 

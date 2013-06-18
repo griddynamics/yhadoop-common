@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.RMAdminProtocol;
+import org.apache.hadoop.yarn.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RefreshNodesRequest;
@@ -72,7 +72,7 @@ public class FakeRpcClientClassFactory {
 
   }
 
-  public static class FakeRMAdminProtocol implements RMAdminProtocol {
+  public static class FakeRMAdminProtocol implements ResourceManagerAdministrationProtocol {
     public enum FunctionCall {
       refreshQueues, refreshNodes, refreshSuperUserGroupsConfiguration, 
       refreshUserToGroupsMappings,refreshAdminAcls, refreshServiceAcls,
