@@ -173,6 +173,9 @@ Release 2.1.0-beta - UNRELEASED
     YARN-840. Moved ProtoUtils to yarn.api.records.pb.impl. (Jian He via
     acmurthy) 
 
+    YARN-841. Move Auxiliary service to yarn-api, annotate and document it.
+    (vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -395,6 +398,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-805. Fix javadoc and annotations on classes in the yarn-api
     package. (Jian He via sseth)
+
+    YARN-846.  Move pb Impl classes from yarn-api to yarn-common. (Jian He via
+    vinodkv)
 
   OPTIMIZATIONS
 
@@ -639,6 +645,9 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
     available vCores. (ywskycn via tucu) 
+
+    YARN-799. Fix CgroupsLCEResourcesHandler to use /tasks instead of
+    /cgroup.procs. (Chris Riccomini via acmurthy) 
 
 Release 2.0.5-alpha - 06/06/2013
 
