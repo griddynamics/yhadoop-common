@@ -239,7 +239,7 @@ public class TestSplitters {
     @Override
     public Connection getConnection() {
       
-      return new ConnectionForTest();
+      return  DriverForTest.getConnection();
     }
 
 
