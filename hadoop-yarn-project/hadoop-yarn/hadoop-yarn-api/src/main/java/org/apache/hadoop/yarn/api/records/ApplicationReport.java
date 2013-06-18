@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.util.Records;
  *     <li>{@link YarnApplicationState} of the application.</li>
  *     <li>Diagnostic information in case of errors.</li>
  *     <li>Start time of the application.</li>
- *     <li>Client token of the application (if security is enabled).</li>
+ *     <li>Client {@link Token} of the application (if security is enabled).</li>
  *   </ul>
  * </p>
  *
@@ -51,10 +51,10 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class ApplicationReport {
 
   @Private
-  @Stable
+  @Unstable
   public static ApplicationReport newInstance(ApplicationId applicationId,
       ApplicationAttemptId applicationAttemptId, String user, String queue,
-      String name, String host, int rpcPort, Token clientToken,
+      String name, String host, int rpcPort, Token clientToAMToken,
       YarnApplicationState state, String diagnostics, String url,
       long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
@@ -67,7 +67,7 @@ public abstract class ApplicationReport {
     report.setName(name);
     report.setHost(host);
     report.setRpcPort(rpcPort);
-    report.setClientToken(clientToken);
+    report.setClientToAMToken(clientToAMToken);
     report.setYarnApplicationState(state);
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
@@ -98,8 +98,8 @@ public abstract class ApplicationReport {
    * attempt of the application
    * @return <code>ApplicationAttemptId</code> of the attempt
    */
-  @Private
-  @Unstable
+  @Public
+  @Stable
   public abstract ApplicationAttemptId getCurrentApplicationAttemptId();
   
   @Private
@@ -172,13 +172,13 @@ public abstract class ApplicationReport {
    * Get the <em>client token</em> for communicating with the
    * <code>ApplicationMaster</code>.
    * <p>
-   * <code>ClientToken</code> is the security token used by the AMs to verify
+   * <em>ClientToAMToken</em> is the security token used by the AMs to verify
    * authenticity of any <code>client</code>.
    * </p>
    *
    * <p>
    * The <code>ResourceManager</code>, provides a secure token (via
-   * {@link ApplicationReport#getClientToken()}) which is verified by the
+   * {@link ApplicationReport#getClientToAMToken()}) which is verified by the
    * ApplicationMaster when the client directly talks to an AM.
    * </p>
    * @return <em>client token</em> for communicating with the
@@ -186,11 +186,11 @@ public abstract class ApplicationReport {
    */
   @Public
   @Stable
-  public abstract Token getClientToken();
+  public abstract Token getClientToAMToken();
 
   @Private
   @Unstable
-  public abstract void setClientToken(Token clientToken);
+  public abstract void setClientToAMToken(Token clientToAMToken);
 
   /**
    * Get the <code>YarnApplicationState</code> of the application.
