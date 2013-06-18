@@ -118,7 +118,7 @@ public class ApplicationMasterService extends AbstractService implements
 
     this.server =
       rpc.getServer(ApplicationMasterProtocol.class, this, masterServiceAddress,
-          conf, this.rmContext.getApplicationTokenSecretManager(),
+          conf, this.rmContext.getAMRMTokenSecretManager(),
           conf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
     
@@ -214,6 +214,12 @@ public class ApplicationMasterService extends AbstractService implements
           .getMaximumResourceCapability());
       response.setApplicationACLs(app.getRMAppAttempt(applicationAttemptId)
           .getSubmissionContext().getAMContainerSpec().getApplicationACLs());
+      if (UserGroupInformation.isSecurityEnabled()) {
+        LOG.info("Setting client token master key");
+        response.setClientToAMTokenMasterKey(java.nio.ByteBuffer.wrap(rmContext
+            .getClientToAMTokenSecretManager()
+            .getMasterKey(applicationAttemptId).getEncoded()));        
+      }
       return response;
     }
   }
