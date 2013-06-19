@@ -79,6 +79,9 @@ Release 2.1.0-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4461. DirectoryScanner: volume path prefix takes up memory for every
+    block that is scanned (Colin Patrick McCabe)
+
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
     configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
 
@@ -393,6 +396,9 @@ Release 2.1.0-beta - UNRELEASED
 
     HDFS-4906. HDFS Output streams should not accept writes after being
     closed. (atm)
+
+    HDFS-4917. Start-dfs.sh cannot pass the parameters correctly.
+    (Fengdong Yu via suresh)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
