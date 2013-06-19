@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-public interface RefreshServiceAclsRequest {
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.util.Records;
 
+@Public
+@Stable
+public abstract class RefreshServiceAclsRequest {
+  @Public
+  @Stable
+  public static RefreshServiceAclsRequest newInstance() {
+    RefreshServiceAclsRequest request =
+        Records.newRecord(RefreshServiceAclsRequest.class);
+    return request;
+  }
 }

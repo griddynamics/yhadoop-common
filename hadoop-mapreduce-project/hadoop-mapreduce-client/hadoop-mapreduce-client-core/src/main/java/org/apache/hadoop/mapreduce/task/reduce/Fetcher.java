@@ -72,7 +72,7 @@ class Fetcher<K,V> extends Thread {
   private final Counters.Counter wrongMapErrs;
   private final Counters.Counter wrongReduceErrs;
   private final MergeManager<K,V> merger;
-  private final ShuffleScheduler<K,V> scheduler;
+  private final ShuffleSchedulerImpl<K,V> scheduler;
   private final ShuffleClientMetrics metrics;
   private final ExceptionReporter exceptionReporter;
   private final int id;
@@ -82,25 +82,36 @@ class Fetcher<K,V> extends Thread {
   private final int connectionTimeout;
   private final int readTimeout;
   
-  private final SecretKey jobTokenSecret;
+  private final SecretKey shuffleSecretKey;
 
+  protected HttpURLConnection connection;
   private volatile boolean stopped = false;
 
   private static boolean sslShuffle;
   private static SSLFactory sslFactory;
 
   public Fetcher(JobConf job, TaskAttemptID reduceId, 
-                 ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
+                 ShuffleSchedulerImpl<K,V> scheduler, MergeManager<K,V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
-                 ExceptionReporter exceptionReporter, SecretKey jobTokenSecret) {
+                 ExceptionReporter exceptionReporter, SecretKey shuffleKey) {
+    this(job, reduceId, scheduler, merger, reporter, metrics,
+        exceptionReporter, shuffleKey, ++nextId);
+  }
+
+  @VisibleForTesting
+  Fetcher(JobConf job, TaskAttemptID reduceId, 
+                 ShuffleSchedulerImpl<K,V> scheduler, MergeManager<K,V> merger,
+                 Reporter reporter, ShuffleClientMetrics metrics,
+                 ExceptionReporter exceptionReporter, SecretKey shuffleKey,
+                 int id) {
     this.reporter = reporter;
     this.scheduler = scheduler;
     this.merger = merger;
     this.metrics = metrics;
     this.exceptionReporter = exceptionReporter;
-    this.id = ++nextId;
+    this.id = id;
     this.reduce = reduceId.getTaskID().getId();
-    this.jobTokenSecret = jobTokenSecret;
+    this.shuffleSecretKey = shuffleKey;
     ioErrs = reporter.getCounter(SHUFFLE_ERR_GRP_NAME,
         ShuffleErrors.IO_ERROR.toString());
     wrongLengthErrs = reporter.getCounter(SHUFFLE_ERR_GRP_NAME,
@@ -166,6 +177,15 @@ class Fetcher<K,V> extends Thread {
     }
   }
 
+  @Override
+  public void interrupt() {
+    try {
+      closeConnection();
+    } finally {
+      super.interrupt();
+    }
+  }
+
   public void shutDown() throws InterruptedException {
     this.stopped = true;
     interrupt();
@@ -180,7 +200,8 @@ class Fetcher<K,V> extends Thread {
   }
 
   @VisibleForTesting
-  protected HttpURLConnection openConnection(URL url) throws IOException {
+  protected synchronized void openConnection(URL url)
+      throws IOException {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     if (sslShuffle) {
       HttpsURLConnection httpsConn = (HttpsURLConnection) conn;
@@ -191,9 +212,24 @@ class Fetcher<K,V> extends Thread {
       }
       httpsConn.setHostnameVerifier(sslFactory.getHostnameVerifier());
     }
-    return conn;
+    connection = conn;
   }
-  
+
+  protected synchronized void closeConnection() {
+    // Note that HttpURLConnection::disconnect() doesn't trash the object.
+    // connect() attempts to reconnect in a loop, possibly reversing this
+    if (connection != null) {
+      connection.disconnect();
+    }
+  }
+
+  private void abortConnect(MapHost host, Set<TaskAttemptID> remaining) {
+    for (TaskAttemptID left : remaining) {
+      scheduler.putBackKnownMapOutput(host, left);
+    }
+    closeConnection();
+  }
+
   /**
    * The crux of the matter...
    * 
@@ -220,16 +256,19 @@ class Fetcher<K,V> extends Thread {
     Set<TaskAttemptID> remaining = new HashSet<TaskAttemptID>(maps);
     
     // Construct the url and connect
-    DataInputStream input;
-    boolean connectSucceeded = false;
-    
+    DataInputStream input = null;
     try {
       URL url = getMapOutputURL(host, maps);
-      HttpURLConnection connection = openConnection(url);
+      openConnection(url);
+      if (stopped) {
+        abortConnect(host, remaining);
+        return;
+      }
       
       // generate hash of the url
       String msgToEncode = SecureShuffleUtils.buildMsgFrom(url);
-      String encHash = SecureShuffleUtils.hashFromString(msgToEncode, jobTokenSecret);
+      String encHash = SecureShuffleUtils.hashFromString(msgToEncode,
+          shuffleSecretKey);
       
       // put url hash into http header
       connection.addRequestProperty(
@@ -237,7 +276,11 @@ class Fetcher<K,V> extends Thread {
       // set the read timeout
       connection.setReadTimeout(readTimeout);
       connect(connection, connectionTimeout);
-      connectSucceeded = true;
+      // verify that the thread wasn't stopped during calls to connect
+      if (stopped) {
+        abortConnect(host, remaining);
+        return;
+      }
       input = new DataInputStream(connection.getInputStream());
 
       // Validate response code
@@ -255,7 +298,7 @@ class Fetcher<K,V> extends Thread {
       }
       LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
       // verify that replyHash is HMac of encHash
-      SecureShuffleUtils.verifyReply(replyHash, encHash, jobTokenSecret);
+      SecureShuffleUtils.verifyReply(replyHash, encHash, shuffleSecretKey);
       LOG.info("for url="+msgToEncode+" sent hash and received reply");
     } catch (IOException ie) {
       boolean connectExcpt = ie instanceof ConnectException;
@@ -265,18 +308,10 @@ class Fetcher<K,V> extends Thread {
 
       // If connect did not succeed, just mark all the maps as failed,
       // indirectly penalizing the host
-      if (!connectSucceeded) {
-        for(TaskAttemptID left: remaining) {
-          scheduler.copyFailed(left, host, connectSucceeded, connectExcpt);
-        }
-      } else {
-        // If we got a read error at this stage, it implies there was a problem
-        // with the first map, typically lost map. So, penalize only that map
-        // and add the rest
-        TaskAttemptID firstMap = maps.get(0);
-        scheduler.copyFailed(firstMap, host, connectSucceeded, connectExcpt);
+      for(TaskAttemptID left: remaining) {
+        scheduler.copyFailed(left, host, false, connectExcpt);
       }
-      
+     
       // Add back all the remaining maps, WITHOUT marking them as failed
       for(TaskAttemptID left: remaining) {
         scheduler.putBackKnownMapOutput(host, left);
@@ -301,15 +336,19 @@ class Fetcher<K,V> extends Thread {
           scheduler.copyFailed(left, host, true, false);
         }
       }
-      
-      IOUtils.cleanup(LOG, input);
-      
+
       // Sanity check
       if (failedTasks == null && !remaining.isEmpty()) {
         throw new IOException("server didn't return all expected map outputs: "
             + remaining.size() + " left.");
       }
+      input.close();
+      input = null;
     } finally {
+      if (input != null) {
+        IOUtils.cleanup(LOG, input);
+        input = null;
+      }
       for (TaskAttemptID left : remaining) {
         scheduler.putBackKnownMapOutput(host, left);
       }
@@ -366,13 +405,20 @@ class Fetcher<K,V> extends Thread {
         return EMPTY_ATTEMPT_ID_ARRAY;
       } 
       
-      // Go!
-      LOG.info("fetcher#" + id + " about to shuffle output of map " + 
-               mapOutput.getMapId() + " decomp: " +
-               decompressedLength + " len: " + compressedLength + " to " +
-               mapOutput.getDescription());
-      mapOutput.shuffle(host, input, compressedLength, decompressedLength,
-                        metrics, reporter);
+      // The codec for lz0,lz4,snappy,bz2,etc. throw java.lang.InternalError
+      // on decompression failures. Catching and re-throwing as IOException
+      // to allow fetch failure logic to be processed
+      try {
+        // Go!
+        LOG.info("fetcher#" + id + " about to shuffle output of map "
+            + mapOutput.getMapId() + " decomp: " + decompressedLength
+            + " len: " + compressedLength + " to " + mapOutput.getDescription());
+        mapOutput.shuffle(host, input, compressedLength, decompressedLength,
+            metrics, reporter);
+      } catch (java.lang.InternalError e) {
+        LOG.warn("Failed to shuffle for fetcher#"+id, e);
+        throw new IOException(e);
+      }
       
       // Inform the shuffle scheduler
       long endTime = System.currentTimeMillis();

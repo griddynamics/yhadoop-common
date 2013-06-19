@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +40,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -58,9 +60,9 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
-import org.apache.hadoop.yarn.client.YarnClientImpl;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -73,7 +75,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <p>This client is meant to act as an example on how to write yarn-based applications. </p>
  * 
  * <p> To submit an application, a client first needs to connect to the <code>ResourceManager</code> 
- * aka ApplicationsManager or ASM via the {@link ClientRMProtocol}. The {@link ClientRMProtocol} 
+ * aka ApplicationsManager or ASM via the {@link ApplicationClientProtocol}. The {@link ApplicationClientProtocol} 
  * provides a way for the client to get access to cluster information and to request for a
  * new {@link ApplicationId}. <p>
  * 
@@ -97,13 +99,13 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class Client extends YarnClientImpl {
+public class Client {
 
   private static final Log LOG = LogFactory.getLog(Client.class);
 
   // Configuration
   private Configuration conf;
-
+  private YarnClient yarnClient;
   // Application master specific info to register a new Application with RM/ASM
   private String appName = "";
   // App master priority
@@ -184,9 +186,10 @@ public class Client extends YarnClientImpl {
   /**
    */
   public Client(Configuration conf) throws Exception  {
-    super();
+    
     this.conf = conf;
-    init(conf);
+    yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(conf);
     opts = new Options();
     opts.addOption("appname", true, "Application Name. Default value - DistributedShell");
     opts.addOption("priority", true, "Application Priority. Default 0");
@@ -310,28 +313,28 @@ public class Client extends YarnClientImpl {
    * Main run function for the client
    * @return true if application completed successfully
    * @throws IOException
+   * @throws YarnException
    */
-  public boolean run() throws IOException {
+  public boolean run() throws IOException, YarnException {
 
     LOG.info("Running Client");
-    start();
+    yarnClient.start();
 
-    YarnClusterMetrics clusterMetrics = super.getYarnClusterMetrics();
+    YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
     LOG.info("Got Cluster metric info from ASM" 
         + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
 
-    List<NodeReport> clusterNodeReports = super.getNodeReports();
+    List<NodeReport> clusterNodeReports = yarnClient.getNodeReports();
     LOG.info("Got Cluster node info from ASM");
     for (NodeReport node : clusterNodeReports) {
       LOG.info("Got node report from ASM for"
           + ", nodeId=" + node.getNodeId() 
           + ", nodeAddress" + node.getHttpAddress()
           + ", nodeRackName" + node.getRackName()
-          + ", nodeNumContainers" + node.getNumContainers()
-          + ", nodeHealthStatus" + node.getNodeHealthStatus());
+          + ", nodeNumContainers" + node.getNumContainers());
     }
 
-    QueueInfo queueInfo = super.getQueueInfo(this.amQueue);		
+    QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
     LOG.info("Queue info"
         + ", queueName=" + queueInfo.getQueueName()
         + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
@@ -339,7 +342,7 @@ public class Client extends YarnClientImpl {
         + ", queueApplicationCount=" + queueInfo.getApplications().size()
         + ", queueChildQueueCount=" + queueInfo.getChildQueues().size());		
 
-    List<QueueUserACLInfo> listAclInfo = super.getQueueAclsInfo();				
+    List<QueueUserACLInfo> listAclInfo = yarnClient.getQueueAclsInfo();
     for (QueueUserACLInfo aclInfo : listAclInfo) {
       for (QueueACL userAcl : aclInfo.getUserAcls()) {
         LOG.info("User ACL Info for Queue"
@@ -349,7 +352,7 @@ public class Client extends YarnClientImpl {
     }		
 
     // Get a new application id 
-    GetNewApplicationResponse newApp = super.getNewApplication();
+    GetNewApplicationResponse newApp = yarnClient.getNewApplication();
     ApplicationId appId = newApp.getApplicationId();
 
     // TODO get min/max resource capabilities from RM and change memory ask if needed
@@ -357,21 +360,11 @@ public class Client extends YarnClientImpl {
     // the required resources from the RM for the app master
     // Memory ask has to be a multiple of min and less than max. 
     // Dump out information about cluster capability as seen by the resource manager
-    int minMem = newApp.getMinimumResourceCapability().getMemory();
     int maxMem = newApp.getMaximumResourceCapability().getMemory();
-    LOG.info("Min mem capabililty of resources in this cluster " + minMem);
     LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
 
-    // A resource ask has to be atleast the minimum of the capability of the cluster, the value has to be 
-    // a multiple of the min value and cannot exceed the max. 
-    // If it is not an exact multiple of min, the RM will allocate to the nearest multiple of min
-    if (amMemory < minMem) {
-      LOG.info("AM memory specified below min threshold of cluster. Using min value."
-          + ", specified=" + amMemory
-          + ", min=" + minMem);
-      amMemory = minMem; 
-    } 
-    else if (amMemory > maxMem) {
+    // A resource ask cannot exceed the max. 
+    if (amMemory > maxMem) {
       LOG.info("AM memory specified above max threshold of cluster. Using max value."
           + ", specified=" + amMemory
           + ", max=" + maxMem);
@@ -481,14 +474,15 @@ public class Client extends YarnClientImpl {
     // It should be provided out of the box. 
     // For now setting all required classpaths including
     // the classpath to "." for the application jar
-    StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
+    StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$())
+      .append(File.pathSeparatorChar).append("./*");
     for (String c : conf.getStrings(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-      classPathEnv.append(':');
+      classPathEnv.append(File.pathSeparatorChar);
       classPathEnv.append(c.trim());
     }
-    classPathEnv.append(":./log4j.properties");
+    classPathEnv.append(File.pathSeparatorChar).append("./log4j.properties");
 
     // add the runtime classpath needed for tests to work
     if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
@@ -505,7 +499,7 @@ public class Client extends YarnClientImpl {
 
     // Set java executable command 
     LOG.info("Setting up app master command");
-    vargs.add("${JAVA_HOME}" + "/bin/java");
+    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
     // Set Xmx based on am memory size
     vargs.add("-Xmx" + amMemory + "m");
     // Set class name 
@@ -545,7 +539,7 @@ public class Client extends YarnClientImpl {
     // For now, only memory is supported so we set memory requirements
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(amMemory);
-    amContainer.setResource(capability);
+    appContext.setResource(capability);
 
     // Service data is a binary blob that can be passed to the application
     // Not needed in this scenario
@@ -570,7 +564,8 @@ public class Client extends YarnClientImpl {
     // Ignore the response as either a valid response object is returned on success 
     // or an exception thrown to denote some form of a failure
     LOG.info("Submitting application to ASM");
-    super.submitApplication(appContext);
+
+    yarnClient.submitApplication(appContext);
 
     // TODO
     // Try submitting the same request again
@@ -586,9 +581,11 @@ public class Client extends YarnClientImpl {
    * Kill application if time expires. 
    * @param appId Application Id of application to be monitored
    * @return true if application completed successfully
-   * @throws YarnRemoteException
+   * @throws YarnException
+   * @throws IOException
    */
-  private boolean monitorApplication(ApplicationId appId) throws YarnRemoteException {
+  private boolean monitorApplication(ApplicationId appId)
+      throws YarnException, IOException {
 
     while (true) {
 
@@ -600,11 +597,11 @@ public class Client extends YarnClientImpl {
       }
 
       // Get application report for the appId we are interested in 
-      ApplicationReport report = super.getApplicationReport(appId);
+      ApplicationReport report = yarnClient.getApplicationReport(appId);
 
       LOG.info("Got application report from ASM for"
           + ", appId=" + appId.getId()
-          + ", clientToken=" + report.getClientToken()
+          + ", clientToAMToken=" + report.getClientToAMToken()
           + ", appDiagnostics=" + report.getDiagnostics()
           + ", appMasterHost=" + report.getHost()
           + ", appQueue=" + report.getQueue()
@@ -649,16 +646,18 @@ public class Client extends YarnClientImpl {
   /**
    * Kill a submitted application by sending a call to the ASM
    * @param appId Application Id to be killed. 
-   * @throws YarnRemoteException
+   * @throws YarnException
+   * @throws IOException
    */
-  private void forceKillApplication(ApplicationId appId) throws YarnRemoteException {
+  private void forceKillApplication(ApplicationId appId)
+      throws YarnException, IOException {
     // TODO clarify whether multiple jobs with the same app id can be submitted and be running at 
     // the same time. 
     // If yes, can we kill a particular attempt only?
 
     // Response can be ignored as it is non-null on success or 
     // throws an exception in case of failures
-    super.killApplication(appId);	
+    yarnClient.killApplication(appId);	
   }
 
 }

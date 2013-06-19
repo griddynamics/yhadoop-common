@@ -75,10 +75,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -166,8 +167,9 @@ public class TestRMAppAttemptTransitions {
     rmContext =
         new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-          null, new ApplicationTokenSecretManager(conf),
+          null, new AMRMTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
+          new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
     
     RMStateStore store = mock(RMStateStore.class);
@@ -194,25 +196,26 @@ public class TestRMAppAttemptTransitions {
     
 
     ApplicationId applicationId = MockApps.newAppID(appId++);
-    ApplicationAttemptId applicationAttemptId = 
-        MockApps.newAppAttemptID(applicationId, 0);
+    ApplicationAttemptId applicationAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, 0);
     
     final String user = MockApps.newUserName();
     final String queue = MockApps.newQueue();
     submissionContext = mock(ApplicationSubmissionContext.class);
-    when(submissionContext.getUser()).thenReturn(user);
     when(submissionContext.getQueue()).thenReturn(queue);
-    ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
-    Resource resource = mock(Resource.class);
-    when(amContainerSpec.getResource()).thenReturn(resource);
+    Resource resource = BuilderUtils.newResource(1536, 1);
+    ContainerLaunchContext amContainerSpec =
+        BuilderUtils.newContainerLaunchContext(null, null,
+            null, null, null, null);
     when(submissionContext.getAMContainerSpec()).thenReturn(amContainerSpec);
-    
+    when(submissionContext.getResource()).thenReturn(resource);
+
     unmanagedAM = false;
     
     application = mock(RMApp.class);
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttemptId, rmContext, scheduler,
-          masterService, submissionContext, new Configuration());
+          masterService, submissionContext, new Configuration(), user);
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
     
@@ -329,7 +332,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
     verify(scheduler, times(expectedAllocateCount)).
     allocate(any(ApplicationAttemptId.class), 
-        any(List.class), any(List.class));
+        any(List.class), any(List.class), any(List.class), any(List.class));
 
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
@@ -344,6 +347,7 @@ public class TestRMAppAttemptTransitions {
   /**
    * {@link RMAppAttemptState#ALLOCATED}
    */
+  @SuppressWarnings("unchecked")
   private void testAppAttemptAllocatedState(Container amContainer) {
     assertEquals(RMAppAttemptState.ALLOCATED, 
         applicationAttempt.getAppAttemptState());
@@ -353,7 +357,9 @@ public class TestRMAppAttemptTransitions {
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).
         allocate(
-            any(ApplicationAttemptId.class), any(List.class), any(List.class));
+            any(
+                ApplicationAttemptId.class), any(List.class), any(List.class), 
+                any(List.class), any(List.class));
   }
   
   /**
@@ -464,19 +470,24 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptScheduledState();
   }
 
+  @SuppressWarnings("unchecked")
   private Container allocateApplicationAttempt() {
     scheduleApplicationAttempt();
     
     // Mock the allocation of AM container 
     Container container = mock(Container.class);
+    Resource resource = BuilderUtils.newResource(2048, 1);
     when(container.getId()).thenReturn(
         BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
+    when(container.getResource()).thenReturn(resource);
     Allocation allocation = mock(Allocation.class);
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
     when(
         scheduler.allocate(
             any(ApplicationAttemptId.class), 
+            any(List.class), 
+            any(List.class), 
             any(List.class), 
             any(List.class))).
     thenReturn(allocation);

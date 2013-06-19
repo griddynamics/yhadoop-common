@@ -20,16 +20,13 @@ package org.apache.hadoop.mapreduce.v2;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -37,14 +34,14 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.JarFinder;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
-import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.service.Service;
 
 /**
  * Configures and starts the MR-specific components in the YARN cluster.
@@ -70,12 +67,21 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   }
 
   @Override
-  public void init(Configuration conf) {
+  public void serviceInit(Configuration conf) throws Exception {
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     if (conf.get(MRJobConfig.MR_AM_STAGING_DIR) == null) {
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
           "apps_staging_dir/").getAbsolutePath());
     }
+
+    // By default, VMEM monitoring disabled, PMEM monitoring enabled.
+    if (!conf.getBoolean(
+        MRConfig.MAPREDUCE_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
+        MRConfig.DEFAULT_MAPREDUCE_MINICLUSTER_CONTROL_RESOURCE_MONITORING)) {
+      conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+      conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+    }
+
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,  "000");
 
     try {
@@ -94,7 +100,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
       Path doneDirPath = fc.makeQualified(new Path(doneDir));
       fc.mkdir(doneDirPath, null, true);
     } catch (IOException e) {
-      throw new YarnException("Could not create staging directory. ", e);
+      throw new YarnRuntimeException("Could not create staging directory. ", e);
     }
     conf.set(MRConfig.MASTER_ADDRESS, "test"); // The default is local because of
                                              // which shuffle doesn't happen
@@ -115,7 +121,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     // for corresponding uberized tests.
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
 
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   private class JobHistoryServerWrapper extends AbstractService {
@@ -124,7 +130,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     }
 
     @Override
-    public synchronized void start() {
+    public synchronized void serviceStart() throws Exception {
       try {
         if (!getConfig().getBoolean(
             JHAdminConfig.MR_HISTORY_MINICLUSTER_FIXED_PORTS,
@@ -150,9 +156,9 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         if (historyServer.getServiceState() != STATE.STARTED) {
           throw new IOException("HistoryServer failed to start");
         }
-        super.start();
+        super.serviceStart();
       } catch (Throwable t) {
-        throw new YarnException(t);
+        throw new YarnRuntimeException(t);
       }
       //need to do this because historyServer.init creates a new Configuration
       getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
@@ -171,11 +177,11 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     }
 
     @Override
-    public synchronized void stop() {
+    public synchronized void serviceStop() throws Exception {
       if (historyServer != null) {
         historyServer.stop();
       }
-      super.stop();
+      super.serviceStop();
     }
   }
 

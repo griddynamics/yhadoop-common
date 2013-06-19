@@ -20,7 +20,8 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The request from clients to get a report of all Applications
@@ -28,9 +29,16 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  *
  * <p>Currently, this is empty.</p>
  * 
- * @see ClientRMProtocol#getAllApplications(GetAllApplicationsRequest)
+ * @see ApplicationClientProtocol#getAllApplications(GetAllApplicationsRequest)
  */
 @Public
 @Stable
-public interface GetAllApplicationsRequest {
+public abstract class GetAllApplicationsRequest {
+  @Public
+  @Stable
+  public static GetAllApplicationsRequest newInstance() {
+    GetAllApplicationsRequest request =
+        Records.newRecord(GetAllApplicationsRequest.class);
+    return request;
+  }
 }

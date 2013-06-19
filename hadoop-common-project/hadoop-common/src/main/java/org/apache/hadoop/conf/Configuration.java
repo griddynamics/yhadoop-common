@@ -737,6 +737,21 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return value.trim();
     }
   }
+  
+  /**
+   * Get the value of the <code>name</code> property as a trimmed <code>String</code>, 
+   * <code>defaultValue</code> if no such property exists. 
+   * See @{Configuration#getTrimmed} for more details.
+   * 
+   * @param name          the property name.
+   * @param defaultValue  the property default value.
+   * @return              the value of the <code>name</code> or defaultValue
+   *                      if it is not set.
+   */
+  public String getTrimmed(String name, String defaultValue) {
+    String ret = getTrimmed(name);
+    return ret == null ? defaultValue : ret;
+  }
 
   /**
    * Get the value of the <code>name</code> property, without doing
@@ -871,7 +886,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     return result;
   }
-    
+
   /** 
    * Get the value of the <code>name</code> property as an <code>int</code>.
    *   
@@ -1016,6 +1031,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return defaultValue;
     return Float.parseFloat(valueString);
   }
+
   /**
    * Set the value of the <code>name</code> property to a <code>float</code>.
    * 
@@ -1024,6 +1040,35 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void setFloat(String name, float value) {
     set(name,Float.toString(value));
+  }
+
+  /** 
+   * Get the value of the <code>name</code> property as a <code>double</code>.  
+   * If no such property exists, the provided default value is returned,
+   * or if the specified value is not a valid <code>double</code>,
+   * then an error is thrown.
+   *
+   * @param name property name.
+   * @param defaultValue default value.
+   * @throws NumberFormatException when the value is invalid
+   * @return property value as a <code>double</code>, 
+   *         or <code>defaultValue</code>. 
+   */
+  public double getDouble(String name, double defaultValue) {
+    String valueString = getTrimmed(name);
+    if (valueString == null)
+      return defaultValue;
+    return Double.parseDouble(valueString);
+  }
+
+  /**
+   * Set the value of the <code>name</code> property to a <code>double</code>.
+   * 
+   * @param name property name.
+   * @param value property value.
+   */
+  public void setDouble(String name, double value) {
+    set(name,Double.toString(value));
   }
  
   /** 
@@ -1829,7 +1874,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, URL url)
       throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing URL " + url);
+      LOG.debug("parsing URL " + url);
     }
     if (url == null) {
       return null;
@@ -1840,7 +1885,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, InputStream is,
       String systemId) throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing input stream " + is);
+      LOG.debug("parsing input stream " + is);
     }
     if (is == null) {
       return null;
@@ -1913,7 +1958,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
-            LOG.info("parsing File " + file);
+            LOG.debug("parsing File " + file);
           }
           doc = parse(builder, new BufferedInputStream(
               new FileInputStream(file)), ((Path)resource).toString());

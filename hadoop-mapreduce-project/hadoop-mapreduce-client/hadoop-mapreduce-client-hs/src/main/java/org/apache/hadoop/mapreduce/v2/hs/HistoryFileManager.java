@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -36,6 +37,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -59,8 +61,8 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
-import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -131,19 +133,73 @@ public class HistoryFileManager extends AbstractService {
     }
   }
 
-  static class JobListCache {
+  /**
+   * Wrapper around {@link ConcurrentSkipListMap} that maintains size along
+   * side for O(1) size() implementation for use in JobListCache.
+   *
+   * Note: The size is not updated atomically with changes additions/removals.
+   * This race can lead to size() returning an incorrect size at times.
+   */
+  static class JobIdHistoryFileInfoMap {
     private ConcurrentSkipListMap<JobId, HistoryFileInfo> cache;
+    private AtomicInteger mapSize;
+
+    JobIdHistoryFileInfoMap() {
+      cache = new ConcurrentSkipListMap<JobId, HistoryFileInfo>();
+      mapSize = new AtomicInteger();
+    }
+
+    public HistoryFileInfo putIfAbsent(JobId key, HistoryFileInfo value) {
+      HistoryFileInfo ret = cache.putIfAbsent(key, value);
+      if (ret == null) {
+        mapSize.incrementAndGet();
+      }
+      return ret;
+    }
+
+    public HistoryFileInfo remove(JobId key) {
+      HistoryFileInfo ret = cache.remove(key);
+      if (ret != null) {
+        mapSize.decrementAndGet();
+      }
+      return ret;
+    }
+
+    /**
+     * Returns the recorded size of the internal map. Note that this could be out
+     * of sync with the actual size of the map
+     * @return "recorded" size
+     */
+    public int size() {
+      return mapSize.get();
+    }
+
+    public HistoryFileInfo get(JobId key) {
+      return cache.get(key);
+    }
+
+    public NavigableSet<JobId> navigableKeySet() {
+      return cache.navigableKeySet();
+    }
+
+    public Collection<HistoryFileInfo> values() {
+      return cache.values();
+    }
+  }
+
+  static class JobListCache {
+    private JobIdHistoryFileInfoMap cache;
     private int maxSize;
     private long maxAge;
 
     public JobListCache(int maxSize, long maxAge) {
       this.maxSize = maxSize;
       this.maxAge = maxAge;
-      this.cache = new ConcurrentSkipListMap<JobId, HistoryFileInfo>();
+      this.cache = new JobIdHistoryFileInfoMap();
     }
 
     public HistoryFileInfo addIfAbsent(HistoryFileInfo fileInfo) {
-      JobId jobId = fileInfo.getJobIndexInfo().getJobId();
+      JobId jobId = fileInfo.getJobId();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Adding " + jobId + " to job list cache with "
             + fileInfo.getJobIndexInfo());
@@ -188,6 +244,9 @@ public class HistoryFileManager extends AbstractService {
     }
 
     public void delete(HistoryFileInfo fileInfo) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Removing from cache " + fileInfo);
+      }
       cache.remove(fileInfo.getJobId());
     }
 
@@ -218,6 +277,10 @@ public class HistoryFileManager extends AbstractService {
           modTime = newModTime;
         } catch (IOException e) {
           LOG.error("Error while trying to scan the directory " + p, e);
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Scan not needed of " + fs.getPath());
         }
       }
     }
@@ -258,9 +321,21 @@ public class HistoryFileManager extends AbstractService {
       return state == HistoryInfoState.DELETED;
     }
 
+    @Override
+    public String toString() {
+      return "HistoryFileInfo jobID " + getJobId()
+             + " historyFile = " + historyFile;
+    }
+
     private synchronized void moveToDone() throws IOException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("moveToDone: " + historyFile);
+      }
       if (!isMovePending()) {
         // It was either deleted or is already in done. Either way do nothing
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Move no longer pending");
+        }
         return;
       }
       try {
@@ -342,6 +417,9 @@ public class HistoryFileManager extends AbstractService {
     }
     
     private synchronized void delete() throws IOException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("deleting " + historyFile + " and " + confFile);
+      }
       state = HistoryInfoState.DELETED;
       doneDirFc.delete(doneDirFc.makeQualified(historyFile), false);
       doneDirFc.delete(doneDirFc.makeQualified(confFile), false);
@@ -402,7 +480,7 @@ public class HistoryFileManager extends AbstractService {
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
 
     int serialNumberLowDigits = 3;
@@ -421,7 +499,7 @@ public class HistoryFileManager extends AbstractService {
       mkdir(doneDirFc, doneDirPrefixPath, new FsPermission(
           JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION));
     } catch (IOException e) {
-      throw new YarnException("Error creating done directory: ["
+      throw new YarnRuntimeException("Error creating done directory: ["
           + doneDirPrefixPath + "]", e);
     }
 
@@ -437,7 +515,7 @@ public class HistoryFileManager extends AbstractService {
           JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS.toShort()));
     } catch (IOException e) {
       LOG.info("error creating done directory on dfs " + e);
-      throw new YarnException("Error creating intermediate done directory: ["
+      throw new YarnRuntimeException("Error creating intermediate done directory: ["
           + intermediateDoneDirPath + "]", e);
     }
 
@@ -463,7 +541,7 @@ public class HistoryFileManager extends AbstractService {
     moveToDoneExecutor = new ThreadPoolExecutor(numMoveThreads, numMoveThreads,
         1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
 
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   private void mkdir(FileContext fc, Path path, FsPermission fsp)
@@ -609,7 +687,7 @@ public class HistoryFileManager extends AbstractService {
     // case where we are looking for a particular job.
     List<FileStatus> userDirList = JobHistoryUtils.localGlobber(
         intermediateDoneDirFc, intermediateDoneDirPath, "");
-
+    LOG.debug("Scanning intermediate dirs");
     for (FileStatus userDir : userDirList) {
       String name = userDir.getPath().getName();
       UserLogDir dir = userDirModificationTimeMap.get(name);
@@ -631,9 +709,18 @@ public class HistoryFileManager extends AbstractService {
    * @throws IOException
    */
   private void scanIntermediateDirectory(final Path absPath) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Scanning intermediate dir " + absPath);
+    }
     List<FileStatus> fileStatusList = scanDirectoryForHistoryFiles(absPath,
         intermediateDoneDirFc);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Found " + fileStatusList.size() + " files");
+    }
     for (FileStatus fs : fileStatusList) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("scanning file: "+ fs.getPath());
+      }
       JobIndexInfo jobIndexInfo = FileNameIndexUtils.getIndexInfo(fs.getPath()
           .getName());
       String confFileName = JobHistoryUtils
@@ -655,6 +742,9 @@ public class HistoryFileManager extends AbstractService {
             LOG.warn("Error cleaning up a HistoryFile that is out of date.", e);
           }
         } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Scheduling move to done of " +found);
+          }
           moveToDoneExecutor.execute(new Runnable() {
             @Override
             public void run() {
@@ -669,6 +759,9 @@ public class HistoryFileManager extends AbstractService {
         }
       } else if (old != null && !old.isMovePending()) {
         //This is a duplicate so just delete it
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Duplicate: deleting");
+        }
         fileInfo.delete();
       }
     }
@@ -869,4 +962,8 @@ public class HistoryFileManager extends AbstractService {
       }
     }
   }
+  @VisibleForTesting
+  protected void setMaxHistoryAge(long newValue){
+    maxHistoryAge=newValue;
+  } 
 }

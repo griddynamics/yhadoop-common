@@ -21,67 +21,66 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>The response sent by the <code>NodeManager</code> to the 
  * <code>ApplicationMaster</code> when asked to <em>start</em> an
  * allocated container.</p>
  * 
- * @see ContainerManager#startContainer(StartContainerRequest)
+ * @see ContainerManagementProtocol#startContainer(StartContainerRequest)
  */
 @Public
 @Stable
-public interface StartContainerResponse {
-  /**
-   * <p>Get the responses from all auxiliary services running on the 
-   * <code>NodeManager</code>.</p>
-   * <p>The responses are returned as a Map between the auxiliary service names
-   * and their corresponding opaque blob <code>ByteBuffer</code>s</p> 
-   * @return a Map between the auxiliary service names and their outputs
-   */
-  Map<String, ByteBuffer> getAllServiceResponse();
+public abstract class StartContainerResponse {
+
+  @Private
+  @Unstable
+  public static StartContainerResponse newInstance(
+      Map<String, ByteBuffer> servicesMetaData) {
+    StartContainerResponse response =
+        Records.newRecord(StartContainerResponse.class);
+    response.setAllServicesMetaData(servicesMetaData);
+    return response;
+  }
 
   /**
-   * Get the response from a single auxiliary service running on the
-   * <code>NodeManager</code>
+   * <p>
+   * Get the meta-data from all auxiliary services running on the
+   * <code>NodeManager</code>.
+   * </p>
+   * <p>
+   * The meta-data is returned as a Map between the auxiliary service names and
+   * their corresponding per service meta-data as an opaque blob
+   * <code>ByteBuffer</code>
+   * </p>
    * 
-   * @param key The auxiliary service name whose response is desired.
-   * @return The opaque blob <code>ByteBuffer</code> returned by the auxiliary
-   * service.
+   * <p>
+   * To be able to interpret the per-service meta-data, you should consult the
+   * documentation for the Auxiliary-service configured on the NodeManager
+   * </p>
+   * 
+   * @return a Map between the names of auxiliary services and their
+   *         corresponding meta-data
    */
-  ByteBuffer getServiceResponse(String key);
+  @Public
+  @Stable
+  public abstract Map<String, ByteBuffer> getAllServicesMetaData();
 
   /**
-   * Add to the list of auxiliary services which have been started on the
+   * Set to the list of auxiliary services which have been started on the
    * <code>NodeManager</code>. This is done only once when the
    * <code>NodeManager</code> starts up
-   * @param serviceResponse A map from auxiliary service names to the opaque
-   * blob <code>ByteBuffer</code>s for that auxiliary service
+   * @param allServicesMetaData A map from auxiliary service names to the opaque
+   * blob <code>ByteBuffer</code> for that auxiliary service
    */
-  void addAllServiceResponse(Map<String, ByteBuffer> serviceResponse);
-
-  /**
-   * Add to the list of auxiliary services which have been started on the
-   * <code>NodeManager</code>. This is done only once when the
-   * <code>NodeManager</code> starts up
-   * 
-   * @param key The auxiliary service name
-   * @param value The opaque blob <code>ByteBuffer</code> managed by the
-   * auxiliary service
-   */
-  void setServiceResponse(String key, ByteBuffer value);
-
-  /**
-   * Remove a single auxiliary service from the StartContainerResponse object
-   * @param key The auxiliary service to remove
-   */
-  void removeServiceResponse(String key);
-  
-  /**
-   * Remove all the auxiliary services from the StartContainerResponse object
-   */
-  void clearServiceResponse();
+  @Private
+  @Unstable
+  public abstract void setAllServicesMetaData(
+      Map<String, ByteBuffer> allServicesMetaData);
 }

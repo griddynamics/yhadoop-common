@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Map;
@@ -36,18 +37,20 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.client.YarnClientImpl;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -55,10 +58,11 @@ import org.apache.hadoop.yarn.util.Records;
  * unmanagedAM is an AM that is not launched and managed by the RM. The client
  * creates a new application on the RM and negotiates a new attempt id. Then it
  * waits for the RM app state to reach be YarnApplicationState.ACCEPTED after
- * which it spawns the AM in another process and passes it the attempt id via
- * env variable ApplicationConstants.AM_APP_ATTEMPT_ID_ENV. The AM can be in any
- * language. The AM can register with the RM using the attempt id and proceed as
- * normal. The client redirects app stdout and stderr to its own stdout and
+ * which it spawns the AM in another process and passes it the container id via
+ * env variable Environment.CONTAINER_ID. The AM can be in any
+ * language. The AM can register with the RM using the attempt id obtained
+ * from the container id and proceed as normal.
+ * The client redirects app stdout and stderr to its own stdout and
  * stderr and waits for the AM process to exit. Then it waits for the RM to
  * report app completion.
  */
@@ -68,7 +72,7 @@ public class UnmanagedAMLauncher {
   private Configuration conf;
 
   // Handle to talk to the Resource Manager/Applications Manager
-  private YarnClientImpl rmClient;
+  private YarnClient rmClient;
 
   // Application master specific info to register a new Application with RM/ASM
   private String appName = "";
@@ -80,6 +84,8 @@ public class UnmanagedAMLauncher {
   private String amCmd = null;
   // set the classpath explicitly
   private String classpath = null;
+
+  private volatile boolean amCompleted = false;
 
   /**
    * @param args
@@ -154,7 +160,7 @@ public class UnmanagedAMLauncher {
     }
 
     YarnConfiguration yarnConf = new YarnConfiguration(conf);
-    rmClient = new YarnClientImpl();
+    rmClient = YarnClient.createYarnClient();
     rmClient.init(yarnConf);
 
     return true;
@@ -179,8 +185,16 @@ public class UnmanagedAMLauncher {
     if(!setClasspath && classpath!=null) {
       envAMList.add("CLASSPATH="+classpath);
     }
-        
-    envAMList.add(ApplicationConstants.AM_APP_ATTEMPT_ID_ENV + "=" + attemptId);
+    ContainerId containerId = ContainerId.newInstance(attemptId, 0);
+
+    String hostname = InetAddress.getLocalHost().getHostName();
+    envAMList.add(Environment.CONTAINER_ID.name() + "=" + containerId);
+    envAMList.add(Environment.NM_HOST.name() + "=" + hostname);
+    envAMList.add(Environment.NM_HTTP_PORT.name() + "=0");
+    envAMList.add(Environment.NM_PORT.name() + "=0");
+    envAMList.add(Environment.LOCAL_DIRS.name() + "= /tmp");
+    envAMList.add(ApplicationConstants.APP_SUBMIT_TIME_ENV + "="
+        + System.currentTimeMillis());
 
     String[] envAM = new String[envAMList.size()];
     Process amProc = Runtime.getRuntime().exec(amCmd, envAMList.toArray(envAM));
@@ -233,8 +247,10 @@ public class UnmanagedAMLauncher {
       LOG.info("AM process exited with value: " + exitCode);
     } catch (InterruptedException e) {
       e.printStackTrace();
+    } finally {
+      amCompleted = true;
     }
-
+    
     try {
       // make sure that the error thread exits
       // on Windows these threads sometimes get stuck and hang the execution
@@ -252,7 +268,7 @@ public class UnmanagedAMLauncher {
     amProc.destroy();
   }
   
-  public boolean run() throws IOException {
+  public boolean run() throws IOException, YarnException {
     LOG.info("Starting Client");
     
     // Connect to ResourceManager
@@ -306,6 +322,7 @@ public class UnmanagedAMLauncher {
       appReport = monitorApplication(appId, EnumSet.of(
           YarnApplicationState.KILLED, YarnApplicationState.FAILED,
           YarnApplicationState.FINISHED));
+
       YarnApplicationState appState = appReport.getYarnApplicationState();
       FinalApplicationStatus appStatus = appReport.getFinalApplicationStatus();
   
@@ -336,10 +353,25 @@ public class UnmanagedAMLauncher {
    * @param appId
    *          Application Id of application to be monitored
    * @return true if application completed successfully
-   * @throws YarnRemoteException
+   * @throws YarnException
+   * @throws IOException
    */
   private ApplicationReport monitorApplication(ApplicationId appId,
-      Set<YarnApplicationState> finalState) throws YarnRemoteException {
+      Set<YarnApplicationState> finalState) throws YarnException,
+      IOException {
+
+    long foundAMCompletedTime = 0;
+    final int timeToWaitMS = 10000;
+    StringBuilder expectedFinalState = new StringBuilder();
+    boolean first = true;
+    for (YarnApplicationState state : finalState) {
+      if (first) {
+        first = false;
+        expectedFinalState.append(state.name());
+      } else {
+        expectedFinalState.append("," + state.name());
+      }
+    }
 
     while (true) {
 
@@ -355,8 +387,8 @@ public class UnmanagedAMLauncher {
 
       LOG.info("Got application report from ASM for" + ", appId="
           + appId.getId() + ", appAttemptId="
-          + report.getCurrentApplicationAttemptId() + ", clientToken="
-          + report.getClientToken() + ", appDiagnostics="
+          + report.getCurrentApplicationAttemptId() + ", clientToAMToken="
+          + report.getClientToAMToken() + ", appDiagnostics="
           + report.getDiagnostics() + ", appMasterHost=" + report.getHost()
           + ", appQueue=" + report.getQueue() + ", appMasterRpcPort="
           + report.getRpcPort() + ", appStartTime=" + report.getStartTime()
@@ -370,8 +402,24 @@ public class UnmanagedAMLauncher {
         return report;
       }
 
+      // wait for 10 seconds after process has completed for app report to
+      // come back
+      if (amCompleted) {
+        if (foundAMCompletedTime == 0) {
+          foundAMCompletedTime = System.currentTimeMillis();
+        } else if ((System.currentTimeMillis() - foundAMCompletedTime)
+            > timeToWaitMS) {
+          LOG.warn("Waited " + timeToWaitMS/1000
+              + " seconds after process completed for AppReport"
+              + " to reach desired final state. Not waiting anymore."
+              + "CurrentState = " + state
+              + ", ExpectedStates = " + expectedFinalState.toString());
+          throw new RuntimeException("Failed to receive final expected state"
+              + " in ApplicationReport"
+              + ", CurrentState=" + state
+              + ", ExpectedStates=" + expectedFinalState.toString());
+        }
+      }
     }
-
   }
-
 }

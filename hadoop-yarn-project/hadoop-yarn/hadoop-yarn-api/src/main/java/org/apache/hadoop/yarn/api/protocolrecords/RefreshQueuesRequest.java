@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-public interface RefreshQueuesRequest {
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.util.Records;
 
+@Public
+@Stable
+public abstract class RefreshQueuesRequest {
+  @Public
+  @Stable
+  public static RefreshQueuesRequest newInstance() {
+    RefreshQueuesRequest request =
+        Records.newRecord(RefreshQueuesRequest.class);
+    return request;
+  }
 }

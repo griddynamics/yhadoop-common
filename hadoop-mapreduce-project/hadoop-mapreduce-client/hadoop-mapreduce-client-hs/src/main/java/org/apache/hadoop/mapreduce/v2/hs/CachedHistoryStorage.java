@@ -37,8 +37,8 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
-import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
  * Manages an in memory cache of parsed Job History files.
@@ -60,7 +60,8 @@ public class CachedHistoryStorage extends AbstractService implements
 
   @SuppressWarnings("serial")
   @Override
-  public void init(Configuration conf) throws YarnException {
+  public void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     LOG.info("CachedHistoryStorage Init");
 
     loadedJobCacheSize = conf.getInt(
@@ -74,8 +75,6 @@ public class CachedHistoryStorage extends AbstractService implements
         return super.size() > loadedJobCacheSize;
       }
     });
-
-    super.init(conf);
   }
 
   public CachedHistoryStorage() {
@@ -94,7 +93,7 @@ public class CachedHistoryStorage extends AbstractService implements
       loadedJobCache.put(job.getID(), job);
       return job;
     } catch (IOException e) {
-      throw new YarnException(
+      throw new YarnRuntimeException(
           "Could not find/load job: " + fileInfo.getJobId(), e);
     }
   }
@@ -120,7 +119,7 @@ public class CachedHistoryStorage extends AbstractService implements
       }
       return result;
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -137,7 +136,7 @@ public class CachedHistoryStorage extends AbstractService implements
       }
     } catch (IOException e) {
       LOG.warn("Error trying to scan for all FileInfos", e);
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
     return result;
   }

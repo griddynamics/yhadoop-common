@@ -39,14 +39,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
@@ -54,12 +54,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils.ContainerIdComparator;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.BuilderUtils.ContainerIdComparator;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -93,9 +93,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final String httpAddress;
   private final Resource totalCapability;
   private final Node node;
-  private final NodeHealthStatus nodeHealthStatus = recordFactory
-      .newRecordInstance(NodeHealthStatus.class);
-  
+
+  private String healthReport;
+  private long lastHealthReportTime;
+
   /* set of containers that have just launched */
   private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
     new HashMap<ContainerId, ContainerStatus>();
@@ -107,8 +108,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* the list of applications that have finished and need to be purged */
   private final List<ApplicationId> finishedApplications = new ArrayList<ApplicationId>();
 
-  private HeartbeatResponse latestHeartBeatResponse = recordFactory
-      .newRecordInstance(HeartbeatResponse.class);
+  private NodeHeartbeatResponse latestNodeHeartBeatResponse = recordFactory
+      .newRecordInstance(NodeHeartbeatResponse.class);
   
   private static final StateMachineFactory<RMNodeImpl,
                                            NodeState,
@@ -180,11 +181,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.nodeAddress = hostName + ":" + cmPort;
     this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
-    this.nodeHealthStatus.setIsNodeHealthy(true);
-    this.nodeHealthStatus.setHealthReport("Healthy");
-    this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
+    this.healthReport = "Healthy";
+    this.lastHealthReportTime = System.currentTimeMillis();
 
-    this.latestHeartBeatResponse.setResponseId(0);
+    this.latestNodeHeartBeatResponse.setResponseId(0);
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -246,25 +246,44 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
   
   @Override
-  public NodeHealthStatus getNodeHealthStatus() {
+  public String getHealthReport() {
     this.readLock.lock();
 
     try {
-      return this.nodeHealthStatus;
+      return this.healthReport;
     } finally {
       this.readLock.unlock();
     }
   }
-
-  private void setNodeHealthStatus(NodeHealthStatus status)
-  {
+  
+  public void setHealthReport(String healthReport) {
     this.writeLock.lock();
+
     try {
-      this.nodeHealthStatus.setHealthReport(status.getHealthReport());
-      this.nodeHealthStatus.setIsNodeHealthy(status.getIsNodeHealthy());
-      this.nodeHealthStatus.setLastHealthReportTime(status.getLastHealthReportTime());
+      this.healthReport = healthReport;
     } finally {
       this.writeLock.unlock();
+    }
+  }
+  
+  public void setLastHealthReportTime(long lastHealthReportTime) {
+    this.writeLock.lock();
+
+    try {
+      this.lastHealthReportTime = lastHealthReportTime;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+  
+  @Override
+  public long getLastHealthReportTime() {
+    this.readLock.lock();
+
+    try {
+      return this.lastHealthReportTime;
+    } finally {
+      this.readLock.unlock();
     }
   }
 
@@ -304,7 +323,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   };
 
   @Override
-  public void updateHeartbeatResponseForCleanup(HeartbeatResponse response) {
+  public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
     this.writeLock.lock();
 
     try {
@@ -319,12 +338,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   };
 
   @Override
-  public HeartbeatResponse getLastHeartBeatResponse() {
+  public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
 
     this.readLock.lock();
 
     try {
-      return this.latestHeartBeatResponse;
+      return this.latestNodeHeartBeatResponse;
     } finally {
       this.readLock.unlock();
     }
@@ -430,7 +449,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       if (rmNode.getTotalCapability().equals(newNode.getTotalCapability())
           && rmNode.getHttpPort() == newNode.getHttpPort()) {
         // Reset heartbeat ID since node just restarted.
-        rmNode.getLastHeartBeatResponse().setResponseId(0);
+        rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));
       } else {
@@ -507,11 +526,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
 
       // Switch the last heartbeatresponse.
-      rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
+      rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
 
       NodeHealthStatus remoteNodeHealthStatus = 
           statusEvent.getNodeHealthStatus();
-      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
+      rmNode.setLastHealthReportTime(
+          remoteNodeHealthStatus.getLastHealthReportTime());
       if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
         LOG.info("Node " + rmNode.nodeId + " reported UNHEALTHY with details: "
             + remoteNodeHealthStatus.getHealthReport());
@@ -591,9 +612,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
 
       // Switch the last heartbeatresponse.
-      rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
+      rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
       NodeHealthStatus remoteNodeHealthStatus = statusEvent.getNodeHealthStatus();
-      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
+      rmNode.setLastHealthReportTime(
+          remoteNodeHealthStatus.getLastHealthReportTime());
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));

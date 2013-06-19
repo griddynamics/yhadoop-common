@@ -154,7 +154,8 @@ public class TokenCache {
    */
   @InterfaceAudience.Private
   public static final String JOB_TOKENS_FILENAME = "mapreduce.job.jobTokenFile";
-  private static final Text JOB_TOKEN = new Text("ShuffleAndJobToken");
+  private static final Text JOB_TOKEN = new Text("JobToken");
+  private static final Text SHUFFLE_TOKEN = new Text("MapReduceShuffleToken");
   
   /**
    * load job token from a file
@@ -176,6 +177,19 @@ public class TokenCache {
     }
     return ts;
   }
+  
+  /**
+   * load job token from a file
+   * 
+   * @param conf
+   * @throws IOException
+   */
+  @InterfaceAudience.Private
+  public static Credentials loadTokens(String jobTokenFile, Configuration conf)
+      throws IOException {
+    return loadTokens(jobTokenFile, new JobConf(conf));
+  }
+  
   /**
    * store job token
    * @param t
@@ -193,5 +207,27 @@ public class TokenCache {
   @InterfaceAudience.Private
   public static Token<JobTokenIdentifier> getJobToken(Credentials credentials) {
     return (Token<JobTokenIdentifier>) credentials.getToken(JOB_TOKEN);
+  }
+
+  @InterfaceAudience.Private
+  public static void setShuffleSecretKey(byte[] key, Credentials credentials) {
+    credentials.addSecretKey(SHUFFLE_TOKEN, key);
+  }
+
+  @InterfaceAudience.Private
+  public static byte[] getShuffleSecretKey(Credentials credentials) {
+    return getSecretKey(credentials, SHUFFLE_TOKEN);
+  }
+
+  /**
+   * 
+   * @param namenode
+   * @return delegation token
+   */
+  public static
+      Token<?> getDelegationToken(
+          Credentials credentials, String namenode) {
+    return (Token<?>) credentials.getToken(new Text(
+      namenode));
   }
 }

@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-public interface RefreshAdminAclsResponse {
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
+@Public
+@Stable
+public abstract class RefreshAdminAclsResponse {
+  @Private
+  @Unstable
+  public static RefreshAdminAclsResponse newInstance() {
+    RefreshAdminAclsResponse response =
+        Records.newRecord(RefreshAdminAclsResponse.class);
+    return response;
+  }
 }

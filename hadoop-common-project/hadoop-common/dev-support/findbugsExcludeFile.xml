@@ -100,6 +100,11 @@
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.util.ProgramDriver" />
+       <Method name="driver" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
      <!--
        We need to cast objects between old and new api objects
      -->
@@ -173,18 +178,6 @@
        <Class name="org.apache.hadoop.fs.FileSystem" />
        <Method name="checkPath" />
        <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ" />
-     </Match>
-
-     <Match>
-       <Class name="org.apache.hadoop.fs.kfs.KFSOutputStream" />
-       <Field name="path" />
-       <Bug pattern="URF_UNREAD_FIELD" />
-     </Match>
-
-     <Match>
-       <Class name="org.apache.hadoop.fs.kfs.KosmosFileSystem" />
-       <Method name="initialize" />
-       <Bug pattern="DM_EXIT" />
      </Match>
 
      <Match>
@@ -272,7 +265,7 @@
     </Match>
     <Match>
       <!-- protobuf generated code -->
-      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.HadoopRpcProtos.*"/>
+      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.ProtobufRpcEngineProtos.*"/>
     </Match>
     <Match>
       <!-- protobuf generated code -->
@@ -284,7 +277,7 @@
     </Match>
         <Match>
       <!-- protobuf generated code -->
-      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.RpcPayloadHeaderProtos.*"/>
+      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.RpcHeaderProtos.*"/>
     </Match>
     <Match>
       <!-- protobuf generated code -->
@@ -319,5 +312,25 @@
        <Class name="org.apache.hadoop.fs.DelegationTokenRenewer" />
        <Method name="removeRenewAction" />
        <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     
+     <!-- Inconsistent synchronization flagged by findbugs is not valid. -->
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Client$Connection" />
+       <Field name="in" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
+
+     <!-- Synchronization performed on util.concurrent instance. -->
+     <Match>
+       <Class name="org.apache.hadoop.service.AbstractService" />
+       <Method name="stop" />
+       <Bug code="JLM" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.service.AbstractService" />
+       <Method name="waitForServiceToStop" />
+       <Bug code="JLM" />
      </Match>
  </FindBugsFilter>

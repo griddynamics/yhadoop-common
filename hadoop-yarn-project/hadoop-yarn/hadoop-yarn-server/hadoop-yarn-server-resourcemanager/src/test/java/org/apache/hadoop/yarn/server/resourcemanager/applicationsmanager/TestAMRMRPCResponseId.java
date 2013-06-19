@@ -21,7 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
@@ -32,7 +33,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -78,25 +78,25 @@ public class TestAMRMRPCResponseId {
 
     am.registerAppAttempt();
     
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(attempt
-        .getAppAttemptId(), 0, 0F, null, null);
+    AllocateRequest allocateRequest = AllocateRequest.newInstance(attempt
+        .getAppAttemptId(), 0, 0F, null, null, null);
 
-    AMResponse response = amService.allocate(allocateRequest).getAMResponse();
+    AllocateResponse response = amService.allocate(allocateRequest);
     Assert.assertEquals(1, response.getResponseId());
-    Assert.assertFalse(response.getReboot());
-    allocateRequest = BuilderUtils.newAllocateRequest(attempt
-        .getAppAttemptId(), response.getResponseId(), 0F, null, null);
+    Assert.assertTrue(response.getAMCommand() == null);
+    allocateRequest = AllocateRequest.newInstance(attempt
+        .getAppAttemptId(), response.getResponseId(), 0F, null, null, null);
     
-    response = amService.allocate(allocateRequest).getAMResponse();
+    response = amService.allocate(allocateRequest);
     Assert.assertEquals(2, response.getResponseId());
     /* try resending */
-    response = amService.allocate(allocateRequest).getAMResponse();
+    response = amService.allocate(allocateRequest);
     Assert.assertEquals(2, response.getResponseId());
     
     /** try sending old request again **/
-    allocateRequest = BuilderUtils.newAllocateRequest(attempt
-        .getAppAttemptId(), 0, 0F, null, null);
-    response = amService.allocate(allocateRequest).getAMResponse();
-    Assert.assertTrue(response.getReboot());
+    allocateRequest = AllocateRequest.newInstance(attempt
+        .getAppAttemptId(), 0, 0F, null, null, null);
+    response = amService.allocate(allocateRequest);
+    Assert.assertTrue(response.getAMCommand() == AMCommand.AM_RESYNC);
   }
 }

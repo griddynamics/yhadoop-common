@@ -35,8 +35,8 @@ message RegisterApplicationMasterRequestProto {
 }
 
 message RegisterApplicationMasterResponseProto {
-  optional ResourceProto minimumCapability = 1;
-  optional ResourceProto maximumCapability = 2;
+  optional ResourceProto maximumCapability = 1;
+  optional bytes client_to_am_token_master_key = 2;
   repeated ApplicationACLMapProto application_ACLs = 3;
 }
 
@@ -54,16 +54,27 @@ message AllocateRequestProto {
   optional ApplicationAttemptIdProto application_attempt_id = 1;
   repeated ResourceRequestProto ask = 2;
   repeated ContainerIdProto release = 3;
-  optional int32 response_id = 4;
-  optional float progress = 5;
+  optional ResourceBlacklistRequestProto blacklist_request = 4;
+  optional int32 response_id = 5;
+  optional float progress = 6;
+}
+
+message NMTokenProto {
+  optional NodeIdProto nodeId = 1; 
+  optional hadoop.common.TokenProto token = 2;
 }
 
 message AllocateResponseProto {
-  optional AMResponseProto AM_response = 1;
-  optional int32 num_cluster_nodes = 2;
+  optional AMCommandProto a_m_command = 1;
+  optional int32 response_id = 2;
+  repeated ContainerProto allocated_containers = 3;
+  repeated ContainerStatusProto completed_container_statuses = 4;
+  optional ResourceProto limit = 5;
+  repeated NodeReportProto updated_nodes = 6;
+  optional int32 num_cluster_nodes = 7;
+  optional PreemptionMessageProto preempt = 8;
+  repeated NMTokenProto nm_tokens = 9;
 }
-
-
 
 //////////////////////////////////////////////////////
 /////// client_RM_Protocol ///////////////////////////
@@ -74,8 +85,7 @@ message GetNewApplicationRequestProto {
 
 message GetNewApplicationResponseProto {
   optional ApplicationIdProto application_id = 1;
-  optional ResourceProto minimumCapability = 2;
-  optional ResourceProto maximumCapability = 3;
+  optional ResourceProto maximumCapability = 2;
 }
 
 message GetApplicationReportRequestProto {
@@ -146,10 +156,11 @@ message GetQueueUserAclsInfoResponseProto {
 
 message StartContainerRequestProto {
   optional ContainerLaunchContextProto container_launch_context = 1;
+  optional hadoop.common.TokenProto container_token = 2;
 }
 
 message StartContainerResponseProto {
-  repeated StringBytesMapProto service_response = 1;
+  repeated StringBytesMapProto services_meta_data = 1;
 }
 
 message StopContainerRequestProto {

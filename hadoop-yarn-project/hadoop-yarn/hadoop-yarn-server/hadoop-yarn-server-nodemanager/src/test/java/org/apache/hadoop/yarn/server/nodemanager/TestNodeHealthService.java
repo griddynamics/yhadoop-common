@@ -28,11 +28,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -81,7 +82,7 @@ public class TestNodeHealthService {
     pw.println(scriptStr);
     pw.flush();
     pw.close();
-    nodeHealthscriptFile.setExecutable(setExecutable);
+    FileUtil.setExecutable(nodeHealthscriptFile, setExecutable);
   }
 
   @Test

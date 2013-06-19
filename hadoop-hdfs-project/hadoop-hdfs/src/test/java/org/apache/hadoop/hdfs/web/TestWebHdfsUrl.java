@@ -54,7 +54,7 @@ public class TestWebHdfsUrl {
     UserGroupInformation.setConfiguration(new Configuration());
   }
   
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSimpleAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
 
@@ -75,7 +75,7 @@ public class TestWebHdfsUrl {
         fileStatusUrl);
   }
 
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSimpleProxyAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
 
@@ -98,7 +98,7 @@ public class TestWebHdfsUrl {
         fileStatusUrl);
   }
 
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSecureAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
     // fake turning on security so api thinks it should use tokens
@@ -112,7 +112,7 @@ public class TestWebHdfsUrl {
 
     WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(ugi, conf);
     Path fsPath = new Path("/");
-    String tokenString = webhdfs.getRenewToken().encodeToUrlString();
+    String tokenString = webhdfs.getDelegationToken().encodeToUrlString();
 
     // send user
     URL getTokenUrl = webhdfs.toUrl(GetOpParam.Op.GETDELEGATIONTOKEN, fsPath);
@@ -134,7 +134,7 @@ public class TestWebHdfsUrl {
         },
         renewTokenUrl);
 
-    // send user+token
+    // send token
     URL cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
     checkQueryParams(
@@ -142,16 +142,14 @@ public class TestWebHdfsUrl {
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
             new UserParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
-            new DelegationParam(tokenString).toString()
         },
         cancelTokenUrl);
     
-    // send user+token
+    // send token
     URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new DelegationParam(tokenString).toString()
         },
         fileStatusUrl);
@@ -180,7 +178,7 @@ public class TestWebHdfsUrl {
         fileStatusUrl);    
   }
 
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSecureProxyAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
     // fake turning on security so api thinks it should use tokens
@@ -195,7 +193,7 @@ public class TestWebHdfsUrl {
 
     WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(ugi, conf);
     Path fsPath = new Path("/");
-    String tokenString = webhdfs.getRenewToken().encodeToUrlString();
+    String tokenString = webhdfs.getDelegationToken().encodeToUrlString();
 
     // send real+effective
     URL getTokenUrl = webhdfs.toUrl(GetOpParam.Op.GETDELEGATIONTOKEN, fsPath);
@@ -219,24 +217,23 @@ public class TestWebHdfsUrl {
         },
         renewTokenUrl);
 
-    // send effective+token
+    // send token
     URL cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
+            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
+            new DoAsParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
-            new DelegationParam(tokenString).toString()
         },
         cancelTokenUrl);
     
-    // send effective+token
+    // send token
     URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new DelegationParam(tokenString).toString()
         },
         fileStatusUrl);
@@ -293,7 +290,7 @@ public class TestWebHdfsUrl {
     return (WebHdfsFileSystem) FileSystem.get(uri, conf);
   }
   
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSelectHdfsDelegationToken() throws Exception {
     SecurityUtilTestHelper.setTokenServiceUseIp(true);
 
@@ -382,8 +379,5 @@ public class TestWebHdfsUrl {
     public int getDefaultPort() {
       return super.getDefaultPort();
     }
-    // don't automatically get a token
-    @Override
-    protected void initDelegationToken() throws IOException {}
   }
 }

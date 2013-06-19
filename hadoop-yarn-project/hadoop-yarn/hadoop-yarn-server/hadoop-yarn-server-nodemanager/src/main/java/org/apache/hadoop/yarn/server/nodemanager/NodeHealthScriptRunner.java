@@ -28,11 +28,12 @@ import java.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
  * 
@@ -196,7 +197,7 @@ public class NodeHealthScriptRunner extends AbstractService {
    * Method which initializes the values for the script path and interval time.
    */
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.nodeHealthScript = 
         conf.get(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH);
@@ -208,6 +209,7 @@ public class NodeHealthScriptRunner extends AbstractService {
     String[] args = conf.getStrings(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_OPTS,
         new String[] {});
     timer = new NodeHealthMonitorExecutor(args);
+    super.serviceInit(conf);
   }
 
   /**
@@ -215,7 +217,7 @@ public class NodeHealthScriptRunner extends AbstractService {
    * 
    */
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     // if health script path is not configured don't start the thread.
     if (!shouldRun(conf)) {
       LOG.info("Not starting node health monitor");
@@ -225,6 +227,7 @@ public class NodeHealthScriptRunner extends AbstractService {
     // Start the timer task immediately and
     // then periodically at interval time.
     nodeHealthScriptScheduler.scheduleAtFixedRate(timer, 0, intervalTime);
+    super.serviceStart();
   }
 
   /**
@@ -232,11 +235,13 @@ public class NodeHealthScriptRunner extends AbstractService {
    * 
    */
   @Override
-  public void stop() {
+  protected void serviceStop() {
     if (!shouldRun(conf)) {
       return;
     }
-    nodeHealthScriptScheduler.cancel();
+    if (nodeHealthScriptScheduler != null) {
+      nodeHealthScriptScheduler.cancel();
+    }
     if (shexec != null) {
       Process p = shexec.getProcess();
       if (p != null) {
@@ -321,7 +326,7 @@ public class NodeHealthScriptRunner extends AbstractService {
       return false;
     }
     File f = new File(nodeHealthScript);
-    return f.exists() && f.canExecute();
+    return f.exists() && FileUtil.canExecute(f);
   }
 
   private synchronized void setHealthStatus(boolean isHealthy, String output) {

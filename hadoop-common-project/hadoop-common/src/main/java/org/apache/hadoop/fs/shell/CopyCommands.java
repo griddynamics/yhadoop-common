@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -60,16 +62,20 @@ class CopyCommands {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "nl");
-      cf.parse(args);
+      try {
+        CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "nl");
+        cf.parse(args);
 
-      delimiter = cf.getOpt("nl") ? "\n" : null;
+        delimiter = cf.getOpt("nl") ? "\n" : null;
 
-      dst = new PathData(new File(args.removeLast()), getConf());
-      if (dst.exists && dst.stat.isDirectory()) {
-        throw new PathIsDirectoryException(dst.toString());
+        dst = new PathData(new URI(args.removeLast()), getConf());
+        if (dst.exists && dst.stat.isDirectory()) {
+          throw new PathIsDirectoryException(dst.toString());
+        }
+        srcs = new LinkedList<PathData>();
+      } catch (URISyntaxException e) {
+        throw new IOException("unexpected URISyntaxException", e);
       }
-      srcs = new LinkedList<PathData>();
     }
 
     @Override
@@ -123,17 +129,19 @@ class CopyCommands {
 
   static class Cp extends CommandWithDestination {
     public static final String NAME = "cp";
-    public static final String USAGE = "<src> ... <dst>";
+    public static final String USAGE = "[-f] [-p] <src> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src> to a\n" +
       "destination.  When copying multiple files, the destination\n" +
-      "must be a directory.";
+      "must be a directory. Passing -p preserves access and\n" +
+      "modification times, ownership and the mode.\n";
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f");
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f", "p");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
+      setPreserve(cf.getOpt("p"));
       // should have a -r option
       setRecursive(true);
       getRemoteDestination(args);
@@ -146,20 +154,23 @@ class CopyCommands {
   public static class Get extends CommandWithDestination {
     public static final String NAME = "get";
     public static final String USAGE =
-      "[-ignoreCrc] [-crc] <src> ... <localdst>";
+      "[-p] [-ignoreCrc] [-crc] <src> ... <localdst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src>\n" +
       "to the local name.  <src> is kept.  When copying multiple,\n" +
-      "files, the destination must be a directory.";
+      "files, the destination must be a directory. Passing\n" +
+      "-p preserves access and modification times,\n" +
+      "ownership and the mode.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
       CommandFormat cf = new CommandFormat(
-          1, Integer.MAX_VALUE, "crc", "ignoreCrc");
+          1, Integer.MAX_VALUE, "crc", "ignoreCrc", "p");
       cf.parse(args);
       setWriteChecksum(cf.getOpt("crc"));
       setVerifyChecksum(!cf.getOpt("ignoreCrc"));
+      setPreserve(cf.getOpt("p"));
       setRecursive(true);
       getLocalDestination(args);
     }
@@ -170,16 +181,20 @@ class CopyCommands {
    */
   public static class Put extends CommandWithDestination {
     public static final String NAME = "put";
-    public static final String USAGE = "<localsrc> ... <dst>";
+    public static final String USAGE = "[-f] [-p] <localsrc> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files from the local file system\n" +
-      "into fs.";
+      "into fs. Copying fails if the file already\n" +
+      "exists, unless the -f flag is given. Passing\n" +
+      "-p preserves access and modification times,\n" +
+      "ownership and the mode.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f");
+      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f", "p");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
+      setPreserve(cf.getOpt("p"));
       getRemoteDestination(args);
       // should have a -r option
       setRecursive(true);
@@ -188,9 +203,13 @@ class CopyCommands {
     // commands operating on local paths have no need for glob expansion
     @Override
     protected List<PathData> expandArgument(String arg) throws IOException {
-      List<PathData> items = new LinkedList<PathData>();
-      items.add(new PathData(new File(arg), getConf()));
-      return items;
+      try {
+        List<PathData> items = new LinkedList<PathData>();
+        items.add(new PathData(new URI(arg), getConf()));
+        return items;
+      } catch (URISyntaxException e) {
+        throw new IOException("unexpected URISyntaxException", e);
+      }
     }
 
     @Override

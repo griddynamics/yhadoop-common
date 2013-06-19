@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,12 +29,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -45,12 +45,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -59,9 +59,17 @@ public class TestAMAuthorization {
 
   private static final Log LOG = LogFactory.getLog(TestAMAuthorization.class);
 
-  public static final class MyContainerManager implements ContainerManager {
+  private static final Configuration confWithSecurityEnabled =
+      new Configuration();
+  static {
+    confWithSecurityEnabled.set(
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(confWithSecurityEnabled);
+  }
 
-    public Map<String, String> amContainerEnv;
+  public static final class MyContainerManager implements ContainerManagementProtocol {
+
+    public ByteBuffer amTokens;
 
     public MyContainerManager() {
     }
@@ -69,21 +77,21 @@ public class TestAMAuthorization {
     @Override
     public StartContainerResponse
         startContainer(StartContainerRequest request)
-            throws YarnRemoteException {
-      amContainerEnv = request.getContainerLaunchContext().getEnvironment();
+            throws YarnException {
+      amTokens = request.getContainerLaunchContext().getTokens();
       return null;
     }
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws YarnException {
       // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws YarnException {
       // TODO Auto-generated method stub
       return null;
     }
@@ -91,11 +99,8 @@ public class TestAMAuthorization {
 
   public static class MockRMWithAMS extends MockRMWithCustomAMLauncher {
 
-    public MockRMWithAMS(Configuration conf, ContainerManager containerManager) {
+    public MockRMWithAMS(Configuration conf, ContainerManagementProtocol containerManager) {
       super(conf, containerManager);
-      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-          "kerberos");
-      UserGroupInformation.setConfiguration(conf);
     }
 
     @Override
@@ -105,7 +110,6 @@ public class TestAMAuthorization {
 
     @Override
     protected ApplicationMasterService createApplicationMasterService() {
-
       return new ApplicationMasterService(getRMContext(), this.scheduler);
     }
   }
@@ -113,7 +117,8 @@ public class TestAMAuthorization {
   @Test
   public void testAuthorizedAccess() throws Exception {
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm = new MockRMWithAMS(new Configuration(), containerManager);
+    final MockRM rm =
+        new MockRMWithAMS(confWithSecurityEnabled, containerManager);
     rm.start();
 
     MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -126,11 +131,11 @@ public class TestAMAuthorization {
     nm1.nodeHeartbeat(true);
 
     int waitCount = 0;
-    while (containerManager.amContainerEnv == null && waitCount++ < 20) {
+    while (containerManager.amTokens == null && waitCount++ < 20) {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.amContainerEnv);
+    Assert.assertNotNull(containerManager.amTokens);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -142,18 +147,18 @@ public class TestAMAuthorization {
 
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
-    String tokenURLEncodedStr = containerManager.amContainerEnv
-        .get(ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
-    LOG.info("AppMasterToken is " + tokenURLEncodedStr);
-    Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
-    token.decodeFromUrlString(tokenURLEncodedStr);
-    currentUser.addToken(token);
+    Credentials credentials = new Credentials();
+    DataInputByteBuffer buf = new DataInputByteBuffer();
+    containerManager.amTokens.rewind();
+    buf.reset(containerManager.amTokens);
+    credentials.readTokenStorageStream(buf);
+    currentUser.addCredentials(credentials);
 
-    AMRMProtocol client = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+    ApplicationMasterProtocol client = currentUser
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rm
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rm
               .getApplicationMasterService().getBindAddress(), conf);
           }
         });
@@ -172,7 +177,7 @@ public class TestAMAuthorization {
   @Test
   public void testUnauthorizedAccess() throws Exception {
     MyContainerManager containerManager = new MyContainerManager();
-    MockRM rm = new MockRMWithAMS(new Configuration(), containerManager);
+    MockRM rm = new MockRMWithAMS(confWithSecurityEnabled, containerManager);
     rm.start();
 
     MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -182,17 +187,16 @@ public class TestAMAuthorization {
     nm1.nodeHeartbeat(true);
 
     int waitCount = 0;
-    while (containerManager.amContainerEnv == null && waitCount++ < 20) {
+    while (containerManager.amTokens == null && waitCount++ < 40) {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.amContainerEnv);
+    Assert.assertNotNull(containerManager.amTokens);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
     waitForLaunchedState(attempt);
 
-    // Create a client to the RM.
     final Configuration conf = rm.getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
     final InetSocketAddress serviceAddr = conf.getSocketAddr(
@@ -202,31 +206,56 @@ public class TestAMAuthorization {
 
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
-    String tokenURLEncodedStr = containerManager.amContainerEnv
-        .get(ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
-    LOG.info("AppMasterToken is " + tokenURLEncodedStr);
-    Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
-    token.decodeFromUrlString(tokenURLEncodedStr);
-    currentUser.addToken(token);
 
-    AMRMProtocol client = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+    // First try contacting NM without tokens
+    ApplicationMasterProtocol client = currentUser
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
+                serviceAddr, conf);
+          }
+        });
+    RegisterApplicationMasterRequest request = Records
+        .newRecord(RegisterApplicationMasterRequest.class);
+    request.setApplicationAttemptId(applicationAttemptId);
+    try {
+      client.registerApplicationMaster(request);
+      Assert.fail("Should fail with authorization error");
+    } catch (Exception e) {
+      // Because there are no tokens, the request should be rejected as the
+      // server side will assume we are trying simple auth.
+      Assert.assertTrue(e.getCause().getMessage().contains(
+        "SIMPLE authentication is not enabled.  "
+            + "Available:[KERBEROS, DIGEST]"));
+    }
+
+    // Now try to validate invalid authorization.
+    Credentials credentials = new Credentials();
+    DataInputByteBuffer buf = new DataInputByteBuffer();
+    containerManager.amTokens.rewind();
+    buf.reset(containerManager.amTokens);
+    credentials.readTokenStorageStream(buf);
+    currentUser.addCredentials(credentials);
+
+    // Create a client to the RM.
+    client = currentUser
+        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+          @Override
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
                 serviceAddr, conf);
           }
         });
 
-    RegisterApplicationMasterRequest request = Records
-        .newRecord(RegisterApplicationMasterRequest.class);
+    request = Records.newRecord(RegisterApplicationMasterRequest.class);
     ApplicationAttemptId otherAppAttemptId = BuilderUtils
         .newApplicationAttemptId(applicationAttemptId.getApplicationId(), 42);
     request.setApplicationAttemptId(otherAppAttemptId);
     try {
       client.registerApplicationMaster(request);
       Assert.fail("Should fail with authorization error");
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().contains(
           "Unauthorized request from ApplicationMaster. "
               + "Expected ApplicationAttemptID: "
@@ -241,7 +270,7 @@ public class TestAMAuthorization {
       throws InterruptedException {
     int waitCount = 0;
     while (attempt.getAppAttemptState() != RMAppAttemptState.LAUNCHED
-        && waitCount++ < 20) {
+        && waitCount++ < 40) {
       LOG.info("Waiting for AppAttempt to reach LAUNCHED state. "
           + "Current state is " + attempt.getAppAttemptState());
       Thread.sleep(1000);

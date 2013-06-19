@@ -168,9 +168,21 @@ public interface RMApp extends EventHandler<RMAppEvent> {
 
   /**
    * The final finish state of the AM when unregistering as in
-   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
+   * {@link FinishApplicationMasterRequest#setFinalApplicationStatus(FinalApplicationStatus)}.
    * @return the final finish state of the AM as set in
-   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
+   * {@link FinishApplicationMasterRequest#setFinalApplicationStatus(FinalApplicationStatus)}.
    */
   FinalApplicationStatus getFinalApplicationStatus();
+
+  /**
+   * The number of max attempts of the application.
+   * @return the number of max attempts of the application.
+   */
+  int getMaxAppAttempts();
+  
+  /**
+   * Returns the application type
+   * @return the application type.
+   */
+  String getApplicationType(); 
 }

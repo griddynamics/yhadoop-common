@@ -47,6 +47,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
@@ -60,7 +61,7 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -103,10 +104,10 @@ public class TestPipeApplication {
 
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
       // token for authorization
-      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
-      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      TokenCache.setJobToken(token,  conf.getCredentials());
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
       TestTaskReporter reporter = new TestTaskReporter();
       PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text> runner = new PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text>();
@@ -167,11 +168,11 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
 
       // token for authorization
-      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
 
-      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      TokenCache.setJobToken(token, conf.getCredentials());
       FakeCollector output = new FakeCollector(new Counters.Counter(),
               new Progress());
       FileSystem fs = new RawLocalFileSystem();
@@ -388,10 +389,10 @@ public class TestPipeApplication {
     File[] psw = cleanTokenPasswordFile();
     JobConf conf = new JobConf();
     try {
-      Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
+      Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
-      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      TokenCache.setJobToken(token, conf.getCredentials());
 
       File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerStub");
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());

@@ -19,9 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -35,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -47,19 +44,20 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy;
+import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -74,22 +72,22 @@ public class ContainerLauncherImpl extends AbstractService implements
 
   private ConcurrentHashMap<ContainerId, Container> containers = 
     new ConcurrentHashMap<ContainerId, Container>(); 
-  private AppContext context;
+  private final AppContext context;
   protected ThreadPoolExecutor launcherPool;
   protected static final int INITIAL_POOL_SIZE = 10;
   private int limitOnPoolSize;
   private Thread eventHandlingThread;
   protected BlockingQueue<ContainerLauncherEvent> eventQueue =
       new LinkedBlockingQueue<ContainerLauncherEvent>();
-  YarnRPC rpc;
   private final AtomicBoolean stopped;
+  private ContainerManagementProtocolProxy cmProxy;
 
   private Container getContainer(ContainerLauncherEvent event) {
     ContainerId id = event.getContainerID();
     Container c = containers.get(id);
     if(c == null) {
       c = new Container(event.getTaskAttemptID(), event.getContainerID(),
-          event.getContainerMgrAddress(), event.getContainerToken());
+          event.getContainerMgrAddress());
       Container old = containers.putIfAbsent(id, c);
       if(old != null) {
         c = old;
@@ -115,15 +113,13 @@ public class ContainerLauncherImpl extends AbstractService implements
     private TaskAttemptId taskAttemptID;
     private ContainerId containerID;
     final private String containerMgrAddress;
-    private ContainerToken containerToken;
     
     public Container(TaskAttemptId taId, ContainerId containerID,
-        String containerMgrAddress, ContainerToken containerToken) {
+        String containerMgrAddress) {
       this.state = ContainerState.PREP;
       this.taskAttemptID = taId;
       this.containerMgrAddress = containerMgrAddress;
       this.containerID = containerID;
-      this.containerToken = containerToken;
     }
     
     public synchronized boolean isCompletelyDone() {
@@ -140,24 +136,26 @@ public class ContainerLauncherImpl extends AbstractService implements
         return;
       }
       
-      ContainerManager proxy = null;
+      ContainerManagementProtocolProxyData proxy = null;
       try {
 
-        proxy = getCMProxy(containerID, containerMgrAddress,
-            containerToken);
+        proxy = getCMProxy(containerMgrAddress, containerID);
 
         // Construct the actual Container
         ContainerLaunchContext containerLaunchContext =
-          event.getContainer();
+          event.getContainerLaunchContext();
 
         // Now launch the actual container
         StartContainerRequest startRequest = Records
           .newRecord(StartContainerRequest.class);
         startRequest.setContainerLaunchContext(containerLaunchContext);
-        StartContainerResponse response = proxy.startContainer(startRequest);
+        startRequest.setContainerToken(event.getContainerToken());
+        StartContainerResponse response =
+            proxy.getContainerManagementProtocol().startContainer(startRequest);
 
-        ByteBuffer portInfo = response
-          .getServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID);
+        ByteBuffer portInfo =
+            response.getAllServicesMetaData().get(
+                ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID);
         int port = -1;
         if(portInfo != null) {
           port = ShuffleHandler.deserializeMetaData(portInfo);
@@ -183,7 +181,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         sendContainerLaunchFailedMsg(taskAttemptID, message);
       } finally {
         if (proxy != null) {
-          ContainerLauncherImpl.this.rpc.stopProxy(proxy, getConfig());
+          cmProxy.mayBeCloseProxy(proxy);
         }
       }
     }
@@ -196,29 +194,30 @@ public class ContainerLauncherImpl extends AbstractService implements
       } else if (!isCompletelyDone()) {
         LOG.info("KILLING " + taskAttemptID);
 
-        ContainerManager proxy = null;
+        ContainerManagementProtocolProxyData proxy = null;
         try {
-          proxy = getCMProxy(this.containerID, this.containerMgrAddress,
-              this.containerToken);
+          proxy = getCMProxy(this.containerMgrAddress, this.containerID);
 
-            // kill the remote container if already launched
-            StopContainerRequest stopRequest = Records
+          // kill the remote container if already launched
+          StopContainerRequest stopRequest = Records
               .newRecord(StopContainerRequest.class);
-            stopRequest.setContainerId(this.containerID);
-            proxy.stopContainer(stopRequest);
+          stopRequest.setContainerId(this.containerID);
+          proxy.getContainerManagementProtocol().stopContainer(stopRequest);
 
         } catch (Throwable t) {
 
           // ignore the cleanup failure
           String message = "cleanup failed for container "
-            + this.containerID + " : "
-            + StringUtils.stringifyException(t);
-          context.getEventHandler().handle(
-            new TaskAttemptDiagnosticsUpdateEvent(this.taskAttemptID, message));
+              + this.containerID + " : "
+              + StringUtils.stringifyException(t);
+          context.getEventHandler()
+              .handle(
+                  new TaskAttemptDiagnosticsUpdateEvent(this.taskAttemptID,
+                      message));
           LOG.warn(message);
         } finally {
           if (proxy != null) {
-            ContainerLauncherImpl.this.rpc.stopProxy(proxy, getConfig());
+            cmProxy.mayBeCloseProxy(proxy);
           }
         }
         this.state = ContainerState.DONE;
@@ -230,7 +229,6 @@ public class ContainerLauncherImpl extends AbstractService implements
     }
   }
 
-
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
     this.context = context;
@@ -238,24 +236,17 @@ public class ContainerLauncherImpl extends AbstractService implements
   }
 
   @Override
-  public synchronized void init(Configuration config) {
-    Configuration conf = new Configuration(config);
-    conf.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
-        0);
+  protected void serviceInit(Configuration conf) throws Exception {
     this.limitOnPoolSize = conf.getInt(
         MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT,
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT);
     LOG.info("Upper limit on the thread pool size is " + this.limitOnPoolSize);
-    this.rpc = createYarnRPC(conf);
-    super.init(conf);
-  }
-  
-  protected YarnRPC createYarnRPC(Configuration conf) {
-    return YarnRPC.create(conf);
+    super.serviceInit(conf);
+    cmProxy =
+        new ContainerManagementProtocolProxy(conf, context.getNMTokens());
   }
 
-  public void start() {
+  protected void serviceStart() throws Exception {
 
     ThreadFactory tf = new ThreadFactoryBuilder().setNameFormat(
         "ContainerLauncher #%d").setDaemon(true).build();
@@ -271,7 +262,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         ContainerLauncherEvent event = null;
         Set<String> allNodes = new HashSet<String>();
 
-          while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
+        while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
@@ -281,6 +272,7 @@ public class ContainerLauncherImpl extends AbstractService implements
             return;
           }
           allNodes.add(event.getContainerMgrAddress());
+
           int poolSize = launcherPool.getCorePoolSize();
 
           // See if we need up the pool size only if haven't reached the
@@ -315,7 +307,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     };
     eventHandlingThread.setName("ContainerLauncher Event Handler");
     eventHandlingThread.start();
-    super.start();
+    super.serviceStart();
   }
 
   private void shutdownAllContainers() {
@@ -326,49 +318,25 @@ public class ContainerLauncherImpl extends AbstractService implements
     }
   }
 
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (stopped.getAndSet(true)) {
       // return if already stopped
       return;
     }
     // shutdown any containers that might be left running
     shutdownAllContainers();
-    eventHandlingThread.interrupt();
-    launcherPool.shutdownNow();
-    super.stop();
+    if (eventHandlingThread != null) {
+      eventHandlingThread.interrupt();
+    }
+    if (launcherPool != null) {
+      launcherPool.shutdownNow();
+    }
+    super.serviceStop();
   }
 
   protected EventProcessor createEventProcessor(ContainerLauncherEvent event) {
     return new EventProcessor(event);
   }
-
-  protected ContainerManager getCMProxy(ContainerId containerID,
-      final String containerManagerBindAddr, ContainerToken containerToken)
-      throws IOException {
-
-    final InetSocketAddress cmAddr =
-        NetUtils.createSocketAddr(containerManagerBindAddr);
-    UserGroupInformation user = UserGroupInformation.getCurrentUser();
-
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
-      // the user in createRemoteUser in this context has to be ContainerID
-      user = UserGroupInformation.createRemoteUser(containerID.toString());
-      user.addToken(token);
-    }
-
-    ContainerManager proxy = user
-        .doAs(new PrivilegedAction<ContainerManager>() {
-          @Override
-          public ContainerManager run() {
-            return (ContainerManager) rpc.getProxy(ContainerManager.class,
-                cmAddr, getConfig());
-          }
-        });
-    return proxy;
-  }
-
 
   /**
    * Setup and start the container on remote nodemanager.
@@ -404,7 +372,7 @@ public class ContainerLauncherImpl extends AbstractService implements
       removeContainerIfDone(containerID);
     }
   }
-
+  
   @SuppressWarnings("unchecked")
   void sendContainerLaunchFailedMsg(TaskAttemptId taskAttemptID,
       String message) {
@@ -421,7 +389,12 @@ public class ContainerLauncherImpl extends AbstractService implements
     try {
       eventQueue.put(event);
     } catch (InterruptedException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
+  }
+  
+  public ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData getCMProxy(
+      String containerMgrBindAddr, ContainerId containerId) throws IOException {
+    return cmProxy.getProxy(containerMgrBindAddr, containerId);
   }
 }

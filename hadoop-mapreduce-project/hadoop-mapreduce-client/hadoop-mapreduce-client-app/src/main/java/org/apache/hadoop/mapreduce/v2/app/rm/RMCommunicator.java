@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -38,13 +39,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -55,10 +52,10 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
@@ -73,10 +70,9 @@ public abstract class RMCommunicator extends AbstractService
   protected Thread allocatorThread;
   @SuppressWarnings("rawtypes")
   protected EventHandler eventHandler;
-  protected AMRMProtocol scheduler;
+  protected ApplicationMasterProtocol scheduler;
   private final ClientService clientService;
   protected int lastResponseID;
-  private Resource minContainerCapability;
   private Resource maxContainerCapability;
   protected Map<ApplicationAccessType, String> applicationACLs;
   private volatile long lastHeartbeatTime;
@@ -103,22 +99,22 @@ public abstract class RMCommunicator extends AbstractService
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     rmPollInterval =
         conf.getInt(MRJobConfig.MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS,
             MRJobConfig.DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     scheduler= createSchedulerProxy();
     register();
     startAllocatorThread();
     JobID id = TypeConverter.fromYarn(this.applicationId);
     JobId jobId = TypeConverter.toYarn(id);
     job = context.getJob(jobId);
-    super.start();
+    super.serviceStart();
   }
 
   protected AppContext getContext() {
@@ -156,19 +152,23 @@ public abstract class RMCommunicator extends AbstractService
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
-      minContainerCapability = response.getMinimumResourceCapability();
       maxContainerCapability = response.getMaximumResourceCapability();
-      this.context.getClusterInfo().setMinContainerCapability(
-          minContainerCapability);
       this.context.getClusterInfo().setMaxContainerCapability(
           maxContainerCapability);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        setClientToAMToken(response.getClientToAMTokenMasterKey());        
+      }
       this.applicationACLs = response.getApplicationACLs();
-      LOG.info("minContainerCapability: " + minContainerCapability.getMemory());
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
-      throw new YarnException(are);
+      throw new YarnRuntimeException(are);
     }
+  }
+
+  private void setClientToAMToken(ByteBuffer clientToAMTokenMasterKey) {
+    byte[] key = clientToAMTokenMasterKey.array();
+    context.getClientToAMTokenSecretManager().setMasterKey(key);
   }
 
   protected void unregister() {
@@ -197,7 +197,7 @@ public abstract class RMCommunicator extends AbstractService
       FinishApplicationMasterRequest request =
           recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
       request.setAppAttemptId(this.applicationAttemptId);
-      request.setFinishApplicationStatus(finishState);
+      request.setFinalApplicationStatus(finishState);
       request.setDiagnostics(sb.toString());
       request.setTrackingUrl(historyUrl);
       scheduler.finishApplicationMaster(request);
@@ -206,30 +206,28 @@ public abstract class RMCommunicator extends AbstractService
     }
   }
 
-  protected Resource getMinContainerCapability() {
-    return minContainerCapability;
-  }
-
   protected Resource getMaxContainerCapability() {
     return maxContainerCapability;
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (stopped.getAndSet(true)) {
       // return if already stopped
       return;
     }
-    allocatorThread.interrupt();
-    try {
-      allocatorThread.join();
-    } catch (InterruptedException ie) {
-      LOG.warn("InterruptedException while stopping", ie);
+    if (allocatorThread != null) {
+      allocatorThread.interrupt();
+      try {
+        allocatorThread.join();
+      } catch (InterruptedException ie) {
+        LOG.warn("InterruptedException while stopping", ie);
+      }
     }
     if(shouldUnregister) {
       unregister();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   protected void startAllocatorThread() {
@@ -241,7 +239,7 @@ public abstract class RMCommunicator extends AbstractService
             Thread.sleep(rmPollInterval);
             try {
               heartbeat();
-            } catch (YarnException e) {
+            } catch (YarnRuntimeException e) {
               LOG.error("Error communicating with RM: " + e.getMessage() , e);
               return;
             } catch (Exception e) {
@@ -265,7 +263,7 @@ public abstract class RMCommunicator extends AbstractService
     allocatorThread.start();
   }
 
-  protected AMRMProtocol createSchedulerProxy() {
+  protected ApplicationMasterProtocol createSchedulerProxy() {
     final Configuration conf = getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
     final InetSocketAddress serviceAddr = conf.getSocketAddr(
@@ -277,31 +275,14 @@ public abstract class RMCommunicator extends AbstractService
     try {
       currentUser = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
 
-    if (UserGroupInformation.isSecurityEnabled()) {
-      String tokenURLEncodedStr = System.getenv().get(
-          ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
-      Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
-
-      try {
-        token.decodeFromUrlString(tokenURLEncodedStr);
-      } catch (IOException e) {
-        throw new YarnException(e);
-      }
-
-      SecurityUtil.setTokenService(token, serviceAddr);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("AppMasterToken is " + token);
-      }
-      currentUser.addToken(token);
-    }
-
-    return currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
+    // CurrentUser should already have AMToken loaded.
+    return currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
       @Override
-      public AMRMProtocol run() {
-        return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
+      public ApplicationMasterProtocol run() {
+        return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
             serviceAddr, conf);
       }
     });

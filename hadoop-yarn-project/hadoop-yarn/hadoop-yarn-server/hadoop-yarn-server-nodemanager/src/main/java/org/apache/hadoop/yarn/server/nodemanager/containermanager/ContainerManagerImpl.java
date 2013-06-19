@@ -18,18 +18,19 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
+import static org.apache.hadoop.service.Service.STATE.STARTED;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
@@ -38,10 +39,14 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -52,16 +57,17 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
@@ -71,6 +77,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
@@ -98,12 +105,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.service.CompositeService;
-import org.apache.hadoop.yarn.service.Service;
-import org.apache.hadoop.yarn.service.ServiceStateChangeListener;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public class ContainerManagerImpl extends CompositeService implements
-    ServiceStateChangeListener, ContainerManager,
+    ServiceStateChangeListener, ContainerManagementProtocol,
     EventHandler<ContainerManagerEvent> {
 
   private static final Log LOG = LogFactory.getLog(ContainerManagerImpl.class);
@@ -125,6 +132,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ApplicationACLsManager aclsManager;
 
   private final DeletionService deletionService;
+  private AtomicBoolean blockNewContainerRequests = new AtomicBoolean(false);
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -151,7 +159,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     // Start configurable services
     auxiliaryServices = new AuxServices();
-    auxiliaryServices.register(this);
+    auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
     this.containersMonitor =
@@ -172,13 +180,13 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
-  public void init(Configuration conf) {
+  public void serviceInit(Configuration conf) throws Exception {
     LogHandler logHandler =
       createLogHandler(conf, this.context, this.deletionService);
     addIfService(logHandler);
     dispatcher.register(LogHandlerEventType.class, logHandler);
     
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   private void addIfService(Object object) {
@@ -215,7 +223,7 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
 
     // Enqueue user dirs in deletion context
 
@@ -228,8 +236,8 @@ public class ContainerManagerImpl extends CompositeService implements
         YarnConfiguration.DEFAULT_NM_PORT);
 
     server =
-        rpc.getServer(ContainerManager.class, this, initialAddress, conf,
-            this.context.getContainerTokenSecretManager(),
+        rpc.getServer(ContainerManagementProtocol.class, this, initialAddress, conf,
+            this.context.getNMTokenSecretManager(),
             conf.getInt(YarnConfiguration.NM_CONTAINER_MGR_THREAD_COUNT, 
                 YarnConfiguration.DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT));
     
@@ -239,13 +247,20 @@ public class ContainerManagerImpl extends CompositeService implements
         false)) {
       refreshServiceAcls(conf, new NMPolicyProvider());
     }
-    
+
+    LOG.info("Blocking new container-requests as container manager rpc" +
+    		" server is still starting.");
+    this.setBlockNewContainerRequests(true);
     server.start();
     InetSocketAddress connectAddress = NetUtils.getConnectAddress(server);
-    this.context.getNodeId().setHost(connectAddress.getHostName());
-    this.context.getNodeId().setPort(connectAddress.getPort());
+    NodeId nodeId = NodeId.newInstance(
+        connectAddress.getAddress().getCanonicalHostName(),
+        connectAddress.getPort());
+    ((NodeManager.NMContext)context).setNodeId(nodeId);
+    this.context.getNMTokenSecretManager().setNodeId(nodeId);
+    this.context.getContainerTokenSecretManager().setNodeId(nodeId);
     LOG.info("ContainerManager started at " + connectAddress);
-    super.start();
+    super.serviceStart();
   }
 
   void refreshServiceAcls(Configuration configuration, 
@@ -254,25 +269,24 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
-  public void stop() {
+  public void serviceStop() throws Exception {
     if (auxiliaryServices.getServiceState() == STARTED) {
-      auxiliaryServices.unregister(this);
+      auxiliaryServices.unregisterServiceListener(this);
     }
     if (server != null) {
       server.stop();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   // Get the remoteUGI corresponding to the api call.
-  private UserGroupInformation getRemoteUgi(String containerIDStr)
-      throws YarnRemoteException {
+  protected UserGroupInformation getRemoteUgi()
+      throws YarnException {
     UserGroupInformation remoteUgi;
     try {
       remoteUgi = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
-      String msg = "Cannot obtain the user-name for containerId: "
-          + containerIDStr + ". Got exception: "
+      String msg = "Cannot obtain the user-name. Got exception: "
           + StringUtils.stringifyException(e);
       LOG.warn(msg);
       throw RPCUtil.getRemoteException(msg);
@@ -283,13 +297,15 @@ public class ContainerManagerImpl extends CompositeService implements
   // Obtain the needed ContainerTokenIdentifier from the remote-UGI. RPC layer
   // currently sets only the required id, but iterate through anyways just to
   // be sure.
-  private ContainerTokenIdentifier selectContainerTokenIdentifier(
+  @Private
+  @VisibleForTesting
+  protected NMTokenIdentifier selectNMTokenIdentifier(
       UserGroupInformation remoteUgi) {
     Set<TokenIdentifier> tokenIdentifiers = remoteUgi.getTokenIdentifiers();
-    ContainerTokenIdentifier resultId = null;
+    NMTokenIdentifier resultId = null;
     for (TokenIdentifier id : tokenIdentifiers) {
-      if (id instanceof ContainerTokenIdentifier) {
-        resultId = (ContainerTokenIdentifier) id;
+      if (id instanceof NMTokenIdentifier) {
+        resultId = (NMTokenIdentifier) id;
         break;
       }
     }
@@ -297,84 +313,51 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   /**
-   * Authorize the request.
-   * 
-   * @param containerIDStr
-   *          of the container
-   * @param launchContext
-   *          passed if verifying the startContainer, null otherwise.
-   * @param remoteUgi
+   * @param containerTokenIdentifier
+   *          of the container to be started
+   * @param ugi
    *          ugi corresponding to the remote end making the api-call
-   * @throws YarnRemoteException
+   * @throws YarnException
    */
-  private void authorizeRequest(String containerIDStr,
-      ContainerLaunchContext launchContext, UserGroupInformation remoteUgi)
-      throws YarnRemoteException {
+  @Private
+  @VisibleForTesting
+  protected void authorizeStartRequest(NMTokenIdentifier nmTokenIdentifier,
+      ContainerTokenIdentifier containerTokenIdentifier,
+      UserGroupInformation ugi) throws YarnException {
 
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return;
-    }
-
+    ContainerId containerId = containerTokenIdentifier.getContainerID();
+    String containerIDStr = containerId.toString();
     boolean unauthorized = false;
     StringBuilder messageBuilder =
         new StringBuilder("Unauthorized request to start container. ");
-
-    if (!remoteUgi.getUserName().equals(containerIDStr)) {
+    if (!nmTokenIdentifier.getApplicationAttemptId().equals(
+        containerId.getApplicationAttemptId())) {
       unauthorized = true;
-      messageBuilder.append("\nExpected containerId: "
-          + remoteUgi.getUserName() + " Found: " + containerIDStr);
-    } else if (launchContext != null) {
-      // Verify other things also for startContainer() request.
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Number of TokenIdentifiers in the UGI from RPC: "
-            + remoteUgi.getTokenIdentifiers().size());
-      }
-
-      // Get the tokenId from the remote user ugi
-      ContainerTokenIdentifier tokenId =
-          selectContainerTokenIdentifier(remoteUgi);
-
-      if (tokenId == null) {
-        unauthorized = true;
-        messageBuilder
-            .append("\nContainerTokenIdentifier cannot be null! Null found for "
-                + containerIDStr);
-      } else {
-
-        // Is the container coming in with correct user-name?
-        if (!tokenId.getApplicationSubmitter().equals(launchContext.getUser())) {
-          unauthorized = true;
-          messageBuilder.append("\n Expected user-name "
-              + tokenId.getApplicationSubmitter() + " but found "
-              + launchContext.getUser());
-        }
-
-        // Is the container being relaunched? Or RPC layer let startCall with 
-      	//  tokens generated off old-secret through?
-        if (!this.context.getContainerTokenSecretManager()
-          .isValidStartContainerRequest(tokenId)) {
-          unauthorized = true;
-          messageBuilder.append("\n Attempt to relaunch the same " +
-              "container with id " + containerIDStr + ".");
-        }
-
-        // Ensure the token is not expired. 
-        // Token expiry is not checked for stopContainer/getContainerStatus
-        if (tokenId.getExpiryTimeStamp() < System.currentTimeMillis()) {
-          unauthorized = true;
-          messageBuilder.append("\nThis token is expired. current time is "
-              + System.currentTimeMillis() + " found "
-              + tokenId.getExpiryTimeStamp());
-        }
-        
-        Resource resource = tokenId.getResource();
-        if (!resource.equals(launchContext.getResource())) {
-          unauthorized = true;
-          messageBuilder.append("\nExpected resource " + resource
-              + " but found " + launchContext.getResource());
-        }
-      }
+      messageBuilder.append("\nNMToken for application attempt : ")
+        .append(nmTokenIdentifier.getApplicationAttemptId())
+        .append(" was used for starting container with container token")
+        .append(" issued for application attempt : ")
+        .append(containerId.getApplicationAttemptId());
+    } else if (!ugi.getUserName().equals(
+        nmTokenIdentifier.getApplicationAttemptId().toString())) {
+      unauthorized = true;
+      messageBuilder.append("\nExpected applicationAttemptId: ")
+        .append(ugi.getUserName()).append(" Found: ")
+        .append(nmTokenIdentifier.getApplicationAttemptId().toString());
+    } else if (!this.context.getContainerTokenSecretManager()
+        .isValidStartContainerRequest(containerId)) {
+      // Is the container being relaunched? Or RPC layer let startCall with
+      // tokens generated off old-secret through?
+      unauthorized = true;
+      messageBuilder.append("\n Attempt to relaunch the same ")
+        .append("container with id ").append(containerIDStr).append(".");
+    } else if (containerTokenIdentifier.getExpiryTimeStamp() < System
+      .currentTimeMillis()) {
+      // Ensure the token is not expired.
+      unauthorized = true;
+      messageBuilder.append("\nThis token is expired. current time is ")
+        .append(System.currentTimeMillis()).append(" found ")
+        .append(containerTokenIdentifier.getExpiryTimeStamp());
     }
 
     if (unauthorized) {
@@ -383,28 +366,144 @@ public class ContainerManagerImpl extends CompositeService implements
       throw RPCUtil.getRemoteException(msg);
     }
   }
-  
+
   /**
    * Start a container on this NodeManager.
    */
   @SuppressWarnings("unchecked")
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnException, IOException {
+
+    if (blockNewContainerRequests.get()) {
+      throw new NMNotYetReadyException(
+        "Rejecting new containers as NodeManager has not"
+            + " yet connected with ResourceManager");
+    }
+    /*
+     * 1) It should save the NMToken into NMTokenSecretManager. This is done
+     * here instead of RPC layer because at the time of opening/authenticating
+     * the connection it doesn't know what all RPC calls user will make on it.
+     * Also new NMToken is issued only at startContainer (once it gets renewed).
+     * 
+     * 2) It should validate containerToken. Need to check below things. a) It
+     * is signed by correct master key (part of retrieve password). b) It
+     * belongs to correct Node Manager (part of retrieve password). c) It has
+     * correct RMIdentifier. d) It is not expired.
+     */
+    // update NMToken
+
+    UserGroupInformation remoteUgi = getRemoteUgi();
+    NMTokenIdentifier nmTokenIdentifier = selectNMTokenIdentifier(remoteUgi);
+    
+    // Validate containerToken
+    ContainerTokenIdentifier containerTokenIdentifier =
+        verifyAndGetContainerTokenIdentifier(request.getContainerToken());
+
+    authorizeStartRequest(nmTokenIdentifier, containerTokenIdentifier,
+      remoteUgi);
+
+    if (containerTokenIdentifier.getRMIdentifer() != nodeStatusUpdater
+        .getRMIdentifier()) {
+        // Is the container coming from unknown RM
+        StringBuilder sb = new StringBuilder("\nContainer ");
+        sb.append(containerTokenIdentifier.getContainerID().toString())
+          .append(" rejected as it is allocated by a previous RM");
+        throw new InvalidContainerException(sb.toString());
+    }
+    
+    updateNMTokenIdentifier(nmTokenIdentifier);
+    
+    ContainerId containerId = containerTokenIdentifier.getContainerID();
+    String containerIdStr = containerId.toString();
+    String user = containerTokenIdentifier.getApplicationSubmitter();
+
+    LOG.info("Start request for " + containerIdStr + " by user " + user);
+
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
 
-    ContainerId containerID = launchContext.getContainerId();
-    String containerIDStr = containerID.toString();
+    Credentials credentials = parseCredentials(launchContext);
 
-    UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
-    authorizeRequest(containerIDStr, launchContext, remoteUgi);
+    Container container =
+        new ContainerImpl(getConfig(), this.dispatcher, launchContext,
+          credentials, metrics, containerTokenIdentifier);
+    ApplicationId applicationID =
+        containerId.getApplicationAttemptId().getApplicationId();
+    if (context.getContainers().putIfAbsent(containerId, container) != null) {
+      NMAuditLogger.logFailure(user, AuditConstants.START_CONTAINER,
+        "ContainerManagerImpl", "Container already running on this node!",
+        applicationID, containerId);
+      throw RPCUtil.getRemoteException("Container " + containerIdStr
+          + " already is running on this node!!");
+    }
 
-    LOG.info("Start request for " + containerIDStr + " by user "
-        + launchContext.getUser());
+    // Create the application
+    Application application =
+        new ApplicationImpl(dispatcher, this.aclsManager, user, applicationID,
+          credentials, context);
+    if (null == context.getApplications().putIfAbsent(applicationID,
+      application)) {
+      LOG.info("Creating a new application reference for app " + applicationID);
 
-    // //////////// Parse credentials
-    ByteBuffer tokens = launchContext.getContainerTokens();
+      dispatcher.getEventHandler().handle(
+        new ApplicationInitEvent(applicationID, container.getLaunchContext()
+          .getApplicationACLs()));
+    }
+
+    dispatcher.getEventHandler().handle(
+      new ApplicationContainerInitEvent(container));
+
+    this.context.getContainerTokenSecretManager().startContainerSuccessful(
+      containerTokenIdentifier);
+    NMAuditLogger.logSuccess(user, AuditConstants.START_CONTAINER,
+      "ContainerManageImpl", applicationID, containerId);
+    StartContainerResponse response =
+        recordFactory.newRecordInstance(StartContainerResponse.class);
+    response.setAllServicesMetaData(auxiliaryServices.getMetaData());
+    // TODO launchedContainer misplaced -> doesn't necessarily mean a container
+    // launch. A finished Application will not launch containers.
+    metrics.launchedContainer();
+    metrics.allocateContainer(containerTokenIdentifier.getResource());
+    return response;
+  }
+
+  protected ContainerTokenIdentifier verifyAndGetContainerTokenIdentifier(
+      org.apache.hadoop.yarn.api.records.Token token) throws YarnException,
+      InvalidToken {
+    ContainerTokenIdentifier containerTokenIdentifier = null;
+    try {
+      containerTokenIdentifier =
+          BuilderUtils.newContainerTokenIdentifier(token);
+    } catch (IOException e) {
+      throw RPCUtil.getRemoteException(e);
+    }
+    byte[] password =
+        context.getContainerTokenSecretManager().retrievePassword(
+          containerTokenIdentifier);
+    byte[] tokenPass = token.getPassword().array();
+    if (password == null || tokenPass == null
+        || !Arrays.equals(password, tokenPass)) {
+      throw new InvalidToken(
+        "Invalid container token used for starting container on : "
+            + context.getNodeId().toString());
+    }
+    return containerTokenIdentifier;
+  }
+
+  @Private
+  @VisibleForTesting
+  protected void updateNMTokenIdentifier(NMTokenIdentifier nmTokenIdentifier)
+      throws InvalidToken {
+    context.getNMTokenSecretManager().appAttemptStartContainer(
+      nmTokenIdentifier);
+  }
+
+  private Credentials parseCredentials(ContainerLaunchContext launchContext)
+      throws YarnException {
     Credentials credentials = new Credentials();
+    // //////////// Parse credentials
+    ByteBuffer tokens = launchContext.getTokens();
+
     if (tokens != null) {
       DataInputByteBuffer buf = new DataInputByteBuffer();
       tokens.rewind();
@@ -412,8 +511,7 @@ public class ContainerManagerImpl extends CompositeService implements
       try {
         credentials.readTokenStorageStream(buf);
         if (LOG.isDebugEnabled()) {
-          for (Token<? extends TokenIdentifier> tk : credentials
-              .getAllTokens()) {
+          for (Token<? extends TokenIdentifier> tk : credentials.getAllTokens()) {
             LOG.debug(tk.getService() + " = " + tk.toString());
           }
         }
@@ -422,55 +520,7 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
     // //////////// End of parsing credentials
-
-    Container container = new ContainerImpl(getConfig(), this.dispatcher,
-        launchContext, credentials, metrics);
-    ApplicationId applicationID = 
-        containerID.getApplicationAttemptId().getApplicationId();
-    if (context.getContainers().putIfAbsent(containerID, container) != null) {
-      NMAuditLogger.logFailure(launchContext.getUser(), 
-          AuditConstants.START_CONTAINER, "ContainerManagerImpl",
-          "Container already running on this node!",
-          applicationID, containerID);
-      throw RPCUtil.getRemoteException("Container " + containerIDStr
-          + " already is running on this node!!");
-    }
-
-    // Create the application
-    Application application =
-        new ApplicationImpl(dispatcher, this.aclsManager,
-          launchContext.getUser(), applicationID, credentials, context);
-    if (null ==
-        context.getApplications().putIfAbsent(applicationID, application)) {
-      LOG.info("Creating a new application reference for app "
-          + applicationID);
-      dispatcher.getEventHandler().handle(
-          new ApplicationInitEvent(applicationID, container
-              .getLaunchContext().getApplicationACLs()));
-    }
-
-    // TODO: Validate the request
-    dispatcher.getEventHandler().handle(
-        new ApplicationContainerInitEvent(container));
-    if (UserGroupInformation.isSecurityEnabled()) {
-      ContainerTokenIdentifier tokenId =
-          selectContainerTokenIdentifier(remoteUgi);
-      this.context.getContainerTokenSecretManager().startContainerSuccessful(
-        tokenId);
-    }
-
-    NMAuditLogger.logSuccess(launchContext.getUser(), 
-        AuditConstants.START_CONTAINER, "ContainerManageImpl", 
-        applicationID, containerID);
-
-    StartContainerResponse response =
-        recordFactory.newRecordInstance(StartContainerResponse.class);
-    response.addAllServiceResponse(auxiliaryServices.getMeta());
-    // TODO launchedContainer misplaced -> doesn't necessarily mean a container
-    // launch. A finished Application will not launch containers.
-    metrics.launchedContainer();
-    metrics.allocateContainer(launchContext.getResource());
-    return response;
+    return credentials;
   }
 
   /**
@@ -479,38 +529,24 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   @SuppressWarnings("unchecked")
   public StopContainerResponse stopContainer(StopContainerRequest request)
-      throws YarnRemoteException {
+      throws YarnException, IOException {
 
     ContainerId containerID = request.getContainerId();
     String containerIDStr = containerID.toString();
-
-    // TODO: Only the container's owner can kill containers today.
-
-    UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
-    authorizeRequest(containerIDStr, null, remoteUgi);
+    Container container = this.context.getContainers().get(containerID);
+    LOG.info("Getting container-status for " + containerIDStr);
+    authorizeGetAndStopContainerRequest(containerID, container, true);
 
     StopContainerResponse response =
         recordFactory.newRecordInstance(StopContainerResponse.class);
 
-    Container container = this.context.getContainers().get(containerID);
-    if (container == null) {
-      LOG.warn("Trying to stop unknown container " + containerID);
-      NMAuditLogger.logFailure("UnknownUser",
-          AuditConstants.STOP_CONTAINER, "ContainerManagerImpl",
-          "Trying to stop unknown container!",
-          containerID.getApplicationAttemptId().getApplicationId(), 
-          containerID);
-      return response; // Return immediately.
-    }
-
     dispatcher.getEventHandler().handle(
-        new ContainerKillEvent(containerID,
-            "Container killed by the ApplicationMaster."));
- 
-    NMAuditLogger.logSuccess(container.getUser(), 
-        AuditConstants.STOP_CONTAINER, "ContainerManageImpl", 
-        containerID.getApplicationAttemptId().getApplicationId(), 
-        containerID);
+      new ContainerKillEvent(containerID,
+        "Container killed by the ApplicationMaster."));
+
+    NMAuditLogger.logSuccess(container.getUser(),
+      AuditConstants.STOP_CONTAINER, "ContainerManageImpl", containerID
+        .getApplicationAttemptId().getApplicationId(), containerID);
 
     // TODO: Move this code to appropriate place once kill_container is
     // implemented.
@@ -521,29 +557,63 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public GetContainerStatusResponse getContainerStatus(
-      GetContainerStatusRequest request) throws YarnRemoteException {
+      GetContainerStatusRequest request) throws YarnException, IOException {
 
     ContainerId containerID = request.getContainerId();
     String containerIDStr = containerID.toString();
-
-    // TODO: Only the container's owner can get containers' status today.
-
-    UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
-    authorizeRequest(containerIDStr, null, remoteUgi);
+    Container container = this.context.getContainers().get(containerID);
 
     LOG.info("Getting container-status for " + containerIDStr);
-    Container container = this.context.getContainers().get(containerID);
-    if (container != null) {
-      ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
-      LOG.info("Returning " + containerStatus);
-      GetContainerStatusResponse response = recordFactory
-          .newRecordInstance(GetContainerStatusResponse.class);
-      response.setStatus(containerStatus);
-      return response;
+    authorizeGetAndStopContainerRequest(containerID, container, false);
+
+    ContainerStatus containerStatus = container.cloneAndGetContainerStatus();
+    LOG.info("Returning " + containerStatus);
+    GetContainerStatusResponse response =
+        recordFactory.newRecordInstance(GetContainerStatusResponse.class);
+    response.setStatus(containerStatus);
+    return response;
+  }
+
+  @Private
+  @VisibleForTesting
+  protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
+      Container container, boolean stopRequest) throws YarnException {
+
+    UserGroupInformation remoteUgi = getRemoteUgi();
+    NMTokenIdentifier identifier = selectNMTokenIdentifier(remoteUgi);
+
+    /*
+     * For get/stop container status; we need to verify that 1) User (NMToken)
+     * application attempt only has started container. 2) Requested containerId
+     * belongs to the same application attempt (NMToken) which was used. (Note:-
+     * This will prevent user in knowing another application's containers).
+     */
+
+    if ((!identifier.getApplicationAttemptId().equals(
+      containerId.getApplicationAttemptId()))
+        || (container != null && !identifier.getApplicationAttemptId().equals(
+          container.getContainerId().getApplicationAttemptId()))) {
+      if (stopRequest) {
+        LOG.warn(identifier.getApplicationAttemptId()
+            + " attempted to stop non-application container : "
+            + container.getContainerId().toString());
+        NMAuditLogger.logFailure("UnknownUser", AuditConstants.STOP_CONTAINER,
+          "ContainerManagerImpl", "Trying to stop unknown container!",
+          identifier.getApplicationAttemptId().getApplicationId(),
+          container.getContainerId());
+      } else {
+        LOG.warn(identifier.getApplicationAttemptId()
+            + " attempted to get get status for non-application container : "
+            + container.getContainerId().toString());
+      }
+      throw RPCUtil.getRemoteException("Container " + containerId.toString()
+          + " is not started by this application attempt.");
     }
 
-    throw RPCUtil.getRemoteException("Container " + containerIDStr
-        + " is not handled by this NodeManager");
+    if (container == null) {
+      throw RPCUtil.getRemoteException("Container " + containerId.toString()
+          + " is not handled by this NodeManager");
+    }
   }
 
   class ContainerEventDispatcher implements EventHandler<ContainerEvent> {
@@ -612,9 +682,23 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
+  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
+    this.blockNewContainerRequests.set(blockNewContainerRequests);
+  }
+
+  @Private
+  @VisibleForTesting
+  public boolean getBlockNewContainerRequestsStatus() {
+    return this.blockNewContainerRequests.get();
+  }
+  
   @Override
   public void stateChanged(Service service) {
     // TODO Auto-generated method stub
+  }
+  
+  public Context getContext() {
+    return this.context;
   }
 
 }

@@ -37,7 +37,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -50,7 +49,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -60,18 +59,18 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy;
+import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.junit.Test;
 
 public class TestContainerLauncher {
@@ -86,8 +85,8 @@ public class TestContainerLauncher {
   @Test
   public void testPoolSize() throws InterruptedException {
 
-    ApplicationId appId = BuilderUtils.newApplicationId(12345, 67);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationId appId = ApplicationId.newInstance(12345, 67);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
       appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 9, TaskType.MAP);
@@ -108,7 +107,7 @@ public class TestContainerLauncher {
 
     containerLauncher.expectedCorePoolSize = ContainerLauncherImpl.INITIAL_POOL_SIZE;
     for (int i = 0; i < 10; i++) {
-      ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, i);
+      ContainerId containerId = ContainerId.newInstance(appAttemptId, i);
       TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, i);
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
         containerId, "host" + i + ":1234", null,
@@ -130,7 +129,7 @@ public class TestContainerLauncher {
     Assert.assertEquals(10, containerLauncher.numEventsProcessed.get());
     containerLauncher.finishEventHandling = false;
     for (int i = 0; i < 10; i++) {
-      ContainerId containerId = BuilderUtils.newContainerId(appAttemptId,
+      ContainerId containerId = ContainerId.newInstance(appAttemptId,
           i + 10);
       TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId,
           i + 10);
@@ -147,7 +146,7 @@ public class TestContainerLauncher {
     // Core pool size should be 21 but the live pool size should be only 11.
     containerLauncher.expectedCorePoolSize = 11 + ContainerLauncherImpl.INITIAL_POOL_SIZE;
     containerLauncher.finishEventHandling = false;
-    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 21);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 21);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 21);
     containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
       containerId, "host11:1234", null,
@@ -161,13 +160,13 @@ public class TestContainerLauncher {
 
   @Test
   public void testPoolLimits() throws InterruptedException {
-    ApplicationId appId = BuilderUtils.newApplicationId(12345, 67);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+    ApplicationId appId = ApplicationId.newInstance(12345, 67);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
       appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 9, TaskType.MAP);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
-    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 10);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 10);
 
     AppContext context = mock(AppContext.class);
     CustomContainerLauncher containerLauncher = new CustomContainerLauncher(
@@ -225,10 +224,6 @@ public class TestContainerLauncher {
 
   @Test
   public void testSlowNM() throws Exception {
-    test();
-  }
-
-  private void test() throws Exception {
 
     conf = new Configuration();
     int maxAttempts = 1;
@@ -240,7 +235,7 @@ public class TestContainerLauncher {
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
-    server = rpc.getServer(ContainerManager.class, new DummyContainerManager(),
+    server = rpc.getServer(ContainerManagementProtocol.class, new DummyContainerManager(),
         addr, conf, null, 1);
     server.start();
 
@@ -350,16 +345,26 @@ public class TestContainerLauncher {
     }
 
     @Override
-    protected ContainerLauncher createContainerLauncher(AppContext context) {
+    protected ContainerLauncher
+        createContainerLauncher(final AppContext context) {
       return new ContainerLauncherImpl(context) {
+
         @Override
-        protected ContainerManager getCMProxy(ContainerId containerID,
-            String containerManagerBindAddr, ContainerToken containerToken)
+        public ContainerManagementProtocolProxyData getCMProxy(
+            String containerMgrBindAddr, ContainerId containerId)
             throws IOException {
-          // make proxy connect to our local containerManager server
-          ContainerManager proxy = (ContainerManager) rpc.getProxy(
-              ContainerManager.class,
-              NetUtils.getConnectAddress(server), conf);
+          Token dummyToken =
+              Token.newInstance("NMTokenIdentifier".getBytes(),
+                  NMTokenIdentifier.KIND.toString(), "password".getBytes(),
+                  "NMToken");
+          ContainerManagementProtocolProxy cmProxy =
+              new ContainerManagementProtocolProxy(conf, context.getNMTokens());
+          InetSocketAddress addr = NetUtils.getConnectAddress(server);
+          ContainerManagementProtocolProxyData proxy =
+              cmProxy.new ContainerManagementProtocolProxyData(
+                  YarnRPC.create(conf),
+                  addr.getHostName() + ":" + addr.getPort(), containerId,
+                  dummyToken);
           return proxy;
         }
       };
@@ -367,13 +372,13 @@ public class TestContainerLauncher {
     };
   }
 
-  public class DummyContainerManager implements ContainerManager {
+  public class DummyContainerManager implements ContainerManagementProtocol {
 
     private ContainerStatus status = null;
 
     @Override
     public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnRemoteException {
+        GetContainerStatusRequest request) throws IOException {
       GetContainerStatusResponse response = recordFactory
           .newRecordInstance(GetContainerStatusResponse.class);
       response.setStatus(status);
@@ -382,31 +387,37 @@ public class TestContainerLauncher {
 
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
-        throws YarnRemoteException {
-      ContainerLaunchContext container = request.getContainerLaunchContext();
+        throws IOException {
+
+      ContainerTokenIdentifier containerTokenIdentifier =
+          MRApp.newContainerTokenIdentifier(request.getContainerToken());
+
+      // Validate that the container is what RM is giving.
+      Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,
+        containerTokenIdentifier.getNmHostAddress());
+
       StartContainerResponse response = recordFactory
           .newRecordInstance(StartContainerResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
-          try {
+      try {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(15000);
       } catch (Exception e) {
         LOG.error(e);
         throw new UndeclaredThrowableException(e);
-            }
+      }
       status.setState(ContainerState.RUNNING);
-      status.setContainerId(container.getContainerId());
+      status.setContainerId(containerTokenIdentifier.getContainerID());
       status.setExitStatus(0);
       return response;
-            }
+    }
 
     @Override
     public StopContainerResponse stopContainer(StopContainerRequest request)
-        throws YarnRemoteException {
+        throws IOException {
       Exception e = new Exception("Dummy function", new Exception(
           "Dummy function cause"));
-      throw YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(
-          null).createYarnRemoteException(e);
-          }
-        }
+      throw new IOException(e);
+    }
   }
+}
