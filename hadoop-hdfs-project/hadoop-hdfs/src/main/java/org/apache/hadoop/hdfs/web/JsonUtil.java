@@ -223,6 +223,7 @@ public class JsonUtil {
     m.put("blockSize", status.getBlockSize());
     m.put("replication", status.getReplication());
     m.put("fileId", status.getFileId());
+    m.put("childrenNum", status.getChildrenNum());
     return includeType ? toJsonString(FileStatus.class, m): JSON.toString(m);
   }
 
@@ -249,9 +250,10 @@ public class JsonUtil {
     final short replication = shortFromMap(m, "replication");
     final long fileId = m.containsKey("fileId") ? longFromMap(m, "fileId")
         : INodeId.GRANDFATHER_INODE_ID;
+    final int childrenNum = (int) (long) (Long) m.get("childrenNum");
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtil.string2Bytes(localName), fileId);
+        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum);
   }
   
   private static Long longFromMap(Map<?, ?> m, String key) {    
