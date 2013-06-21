@@ -138,12 +138,17 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9517. Documented various aspects of compatibility for Apache
     Hadoop. (Karthik Kambatla via acmurthy)
 
+    HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
     (todd)
 
   BUG FIXES
+
+    HADOOP-9451. Fault single-layer config if node group topology is enabled.
+    (Junping Du via llu)
 
     HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
 
@@ -467,6 +472,9 @@ Release 2.1.0-beta - UNRELEASED
     HADOOP-9637. Adding Native Fstat for Windows as needed by YARN. (Chuan Liu
     via cnauroth)
 
+    HADOOP-9264. Port change to use Java untar API on Windows from 
+    branch-1-win to trunk. (Chris Nauroth via suresh)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
@@ -656,6 +664,11 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-9276. Allow BoundedByteArrayOutputStream to be resettable.
     (Arun Murthy via hitesh)
+
+    HADOOP-7688. Add servlet handler check in HttpServer.start().
+    (Uma Maheswara Rao G via szetszwo)
+
+    HADOOP-7886. Add toString to FileStatus. (SreeHari via jghoman)
 
   OPTIMIZATIONS
 
@@ -927,6 +940,9 @@ Release 2.0.2-alpha - 2012-09-07
     HADOOP-8239. Add subclasses of MD5MD5CRC32FileChecksum to support file
     checksum with CRC32C.  (Kihwal Lee via szetszwo)
 
+    HADOOP-8619. WritableComparator must implement no-arg constructor.
+    (Chris Douglas via Suresh)
+
     HADOOP-8075. Lower native-hadoop library log from info to debug.
     (Hızır Sefa İrken via eli)
 
@@ -940,6 +956,16 @@ Release 2.0.2-alpha - 2012-09-07
 
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
     implementations. (Brandon Li via suresh)
+
+    HADOOP-7808. Port HADOOP-7510 - Add configurable option to use original 
+    hostname in token instead of IP to allow server IP change. 
+    (Daryn Sharp via suresh)
+
+    HADOOP-8367 Improve documentation of declaringClassProtocolName in 
+    rpc headers. (Sanjay Radia)
+
+    HADOOP-8624. ProtobufRpcEngine should log all RPCs if TRACE logging is
+    enabled (todd)
 
   BUG FIXES
 
@@ -1300,6 +1326,14 @@ Release 2.0.0-alpha - 05-23-2012
 
     HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
 
+    HADOOP-7729. Send back valid HTTP response if user hits IPC port with
+    HTTP GET. (todd)
+
+    HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
+
+    HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
+    client side translator and server side implementation. (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1433,6 +1467,9 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8359. Fix javadoc warnings in Configuration.  (Anupam Seth via
     szetszwo)
 
+    HADOOP-7988. Upper case in hostname part of the principals doesn't work with
+    kerberos. (jitendra)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -1496,6 +1533,27 @@ Release 2.0.0-alpha - 05-23-2012
 
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
+
+    HADOOP-7900. LocalDirAllocator confChanged() accesses conf.get() twice
+    (Ravi Gummadi via Uma Maheswara Rao G)
+
+    HADOOP-8146.  FsShell commands cannot be interrupted
+    (Daryn Sharp via Uma Maheswara Rao G)
+
+    HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
+    (Jon Eagles via bobby)
+
+    HADOOP-8001  ChecksumFileSystem's rename doesn't correctly handle checksum
+    files. (Daryn Sharp via bobby)
+
+    HADOOP-8006  TestFSInputChecker is failing in trunk.
+    (Daryn Sharp via bobby)
+
+    HADOOP-7998. CheckFileSystem does not correctly honor setVerifyChecksum
+    (Daryn Sharp via bobby)
+
+    HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
+    by Jersey (Alejandro Abdelnur via atm)
 
 Release 0.23.9 - UNRELEASED
 
@@ -2005,6 +2063,9 @@ Release 0.23.1 - 2012-02-17
 
     HADOOP-8027. Visiting /jmx on the daemon web interfaces may print
     unnecessary error in logs. (atm)
+
+    HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
+    (jitendra)
 
   OPTIMIZATIONS
 

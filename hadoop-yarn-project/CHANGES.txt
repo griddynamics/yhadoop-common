@@ -187,6 +187,10 @@ Release 2.1.0-beta - UNRELEASED
     ApplicationSubmissionContext to simplify the api. (Karthik Kambatla via
     acmurthy) 
 
+    YARN-851. Share NMTokens using NMTokenCache (api-based) between AMRMClient
+    and NMClient instead of memory based approach which is used currently. (Omkar
+    Vinit Joshi via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -604,6 +608,12 @@ Release 2.1.0-beta - UNRELEASED
     YARN-848. Nodemanager does not register with RM using the fully qualified
     hostname. (Hitesh Shah via sseth)
 
+    YARN-854. Fixing YARN bugs that are failing applications in secure
+    environment. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-861. TestContainerManager is failing. (Vinod Kumar Vavilapalli via
+    hitesh)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
@@ -656,6 +666,12 @@ Release 2.1.0-beta - UNRELEASED
 
     YARN-839. TestContainerLaunch.testContainerEnvVariables fails on Windows.
     (Chuan Liu via cnauroth)
+
+    YARN-597. TestFSDownload fails on Windows due to dependencies on
+    tar/gzip/jar tools. (Ivan Mitic via acmurthy) 
+
+    YARN-852. TestAggregatedLogFormat.testContainerLogsFileAccess fails on
+    Windows. (Chuan Liu via cnauroth)
 
     YARN-795. Fair scheduler queue metrics should subtract allocated vCores from 
     available vCores. (ywskycn via tucu) 
@@ -963,6 +979,9 @@ Release 0.23.9 - UNRELEASED
 
     YARN-427. Coverage fix for org.apache.hadoop.yarn.server.api.* (Aleksey
     Gorshkov via jeagles)
+
+    YARN-478. fix coverage org.apache.hadoop.yarn.webapp.log (Aleksey Gorshkov
+    via jeagles)
     
   OPTIMIZATIONS
 
