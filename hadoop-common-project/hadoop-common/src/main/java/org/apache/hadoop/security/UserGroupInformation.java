@@ -1103,7 +1103,7 @@ public class UserGroupInformation {
         HadoopConfiguration.SIMPLE_CONFIG_NAME),
     KERBEROS(AuthMethod.KERBEROS,
         HadoopConfiguration.USER_KERBEROS_CONFIG_NAME),
-    TOKEN(AuthMethod.DIGEST),
+    TOKEN(AuthMethod.TOKEN),
     CERTIFICATE(null),
     KERBEROS_SSL(null),
     PROXY(null);
