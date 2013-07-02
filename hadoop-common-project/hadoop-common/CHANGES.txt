@@ -34,6 +34,9 @@ Release 2.2.0 - UNRELEASED
     HADOOP-9673.  NetworkTopology: when a node can't be added, print out its
     location for diagnostic purposes.  (Colin Patrick McCabe)
 
+    HADOOP-9414.  Refactor out FSLinkResolver and relevant helper methods.
+    (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -167,6 +170,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
 
     HADOOP-9619 Mark stability of .proto files (sanjay Radia)
+
+    HADOOP-9676.  Make maximum RPC buffer size configurable (Colin Patrick
+    McCabe)
 
   OPTIMIZATIONS
 
