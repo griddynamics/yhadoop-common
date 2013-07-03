@@ -152,6 +152,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
     task-state (Ashwin Shankar via jlowe)
 
+    MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
+    input path dir (Devaraj K via jlowe)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -596,6 +599,12 @@ Release 2.1.0-beta - 2013-07-02
 
     MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
+    MAPREDUCE-5355. MiniMRYarnCluster with localFs does not work on Windows.
+    (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5359. JobHistory should not use File.separator to match timestamp
+    in path. (Chuan Liu via cnauroth)
 
     MAPREDUCE-5291. Change MR App to use updated property names in
     container-log4j.properties. (Zhijie Shen via sseth)
@@ -1186,6 +1195,9 @@ Release 0.23.10 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
+    input path dir (Devaraj K via jlowe)
 
 Release 0.23.9 - 2013-07-08
 
