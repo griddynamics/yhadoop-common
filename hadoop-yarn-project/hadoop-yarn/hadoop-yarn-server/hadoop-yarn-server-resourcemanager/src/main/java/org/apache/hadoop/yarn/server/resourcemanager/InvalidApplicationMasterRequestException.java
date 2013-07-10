@@ -16,29 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * <p>The request from clients to get a report of all Applications
- * in the cluster from the <code>ResourceManager</code>.</p>
- *
- * <p>Currently, this is empty.</p>
- * 
- * @see ApplicationClientProtocol#getAllApplications(GetAllApplicationsRequest)
+ * The exception is thrown when an application Master call allocate without
+ * calling RegisterApplicationMaster or try to register more then once.
  */
-@Public
-@Stable
-public abstract class GetAllApplicationsRequest {
-  @Public
-  @Stable
-  public static GetAllApplicationsRequest newInstance() {
-    GetAllApplicationsRequest request =
-        Records.newRecord(GetAllApplicationsRequest.class);
-    return request;
+public class InvalidApplicationMasterRequestException extends YarnException {
+
+  private static final long serialVersionUID = 1357686L;
+
+  public InvalidApplicationMasterRequestException(Throwable cause) {
+    super(cause);
+  }
+
+  public InvalidApplicationMasterRequestException(String message) {
+    super(message);
+  }
+
+  public InvalidApplicationMasterRequestException(String message,
+      Throwable cause) {
+    super(message, cause);
   }
 }
