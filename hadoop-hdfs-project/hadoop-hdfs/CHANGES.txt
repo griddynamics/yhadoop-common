@@ -14,6 +14,8 @@ Trunk (Unreleased)
 
     HDFS-4762 Provide HDFS based NFSv3 and Mountd implementation (brandonli)
 
+    HDFS-4962 Use enum for nfs constants (Nicholas SZE via jing9)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -652,6 +654,8 @@ Release 2.1.0-beta - 2013-07-02
     HDFS-4943. WebHdfsFileSystem does not work when original file path has
     encoded chars.  (Jerry He via szetszwo)
 
+    HDFS-4887. TestNNThroughputBenchmark exits abruptly. (kihwal)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
@@ -1173,6 +1177,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4951. FsShell commands using secure httpfs throw exceptions due 
     to missing TokenRenewer. (rknater via tucu)
+
+    HDFS-4969. WebhdfsFileSystem expects non-standard WEBHDFS Json element. 
+    (rkanter via tucu)
 
 Release 2.0.5-alpha - 06/06/2013
 
