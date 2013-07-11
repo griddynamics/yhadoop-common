@@ -319,6 +319,10 @@ Release 2.1.0-beta - 2013-07-02
     (Junping Du via szetszwo)
 
     HDFS-4372. Track NameNode startup progress. (cnauroth)
+
+    HDFS-4373. Add HTTP API for querying NameNode startup progress. (cnauroth)
+
+    HDFS-4374. Display NameNode startup progress in UI. (cnauroth)
     
   IMPROVEMENTS
 
@@ -654,6 +658,9 @@ Release 2.1.0-beta - 2013-07-02
     encoded chars.  (Jerry He via szetszwo)
 
     HDFS-4887. TestNNThroughputBenchmark exits abruptly. (kihwal)
+
+    HDFS-4980. Incorrect logging.properties file for hadoop-httpfs.
+    (Mark Grover via suresh)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
