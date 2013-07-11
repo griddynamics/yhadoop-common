@@ -12,6 +12,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9432 Add support for markdown .md files in site documentation (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -26,6 +28,8 @@ Release 2.2.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-9417.  Support for symlink resolution in LocalFileSystem /
+    RawLocalFileSystem.  (Andrew Wang via Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
