@@ -36,6 +36,9 @@ Release 2.2.0 - UNRELEASED
     HADOOP-9703.  org.apache.hadoop.ipc.Client leaks threads on stop.
     (Tsuyoshi OZAWA vi Colin Patrick McCabe)
 
+    HADOOP-9618.  Add thread which detects GC pauses.
+    (Todd Lipcon via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -74,6 +77,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9421. [RPC v9] Convert SASL to use ProtoBuf and provide
     negotiation capabilities (daryn)
+
+    HADOOP-9683. [RPC v9] Wrap IpcConnectionContext in RPC headers (daryn)
 
   NEW FEATURES
 
