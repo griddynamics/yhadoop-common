@@ -508,7 +508,7 @@ public class TestShortCircuitLocalRead {
     }
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60000)
   public void testReadWithRemoteBlockReader() throws IOException, InterruptedException {
     doTestShortCircuitReadWithRemoteBlockReader(true, 3*blockSize+100, 0);
   }
