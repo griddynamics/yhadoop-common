@@ -250,6 +250,9 @@ Release 2.2.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HDFS-4657.  Limit the number of blocks logged by the NN after a block
+    report to a configurable value.  (Aaron Twinning Meyers via Colin Patrick
+    McCabe)
 
   OPTIMIZATIONS
 
@@ -263,9 +266,15 @@ Release 2.1.1-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9418.  Add symlink support to DistributedFileSystem (Andrew Wang via
+    Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-4982. JournalNode should relogin from keytab before fetching logs
+    from other JNs (todd)
 
 Release 2.1.0-beta - 2013-07-02
 
@@ -319,6 +328,10 @@ Release 2.1.0-beta - 2013-07-02
     (Junping Du via szetszwo)
 
     HDFS-4372. Track NameNode startup progress. (cnauroth)
+
+    HDFS-4373. Add HTTP API for querying NameNode startup progress. (cnauroth)
+
+    HDFS-4374. Display NameNode startup progress in UI. (cnauroth)
     
   IMPROVEMENTS
 
@@ -427,6 +440,14 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4645.  Move from randomly generated block ID to sequentially generated
     block ID.  (Arpit Agarwal via szetszwo)
+
+    HDFS-4912. Cleanup FSNamesystem#startFileInternal. (suresh)
+
+    HDFS-4903. Print trash configuration and trash emptier state in
+    namenode log. (Arpit Agarwal via suresh)
+
+    HDFS-4992. Make balancer's mover thread count and dispatcher thread count
+    configurable.  (Max Lapan via szetszwo)
 
   OPTIMIZATIONS
 
@@ -654,6 +675,9 @@ Release 2.1.0-beta - 2013-07-02
     encoded chars.  (Jerry He via szetszwo)
 
     HDFS-4887. TestNNThroughputBenchmark exits abruptly. (kihwal)
+
+    HDFS-4980. Incorrect logging.properties file for hadoop-httpfs.
+    (Mark Grover via suresh)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
@@ -1182,6 +1206,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-4797. BlockScanInfo does not override equals(..) and hashCode()
     consistently.  (szetszwo)
+
+    HDFS-4978. Make disallowSnapshot idempotent. (jing9)
 
 Release 2.0.5-alpha - 06/06/2013
 
@@ -3237,6 +3263,8 @@ Release 0.23.10 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-4998. TestUnderReplicatedBlocks fails intermittently (kihwal)
 
 Release 0.23.9 - 2013-07-08
 

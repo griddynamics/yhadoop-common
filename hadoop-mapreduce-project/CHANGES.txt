@@ -158,6 +158,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5358. MRAppMaster throws invalid transitions for JobImpl
     (Devaraj K via jlowe)
 
+    MAPREDUCE-5380. Invalid mapred command should return non-zero exit code
+    (Stephen Chu via jlowe)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -343,6 +346,8 @@ Release 2.1.0-beta - 2013-07-02
 
     MAPREDUCE-5333. Add test that verifies MRAM works correctly when sending
     requests with non-normalized capabilities. (ywskycn via tucu)
+
+    MAPREDUCE-5398. MR changes for YARN-513 (Jian He via bikas)
 
   OPTIMIZATIONS
 
@@ -1219,6 +1224,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
     input path dir (Devaraj K via jlowe)
+
+    MAPREDUCE-5380. Invalid mapred command should return non-zero exit code
+    (Stephen Chu via jlowe)
 
 Release 0.23.9 - 2013-07-08
 

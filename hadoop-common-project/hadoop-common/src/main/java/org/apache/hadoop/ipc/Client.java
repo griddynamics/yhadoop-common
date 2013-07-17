@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -63,7 +65,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
+import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
+import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -115,20 +120,73 @@ public class Client {
   private final int connectionTimeout;
 
   private final boolean fallbackAllowed;
-  private final byte[] uuid;
+  private final byte[] clientId;
   
   /**
-   * Executor on which IPC calls' parameters are sent. Deferring
-   * the sending of parameters to a separate thread isolates them
-   * from thread interruptions in the calling code.
+   * Executor on which IPC calls' parameters are sent.
+   * Deferring the sending of parameters to a separate
+   * thread isolates them from thread interruptions in the
+   * calling code.
    */
-  private static final ExecutorService SEND_PARAMS_EXECUTOR = 
-    Executors.newCachedThreadPool(
-        new ThreadFactoryBuilder()
-        .setDaemon(true)
-        .setNameFormat("IPC Parameter Sending Thread #%d")
-        .build());
+  private final ExecutorService sendParamsExecutor;
+  private final static ClientExecutorServiceFactory clientExcecutorFactory =
+      new ClientExecutorServiceFactory();
 
+  private static class ClientExecutorServiceFactory {
+    private int executorRefCount = 0;
+    private ExecutorService clientExecutor = null;
+    
+    /**
+     * Get Executor on which IPC calls' parameters are sent.
+     * If the internal reference counter is zero, this method
+     * creates the instance of Executor. If not, this method
+     * just returns the reference of clientExecutor.
+     * 
+     * @return An ExecutorService instance
+     */
+    synchronized ExecutorService refAndGetInstance() {
+      if (executorRefCount == 0) {
+        clientExecutor = Executors.newCachedThreadPool(
+            new ThreadFactoryBuilder()
+            .setDaemon(true)
+            .setNameFormat("IPC Parameter Sending Thread #%d")
+            .build());
+      }
+      executorRefCount++;
+      
+      return clientExecutor;
+    }
+    
+    /**
+     * Cleanup Executor on which IPC calls' parameters are sent.
+     * If reference counter is zero, this method discards the
+     * instance of the Executor. If not, this method
+     * just decrements the internal reference counter.
+     * 
+     * @return An ExecutorService instance if it exists.
+     *   Null is returned if not.
+     */
+    synchronized ExecutorService unrefAndCleanup() {
+      executorRefCount--;
+      assert(executorRefCount >= 0);
+      
+      if (executorRefCount == 0) {
+        clientExecutor.shutdown();
+        try {
+          if (!clientExecutor.awaitTermination(1, TimeUnit.MINUTES)) {
+            clientExecutor.shutdownNow();
+          }
+        } catch (InterruptedException e) {
+          LOG.error("Interrupted while waiting for clientExecutor" +
+              "to stop", e);
+          clientExecutor.shutdownNow();
+        }
+        clientExecutor = null;
+      }
+      
+      return clientExecutor;
+    }
+  };
   
   /**
    * set the ping interval value in configuration
@@ -201,7 +259,7 @@ public class Client {
   synchronized boolean isZeroReference() {
     return refCount==0;
   }
-
+  
   /** 
    * Class that represents an RPC call
    */
@@ -780,17 +838,20 @@ public class Client {
                                         AuthMethod authMethod)
                                             throws IOException {
       // Write out the ConnectionHeader
-      DataOutputBuffer buf = new DataOutputBuffer();
-      ProtoUtil.makeIpcConnectionContext(
+      IpcConnectionContextProto message = ProtoUtil.makeIpcConnectionContext(
           RPC.getProtocolName(remoteId.getProtocol()),
           remoteId.getTicket(),
-          authMethod).writeTo(buf);
+          authMethod);
+      RpcRequestHeaderProto connectionContextHeader =
+          ProtoUtil.makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
+              clientId);
+      RpcRequestMessageWrapper request =
+          new RpcRequestMessageWrapper(connectionContextHeader, message);
       
       // Write out the packet length
-      int bufLen = buf.getLength();
-
-      out.writeInt(bufLen);
-      out.write(buf.getData(), 0, bufLen);
+      out.writeInt(request.getLength());
+      request.write(out);
     }
     
     /* wait till someone signals us to start reading RPC response or
@@ -879,7 +940,8 @@ public class Client {
       }
 
       // Serialize the call to be sent. This is done from the actual
-      // caller thread, rather than the SEND_PARAMS_EXECUTOR thread,
+      // caller thread, rather than the sendParamsExecutor thread,
+      
       // so that if the serialization throws an error, it is reported
       // properly. This also parallelizes the serialization.
       //
@@ -891,12 +953,12 @@ public class Client {
       // Items '1' and '2' are prepared here. 
       final DataOutputBuffer d = new DataOutputBuffer();
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, uuid);
+         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, clientId);
       header.writeDelimitedTo(d);
       call.rpcRequest.write(d);
 
       synchronized (sendRpcRequestLock) {
-        Future<?> senderFuture = SEND_PARAMS_EXECUTOR.submit(new Runnable() {
+        Future<?> senderFuture = sendParamsExecutor.submit(new Runnable() {
           @Override
           public void run() {
             try {
@@ -1091,7 +1153,8 @@ public class Client {
         CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
     this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
-    this.uuid = StringUtils.getUuidBytes();
+    this.clientId = StringUtils.getUuidBytes();
+    this.sendParamsExecutor = clientExcecutorFactory.refAndGetInstance();
   }
 
   /**
@@ -1136,6 +1199,8 @@ public class Client {
       } catch (InterruptedException e) {
       }
     }
+    
+    clientExcecutorFactory.unrefAndCleanup();
   }
 
   /**
