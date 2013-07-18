@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,6 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
-package org.apache.hadoop.mapreduce.v2.app.recover;
-import org.apache.hadoop.classification.InterfaceAudience;
+package org.apache.hadoop.fs;
+
+import junit.framework.AssertionFailedError;
+import org.junit.Test;
+
+public class TestFsShell {
+
+  @Test
+  public void testConfWithInvalidFile() throws Throwable {
+    String[] args = new String[1];
+    args[0] = "--conf=invalidFile";
+    Throwable th = null;
+    try {
+      FsShell.main(args);
+    } catch (Exception e) {
+      th = e;
+    }
+
+    if (!(th instanceof RuntimeException)) {
+      throw new AssertionFailedError("Expected Runtime exception, got: " + th)
+          .initCause(th);
+    }
+  }
+
+}

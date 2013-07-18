@@ -17,26 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.junit.Test;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.DataInputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.lang.InterruptedException;
-import java.util.Random;
 import static org.junit.Assert.assertTrue;
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * This class tests the creation and validation of metasave
@@ -98,16 +97,69 @@ public class TestMetaSave {
         + "metasave.out.txt";
     FileInputStream fstream = new FileInputStream(logFile);
     DataInputStream in = new DataInputStream(fstream);
-    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    String line = reader.readLine();
-    assertTrue(line.equals("3 files and directories, 2 blocks = 5 total"));
-    line = reader.readLine();
-    assertTrue(line.equals("Live Datanodes: 1"));
-    line = reader.readLine();
-    assertTrue(line.equals("Dead Datanodes: 1"));
-    line = reader.readLine();
-    line = reader.readLine();
-    assertTrue(line.matches("^/filestatus[01]:.*"));
+    BufferedReader reader = null;
+    try {
+      reader = new BufferedReader(new InputStreamReader(in));
+      String line = reader.readLine();
+      assertTrue(line.equals(
+          "3 files and directories, 2 blocks = 5 total"));
+      line = reader.readLine();
+      assertTrue(line.equals("Live Datanodes: 1"));
+      line = reader.readLine();
+      assertTrue(line.equals("Dead Datanodes: 1"));
+      line = reader.readLine();
+      line = reader.readLine();
+      assertTrue(line.matches("^/filestatus[01]:.*"));
+    } finally {
+      if (reader != null)
+        reader.close();
+    }
+  }
+
+  /**
+   * Tests metasave after delete, to make sure there are no orphaned blocks
+   */
+  @Test
+  public void testMetasaveAfterDelete()
+      throws IOException, InterruptedException {
+
+    final FSNamesystem namesystem = cluster.getNamesystem();
+
+    for (int i = 0; i < 2; i++) {
+      Path file = new Path("/filestatus" + i);
+      createFile(fileSys, file);
+    }
+
+    cluster.stopDataNode(1);
+    // wait for namenode to discover that a datanode is dead
+    Thread.sleep(15000);
+    namesystem.setReplication("/filestatus0", (short) 4);
+    namesystem.delete("/filestatus0", true);
+    namesystem.delete("/filestatus1", true);
+
+    namesystem.metaSave("metasaveAfterDelete.out.txt");
+
+    // Verification
+    String logFile = System.getProperty("hadoop.log.dir") + "/"
+        + "metasaveAfterDelete.out.txt";
+    BufferedReader reader = null;
+    try {
+      FileInputStream fstream = new FileInputStream(logFile);
+      DataInputStream in = new DataInputStream(fstream);
+      reader = new BufferedReader(new InputStreamReader(in));
+      reader.readLine();
+      String line = reader.readLine();
+      assertTrue(line.equals("Live Datanodes: 1"));
+      line = reader.readLine();
+      assertTrue(line.equals("Dead Datanodes: 1"));
+      line = reader.readLine();
+      assertTrue(line.equals("Metasave: Blocks waiting for replication: 0"));
+      line = reader.readLine();
+      assertTrue(line.equals("Metasave: Blocks being replicated: 0"));
+    } finally {
+      if (reader != null)
+        reader.close();
+    }
   }
 
   @AfterClass

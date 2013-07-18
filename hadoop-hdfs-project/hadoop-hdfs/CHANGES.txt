@@ -1,6 +1,90 @@
 Hadoop HDFS Change Log
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.10 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-4984. Incorrect Quota counting in INodeFile. (jing9 via kihwal)
+
+    HDFS-4972. Permission check and operation are done in a separate lock for
+    getBlockLocations(). (kihwal)
+
+    HDFS-4998. TestUnderReplicatedBlocks fails intermittently (kihwal)
+
+    HDFS-4943. WebHdfsFileSystem does not work when original file path has
+    encoded chars. (Jerry He and Robert Parker via kihwal)
+
+Release 0.23.9 - 2013-07-08
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-4867. metaSave NPEs when there are invalid blocks in repl queue.
+    (Plamen Jeliazkov and Ravi Prakash via shv)
+
+    HDFS-4862. SafeModeInfo.isManual() returns true when resources are low even
+    if it wasn't entered into manually (Ravi Prakash via kihwal)
+
+    HDFS-4832. Namenode doesn't change the number of missing blocks in
+    safemode when DNs rejoin or leave (Ravi Prakash via kihwal)
+
+    HDFS-4878. On Remove Block, block is not removed from neededReplications
+    queue. (Tao Luo via shv)
+
+    HDFS-4765. Permission check of symlink deletion incorrectly throws
+    UnresolvedLinkException. (Andrew Wang via jlowe)
+
+    HDFS-4205. fsck fails with symlinks (jlowe)
+
+Release 0.23.8 - 2013-06-05
+  
+  INCOMPATIBLE CHANGES
+  
+  NEW FEATURES
+  
+  IMPROVEMENTS
+    HDFS-4714. Log short messages in Namenode RPC server for exceptions 
+    meant for clients. (kihwal)
+  
+  OPTIMIZATIONS
+ 
+  BUG FIXES
+    HDFS-4690. Namenode exits if entering safemode while secret manager is 
+    edit logging (daryn via kihwal)
+
+    HDFS-4699. TestPipelinesFailover#testPipelineRecoveryStress fails
+    sporadically (Chris Nauroth via kihwal)
+
+    HDFS-3436. In DataNode.transferReplicaForPipelineRecovery(..), it should
+    use the stored generation stamp to check if the block is valid.  (Vinay
+    via szetszwo)
+
+    HDFS-4477. Secondary namenode may retain old tokens. (daryn via kihwal)
+
+    HDFS-4835. Port trunk WebHDFS changes to branch-0.23. Includes backport
+    of HDFS-4805 and HADOOP-9549. (Robert Parker via kihwal)
+
+    HDFS-3875. Issue handling checksum errors in write pipeline. (kihwal)
+
+    HDFS-4807. createSocketForPipeline() should not include timeout extension
+    on connect. (Cristina Abad via kihwal)
+
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -9,6 +93,11 @@ Release 0.23.7 - UNRELEASED
                via hairong)
 
   IMPROVEMENTS
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
+
+    HDFS-3817. Avoid printing SafeModeException stack trace.
+    (Brandon Li via suresh)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -20,6 +109,8 @@ Release 0.23.7 - UNRELEASED
     HDFS-2476. More CPU efficient data structure for under-replicated,
                over-replicated, and invalidated blocks.
                (Tomasz Nykiel via todd)
+
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
 
   BUG FIXES
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
@@ -39,6 +130,53 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
     (kihwal)
+
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
+
+    HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
+    kihwal)
+
+    HDFS-4553. Webhdfs will NPE on some unexpected response codes (Daryn Sharp
+    via kihwal)
+
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
+
+    HDFS-3266. DFSTestUtil#waitCorruptReplicas doesn't sleep between checks.
+    (Madhukara Phatak via atm)
+
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
+
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
+
+    HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
+    HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
+
+    HDFS-4567. Webhdfs does not need a token for token operations. (daryn via
+    kihwal)
+
+    HDFS-4577. Webhdfs operations should declare if authentication is required
+    (daryn via kihwal)
+
+    HDFS-3256. HDFS considers blocks under-replicated if topology script is
+    configured with only 1 rack. (atm)
+
+    HDFS-3344. Unreliable corrupt blocks counting in TestProcessCorruptBlocks
+    (kihwal)
+
+    HDFS-3367. WebHDFS doesn't use the logged in user when opening
+    connections (daryn)
+
+    HDFS-4581. checkDiskError should not be called on network errors (Rohit
+    Kochar via kihwal)
+
+    HDFS-4649. Webhdfs cannot list large directories (daryn via kihwal)
+
+    HDFS-4548. Webhdfs doesn't renegotiate SPNEGO token (daryn via kihwal)
 
 Release 0.23.6 - 2013-02-06
 

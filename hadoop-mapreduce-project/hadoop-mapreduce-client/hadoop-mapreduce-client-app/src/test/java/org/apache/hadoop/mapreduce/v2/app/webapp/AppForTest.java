@@ -16,24 +16,26 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.mapreduce.v2.app.recover;
+package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import java.util.List;
-import java.util.Map;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
 
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
-import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.event.Dispatcher;
+/**
+ *  Class AppForTest publishes a methods for test
+ */
+public class AppForTest extends App {
 
-public interface Recovery {
+  public AppForTest(AppContext ctx) {
+    super(ctx);
+  }
+  public void setJob(Job job) {
+    super.setJob(job);
+  }
+  @Override
+  public void setTask(Task task) {
+    super.setTask(task);
+  }
 
-  Dispatcher getDispatcher();
-
-  Clock getClock();
-  
-  Map<TaskId, TaskInfo> getCompletedTasks();
-  
-  List<AMInfo> getAMInfos();
 }
