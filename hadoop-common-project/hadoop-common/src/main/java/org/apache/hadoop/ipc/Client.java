@@ -33,6 +33,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -45,6 +46,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.SocketFactory;
@@ -85,8 +87,10 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.CodedOutputStream;
 
@@ -100,11 +104,26 @@ public class Client {
   
   public static final Log LOG = LogFactory.getLog(Client.class);
 
+  /** A counter for generating call IDs. */
+  private static final AtomicInteger callIdCounter = new AtomicInteger();
+
+  private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();
+  private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
+
+  /** Set call id and retry count for the next call. */
+  public static void setCallIdAndRetryCount(int cid, int rc) {
+    Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
+    Preconditions.checkState(callId.get() == null);
+    Preconditions.checkArgument(rc != RpcConstants.INVALID_RETRY_COUNT);
+
+    callId.set(cid);
+    retryCount.set(rc);
+  }
+
   private Hashtable<ConnectionId, Connection> connections =
     new Hashtable<ConnectionId, Connection>();
 
   private Class<? extends Writable> valueClass;   // class of call values
-  private int counter;                            // counter for call ids
   private AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final private Configuration conf;
 
@@ -114,9 +133,8 @@ public class Client {
   private final int connectionTimeout;
 
   private final boolean fallbackAllowed;
+  private final byte[] clientId;
   
-  final static int PING_CALL_ID = -1;
-
   final static int CONNECTION_CONTEXT_CALL_ID = -3;
   
   /**
@@ -256,23 +274,58 @@ public class Client {
   synchronized boolean isZeroReference() {
     return refCount==0;
   }
-  
+
+  /** Check the rpc response header. */
+  void checkResponse(RpcResponseHeaderProto header) throws IOException {
+    if (header == null) {
+      throw new IOException("Response is null.");
+    }
+    if (header.hasClientId()) {
+      // check client IDs
+      final byte[] id = header.getClientId().toByteArray();
+      if (!Arrays.equals(id, RpcConstants.DUMMY_CLIENT_ID)) {
+        if (!Arrays.equals(id, clientId)) {
+          throw new IOException("Client IDs not matched: local ID="
+              + StringUtils.byteToHexString(clientId) + ", ID in reponse="
+              + StringUtils.byteToHexString(header.getClientId().toByteArray()));
+        }
+      }
+    }
+  }
+
+  Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {
+    return new Call(rpcKind, rpcRequest);
+  }
+
   /** 
    * Class that represents an RPC call
    */
-  private class Call {
+  static class Call {
     final int id;               // call id
+    final int retry;           // retry count
     final Writable rpcRequest;  // the serialized rpc request
     Writable rpcResponse;       // null if rpc has error
     IOException error;          // exception, null if success
     final RPC.RpcKind rpcKind;      // Rpc EngineKind
     boolean done;               // true when call is done
 
-    protected Call(RPC.RpcKind rpcKind, Writable param) {
+    private Call(RPC.RpcKind rpcKind, Writable param) {
       this.rpcKind = rpcKind;
       this.rpcRequest = param;
-      synchronized (Client.this) {
-        this.id = counter++;
+
+      final Integer id = callId.get();
+      if (id == null) {
+        this.id = nextCallId();
+      } else {
+        callId.set(null);
+        this.id = id;
+      }
+      
+      final Integer rc = retryCount.get();
+      if (rc == null) {
+        this.retry = 0;
+      } else {
+        this.retry = rc;
       }
     }
 
@@ -815,8 +868,8 @@ public class Client {
         throws IOException {
       DataOutputStream out = new DataOutputStream(new BufferedOutputStream(outStream));
       // Write out the header, version and authentication method
-      out.write(Server.HEADER.array());
-      out.write(Server.CURRENT_VERSION);
+      out.write(RpcConstants.HEADER.array());
+      out.write(RpcConstants.CURRENT_VERSION);
       out.write(serviceClass);
       final AuthProtocol authProtocol;
       switch (authMethod) {
@@ -841,9 +894,10 @@ public class Client {
           RPC.getProtocolName(remoteId.getProtocol()),
           remoteId.getTicket(),
           authMethod);
-      RpcRequestHeaderProto connectionContextHeader =
-          ProtoUtil.makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
-              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID);
+      RpcRequestHeaderProto connectionContextHeader = ProtoUtil
+          .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+              OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
+              RpcConstants.INVALID_RETRY_COUNT, clientId);
       RpcRequestMessageWrapper request =
           new RpcRequestMessageWrapper(connectionContextHeader, message);
       
@@ -895,7 +949,7 @@ public class Client {
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
         synchronized (out) {
-          out.writeInt(PING_CALL_ID);
+          out.writeInt(RpcConstants.PING_CALL_ID);
           out.flush();
         }
       }
@@ -951,7 +1005,8 @@ public class Client {
       // Items '1' and '2' are prepared here. 
       final DataOutputBuffer d = new DataOutputBuffer();
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-         call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id);
+          call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, call.retry,
+          clientId);
       header.writeDelimitedTo(d);
       call.rpcRequest.write(d);
 
@@ -1016,9 +1071,8 @@ public class Client {
         int totalLen = in.readInt();
         RpcResponseHeaderProto header = 
             RpcResponseHeaderProto.parseDelimitedFrom(in);
-        if (header == null) {
-          throw new IOException("Response is null.");
-        }
+        checkResponse(header);
+
         int headerLen = header.getSerializedSize();
         headerLen += CodedOutputStream.computeRawVarint32Size(headerLen);
 
@@ -1151,6 +1205,7 @@ public class Client {
         CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
     this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
+    this.clientId = StringUtils.getUuidBytes();
     this.sendParamsExecutor = clientExcecutorFactory.refAndGetInstance();
   }
 
@@ -1343,7 +1398,7 @@ public class Client {
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, int serviceClass)
       throws InterruptedException, IOException {
-    Call call = new Call(rpcKind, rpcRequest);
+    final Call call = createCall(rpcKind, rpcRequest);
     Connection connection = getConnection(remoteId, call, serviceClass);
     try {
       connection.sendRpcRequest(call);                 // send the rpc request
@@ -1621,4 +1676,18 @@ public class Client {
       return serverPrincipal + "@" + address;
     }
   }  
+
+  /**
+   * Returns the next valid sequential call ID by incrementing an atomic counter
+   * and masking off the sign bit.  Valid call IDs are non-negative integers in
+   * the range [ 0, 2^31 - 1 ].  Negative numbers are reserved for special
+   * purposes.  The values can overflow back to 0 and be reused.  Note that prior
+   * versions of the client did not mask off the sign bit, so a server may still
+   * see a negative call ID if it receives connections from an old client.
+   * 
+   * @return next call ID
+   */
+  public static int nextCallId() {
+    return callIdCounter.getAndIncrement() & 0x7FFFFFFF;
+  }
 }
