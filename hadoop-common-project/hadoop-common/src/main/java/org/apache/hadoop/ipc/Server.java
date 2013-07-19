@@ -71,6 +71,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import static org.apache.hadoop.ipc.RpcConstants.CURRENT_VERSION;
+import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseWrapper;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
@@ -155,11 +157,7 @@ public abstract class Server {
       return terseExceptions.contains(t.toString());
     }
   }
-  
-  /**
-   * The first four bytes of Hadoop RPC connections
-   */
-  public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
+
   
   /**
    * If the user accidentally sends an HTTP GET to an IPC port, we detect this
@@ -177,17 +175,6 @@ public abstract class Server {
     "Content-type: text/plain\r\n\r\n" +
     "It looks like you are making an HTTP request to a Hadoop IPC port. " +
     "This is not the correct port for the web interface on this daemon.\r\n";
-  
-  // 1 : Introduce ping and server does not throw away RPCs
-  // 3 : Introduce the protocol into the RPC connection header
-  // 4 : Introduced SASL security layer
-  // 5 : Introduced use of {@link ArrayPrimitiveWritable$Internal}
-  //     in ObjectWritable to efficiently transmit arrays of primitives
-  // 6 : Made RPC Request header explicit
-  // 7 : Changed Ipc Connection Header to use Protocol buffers
-  // 8 : SASL server always sends a final response
-  // 9 : Changes to protocol for HADOOP-8990
-  public static final byte CURRENT_VERSION = 9;
 
   /**
    * Initial and max size of response buffer
@@ -281,6 +268,27 @@ public abstract class Server {
    */
   private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
   
+  /**
+   * Returns the currently active RPC call's sequential ID number.  A negative
+   * call ID indicates an invalid value, such as if there is no currently active
+   * RPC call.
+   * 
+   * @return int sequential ID number of currently active RPC call
+   */
+  static int getCallId() {
+    Call call = CurCall.get();
+    return call != null ? call.callId : RpcConstants.INVALID_CALL_ID;
+  }
+  
+  /**
+   * @return The current active RPC call's retry count. -1 indicates the retry
+   *         cache is not supported in the client side.
+   */
+  public static int getCallRetryCount() {
+    Call call = CurCall.get();
+    return call != null ? call.retryCount : RpcConstants.INVALID_RETRY_COUNT;
+  }
+
   /** Returns the remote side ip address when invoked inside an RPC 
    *  Returns null incase of an error.
    */
@@ -291,6 +299,15 @@ public abstract class Server {
     }
     return null;
   }
+  
+  /**
+   * Returns the clientId from the current RPC request
+   */
+  public static byte[] getClientId() {
+    Call call = CurCall.get();
+    return call != null ? call.clientId : RpcConstants.DUMMY_CLIENT_ID;
+  }
+  
   /** Returns remote address as a string when invoked inside an RPC.
    *  Returns null in case of an error.
    */
@@ -445,28 +462,37 @@ public abstract class Server {
   /** A call queued for handling. */
   private static class Call {
     private final int callId;             // the client's call id
+    private final int retryCount;        // the retry count of the call
     private final Writable rpcRequest;    // Serialized Rpc request from client
     private final Connection connection;  // connection to client
     private long timestamp;               // time received when response is null
                                           // time served when response is not null
     private ByteBuffer rpcResponse;       // the response for this call
     private final RPC.RpcKind rpcKind;
+    private final byte[] clientId;
 
-    public Call(int id, Writable param, Connection connection) {
-      this( id,  param,  connection, RPC.RpcKind.RPC_BUILTIN );    
+    private Call(int id, int retryCount, Writable param, 
+        Connection connection) {
+      this(id, retryCount, param, connection, RPC.RpcKind.RPC_BUILTIN,
+          RpcConstants.DUMMY_CLIENT_ID);
     }
-    public Call(int id, Writable param, Connection connection, RPC.RpcKind kind) { 
+
+    private Call(int id, int retryCount, Writable param, Connection connection,
+        RPC.RpcKind kind, byte[] clientId) {
       this.callId = id;
+      this.retryCount = retryCount;
       this.rpcRequest = param;
       this.connection = connection;
       this.timestamp = Time.now();
       this.rpcResponse = null;
       this.rpcKind = kind;
+      this.clientId = clientId;
     }
     
     @Override
     public String toString() {
-      return rpcRequest.toString() + " from " + connection.toString();
+      return rpcRequest + " from " + connection + " Call#" + callId + " Retry#"
+          + retryCount;
     }
 
     public void setResponse(ByteBuffer response) {
@@ -971,8 +997,7 @@ public abstract class Server {
           call = responseQueue.removeFirst();
           SocketChannel channel = call.connection.channel;
           if (LOG.isDebugEnabled()) {
-            LOG.debug(getName() + ": responding to #" + call.callId + " from " +
-                      call.connection);
+            LOG.debug(getName() + ": responding to " + call);
           }
           //
           // Send as much data as we can in the non-blocking fashion
@@ -991,8 +1016,8 @@ public abstract class Server {
               done = false;            // more calls pending to be sent.
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + ": responding to #" + call.callId + " from " +
-                        call.connection + " Wrote " + numBytes + " bytes.");
+              LOG.debug(getName() + ": responding to " + call
+                  + " Wrote " + numBytes + " bytes.");
             }
           } else {
             //
@@ -1019,9 +1044,8 @@ public abstract class Server {
               }
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + ": responding to #" + call.callId + " from " +
-                        call.connection + " Wrote partial " + numBytes + 
-                        " bytes.");
+              LOG.debug(getName() + ": responding to " + call
+                  + " Wrote partial " + numBytes + " bytes.");
             }
           }
           error = false;              // everything went off well
@@ -1149,11 +1173,12 @@ public abstract class Server {
     private static final int AUTHORIZATION_FAILED_CALLID = -1;
     private static final int CONNECTION_CONTEXT_CALL_ID = -3;
     
-    private final Call authFailedCall = 
-      new Call(AUTHORIZATION_FAILED_CALLID, null, this);
+    private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID,
+        RpcConstants.INVALID_RETRY_COUNT, null, this);
     private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
     
-    private final Call saslCall = new Call(AuthProtocol.SASL.callId, null, this);
+    private final Call saslCall = new Call(AuthProtocol.SASL.callId,
+        RpcConstants.INVALID_RETRY_COUNT, null, this);
     private final ByteArrayOutputStream saslResponse = new ByteArrayOutputStream();
     
     private boolean sentNegotiate = false;
@@ -1439,8 +1464,9 @@ public abstract class Server {
             setupHttpRequestOnIpcPortResponse();
             return -1;
           }
-        
-          if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
+          
+          if (!RpcConstants.HEADER.equals(dataLengthBuffer)
+              || version != CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
             LOG.warn("Incorrect header or version mismatch from " + 
                      hostAddress + ":" + remotePort +
@@ -1462,7 +1488,7 @@ public abstract class Server {
         if (data == null) {
           dataLengthBuffer.flip();
           dataLength = dataLengthBuffer.getInt();
-          if ((dataLength == Client.PING_CALL_ID) && (!useWrap)) {
+          if ((dataLength == RpcConstants.PING_CALL_ID) && (!useWrap)) {
             // covers the !useSasl too
             dataLengthBuffer.clear();
             return 0; // ping message
@@ -1580,20 +1606,23 @@ public abstract class Server {
       
       if (clientVersion >= 9) {
         // Versions >>9  understand the normal response
-        Call fakeCall =  new Call(-1, null, this);
+        Call fakeCall = new Call(-1, RpcConstants.INVALID_RETRY_COUNT, null,
+            this);
         setupResponse(buffer, fakeCall, 
             RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_VERSION_MISMATCH,
             null, VersionMismatch.class.getName(), errMsg);
         responder.doRespond(fakeCall);
       } else if (clientVersion >= 3) {
-        Call fakeCall =  new Call(-1, null, this);
+        Call fakeCall = new Call(-1, RpcConstants.INVALID_RETRY_COUNT, null,
+            this);
         // Versions 3 to 8 use older response
         setupResponseOldVersionFatal(buffer, fakeCall,
             null, VersionMismatch.class.getName(), errMsg);
 
         responder.doRespond(fakeCall);
       } else if (clientVersion == 2) { // Hadoop 0.18.3
-        Call fakeCall =  new Call(0, null, this);
+        Call fakeCall = new Call(0, RpcConstants.INVALID_RETRY_COUNT, null,
+            this);
         DataOutputStream out = new DataOutputStream(buffer);
         out.writeInt(0); // call ID
         out.writeBoolean(true); // error
@@ -1606,7 +1635,7 @@ public abstract class Server {
     }
     
     private void setupHttpRequestOnIpcPortResponse() throws IOException {
-      Call fakeCall =  new Call(0, null, this);
+      Call fakeCall = new Call(0, RpcConstants.INVALID_RETRY_COUNT, null, this);
       fakeCall.setResponse(ByteBuffer.wrap(
           RECEIVED_HTTP_REQ_RESPONSE.getBytes()));
       responder.doRespond(fakeCall);
@@ -1702,7 +1731,7 @@ public abstract class Server {
           unwrappedDataLengthBuffer.flip();
           int unwrappedDataLength = unwrappedDataLengthBuffer.getInt();
 
-          if (unwrappedDataLength == Client.PING_CALL_ID) {
+          if (unwrappedDataLength == RpcConstants.PING_CALL_ID) {
             if (LOG.isDebugEnabled())
               LOG.debug("Received ping message");
             unwrappedDataLengthBuffer.clear();
@@ -1738,12 +1767,14 @@ public abstract class Server {
     private void processOneRpc(byte[] buf)
         throws IOException, WrappedRpcServerException, InterruptedException {
       int callId = -1;
+      int retry = RpcConstants.INVALID_RETRY_COUNT;
       try {
         final DataInputStream dis =
             new DataInputStream(new ByteArrayInputStream(buf));
         final RpcRequestHeaderProto header =
             decodeProtobufFromStream(RpcRequestHeaderProto.newBuilder(), dis);
         callId = header.getCallId();
+        retry = header.getRetryCount();
         if (LOG.isDebugEnabled()) {
           LOG.debug(" got #" + callId);
         }
@@ -1760,7 +1791,7 @@ public abstract class Server {
         }
       } catch (WrappedRpcServerException wrse) { // inform client of error
         Throwable ioe = wrse.getCause();
-        final Call call = new Call(callId, null, this);
+        final Call call = new Call(callId, retry, null, this);
         setupResponse(authFailedResponse, call,
             RpcStatusProto.FATAL, wrse.getRpcErrorCodeProto(), null,
             ioe.getClass().getName(), ioe.getMessage());
@@ -1834,8 +1865,9 @@ public abstract class Server {
             RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST, err);
       }
         
-      Call call = new Call(header.getCallId(), rpcRequest, this, 
-          ProtoUtil.convert(header.getRpcKind()));
+      Call call = new Call(header.getCallId(), header.getRetryCount(),
+          rpcRequest, this, ProtoUtil.convert(header.getRpcKind()), header
+              .getClientId().toByteArray());
       callQueue.put(call);              // queue the call; maybe blocked here
       incRpcCount();  // Increment the rpc count
     }
@@ -1987,8 +2019,7 @@ public abstract class Server {
         try {
           final Call call = callQueue.take(); // pop the queue; maybe blocked here
           if (LOG.isDebugEnabled()) {
-            LOG.debug(getName() + ": has Call#" + call.callId + 
-                "for RpcKind " + call.rpcKind + " from " + call.connection);
+            LOG.debug(getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }
           String errorClass = null;
           String error = null;
@@ -2256,9 +2287,11 @@ public abstract class Server {
     DataOutputStream out = new DataOutputStream(responseBuf);
     RpcResponseHeaderProto.Builder headerBuilder =  
         RpcResponseHeaderProto.newBuilder();
+    headerBuilder.setClientId(ByteString.copyFrom(call.clientId));
     headerBuilder.setCallId(call.callId);
+    headerBuilder.setRetryCount(call.retryCount);
     headerBuilder.setStatus(status);
-    headerBuilder.setServerIpcVersionNum(Server.CURRENT_VERSION);
+    headerBuilder.setServerIpcVersionNum(CURRENT_VERSION);
 
     if (status == RpcStatusProto.SUCCESS) {
       RpcResponseHeaderProto header = headerBuilder.build();
