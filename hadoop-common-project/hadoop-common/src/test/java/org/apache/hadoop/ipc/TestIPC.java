@@ -18,37 +18,55 @@
 
 package org.apache.hadoop.ipc;
 
-import org.apache.commons.logging.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.ipc.Server.Connection;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.net.ConnectTimeoutException;
-import org.apache.hadoop.net.NetUtils;
-
-import java.util.Random;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
-import java.io.File;
 import java.io.DataOutput;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+
 import javax.net.SocketFactory;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.RPC.RpcKind;
+import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
+import org.apache.hadoop.net.ConnectTimeoutException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -83,6 +101,10 @@ public class TestIPC {
   private static final File FD_DIR = new File("/proc/self/fd");
 
   private static class TestServer extends Server {
+    // Tests can set callListener to run a piece of code each time the server
+    // receives a call.  This code executes on the server thread, so it has
+    // visibility of that thread's thread-local storage.
+    private Runnable callListener;
     private boolean sleep;
     private Class<? extends Writable> responseClass;
 
@@ -107,6 +129,9 @@ public class TestIPC {
         try {
           Thread.sleep(RANDOM.nextInt(PING_INTERVAL) + MIN_SLEEP_TIME);
         } catch (InterruptedException e) {}
+      }
+      if (callListener != null) {
+        callListener.run();
       }
       if (responseClass != null) {
         try {
@@ -152,6 +177,45 @@ public class TestIPC {
     }
   }
 
+  /**
+   * A RpcInvocationHandler instance for test. Its invoke function uses the same
+   * {@link Client} instance, and will fail the first totalRetry times (by 
+   * throwing an IOException).
+   */
+  private static class TestInvocationHandler implements RpcInvocationHandler {
+    private static int retry = 0;
+    private final Client client;
+    private final Server server;
+    private final int total;
+    
+    TestInvocationHandler(Client client, Server server, int total) {
+      this.client = client;
+      this.server = server;
+      this.total = total;
+    }
+    
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args)
+        throws Throwable {
+      LongWritable param = new LongWritable(RANDOM.nextLong());
+      LongWritable value = (LongWritable) client.call(param,
+          NetUtils.getConnectAddress(server), null, null, 0, conf);
+      if (retry++ < total) {
+        throw new IOException("Fake IOException");
+      } else {
+        return value;
+      }
+    }
+
+    @Override
+    public void close() throws IOException {}
+    
+    @Override
+    public ConnectionId getConnectionId() {
+      return null;
+    }
+  }
+  
   @Test
   public void testSerial() throws Exception {
     testSerial(3, false, 2, 5, 100);
@@ -645,6 +709,216 @@ public class TestIPC {
     assertRetriesOnSocketTimeouts(conf, 4);
   }
 
+  private static class CallInfo {
+    int id = RpcConstants.INVALID_CALL_ID;
+    int retry = RpcConstants.INVALID_RETRY_COUNT;
+  }
+
+  /**
+   * Test if
+   * (1) the rpc server uses the call id/retry provided by the rpc client, and
+   * (2) the rpc client receives the same call id/retry from the rpc server.
+   */
+  @Test
+  public void testCallIdAndRetry() throws Exception {
+    final CallInfo info = new CallInfo();
+
+    // Override client to store the call info and check response
+    final Client client = new Client(LongWritable.class, conf) {
+      @Override
+      Call createCall(RpcKind rpcKind, Writable rpcRequest) {
+        final Call call = super.createCall(rpcKind, rpcRequest);
+        info.id = call.id;
+        info.retry = call.retry;
+        return call;
+      }
+      
+      @Override
+      void checkResponse(RpcResponseHeaderProto header) throws IOException {
+        super.checkResponse(header);
+        Assert.assertEquals(info.id, header.getCallId());
+        Assert.assertEquals(info.retry, header.getRetryCount());
+      }
+    };
+
+    // Attach a listener that tracks every call received by the server.
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        Assert.assertEquals(info.id, Server.getCallId());
+        Assert.assertEquals(info.retry, Server.getCallRetryCount());
+      }
+    };
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      caller.run();
+      assertFalse(caller.failed);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+  
+  /** A dummy protocol */
+  private interface DummyProtocol {
+    public void dummyRun();
+  }
+  
+  /**
+   * Test the retry count while used in a retry proxy.
+   */
+  @Test
+  public void testRetryProxy() throws Exception {
+    final Client client = new Client(LongWritable.class, conf);
+    
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      private int retryCount = 0;
+      @Override
+      public void run() {
+        Assert.assertEquals(retryCount++, Server.getCallRetryCount());
+      }
+    };
+
+    final int totalRetry = 256;
+    DummyProtocol proxy = (DummyProtocol) Proxy.newProxyInstance(
+        DummyProtocol.class.getClassLoader(),
+        new Class[] { DummyProtocol.class }, new TestInvocationHandler(client,
+            server, totalRetry));
+    DummyProtocol retryProxy = (DummyProtocol) RetryProxy.create(
+        DummyProtocol.class, proxy, RetryPolicies.RETRY_FOREVER);
+    
+    try {
+      server.start();
+      retryProxy.dummyRun();
+      Assert.assertEquals(TestInvocationHandler.retry, totalRetry + 1);
+    } finally {
+      Client.setCallIdAndRetryCount(0, 0);
+      client.stop();
+      server.stop();
+    }
+  }
+  
+  /**
+   * Test if the rpc server gets the default retry count (0) from client.
+   */
+  @Test
+  public void testInitialCallRetryCount() throws Exception {
+    // Override client to store the call id
+    final Client client = new Client(LongWritable.class, conf);
+
+    // Attach a listener that tracks every call ID received by the server.
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        // we have not set the retry count for the client, thus on the server
+        // side we should see retry count as 0
+        Assert.assertEquals(0, Server.getCallRetryCount());
+      }
+    };
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      caller.run();
+      assertFalse(caller.failed);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+  
+  /**
+   * Test if the rpc server gets the retry count from client.
+   */
+  @Test
+  public void testCallRetryCount() throws Exception {
+    final int retryCount = 255;
+    // Override client to store the call id
+    final Client client = new Client(LongWritable.class, conf);
+    Client.setCallIdAndRetryCount(Client.nextCallId(), 255);
+
+    // Attach a listener that tracks every call ID received by the server.
+    final TestServer server = new TestServer(1, false);
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        // we have not set the retry count for the client, thus on the server
+        // side we should see retry count as 0
+        Assert.assertEquals(retryCount, Server.getCallRetryCount());
+      }
+    };
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      caller.run();
+      assertFalse(caller.failed);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+
+  /**
+   * Tests that client generates a unique sequential call ID for each RPC call,
+   * even if multiple threads are using the same client.
+   */
+  @Test
+  public void testUniqueSequentialCallIds() throws Exception {
+    int serverThreads = 10, callerCount = 100, perCallerCallCount = 100;
+    TestServer server = new TestServer(serverThreads, false);
+
+    // Attach a listener that tracks every call ID received by the server.  This
+    // list must be synchronized, because multiple server threads will add to it.
+    final List<Integer> callIds = Collections.synchronizedList(
+      new ArrayList<Integer>());
+    server.callListener = new Runnable() {
+      @Override
+      public void run() {
+        callIds.add(Server.getCallId());
+      }
+    };
+
+    Client client = new Client(LongWritable.class, conf);
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      SerialCaller[] callers = new SerialCaller[callerCount];
+      for (int i = 0; i < callerCount; ++i) {
+        callers[i] = new SerialCaller(client, addr, perCallerCallCount);
+        callers[i].start();
+      }
+      for (int i = 0; i < callerCount; ++i) {
+        callers[i].join();
+        assertFalse(callers[i].failed);
+      }
+    } finally {
+      client.stop();
+      server.stop();
+    }
+
+    int expectedCallCount = callerCount * perCallerCallCount;
+    assertEquals(expectedCallCount, callIds.size());
+
+    // It is not guaranteed that the server executes requests in sequential order
+    // of client call ID, so we must sort the call IDs before checking that it
+    // contains every expected value.
+    Collections.sort(callIds);
+    final int startID = callIds.get(0).intValue();
+    for (int i = 0; i < expectedCallCount; ++i) {
+      assertEquals(startID + i, callIds.get(i).intValue());
+    }
+  }
+
   private void assertRetriesOnSocketTimeouts(Configuration conf,
       int maxTimeoutRetries) throws IOException, InterruptedException {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
@@ -736,7 +1010,7 @@ public class TestIPC {
       "6f 6e 67 00 00 00 00 00  00 00 0a                ong..... ...     \n");
 
     final static String HADOOP0_18_ERROR_MSG =
-      "Server IPC version " + Server.CURRENT_VERSION +
+      "Server IPC version " + RpcConstants.CURRENT_VERSION +
       " cannot communicate with client version 2";
     
     /**
@@ -775,7 +1049,7 @@ public class TestIPC {
       "00 14                                            ..               \n");
 
     final static String HADOOP0_20_ERROR_MSG =
-      "Server IPC version " + Server.CURRENT_VERSION +
+      "Server IPC version " + RpcConstants.CURRENT_VERSION +
       " cannot communicate with client version 3";
     
 
@@ -790,7 +1064,7 @@ public class TestIPC {
     
     
     final static String HADOOP0_21_ERROR_MSG =
-      "Server IPC version " + Server.CURRENT_VERSION +
+      "Server IPC version " + RpcConstants.CURRENT_VERSION +
       " cannot communicate with client version 4";
 
     final static byte[] HADOOP_0_21_0_RPC_DUMP =
