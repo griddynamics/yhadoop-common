@@ -378,6 +378,9 @@ Release 2.1.0-beta - 2013-07-02
 
   IMPROVEMENTS
 
+    HADOOP-9164. Print paths of loaded native libraries in
+    NativeLibraryChecker. (Binglin Chang via llu)
+
     HADOOP-9253. Capture ulimit info in the logs at service start time.
     (Arpit Gupta via suresh)
 
@@ -479,6 +482,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9716. Rpc retries should use the same call ID as the original call.
     (szetszwo)
+
+    HADOOP-9717. Add retry attempt count to the RPC requests. (jing9)
 
   OPTIMIZATIONS
 
