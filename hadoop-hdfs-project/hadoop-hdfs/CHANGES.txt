@@ -24,6 +24,9 @@ Release 2.3.0 - UNRELEASED
     report to a configurable value.  (Aaron T. Myers via Colin Patrick
     McCabe)
 
+    HDFS-4278. Log an ERROR when DFS_BLOCK_ACCESS_TOKEN_ENABLE config is
+    disabled but security is turned on. (Kousuke Saruta via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -229,6 +232,9 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9418.  Add symlink support to DistributedFileSystem (Andrew Wang via
     Colin Patrick McCabe)
+
+    HDFS-5007. Replace hard-coded property keys with DFSConfigKeys fields. 
+    (Kousuke Saruta via jing9)
 
   OPTIMIZATIONS
 
