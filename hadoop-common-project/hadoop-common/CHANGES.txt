@@ -69,6 +69,8 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9421. [RPC v9] Convert SASL to use ProtoBuf and provide
     negotiation capabilities (daryn)
 
+    HADOOP-9688. Add globally unique Client ID to RPC requests. (suresh)
+
     HADOOP-9683. [RPC v9] Wrap IpcConnectionContext in RPC headers (daryn)
 
   NEW FEATURES
@@ -172,6 +174,9 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9676.  Make maximum RPC buffer size configurable (Colin Patrick
     McCabe)
 
+    HADOOP-9691. RPC clients can generate call ID using AtomicInteger instead of
+    synchronizing on the Client instance. (cnauroth)
+
     HADOOP-9661. Allow metrics sources to be extended. (sandyr via tucu)
 
     HADOOP-9370.  Write FSWrapper class to wrap FileSystem and FileContext for
@@ -189,8 +194,19 @@ Release 2.1.0-beta - 2013-07-02
     HADOOP-9416.  Add new symlink resolution methods in FileSystem and
     FileSystemLinkResolver.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9720. Rename Client#uuid to Client#clientId. (Arpit Agarwal via
+    suresh)
+
     HADOOP-9734. Common protobuf definitions for GetUserMappingsProtocol,
     RefreshAuthorizationPolicyProtocol and RefreshUserMappingsProtocol (jlowe)
+
+    HADOOP-9716. Rpc retries should use the same call ID as the original call.
+    (szetszwo)
+
+    HADOOP-9717. Add retry attempt count to the RPC requests. (jing9)
+
+    HADOOP-9751. Add clientId and retryCount to RpcResponseHeaderProto.
+    (szetszwo)
 
   OPTIMIZATIONS
 
@@ -549,6 +565,10 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-8440. HarFileSystem.decodeHarURI fails for URIs whose host contains
     numbers. (Ivan Mitic via cnauroth)
+
+    HADOOP-9643. org.apache.hadoop.security.SecurityUtil calls 
+    toUpperCase(Locale.getDefault()) as well as toLowerCase(Locale.getDefault()) 
+    on hadoop.security.authentication value. (markrmiller@gmail.com via tucu)
 
 Release 2.0.5-alpha - 06/06/2013
 
