@@ -258,6 +258,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4278. Log an ERROR when DFS_BLOCK_ACCESS_TOKEN_ENABLE config is
     disabled but security is turned on. (Kousuke Saruta via harsh)
 
+    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
+    (Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -457,6 +460,8 @@ Release 2.1.0-beta - 2013-07-02
 
     HDFS-5007. Replace hard-coded property keys with DFSConfigKeys fields. 
     (Kousuke Saruta via jing9)
+
+    HDFS-5008. Make ClientProtocol#abandonBlock() idempotent. (jing9)
 
   OPTIMIZATIONS
 
