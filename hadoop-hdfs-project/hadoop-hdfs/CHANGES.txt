@@ -126,6 +126,9 @@ Trunk (Unreleased)
 
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
 
+    HDFS-5004. Add additional JMX bean for NameNode status data
+    (Trevor Lorimer via cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -266,6 +269,9 @@ Release 2.3.0 - UNRELEASED
   BUG FIXES
     HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
     Patrick McCabe)
+
+    HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
+    of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
 Release 2.1.1-beta - UNRELEASED
 
