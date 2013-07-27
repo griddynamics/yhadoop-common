@@ -30,11 +30,17 @@ Release 2.3.0 - UNRELEASED
     HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
     (Colin Patrick McCabe)
 
+    HDFS-5004. Add additional JMX bean for NameNode status data. Contributed
+    by Trevor Lorimer.
+
   OPTIMIZATIONS
 
   BUG FIXES
     HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
     Patrick McCabe)
+
+    HDFS-5035.  getFileLinkStatus and rename do not correctly check permissions
+    of symlinks.  (Andrew Wang via Colin Patrick McCabe)
 
 Release 2.1.1-beta - UNRELEASED
 
