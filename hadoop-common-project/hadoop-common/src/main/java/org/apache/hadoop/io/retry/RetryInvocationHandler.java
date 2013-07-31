@@ -28,17 +28,24 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.util.ThreadUtil;
 
-import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 
-class RetryInvocationHandler implements RpcInvocationHandler {
+/**
+ * This class implements RpcInvocationHandler and supports retry on the client 
+ * side.
+ */
+@InterfaceAudience.Private
+public class RetryInvocationHandler implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
   private final FailoverProxyProvider proxyProvider;
 
@@ -52,7 +59,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
   private final Map<String,RetryPolicy> methodNameToPolicyMap;
   private Object currentProxy;
 
-  RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+  protected RetryInvocationHandler(FailoverProxyProvider proxyProvider,
       RetryPolicy retryPolicy) {
     this(proxyProvider, retryPolicy, Collections.<String, RetryPolicy>emptyMap());
   }
@@ -76,7 +83,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
     
     // The number of times this method invocation has been failed over.
     int invocationFailoverCount = 0;
-    final boolean isRpc = isRpcInvocation();
+    final boolean isRpc = isRpcInvocation(currentProxy);
     final int callId = isRpc? Client.nextCallId(): RpcConstants.INVALID_CALL_ID;
     int retries = 0;
     while (true) {
@@ -96,11 +103,16 @@ class RetryInvocationHandler implements RpcInvocationHandler {
         hasMadeASuccessfulCall = true;
         return ret;
       } catch (Exception e) {
-        boolean isMethodIdempotent = proxyProvider.getInterface()
+        boolean isIdempotentOrAtMostOnce = proxyProvider.getInterface()
             .getMethod(method.getName(), method.getParameterTypes())
             .isAnnotationPresent(Idempotent.class);
+        if (!isIdempotentOrAtMostOnce) {
+          isIdempotentOrAtMostOnce = proxyProvider.getInterface()
+              .getMethod(method.getName(), method.getParameterTypes())
+              .isAnnotationPresent(AtMostOnce.class);
+        }
         RetryAction action = policy.shouldRetry(e, retries++,
-            invocationFailoverCount, isMethodIdempotent);
+            invocationFailoverCount, isIdempotentOrAtMostOnce);
         if (action.action == RetryAction.RetryDecision.FAIL) {
           if (action.reason != null) {
             LOG.warn("Exception while invoking " + 
@@ -168,7 +180,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
     }
   }
   
-  private Object invokeMethod(Method method, Object[] args) throws Throwable {
+  protected Object invokeMethod(Method method, Object[] args) throws Throwable {
     try {
       if (!method.isAccessible()) {
         method.setAccessible(true);
@@ -179,11 +191,15 @@ class RetryInvocationHandler implements RpcInvocationHandler {
     }
   }
 
-  private boolean isRpcInvocation() {
-    if (!Proxy.isProxyClass(currentProxy.getClass())) {
+  @VisibleForTesting
+  static boolean isRpcInvocation(Object proxy) {
+    if (proxy instanceof ProtocolTranslator) {
+      proxy = ((ProtocolTranslator) proxy).getUnderlyingProxyObject();
+    }
+    if (!Proxy.isProxyClass(proxy.getClass())) {
       return false;
     }
-    final InvocationHandler ih = Proxy.getInvocationHandler(currentProxy);
+    final InvocationHandler ih = Proxy.getInvocationHandler(proxy);
     return ih instanceof RpcInvocationHandler;
   }
 
