@@ -9,10 +9,6 @@ Trunk (Unreleased)
 
   NEW FEATURES
     
-    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
-
-    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
-
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -310,9 +306,6 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
     (Ashwin Shankar via jlowe)
 
-    HADOOP-9652.  RawLocalFs#getFileLinkStatus does not fill in the link owner
-    and mode.  (Andrew Wang via Colin Patrick McCabe)
-
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -325,7 +318,10 @@ Release 2.1.1-beta - UNRELEASED
 
   BUG FIXES
 
-Release 2.1.0-beta - 2013-07-02
+    HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
+    where spaces are otherwise acceptable. (cnauroth)
+
+Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
 
@@ -379,6 +375,13 @@ Release 2.1.0-beta - 2013-07-02
 
     HADOOP-9762. RetryCache utility for implementing RPC retries. 
     (Suresh Srinivas via jing9)
+
+    HADOOP-9792. Retry the methods that are tagged @AtMostOnce along 
+    with @Idempotent. (suresh)
+
+    HADOOP-9509. Implement ONCRPC and XDR. (brandonli)
+
+    HADOOP-9515. Add general interface for NFS and Mount. (brandonli)
 
   IMPROVEMENTS
 
@@ -502,6 +505,9 @@ Release 2.1.0-beta - 2013-07-02
     (Junping Du via szetszwo)
 
     HADOOP-9770. Make RetryCache#state non volatile. (suresh)
+
+    HADOOP-9786. RetryInvocationHandler#isRpcInvocation should support 
+    ProtocolTranslator. (suresh and jing9)
 
   OPTIMIZATIONS
 
