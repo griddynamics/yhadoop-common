@@ -251,7 +251,7 @@ public class JsonUtil {
     final long fileId = m.containsKey("fileId") ? longFromMap(m, "fileId")
         : INodeId.GRANDFATHER_INODE_ID;
     Long childrenNumLong = (Long) m.get("childrenNum");
-    final int childrenNum = (childrenNumLong == null) ? 0
+    final int childrenNum = (childrenNumLong == null) ? -1
             : childrenNumLong.intValue();
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group,
