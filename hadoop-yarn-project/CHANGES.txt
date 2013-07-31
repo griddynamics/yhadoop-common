@@ -24,7 +24,13 @@ Release 2.1.1-beta - UNRELEASED
 
   BUG FIXES
 
-Release 2.1.0-beta - 2013-07-02
+    YARN-948. Changed ResourceManager to validate the release container list
+    before actually releasing them. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-966. Fixed ContainerLaunch to not fail quietly when there are no
+    localized resources due to some other failure. (Zhijie Shen via vinodkv)
+
+Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
 
@@ -747,8 +753,14 @@ Release 2.1.0-beta - 2013-07-02
 
     YARN-937. Fix unmanaged AM in non-secure/secure setup post YARN-701. (tucu)
 
-    YARN-245. Fixed NodeManager to handle duplicate responses from
-    ResourceManager. (Mayank Bansal via vinodkv)
+    YARN-932. TestResourceLocalizationService.testLocalizationInit can fail on
+    JDK7. (Karthik Kambatla via Sandy Ryza)
+
+    YARN-961. Changed ContainerManager to enforce Token auth irrespective of
+    security. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-945. Removed setting of AMRMToken's service from ResourceManager
+    and changed client libraries do it all the time and correctly. (vinodkv)
 
   BREAKDOWN OF HADOOP-8562/YARN-191 SUBTASKS AND RELATED JIRAS
 
