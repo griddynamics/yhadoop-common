@@ -8,6 +8,8 @@ Release 2.3.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-9319. Update bundled LZ4 source to r99. (Binglin Chang via llu)
+
     HADOOP-9432 Add support for markdown .md files in site documentation (stevel)
 
     HADOOP-9241. DU refresh interval is not configurable (harsh)
@@ -416,6 +418,8 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9507. LocalFileSystem rename() is broken in some cases when
     destination exists. (cnauroth)
+
+    HADOOP-9816. RPC Sasl QOP is broken (daryn)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
