@@ -89,7 +89,12 @@ public class TestUserGroupInformation {
   public void resetUgi() {
     UserGroupInformation.setLoginUser(null);
   }
-  
+
+  @After
+  public void resetUgi() {
+    UserGroupInformation.setLoginUser(null);
+  }
+
   /** Test login method */
   @Test
   public void testLogin() throws Exception {
