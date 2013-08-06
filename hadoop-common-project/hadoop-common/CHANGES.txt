@@ -314,6 +314,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
     (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
+    with symlinks. (Colin Patrick McCabe via Andrew Wang)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -369,6 +372,8 @@ Release 2.1.0-beta - 2013-08-06
     HADOOP-9683. [RPC v9] Wrap IpcConnectionContext in RPC headers (daryn)
 
     HADOOP-9698. [RPC v9] Client must honor server's SASL negotiate response (daryn)
+
+    HADOOP-9832. [RPC v9] Add RPC header to client ping (daryn)
 
   NEW FEATURES
 
