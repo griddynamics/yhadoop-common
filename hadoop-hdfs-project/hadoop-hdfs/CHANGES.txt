@@ -81,6 +81,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-5043. For HdfsFileStatus, set default value of childrenNum to -1
     instead of 0 to avoid confusing applications. (brandonli)
 
+    HDFS-4993. Fsck can fail if a file is renamed or deleted. (Robert Parker
+    via kihwal)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
@@ -97,6 +100,8 @@ Release 2.1.0-beta - 2013-08-06
 
     HDFS-4866. Protocol buffer support cannot compile under C. (Arpit Agarwal via
     cnauroth)
+
+    HDFS-5083. Update the HDFS compatibility version range. (kihwal)
 
   NEW FEATURES
 
