@@ -2437,11 +2437,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   public static void dumpDeprecatedKeys() {
     for (Map.Entry<String, DeprecatedKeyInfo> entry : deprecatedKeyMap.entrySet()) {
-      String newKeys = "";
+      StringBuilder newKeys = new StringBuilder();
       for (String newKey : entry.getValue().newKeys) {
-        newKeys += newKey + "\t";
+        newKeys.append(newKey).append("\t");
       }
-      System.out.println(entry.getKey() + "\t" + newKeys);
+      System.out.println(entry.getKey() + "\t" + newKeys.toString());
     }
   }
 }

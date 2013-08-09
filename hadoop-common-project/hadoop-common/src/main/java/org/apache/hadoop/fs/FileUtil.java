@@ -54,6 +54,7 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceStability.Evolving
 public class FileUtil {
 
+
   private static final Log LOG = LogFactory.getLog(FileUtil.class);
 
   /* The error code is defined in winutils to indicate insufficient

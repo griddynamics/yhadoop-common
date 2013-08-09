@@ -1155,7 +1155,7 @@ public class FSEditLog implements LogsPurgeable {
    * 
    * @param bnReg the backup node registration information.
    * @param nnReg this (active) name-node registration.
-   * @throws IOException
+   * @throws java.io.IOException
    */
   synchronized void registerBackupNode(
       NamenodeRegistration bnReg, // backup node
