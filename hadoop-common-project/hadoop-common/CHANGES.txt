@@ -352,6 +352,8 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9527. Add symlink support to LocalFileSystem on Windows.
     (Arpit Agarwal via cnauroth)
 
+    HADOOP-9831. Make checknative shell command accessible on Windows. (cnauroth)
+
 Release 2.1.0-beta - 2013-08-06
 
   INCOMPATIBLE CHANGES
@@ -382,6 +384,8 @@ Release 2.1.0-beta - 2013-08-06
     HADOOP-9698. [RPC v9] Client must honor server's SASL negotiate response (daryn)
 
     HADOOP-9832. [RPC v9] Add RPC header to client ping (daryn)
+
+    HADOOP-9820. [RPC v9] Wire protocol is insufficient to support multiplexing. (daryn via jitendra)
 
   NEW FEATURES
 
