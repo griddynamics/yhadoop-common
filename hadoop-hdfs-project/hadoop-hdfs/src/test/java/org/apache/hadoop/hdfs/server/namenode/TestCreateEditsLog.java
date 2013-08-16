@@ -40,8 +40,8 @@ import org.apache.hadoop.hdfs.server.common.Util;
  */
 public class TestCreateEditsLog {
 
-  private static final File HDFS_DIR = new File(
-    MiniDFSCluster.getBaseDirectory()).getAbsoluteFile();
+  private static final String BASE_DIR = MiniDFSCluster.newDfsBaseDir();
+  private static final File HDFS_DIR = new File(BASE_DIR).getAbsoluteFile();
   private static final File TEST_DIR = new File(
     System.getProperty("test.build.data", "build/test/data"),
     "TestCreateEditsLog").getAbsoluteFile();
@@ -90,6 +90,7 @@ public class TestCreateEditsLog {
 
     // Start a namenode to try to load the edits.
     cluster = new MiniDFSCluster.Builder(conf)
+      .dfsBaseDir(BASE_DIR)
       .format(false)
       .manageNameDfsDirs(false)
       .waitSafeMode(false)
