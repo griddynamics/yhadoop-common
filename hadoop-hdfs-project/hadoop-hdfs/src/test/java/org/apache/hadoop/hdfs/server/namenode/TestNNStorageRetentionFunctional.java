@@ -58,7 +58,7 @@ public class TestNNStorageRetentionFunctional {
   */
   @Test
   public void testPurgingWithNameEditsDirAfterFailure()
-      throws IOException {
+      throws Exception {
     String baseDir = MiniDFSCluster.newDfsBaseDir();
     MiniDFSCluster cluster = null;    
     Configuration conf = new HdfsConfiguration();
