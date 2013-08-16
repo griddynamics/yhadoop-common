@@ -678,7 +678,6 @@ public class WebHdfsFileSystem extends FileSystem
     return (Boolean)json.get("boolean");
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public void rename(final Path src, final Path dst,
       final Options.Rename... options) throws IOException {
@@ -793,7 +792,6 @@ public class WebHdfsFileSystem extends FileSystem
       .write(bufferSize);
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public boolean delete(final Path f) throws IOException {
     return delete(f, true);
