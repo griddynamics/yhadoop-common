@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
-import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -44,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
@@ -124,8 +124,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     nodeBlacklistingEnabled = 
       conf.getBoolean(MRJobConfig.MR_AM_JOB_NODE_BLACKLISTING_ENABLE, true);
     LOG.info("nodeBlacklistingEnabled:" + nodeBlacklistingEnabled);
@@ -145,10 +145,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   protected AllocateResponse makeRemoteRequest() throws IOException {
-    AllocateRequest allocateRequest = AllocateRequest.newInstance(
-        applicationAttemptId, lastResponseID, super.getApplicationProgress(),
-        new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
-            release), null);
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(lastResponseID,
+          super.getApplicationProgress(), new ArrayList<ResourceRequest>(ask),
+          new ArrayList<ContainerId>(release), null);
     AllocateResponse allocateResponse;
     try {
       allocateResponse = scheduler.allocate(allocateRequest);
@@ -241,7 +241,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
               ResourceRequest zeroedRequest =
                   ResourceRequest.newInstance(req.getPriority(),
                     req.getResourceName(), req.getCapability(),
-                    req.getNumContainers());
+                    req.getNumContainers(), req.getRelaxLocality());
 
               zeroedRequest.setNumContainers(0);
               // to be sent to RM on next heartbeat
@@ -423,5 +423,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     ContainerRequest newReq = new ContainerRequest(orig.attemptID, orig.capability,
         hosts, orig.racks, orig.priority); 
     return newReq;
+  }
+  
+  public Set<String> getBlacklistedNodes() {
+    return blacklistedNodes;
   }
 }

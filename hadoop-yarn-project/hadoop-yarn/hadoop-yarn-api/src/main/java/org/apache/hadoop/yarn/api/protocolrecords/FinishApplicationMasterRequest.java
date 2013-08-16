@@ -20,8 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -31,10 +30,6 @@ import org.apache.hadoop.yarn.util.Records;
  *
  * <p>The final request includes details such:
  *   <ul>
- *     <li>
- *         {@link ApplicationAttemptId} being managed by the
- *         <code>ApplicationMaster</code>
- *     </li>
  *     <li>Final state of the <code>ApplicationMaster</code></li>
  *     <li>
  *       Diagnostic information in case of failure of the
@@ -44,41 +39,23 @@ import org.apache.hadoop.yarn.util.Records;
  *   </ul>
  * </p>
  *
- * @see AMRMProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
+ * @see ApplicationMasterProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
  */
+@Public
+@Stable
 public abstract class FinishApplicationMasterRequest {
 
+  @Public
+  @Stable
   public static FinishApplicationMasterRequest newInstance(
-      ApplicationAttemptId appAttemptId, FinalApplicationStatus finalAppStatus,
-      String diagnostics, String url) {
+      FinalApplicationStatus finalAppStatus, String diagnostics, String url) {
     FinishApplicationMasterRequest request =
         Records.newRecord(FinishApplicationMasterRequest.class);
-    request.setAppAttemptId(appAttemptId);
-    request.setFinishApplicationStatus(finalAppStatus);
+    request.setFinalApplicationStatus(finalAppStatus);
     request.setDiagnostics(diagnostics);
     request.setTrackingUrl(url);
     return request;
   }
-
-  /**
-   * Get the <code>ApplicationAttemptId</code> being managed by the
-   * <code>ApplicationMaster</code>.
-   * @return <code>ApplicationAttemptId</code> being managed by the
-   *         <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public abstract ApplicationAttemptId getApplicationAttemptId();
-
-  /**
-   * Set the <code>ApplicationAttemptId</code> being managed by the
-   * <code>ApplicationMaster</code>.
-   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed
-   *                             by the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public abstract void setAppAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
    * Get <em>final state</em> of the <code>ApplicationMaster</code>.
@@ -89,12 +66,12 @@ public abstract class FinishApplicationMasterRequest {
   public abstract FinalApplicationStatus getFinalApplicationStatus();
 
   /**
-   * Set the <em>finish state</em> of the <code>ApplicationMaster</code>
-   * @param finishState <em>finish state</em> of the <code>ApplicationMaster</code>
+   * Set the <em>final state</em> of the <code>ApplicationMaster</code>
+   * @param finalState <em>final state</em> of the <code>ApplicationMaster</code>
    */
   @Public
   @Stable
-  public abstract void setFinishApplicationStatus(FinalApplicationStatus finishState);
+  public abstract void setFinalApplicationStatus(FinalApplicationStatus finalState);
 
   /**
    * Get <em>diagnostic information</em> on application failure.

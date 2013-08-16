@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.Lock;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -57,9 +57,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -79,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeRepo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
@@ -87,6 +85,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemoved
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.Lock;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -175,6 +177,26 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     this.conf = conf;
   }
   
+  private void validateConf(Configuration conf) {
+    // validate scheduler memory allocation setting
+    int minMem = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+    int maxMem = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+
+    if (minMem <= 0 || minMem > maxMem) {
+      throw new YarnRuntimeException("Invalid resource scheduler memory"
+        + " allocation configuration"
+        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
+        + "=" + minMem
+        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
+        + "=" + maxMem + ", min and max should be greater than 0"
+        + ", max should be no smaller than min.");
+    }
+  }
+  
   @Override
   public synchronized Configuration getConf() {
     return conf;
@@ -201,6 +223,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   {
     setConf(conf);
     if (!this.initialized) {
+      validateConf(conf);
       this.rmContext = rmContext;
       this.minimumAllocation = 
         Resources.createResource(conf.getInt(
@@ -268,7 +291,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         application.showRequests();
 
         // Update application requests
-        application.updateResourceRequests(ask, null, null);
+        application.updateResourceRequests(ask, blacklistAdditions, blacklistRemovals);
 
         LOG.debug("allocate: post-update" +
             " applicationId=" + applicationAttemptId + 
@@ -366,6 +389,11 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       LOG.debug("pre-assignContainers");
       application.showRequests();
       synchronized (application) {
+        // Check if this resource is on the blacklist
+        if (FiCaSchedulerUtils.isBlacklisted(application, node, LOG)) {
+          continue;
+        }
+        
         for (Priority priority : application.getPriorities()) {
           int maxContainers = 
             getMaxAllocatableContainers(application, priority, node, 

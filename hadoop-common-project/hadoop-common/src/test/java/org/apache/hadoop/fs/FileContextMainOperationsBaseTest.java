@@ -65,7 +65,13 @@ public abstract class FileContextMainOperationsBaseTest  {
 
   public Path localFsRootPath;
 
-  protected final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  protected final FileContextTestHelper fileContextTestHelper =
+    createFileContextHelper();
+
+  protected FileContextTestHelper createFileContextHelper() {
+    return new FileContextTestHelper();
+  }
+
   protected static FileContext fc;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
@@ -75,7 +81,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     }
   };
 
-  //A test filter with returns any path containing a "b" 
+  //A test filter with returns any path containing an "x" or "X" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path file) {

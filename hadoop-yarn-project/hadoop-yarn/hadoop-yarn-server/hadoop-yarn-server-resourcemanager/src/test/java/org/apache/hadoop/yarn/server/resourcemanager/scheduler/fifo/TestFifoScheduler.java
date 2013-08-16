@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -58,6 +57,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -125,7 +126,7 @@ public class TestFifoScheduler {
   public void testAppAttemptMetrics() throws Exception {
     AsyncDispatcher dispatcher = new InlineDispatcher();
     RMContext rmContext = new RMContextImpl(dispatcher, null,
-        null, null, null, null, null, null);
+        null, null, null, null, null, null, null);
 
     FifoScheduler schedular = new FifoScheduler();
     schedular.reinitialize(new Configuration(), rmContext);
@@ -150,11 +151,15 @@ public class TestFifoScheduler {
   @Test(timeout=2000)
   public void testNodeLocalAssignment() throws Exception {
     AsyncDispatcher dispatcher = new InlineDispatcher();
+    Configuration conf = new Configuration();
     RMContainerTokenSecretManager containerTokenSecretManager =
-        new RMContainerTokenSecretManager(new Configuration());
+        new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.rollMasterKey();
+    NMTokenSecretManagerInRM nmTokenSecretManager =
+        new NMTokenSecretManagerInRM(conf);
+    nmTokenSecretManager.rollMasterKey();
     RMContext rmContext = new RMContextImpl(dispatcher, null, null, null, null,
-        null, containerTokenSecretManager, null);
+        null, containerTokenSecretManager, nmTokenSecretManager, null);
 
     FifoScheduler scheduler = new FifoScheduler();
     scheduler.reinitialize(new Configuration(), rmContext);

@@ -121,7 +121,7 @@ public class NNThroughputBenchmark {
     File excludeFile = new File(config.get(DFSConfigKeys.DFS_HOSTS_EXCLUDE,
       "exclude"));
     if(!excludeFile.exists()) {
-      if(!excludeFile.getParentFile().mkdirs())
+      if(!excludeFile.getParentFile().exists() && !excludeFile.getParentFile().mkdirs())
         throw new IOException("NNThroughputBenchmark: cannot mkdir " + excludeFile);
     }
     new FileOutputStream(excludeFile).close();
@@ -590,7 +590,7 @@ public class NNThroughputBenchmark {
       long end = Time.now();
       for(boolean written = !closeUponCreate; !written; 
         written = nameNodeProto.complete(fileNames[daemonId][inputIdx],
-                                    clientName, null));
+                                    clientName, null, INodeId.GRANDFATHER_INODE_ID));
       return end-start;
     }
 
@@ -1046,7 +1046,7 @@ public class NNThroughputBenchmark {
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
             BLOCK_SIZE);
         ExtendedBlock lastBlock = addBlocks(fileName, clientName);
-        nameNodeProto.complete(fileName, clientName, lastBlock);
+        nameNodeProto.complete(fileName, clientName, lastBlock, INodeId.GRANDFATHER_INODE_ID);
       }
       // prepare block reports
       for(int idx=0; idx < nrDatanodes; idx++) {
@@ -1194,14 +1194,8 @@ public class NNThroughputBenchmark {
       // start data-nodes; create a bunch of files; generate block reports.
       blockReportObject.generateInputs(ignore);
       // stop replication monitor
-      BlockManagerTestUtil.getReplicationThread(namesystem.getBlockManager())
-          .interrupt();
-      try {
-        BlockManagerTestUtil.getReplicationThread(namesystem.getBlockManager())
-            .join();
-      } catch(InterruptedException ei) {
-        return;
-      }
+      BlockManagerTestUtil.stopReplicationThread(namesystem.getBlockManager());
+
       // report blocks once
       int nrDatanodes = blockReportObject.getNumDatanodes();
       for(int idx=0; idx < nrDatanodes; idx++) {

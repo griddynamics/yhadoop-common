@@ -1970,7 +1970,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, URL url)
       throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing URL " + url);
+      LOG.debug("parsing URL " + url);
     }
     if (url == null) {
       return null;
@@ -1981,7 +1981,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, InputStream is,
       String systemId) throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing input stream " + is);
+      LOG.debug("parsing input stream " + is);
     }
     if (is == null) {
       return null;
@@ -2054,7 +2054,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
-            LOG.info("parsing File " + file);
+            LOG.debug("parsing File " + file);
           }
           doc = parse(builder, new BufferedInputStream(
               new FileInputStream(file)), ((Path)resource).toString());
@@ -2181,12 +2181,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /** 
    * Write out the non-default properties in this configuration to the given
-   * {@link OutputStream}.
+   * {@link OutputStream} using UTF-8 encoding.
    * 
    * @param out the output stream to write to.
    */
   public void writeXml(OutputStream out) throws IOException {
-    writeXml(new OutputStreamWriter(out));
+    writeXml(new OutputStreamWriter(out, "UTF-8"));
   }
 
   /** 
@@ -2228,7 +2228,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     doc.appendChild(conf);
     conf.appendChild(doc.createTextNode("\n"));
     handleDeprecation(); //ensure properties is set and deprecation is handled
-    for (Enumeration e = properties.keys(); e.hasMoreElements();) {
+    for (Enumeration<Object> e = properties.keys(); e.hasMoreElements();) {
       String name = (String)e.nextElement();
       Object object = properties.get(name);
       String value = null;

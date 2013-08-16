@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -33,12 +31,14 @@ import org.apache.hadoop.yarn.util.Records;
  * <p>The request includes the {@link ApplicationId} of the application to be
  * aborted.</p>
  * 
- * @see ClientRMProtocol#forceKillApplication(KillApplicationRequest)
+ * @see ApplicationClientProtocol#forceKillApplication(KillApplicationRequest)
  */
 @Public
 @Stable
 public abstract class KillApplicationRequest {
 
+  @Public
+  @Stable 
   public static KillApplicationRequest newInstance(ApplicationId applicationId) {
     KillApplicationRequest request =
         Records.newRecord(KillApplicationRequest.class);
@@ -54,7 +54,7 @@ public abstract class KillApplicationRequest {
   @Stable
   public abstract ApplicationId getApplicationId();
   
-  @Private
-  @Unstable
+  @Public
+  @Stable
   public abstract void setApplicationId(ApplicationId applicationId);
 }

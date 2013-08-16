@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,8 +38,8 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * This class keeps track of all the consumption of an application. This also
@@ -203,6 +204,14 @@ public class AppSchedulingInfo {
   synchronized public Map<String, ResourceRequest> getResourceRequests(
       Priority priority) {
     return requests.get(priority);
+  }
+
+  synchronized public List<ResourceRequest> getAllResourceRequests() {
+    List<ResourceRequest> ret = new ArrayList<ResourceRequest>();
+    for (Map<String, ResourceRequest> r : requests.values()) {
+      ret.addAll(r.values());
+    }
+    return ret;
   }
 
   synchronized public ResourceRequest getResourceRequest(Priority priority,

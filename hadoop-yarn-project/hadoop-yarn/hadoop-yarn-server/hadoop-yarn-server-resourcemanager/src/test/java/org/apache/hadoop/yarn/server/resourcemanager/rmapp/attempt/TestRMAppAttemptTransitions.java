@@ -75,10 +75,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -166,8 +167,9 @@ public class TestRMAppAttemptTransitions {
     rmContext =
         new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-          null, new ApplicationTokenSecretManager(conf),
+          null, new AMRMTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
+          new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
     
     RMStateStore store = mock(RMStateStore.class);
@@ -650,6 +652,20 @@ public class TestRMAppAttemptTransitions {
             applicationAttempt.getAppAttemptId(), 
             diagnostics));
     testAppAttemptFailedState(amContainer, diagnostics);
+  }
+  
+  @Test
+  public void testAMCrashAtAllocated() {
+    Container amContainer = allocateApplicationAttempt();
+    String containerDiagMsg = "some error";
+    int exitCode = 123;
+    ContainerStatus cs =
+        BuilderUtils.newContainerStatus(amContainer.getId(),
+          ContainerState.COMPLETE, containerDiagMsg, exitCode);
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      applicationAttempt.getAppAttemptId(), cs));
+    assertEquals(RMAppAttemptState.FAILED,
+      applicationAttempt.getAppAttemptState());
   }
   
   @Test

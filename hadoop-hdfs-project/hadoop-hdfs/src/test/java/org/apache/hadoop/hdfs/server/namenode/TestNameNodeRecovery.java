@@ -72,7 +72,7 @@ public class TestNameNodeRecovery {
     EditLogFileOutputStream elfos = null;
     EditLogFileInputStream elfis = null;
     try {
-      elfos = new EditLogFileOutputStream(TEST_LOG_NAME, 0);
+      elfos = new EditLogFileOutputStream(new Configuration(), TEST_LOG_NAME, 0);
       elfos.create();
 
       elts.addTransactionsToLog(elfos, cache);
@@ -274,7 +274,7 @@ public class TestNameNodeRecovery {
     } 
     
     public int getMaxOpSize() {
-      return 30;
+      return 36;
     }
   }
 

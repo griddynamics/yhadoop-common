@@ -35,7 +35,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
-import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -43,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
@@ -80,8 +80,8 @@ public class LocalContainerAllocator extends RMCommunicator
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     retryInterval =
         getConfig().getLong(MRJobConfig.MR_AM_TO_RM_WAIT_INTERVAL_MS,
             MRJobConfig.DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS);
@@ -93,9 +93,9 @@ public class LocalContainerAllocator extends RMCommunicator
   @SuppressWarnings("unchecked")
   @Override
   protected synchronized void heartbeat() throws Exception {
-    AllocateRequest allocateRequest = AllocateRequest.newInstance(
-        this.applicationAttemptId, this.lastResponseID, super
-            .getApplicationProgress(), new ArrayList<ResourceRequest>(),
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(this.lastResponseID,
+          super.getApplicationProgress(), new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>(), null);
     AllocateResponse allocateResponse;
     try {
@@ -143,7 +143,7 @@ public class LocalContainerAllocator extends RMCommunicator
       LOG.info("Processing the event " + event.toString());
       // Assign the same container ID as the AM
       ContainerId cID =
-          ContainerId.newInstance(applicationAttemptId,
+          ContainerId.newInstance(getContext().getApplicationAttemptId(),
             this.containerId.getId());
       Container container = recordFactory.newRecordInstance(Container.class);
       container.setId(cID);

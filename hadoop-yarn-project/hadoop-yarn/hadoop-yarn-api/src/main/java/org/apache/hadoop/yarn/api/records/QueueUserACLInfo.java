@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -32,13 +32,14 @@ import org.apache.hadoop.yarn.util.Records;
  * the given user.</p>
  * 
  * @see QueueACL
- * @see ClientRMProtocol#getQueueUserAcls(org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest)
+ * @see ApplicationClientProtocol#getQueueUserAcls(org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest)
  */
 @Public
 @Stable
 public abstract class QueueUserACLInfo {
 
   @Private
+  @Unstable
   public static QueueUserACLInfo newInstance(String queueName,
       List<QueueACL> acls) {
     QueueUserACLInfo info = Records.newRecord(QueueUserACLInfo.class);

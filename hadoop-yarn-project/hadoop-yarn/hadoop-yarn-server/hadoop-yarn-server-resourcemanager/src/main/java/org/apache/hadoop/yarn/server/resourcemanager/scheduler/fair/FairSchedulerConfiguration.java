@@ -26,12 +26,22 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 @Evolving
 public class FairSchedulerConfiguration extends Configuration {
+
+  /** Increment request grant-able by the RM scheduler. 
+   * These properties are looked up in the yarn-site.xml  */
+  public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_MB =
+    YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-mb";
+  public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB = 1024;
+  public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES =
+    YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-vcores";
+  public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES = 1;
+  
   public static final String FS_CONFIGURATION_FILE = "fair-scheduler.xml";
 
   private static final String CONF_PREFIX =  "yarn.scheduler.fair.";
@@ -100,6 +110,16 @@ public class FairSchedulerConfiguration extends Configuration {
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
     return Resources.createResource(mem, cpu);
+  }
+
+  public Resource getIncrementAllocation() {
+    int incrementMemory = getInt(
+      RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
+      DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB);
+    int incrementCores = getInt(
+      RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES,
+      DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
+    return Resources.createResource(incrementMemory, incrementCores);
   }
 
   public boolean getUserAsDefaultQueue() {

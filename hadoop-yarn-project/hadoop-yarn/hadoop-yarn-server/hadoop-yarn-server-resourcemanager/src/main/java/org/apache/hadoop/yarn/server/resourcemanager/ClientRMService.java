@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -38,11 +39,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -68,10 +70,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -89,7 +93,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenS
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
 
 
@@ -98,7 +101,7 @@ import org.apache.hadoop.yarn.util.Records;
  * interfaces to the resource manager from the client.
  */
 public class ClientRMService extends AbstractService implements
-    ClientRMProtocol {
+    ApplicationClientProtocol {
   private static final ArrayList<ApplicationReport> EMPTY_APPS_REPORT = new ArrayList<ApplicationReport>();
 
   private static final Log LOG = LogFactory.getLog(ClientRMService.class);
@@ -128,17 +131,17 @@ public class ClientRMService extends AbstractService implements
   }
 
   @Override
-  public void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
     clientBindAddress = getBindAddress(conf);
-    super.init(conf);
+    super.serviceInit(conf);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =   
-      rpc.getServer(ClientRMProtocol.class, this,
+      rpc.getServer(ApplicationClientProtocol.class, this,
             clientBindAddress,
             conf, this.rmDTSecretManager,
             conf.getInt(YarnConfiguration.RM_CLIENT_THREAD_COUNT, 
@@ -157,16 +160,15 @@ public class ClientRMService extends AbstractService implements
     // enable RM to short-circuit token operations directly to itself
     RMDelegationTokenIdentifier.Renewer.setSecretManager(
         rmDTSecretManager, clientBindAddress);
-    
-    super.start();
+    super.serviceStart();
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (this.server != null) {
         this.server.stop();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   InetSocketAddress getBindAddress(Configuration conf) {
@@ -209,8 +211,6 @@ public class ClientRMService extends AbstractService implements
         .newRecordInstance(GetNewApplicationResponse.class);
     response.setApplicationId(getNewApplicationId());
     // Pick up min/max resource from scheduler...
-    response.setMinimumResourceCapability(scheduler
-        .getMinimumResourceCapability());
     response.setMaximumResourceCapability(scheduler
         .getMaximumResourceCapability());       
     
@@ -219,7 +219,7 @@ public class ClientRMService extends AbstractService implements
   
   /**
    * It gives response which includes application report if the application
-   * present otherwise gives response with application report as null.
+   * present otherwise throws ApplicationNotFoundException.
    */
   @Override
   public GetApplicationReportResponse getApplicationReport(
@@ -236,10 +236,10 @@ public class ClientRMService extends AbstractService implements
 
     RMApp application = this.rmContext.getRMApps().get(applicationId);
     if (application == null) {
-      // If the RM doesn't have the application, provide the response with
-      // application report as null and let the clients to handle.
-      return recordFactory
-          .newRecordInstance(GetApplicationReportResponse.class);
+      // If the RM doesn't have the application, throw
+      // ApplicationNotFoundException and let client to handle.
+      throw new ApplicationNotFoundException("Application with id '"
+          + applicationId + "' doesn't exist in RM.");
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
@@ -393,8 +393,8 @@ public class ClientRMService extends AbstractService implements
   }
   
   @Override
-  public GetAllApplicationsResponse getAllApplications(
-      GetAllApplicationsRequest request) throws YarnException {
+  public GetApplicationsResponse getApplications(
+      GetApplicationsRequest request) throws YarnException {
 
     UserGroupInformation callerUGI;
     try {
@@ -404,15 +404,21 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
+    Set<String> applicationTypes = request.getApplicationTypes();
+    boolean bypassFilter = applicationTypes.isEmpty();
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
     for (RMApp application : this.rmContext.getRMApps().values()) {
+      if (!(bypassFilter || applicationTypes.contains(application
+          .getApplicationType()))) {
+        continue;
+      }
       boolean allowAccess = checkAccess(callerUGI, application.getUser(),
           ApplicationAccessType.VIEW_APP, application.getApplicationId());
       reports.add(application.createAndGetApplicationReport(allowAccess));
     }
 
-    GetAllApplicationsResponse response = 
-      recordFactory.newRecordInstance(GetAllApplicationsResponse.class);
+    GetApplicationsResponse response =
+      recordFactory.newRecordInstance(GetApplicationsResponse.class);
     response.setApplicationList(reports);
     return response;
   }
@@ -422,7 +428,13 @@ public class ClientRMService extends AbstractService implements
       throws YarnException {
     GetClusterNodesResponse response = 
       recordFactory.newRecordInstance(GetClusterNodesResponse.class);
-    Collection<RMNode> nodes = this.rmContext.getRMNodes().values();
+    EnumSet<NodeState> nodeStates = request.getNodeStates();
+    if (nodeStates == null || nodeStates.isEmpty()) {
+      nodeStates = EnumSet.allOf(NodeState.class);
+    }
+    Collection<RMNode> nodes = RMServerUtils.queryRMNodes(rmContext,
+        nodeStates);
+    
     List<NodeReport> nodeReports = new ArrayList<NodeReport>(nodes.size());
     for (RMNode nodeInfo : nodes) {
       nodeReports.add(createNodeReports(nodeInfo));

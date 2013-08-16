@@ -155,7 +155,7 @@ public class TestEditLog {
         INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
             namesystem.allocateNewInodeId(), p, replication, blockSize, 0, "",
             "", null);
-        editLog.logOpenFile("/filename" + (startIndex + i), inode);
+        editLog.logOpenFile("/filename" + (startIndex + i), inode, false);
         editLog.logCloseFile("/filename" + (startIndex + i), inode);
         editLog.logSync();
       }
@@ -766,7 +766,7 @@ public class TestEditLog {
       File log = new File(currentDir,
           NNStorage.getInProgressEditsFileName(3));
 
-      EditLogFileOutputStream stream = new EditLogFileOutputStream(log, 1024);
+      EditLogFileOutputStream stream = new EditLogFileOutputStream(conf, log, 1024);
       try {
         stream.create();
         if (!inBothDirs) {
@@ -918,14 +918,14 @@ public class TestEditLog {
       log.setMetricsForTests(mockMetrics);
 
       for (int i = 0; i < 400; i++) {
-        log.logDelete(oneKB, 1L);
+        log.logDelete(oneKB, 1L, false);
       }
       // After ~400KB, we're still within the 512KB buffer size
       Mockito.verify(mockMetrics, Mockito.times(0)).addSync(Mockito.anyLong());
       
       // After ~400KB more, we should have done an automatic sync
       for (int i = 0; i < 400; i++) {
-        log.logDelete(oneKB, 1L);
+        log.logDelete(oneKB, 1L, false);
       }
       Mockito.verify(mockMetrics, Mockito.times(1)).addSync(Mockito.anyLong());
 
@@ -1089,7 +1089,7 @@ public class TestEditLog {
     editlog.initJournalsForWrite();
     editlog.openForWrite();
     for (int i = 2; i < TXNS_PER_ROLL; i++) {
-      editlog.logGenerationStamp((long)0);
+      editlog.logGenerationStampV2((long) 0);
     }
     editlog.logSync();
     
@@ -1101,7 +1101,7 @@ public class TestEditLog {
     for (int i = 0; i < numrolls; i++) {
       editlog.rollEditLog();
       
-      editlog.logGenerationStamp((long)i);
+      editlog.logGenerationStampV2((long) i);
       editlog.logSync();
 
       while (aborts.size() > 0 
@@ -1111,7 +1111,7 @@ public class TestEditLog {
       } 
       
       for (int j = 3; j < TXNS_PER_ROLL; j++) {
-        editlog.logGenerationStamp((long)i);
+        editlog.logGenerationStampV2((long) i);
       }
       editlog.logSync();
     }
@@ -1239,7 +1239,7 @@ public class TestEditLog {
     EditLogFileOutputStream elfos = null;
     EditLogFileInputStream elfis = null;
     try {
-      elfos = new EditLogFileOutputStream(TEST_LOG_NAME, 0);
+      elfos = new EditLogFileOutputStream(new Configuration(), TEST_LOG_NAME, 0);
       elfos.create();
       elfos.writeRaw(garbage, 0, garbage.length);
       elfos.setReadyToFlush();

@@ -898,9 +898,13 @@ public class TestCheckpoint {
         savedSd.lock();
         fail("Namenode should not be able to lock a storage that is already locked");
       } catch (IOException ioe) {
-        String jvmName = ManagementFactory.getRuntimeMXBean().getName();
-        assertTrue("Error message does not include JVM name '" + jvmName 
-            + "'", logs.getOutput().contains(jvmName));
+        // cannot read lock file on Windows, so message cannot get JVM name
+        String lockingJvmName = Path.WINDOWS ? "" :
+          " " + ManagementFactory.getRuntimeMXBean().getName();
+        String expectedLogMessage = "It appears that another namenode"
+          + lockingJvmName + " has already locked the storage directory";
+        assertTrue("Log output does not contain expected log message: "
+          + expectedLogMessage, logs.getOutput().contains(expectedLogMessage));
       }
     } finally {
       cleanup(cluster);
@@ -1220,7 +1224,8 @@ public class TestCheckpoint {
         throw new IOException(e);
       }
       
-      final int EXPECTED_TXNS_FIRST_SEG = 11;
+      // TODO: Fix the test to not require a hard-coded transaction count.
+      final int EXPECTED_TXNS_FIRST_SEG = 13;
       
       // the following steps should have happened:
       //   edits_inprogress_1 -> edits_1-12  (finalized)
@@ -2112,7 +2117,7 @@ public class TestCheckpoint {
       StorageDirectory sd0 = storage.getStorageDir(0);
       assertEquals(NameNodeDirType.IMAGE, sd0.getStorageDirType());
       currentDir = sd0.getCurrentDir();
-      FileUtil.setExecutable(currentDir, false);
+      assertEquals(0, FileUtil.chmod(currentDir.getAbsolutePath(), "000"));
 
       // Try to upload checkpoint -- this should fail since there are no
       // valid storage dirs
@@ -2125,7 +2130,7 @@ public class TestCheckpoint {
       }
       
       // Restore the good dir
-      FileUtil.setExecutable(currentDir, true);
+      assertEquals(0, FileUtil.chmod(currentDir.getAbsolutePath(), "755"));
       nn.restoreFailedStorage("true");
       nn.rollEditLog();
 
@@ -2136,7 +2141,7 @@ public class TestCheckpoint {
       assertParallelFilesInvariant(cluster, ImmutableList.of(secondary));
     } finally {
       if (currentDir != null) {
-        FileUtil.setExecutable(currentDir, true);
+        FileUtil.chmod(currentDir.getAbsolutePath(), "755");
       }
       cleanup(secondary);
       secondary = null;

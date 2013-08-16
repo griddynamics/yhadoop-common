@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
 
@@ -27,11 +29,9 @@ import org.apache.hadoop.util.Shell;
  * 
  * TODO: Investigate the semantics and security of each cross-boundary refs.
  */
+@Public
+@Evolving
 public interface ApplicationConstants {
-
-  // TODO: They say tokens via env isn't good.
-  public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
-    "AppClientSecretEnv";
   
   /**
    * The environment variable for APP_SUBMIT_TIME. Set in AppMaster environment
@@ -39,6 +39,9 @@ public interface ApplicationConstants {
    */
   public static final String APP_SUBMIT_TIME_ENV = "APP_SUBMIT_TIME_ENV";
 
+  /**
+   * The cache file into which container token is written
+   */
   public static final String CONTAINER_TOKEN_FILE_ENV_NAME =
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
@@ -50,6 +53,10 @@ public interface ApplicationConstants {
   public static final String APPLICATION_WEB_PROXY_BASE_ENV = 
     "APPLICATION_WEB_PROXY_BASE";
 
+  /**
+   * The temporary environmental variable for container log directory. This
+   * should be replaced by real container log directory on container launch.
+   */
   public static final String LOG_DIR_EXPANSION_VAR = "<LOG_DIR>";
 
   public static final String STDERR = "stderr";
@@ -177,7 +184,15 @@ public interface ApplicationConstants {
      * $LOCAL_DIRS
      * Final, exported by NodeManager and non-modifiable by users.
      */
-    LOCAL_DIRS("LOCAL_DIRS");
+    LOCAL_DIRS("LOCAL_DIRS"),
+
+    /**
+     * $LOG_DIRS
+     * Final, exported by NodeManager and non-modifiable by users.
+     * Comma separate list of directories that the container should use for
+     * logging.
+     */
+    LOG_DIRS("LOG_DIRS");
 
     private final String variable;
     private Environment(String variable) {

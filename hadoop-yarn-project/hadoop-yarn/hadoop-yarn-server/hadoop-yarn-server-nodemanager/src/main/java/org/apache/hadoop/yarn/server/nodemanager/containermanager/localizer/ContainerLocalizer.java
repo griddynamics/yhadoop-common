@@ -53,6 +53,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -64,7 +65,6 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHe
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
@@ -141,12 +141,7 @@ public class ContainerLocalizer {
     // create localizer context
     UserGroupInformation remoteUser =
       UserGroupInformation.createRemoteUser(user);
-    LocalizerTokenSecretManager secretManager =
-      new LocalizerTokenSecretManager();
-    LocalizerTokenIdentifier id = secretManager.createIdentifier();
-    Token<LocalizerTokenIdentifier> localizerToken =
-      new Token<LocalizerTokenIdentifier>(id, secretManager);
-    remoteUser.addToken(localizerToken);
+    remoteUser.addToken(creds.getToken(LocalizerTokenIdentifier.KIND));
     final LocalizationProtocol nodeManager =
         remoteUser.doAs(new PrivilegedAction<LocalizationProtocol>() {
           @Override
@@ -294,11 +289,10 @@ public class ContainerLocalizer {
           stat.setStatus(ResourceStatusType.FETCH_SUCCESS);
         } catch (ExecutionException e) {
           stat.setStatus(ResourceStatusType.FETCH_FAILURE);
-          stat.setException(
-              YarnServerBuilderUtils.newSerializedException(e.getCause()));
+          stat.setException(SerializedException.newInstance(e.getCause()));
         } catch (CancellationException e) {
           stat.setStatus(ResourceStatusType.FETCH_FAILURE);
-          stat.setException(YarnServerBuilderUtils.newSerializedException(e));
+          stat.setException(SerializedException.newInstance(e));
         }
         // TODO shouldn't remove until ACK
         i.remove();

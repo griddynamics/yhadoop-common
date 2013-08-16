@@ -138,6 +138,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-nfs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -587,12 +592,12 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.6.1</version>
+        <version>1.7.5</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
-        <version>1.6.1</version>
+        <version>1.7.5</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jdt</groupId>
@@ -632,7 +637,7 @@
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
-        <version>1.5.3</version>
+        <version>1.7.4</version>
       </dependency>
       <dependency>
         <groupId>net.sf.kosmosfs</groupId>

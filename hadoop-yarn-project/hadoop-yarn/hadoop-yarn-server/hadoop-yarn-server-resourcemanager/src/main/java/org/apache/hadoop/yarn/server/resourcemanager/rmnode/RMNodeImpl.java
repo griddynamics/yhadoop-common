@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -47,6 +46,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
@@ -501,8 +501,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       // Inform the scheduler
       rmNode.nodeUpdateQueue.clear();
-      rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodeRemovedSchedulerEvent(rmNode));
+      // If the current state is NodeState.UNHEALTHY
+      // Then node is already been removed from the
+      // Scheduler
+      if (!rmNode.getState().equals(NodeState.UNHEALTHY)) {
+        rmNode.context.getDispatcher().getEventHandler()
+          .handle(new NodeRemovedSchedulerEvent(rmNode));
+      }
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
               NodesListManagerEventType.NODE_UNUSABLE, rmNode));

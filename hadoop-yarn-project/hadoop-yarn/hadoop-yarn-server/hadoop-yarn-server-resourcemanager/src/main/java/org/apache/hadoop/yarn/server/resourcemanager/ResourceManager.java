@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -30,11 +30,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.YarnRuntimeException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -43,8 +45,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -58,26 +63,28 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.service.CompositeService;
-import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
@@ -86,7 +93,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The ResourceManager is the main class that is a set of components.
- * "I am the ResourceManager. All your resources are belong to us..."
+ * "I am the ResourceManager. All your resources belong to us..."
  *
  */
 @SuppressWarnings("unchecked")
@@ -104,8 +111,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       new ClientToAMTokenSecretManagerInRM();
   
   protected RMContainerTokenSecretManager containerTokenSecretManager;
+  protected NMTokenSecretManagerInRM nmTokenSecretManager;
 
-  protected ApplicationTokenSecretManager appTokenSecretManager;
+  protected AMRMTokenSecretManager amRmTokenSecretManager;
 
   private Dispatcher rmDispatcher;
 
@@ -137,7 +145,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   @Override
-  public synchronized void init(Configuration conf) {
+  protected void serviceInit(Configuration conf) throws Exception {
 
     validateConfigs(conf);
 
@@ -148,7 +156,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmDispatcher = createDispatcher();
     addIfService(this.rmDispatcher);
 
-    this.appTokenSecretManager = createApplicationTokenSecretManager(conf);
+    this.amRmTokenSecretManager = createAMRMTokenSecretManager(conf);
 
     this.containerAllocationExpirer = new ContainerAllocationExpirer(
         this.rmDispatcher);
@@ -164,6 +172,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(tokenRenewer);
 
     this.containerTokenSecretManager = createContainerTokenSecretManager(conf);
+    this.nmTokenSecretManager = createNMTokenSecretManager(conf);
     
     boolean isRecoveryEnabled = conf.getBoolean(
         YarnConfiguration.RECOVERY_ENABLED,
@@ -190,8 +199,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext =
         new RMContextImpl(this.rmDispatcher, rmStore,
           this.containerAllocationExpirer, amLivelinessMonitor,
-          amFinishingMonitor, tokenRenewer, this.appTokenSecretManager,
-          this.containerTokenSecretManager, this.clientToAMSecretManager);
+          amFinishingMonitor, tokenRenewer, this.amRmTokenSecretManager,
+          this.containerTokenSecretManager, this.nmTokenSecretManager,
+          this.clientToAMSecretManager);
     
     // Register event handler for NodesListManager
     this.nodesListManager = new NodesListManager(this.rmContext);
@@ -223,12 +233,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     this.resourceTracker = createResourceTrackerService();
     addService(resourceTracker);
-  
+
+    DefaultMetricsSystem.initialize("ResourceManager");
+    JvmMetrics.initSingleton("ResourceManager", null);
+
     try {
       this.scheduler.reinitialize(conf, this.rmContext);
     } catch (IOException ioe) {
       throw new RuntimeException("Failed to initialize scheduler", ioe);
     }
+
+    // creating monitors that handle preemption
+    createPolicyMonitors();
 
     masterService = createApplicationMasterService();
     addService(masterService) ;
@@ -254,7 +270,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     new RMNMInfo(this.rmContext, this.scheduler);
     
-    super.init(conf);
+    super.serviceInit(conf);
   }
   
   @VisibleForTesting
@@ -268,6 +284,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new RMContainerTokenSecretManager(conf);
   }
 
+  protected NMTokenSecretManagerInRM createNMTokenSecretManager(
+      Configuration conf) {
+    return new NMTokenSecretManagerInRM(conf);
+  }
+  
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
     return new SchedulerEventDispatcher(this.scheduler);
   }
@@ -282,9 +303,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
   }
 
-  protected ApplicationTokenSecretManager createApplicationTokenSecretManager(
+  protected AMRMTokenSecretManager createAMRMTokenSecretManager(
       Configuration conf) {
-    return new ApplicationTokenSecretManager(conf);
+    return new AMRMTokenSecretManager(conf);
   }
 
   protected ResourceScheduler createScheduler() {
@@ -303,7 +324,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException("Could not instantiate Scheduler: "
           + schedulerClassName, e);
-    }  }
+    }
+  }
 
   protected ApplicationMasterLauncher createAMLauncher() {
     return new ApplicationMasterLauncher(this.rmContext);
@@ -338,42 +360,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
           + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
           + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
     }
-
-    // validate scheduler memory allocation setting
-    int minMem = conf.getInt(
-        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    int maxMem = conf.getInt(
-        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-
-    if (minMem <= 0 || minMem > maxMem) {
-      throw new YarnRuntimeException("Invalid resource scheduler memory"
-          + " allocation configuration"
-          + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
-          + "=" + minMem
-          + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-          + "=" + maxMem + ", min and max should be greater than 0"
-          + ", max should be no smaller than min.");
-    }
-
-    // validate scheduler vcores allocation setting
-    int minVcores = conf.getInt(
-        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    int maxVcores = conf.getInt(
-        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-
-    if (minVcores <= 0 || minVcores > maxVcores) {
-      throw new YarnRuntimeException("Invalid resource scheduler vcores"
-          + " allocation configuration"
-          + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
-          + "=" + minVcores
-          + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-          + "=" + maxVcores + ", min and max should be greater than 0"
-          + ", max should be no smaller than min.");
-    }
   }
 
   @Private
@@ -395,17 +381,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     @Override
-    public synchronized void init(Configuration conf) {
+    protected void serviceInit(Configuration conf) throws Exception {
       this.shouldExitOnError =
           conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
             Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
-      super.init(conf);
+      super.serviceInit(conf);
     }
 
     @Override
-    public synchronized void start() {
+    protected void serviceStart() throws Exception {
       this.eventProcessor.start();
-      super.start();
+      super.serviceStart();
     }
 
     private final class EventProcessor implements Runnable {
@@ -445,7 +431,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     @Override
-    public synchronized void stop() {
+    protected void serviceStop() throws Exception {
       this.stopped = true;
       this.eventProcessor.interrupt();
       try {
@@ -453,7 +439,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       } catch (InterruptedException e) {
         throw new YarnRuntimeException(e);
       }
-      super.stop();
+      super.serviceStop();
     }
 
     @Override
@@ -496,6 +482,36 @@ public class ResourceManager extends CompositeService implements Recoverable {
           LOG.error("Error in handling event type " + event.getType()
               + " for application " + appID, t);
         }
+      }
+    }
+  }
+
+  @Private
+  public static final class
+    RMContainerPreemptEventDispatcher
+      implements EventHandler<ContainerPreemptEvent> {
+
+    private final PreemptableResourceScheduler scheduler;
+
+    public RMContainerPreemptEventDispatcher(
+        PreemptableResourceScheduler scheduler) {
+      this.scheduler = scheduler;
+    }
+
+    @Override
+    public void handle(ContainerPreemptEvent event) {
+      ApplicationAttemptId aid = event.getAppId();
+      RMContainer container = event.getContainer();
+      switch (event.getType()) {
+      case DROP_RESERVATION:
+        scheduler.dropContainerReservation(container);
+        break;
+      case PREEMPT_CONTAINER:
+        scheduler.preemptContainer(aid, container);
+        break;
+      case KILL_CONTAINER:
+        scheduler.killContainer(container);
+        break;
       }
     }
   }
@@ -574,15 +590,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     try {
       doSecureLogin();
     } catch(IOException ie) {
       throw new YarnRuntimeException("Failed to login", ie);
     }
 
-    this.appTokenSecretManager.start();
+    this.amRmTokenSecretManager.start();
     this.containerTokenSecretManager.start();
+    this.nmTokenSecretManager.start();
 
     if(recoveryEnabled) {
       try {
@@ -598,8 +615,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     startWepApp();
-    DefaultMetricsSystem.initialize("ResourceManager");
-    JvmMetrics.initSingleton("ResourceManager", null);
     try {
       rmDTSecretManager.startThreads();
     } catch(IOException ie) {
@@ -615,7 +630,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, resolvedAddress);
     }
     
-    super.start();
+    super.serviceStart();
 
     /*synchronized(shutdown) {
       try {
@@ -634,14 +649,23 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (webApp != null) {
       webApp.stop();
     }
-    rmDTSecretManager.stopThreads();
+    if (rmDTSecretManager != null) {
+      rmDTSecretManager.stopThreads();
+    }
 
-    this.appTokenSecretManager.stop();
-    this.containerTokenSecretManager.stop();
+    if (amRmTokenSecretManager != null) {
+      this.amRmTokenSecretManager.stop();
+    }
+    if (containerTokenSecretManager != null) {
+      this.containerTokenSecretManager.stop();
+    }
+    if(nmTokenSecretManager != null) {
+      nmTokenSecretManager.stop();
+    }
 
     /*synchronized(shutdown) {
       shutdown.set(true);
@@ -650,19 +674,22 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     DefaultMetricsSystem.shutdown();
 
-    RMStateStore store = rmContext.getStateStore();
-    try {
-      store.close();
-    } catch (Exception e) {
-      LOG.error("Error closing store.", e);
+    if (rmContext != null) {
+      RMStateStore store = rmContext.getStateStore();
+      try {
+        store.close();
+      } catch (Exception e) {
+        LOG.error("Error closing store.", e);
+      }
     }
-      
-    super.stop();
+
+    super.serviceStop();
   }
   
   protected ResourceTrackerService createResourceTrackerService() {
     return new ResourceTrackerService(this.rmContext, this.nodesListManager,
-        this.nmLivelinessMonitor, this.containerTokenSecretManager);
+        this.nmLivelinessMonitor, this.containerTokenSecretManager,
+        this.nmTokenSecretManager);
   }
 
   protected RMDelegationTokenSecretManager
@@ -689,7 +716,37 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ApplicationMasterService createApplicationMasterService() {
     return new ApplicationMasterService(this.rmContext, scheduler);
   }
-  
+
+  protected void createPolicyMonitors() {
+    if (scheduler instanceof PreemptableResourceScheduler
+        && conf.getBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS)) {
+      LOG.info("Loading policy monitors");
+      List<SchedulingEditPolicy> policies = conf.getInstances(
+              YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+              SchedulingEditPolicy.class);
+      if (policies.size() > 0) {
+        this.rmDispatcher.register(ContainerPreemptEventType.class,
+          new RMContainerPreemptEventDispatcher(
+            (PreemptableResourceScheduler) scheduler));
+        for (SchedulingEditPolicy policy : policies) {
+          LOG.info("LOADING SchedulingEditPolicy:" + policy.getPolicyName());
+          policy.init(conf, this.rmContext.getDispatcher().getEventHandler(),
+              (PreemptableResourceScheduler) scheduler);
+          // periodically check whether we need to take action to guarantee
+          // constraints
+          SchedulingMonitor mon = new SchedulingMonitor(policy);
+          addService(mon);
+
+        }
+      } else {
+        LOG.warn("Policy monitors configured (" +
+            YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS +
+            ") but none specified (" +
+            YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES + ")");
+      }
+    }
+  }
 
   protected AdminService createAdminService(
       ClientRMService clientRMService, 
@@ -739,8 +796,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Private
-  public ApplicationTokenSecretManager getApplicationTokenSecretManager(){
-    return this.appTokenSecretManager;
+  public NMTokenSecretManagerInRM getRMNMTokenSecretManager() {
+    return this.nmTokenSecretManager;
+  }
+  
+  @Private
+  public AMRMTokenSecretManager getAMRMTokenSecretManager(){
+    return this.amRmTokenSecretManager;
   }
 
   @Override

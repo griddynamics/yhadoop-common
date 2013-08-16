@@ -55,6 +55,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -66,8 +68,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottab
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotException;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -381,12 +381,13 @@ public class FSDirectory implements Closeable {
   /**
    * Persist the block list for the inode.
    */
-  void persistBlocks(String path, INodeFileUnderConstruction file) {
+  void persistBlocks(String path, INodeFileUnderConstruction file,
+      boolean logRetryCache) {
     waitForReady();
 
     writeLock();
     try {
-      fsImage.getEditLog().logUpdateBlocks(path, file);
+      fsImage.getEditLog().logUpdateBlocks(path, file, logRetryCache);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
             +path+" with "+ file.getBlocks().length 
@@ -418,23 +419,27 @@ public class FSDirectory implements Closeable {
 
   /**
    * Remove a block from the file.
+   * @return Whether the block exists in the corresponding file
    */
-  void removeBlock(String path, INodeFileUnderConstruction fileNode,
+  boolean removeBlock(String path, INodeFileUnderConstruction fileNode,
                       Block block) throws IOException {
     waitForReady();
 
     writeLock();
     try {
-      unprotectedRemoveBlock(path, fileNode, block);
+      return unprotectedRemoveBlock(path, fileNode, block);
     } finally {
       writeUnlock();
     }
   }
   
-  void unprotectedRemoveBlock(String path, INodeFileUnderConstruction fileNode, 
-      Block block) throws IOException {
+  boolean unprotectedRemoveBlock(String path,
+      INodeFileUnderConstruction fileNode, Block block) throws IOException {
     // modify file-> block and blocksMap
-    fileNode.removeLastBlock(block);
+    boolean removed = fileNode.removeLastBlock(block);
+    if (!removed) {
+      return false;
+    }
     getBlockManager().removeBlockFromMap(block);
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
@@ -446,6 +451,7 @@ public class FSDirectory implements Closeable {
     // update space consumed
     final INodesInPath iip = rootDir.getINodesInPath4Write(path, true);
     updateCount(iip, 0, -fileNode.getBlockDiskspace(), true);
+    return true;
   }
 
   /**
@@ -454,7 +460,7 @@ public class FSDirectory implements Closeable {
    * @deprecated Use {@link #renameTo(String, String, Rename...)} instead.
    */
   @Deprecated
-  boolean renameTo(String src, String dst) 
+  boolean renameTo(String src, String dst, boolean logRetryCache) 
       throws QuotaExceededException, UnresolvedLinkException, 
       FileAlreadyExistsException, SnapshotAccessControlException, IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -470,14 +476,15 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logRename(src, dst, now);
+    fsImage.getEditLog().logRename(src, dst, now, logRetryCache);
     return true;
   }
 
   /**
    * @see #unprotectedRenameTo(String, String, long, Options.Rename...)
    */
-  void renameTo(String src, String dst, Options.Rename... options)
+  void renameTo(String src, String dst, boolean logRetryCache, 
+      Options.Rename... options)
       throws FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, QuotaExceededException,
       UnresolvedLinkException, IOException {
@@ -495,7 +502,7 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logRename(src, dst, now, options);
+    fsImage.getEditLog().logRename(src, dst, now, logRetryCache, options);
   }
 
   /**
@@ -1171,7 +1178,7 @@ public class FSDirectory implements Closeable {
   /**
    * Concat all the blocks from srcs to trg and delete the srcs files
    */
-  void concat(String target, String [] srcs) 
+  void concat(String target, String [] srcs, boolean supportRetryCache) 
       throws UnresolvedLinkException, QuotaExceededException,
       SnapshotAccessControlException, SnapshotException {
     writeLock();
@@ -1181,7 +1188,8 @@ public class FSDirectory implements Closeable {
       long timestamp = now();
       unprotectedConcat(target, srcs, timestamp);
       // do the commit
-      fsImage.getEditLog().logConcat(target, srcs, timestamp);
+      fsImage.getEditLog().logConcat(target, srcs, timestamp, 
+          supportRetryCache);
     } finally {
       writeUnlock();
     }
@@ -1256,10 +1264,12 @@ public class FSDirectory implements Closeable {
    * @param src Path of a directory to delete
    * @param collectedBlocks Blocks under the deleted directory
    * @param removedINodes INodes that should be removed from {@link #inodeMap}
+   * @param logRetryCache Whether to record RPC IDs in editlog to support retry
+   *                      cache rebuilding.
    * @return true on successful deletion; else false
    */
   boolean delete(String src, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes) throws IOException {
+      List<INode> removedINodes, boolean logRetryCache) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
@@ -1294,7 +1304,7 @@ public class FSDirectory implements Closeable {
     if (filesRemoved < 0) {
       return false;
     }
-    fsImage.getEditLog().logDelete(src, now);
+    fsImage.getEditLog().logDelete(src, now, logRetryCache);
     incrDeletedFileCount(filesRemoved);
     // Blocks/INodes will be handled later by the caller of this method
     getFSNamesystem().removePathAndBlocks(src, null, null);
@@ -1582,6 +1592,13 @@ public class FSDirectory implements Closeable {
     }
   }
   
+  /**
+   * Currently we only support "ls /xxx/.snapshot" which will return all the
+   * snapshots of a directory. The FSCommand Ls will first call getFileInfo to
+   * make sure the file/directory exists (before the real getListing call).
+   * Since we do not have a real INode for ".snapshot", we return an empty
+   * non-null HdfsFileStatus here.
+   */
   private HdfsFileStatus getFileInfo4DotSnapshot(String src)
       throws UnresolvedLinkException {
     Preconditions.checkArgument(
@@ -1596,7 +1613,7 @@ public class FSDirectory implements Closeable {
         && node.isDirectory()
         && node.asDirectory() instanceof INodeDirectorySnapshottable) {
       return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L);
+          HdfsFileStatus.EMPTY_NAME, -1L, 0);
     }
     return null;
   }
@@ -2510,7 +2527,7 @@ public class FSDirectory implements Closeable {
   /**
    * Create FileStatus by file INode 
    */
-   private HdfsFileStatus createFileStatus(byte[] path, INode node,
+   HdfsFileStatus createFileStatus(byte[] path, INode node,
        Snapshot snapshot) {
      long size = 0;     // length is zero for directories
      short replication = 0;
@@ -2521,6 +2538,9 @@ public class FSDirectory implements Closeable {
        replication = fileNode.getFileReplication(snapshot);
        blocksize = fileNode.getPreferredBlockSize();
      }
+     int childrenNum = node.isDirectory() ? 
+         node.asDirectory().getChildrenNum(snapshot) : 0;
+         
      return new HdfsFileStatus(
         size, 
         node.isDirectory(), 
@@ -2533,56 +2553,54 @@ public class FSDirectory implements Closeable {
         node.getGroupName(snapshot),
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
         path,
-        node.getId());
+        node.getId(),
+        childrenNum);
   }
 
-   /**
-    * Create FileStatus with location info by file INode 
-    */
-    private HdfsLocatedFileStatus createLocatedFileStatus(
-        byte[] path, INode node, Snapshot snapshot) throws IOException {
-      assert hasReadLock();
-      long size = 0;     // length is zero for directories
-      short replication = 0;
-      long blocksize = 0;
-      LocatedBlocks loc = null;
-      if (node.isFile()) {
-        final INodeFile fileNode = node.asFile();
-        size = fileNode.computeFileSize(snapshot);
-        replication = fileNode.getFileReplication(snapshot);
-        blocksize = fileNode.getPreferredBlockSize();
+  /**
+   * Create FileStatus with location info by file INode
+   */
+  private HdfsLocatedFileStatus createLocatedFileStatus(byte[] path,
+      INode node, Snapshot snapshot) throws IOException {
+    assert hasReadLock();
+    long size = 0; // length is zero for directories
+    short replication = 0;
+    long blocksize = 0;
+    LocatedBlocks loc = null;
+    if (node.isFile()) {
+      final INodeFile fileNode = node.asFile();
+      size = fileNode.computeFileSize(snapshot);
+      replication = fileNode.getFileReplication(snapshot);
+      blocksize = fileNode.getPreferredBlockSize();
 
-        final boolean isUc = fileNode.isUnderConstruction();
-        final long fileSize = snapshot == null && isUc?
-            fileNode.computeFileSizeNotIncludingLastUcBlock(): size;
-        loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
-            fileNode.getBlocks(), fileSize, isUc, 0L, size, false);
-        if (loc==null) {
-          loc = new LocatedBlocks();
-        }
+      final boolean inSnapshot = snapshot != null; 
+      final boolean isUc = inSnapshot ? false : fileNode.isUnderConstruction();
+      final long fileSize = !inSnapshot && isUc ? 
+          fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
+      loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
+          fileNode.getBlocks(), fileSize, isUc, 0L, size, false,
+          inSnapshot);
+      if (loc == null) {
+        loc = new LocatedBlocks();
       }
-      return new HdfsLocatedFileStatus(
-          size, 
-          node.isDirectory(), 
-          replication, 
-          blocksize,
-          node.getModificationTime(snapshot),
-          node.getAccessTime(snapshot),
-          node.getFsPermission(snapshot),
-          node.getUserName(snapshot),
-          node.getGroupName(snapshot),
-          node.isSymlink() ? node.asSymlink().getSymlink() : null,
-          path,
-          node.getId(),
-          loc);
-      }
+    }
+    int childrenNum = node.isDirectory() ? 
+        node.asDirectory().getChildrenNum(snapshot) : 0;
+        
+    return new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
+        blocksize, node.getModificationTime(snapshot),
+        node.getAccessTime(snapshot), node.getFsPermission(snapshot),
+        node.getUserName(snapshot), node.getGroupName(snapshot),
+        node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
+        node.getId(), loc, childrenNum);
+  }
 
     
   /**
    * Add the given symbolic link to the fs. Record it in the edits log.
    */
   INodeSymlink addSymlink(String path, String target,
-      PermissionStatus dirPerms, boolean createParent)
+      PermissionStatus dirPerms, boolean createParent, boolean logRetryCache)
       throws UnresolvedLinkException, FileAlreadyExistsException,
       QuotaExceededException, SnapshotAccessControlException {
     waitForReady();
@@ -2608,7 +2626,8 @@ public class FSDirectory implements Closeable {
       NameNode.stateChangeLog.info("DIR* addSymlink: failed to add " + path);
       return null;
     }
-    fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode);
+    fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode,
+        logRetryCache);
     
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* addSymlink: " + path + " is added");

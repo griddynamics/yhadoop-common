@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,8 +31,11 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -42,20 +46,21 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.DominantResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -271,7 +276,7 @@ public class TestSchedulerUtils {
   public void testValidateResourceBlacklistRequest() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
+    final MockRMWithAMS rm =
         new MockRMWithAMS(new YarnConfiguration(), containerManager);
     rm.start();
 
@@ -294,19 +299,24 @@ public class TestSchedulerUtils {
 
     UserGroupInformation currentUser = 
         UserGroupInformation.createRemoteUser(applicationAttemptId.toString());
-
-    AMRMProtocol client = currentUser
-        .doAs(new PrivilegedAction<AMRMProtocol>() {
+    Credentials credentials = containerManager.getContainerCredentials();
+    final InetSocketAddress rmBindAddress =
+        rm.getApplicationMasterService().getBindAddress();
+    Token<? extends TokenIdentifier> amRMToken =
+        MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+          credentials.getAllTokens());
+    currentUser.addToken(amRMToken);
+    ApplicationMasterProtocol client =
+        currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
-          public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rm
-                .getApplicationMasterService().getBindAddress(), conf);
+          public ApplicationMasterProtocol run() {
+            return (ApplicationMasterProtocol) rpc.getProxy(
+              ApplicationMasterProtocol.class, rmBindAddress, conf);
           }
         });
 
     RegisterApplicationMasterRequest request = Records
         .newRecord(RegisterApplicationMasterRequest.class);
-    request.setApplicationAttemptId(applicationAttemptId);
     client.registerApplicationMaster(request);
 
     ResourceBlacklistRequest blacklistRequest =
@@ -314,8 +324,7 @@ public class TestSchedulerUtils {
             Collections.singletonList(ResourceRequest.ANY), null);
 
     AllocateRequest allocateRequest =
-        AllocateRequest.newInstance(applicationAttemptId, 0, 0.0f, null, null, 
-            blacklistRequest);
+        AllocateRequest.newInstance(0, 0.0f, null, null, blacklistRequest);
     boolean error = false;
     try {
       client.allocate(allocateRequest);

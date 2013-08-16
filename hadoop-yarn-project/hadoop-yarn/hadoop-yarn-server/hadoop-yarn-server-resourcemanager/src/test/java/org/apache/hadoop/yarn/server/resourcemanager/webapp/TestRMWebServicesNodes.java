@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.EnumSet;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
@@ -31,8 +32,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -55,6 +56,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import com.google.common.base.Joiner;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
@@ -78,6 +80,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
       rm = new MockRM(new Configuration());
+      rm.getRMContainerTokenSecretManager().rollMasterKey();
+      rm.getRMNMTokenSecretManager().rollMasterKey();
       bind(ResourceManager.class).toInstance(rm);
       bind(RMContext.class).toInstance(rm.getRMContext());
       bind(ApplicationACLsManager.class).toInstance(
@@ -134,8 +138,6 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
     rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
 
-    // One unhealthy node which should not appear in the list after
-    // MAPREDUCE-3760.
     MockNM nm3 = rm.registerNode("h3:1236", 5122);
     rm.NMwaitForState(nm3.getNodeId(), NodeState.NEW);
     rm.sendNodeStarted(nm3);
@@ -158,8 +160,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     JSONObject nodes = json.getJSONObject("nodes");
     assertEquals("incorrect number of elements", 1, nodes.length());
     JSONArray nodeArray = nodes.getJSONArray("node");
-    // Just 2 nodes, leaving behind the unhealthy node.
-    assertEquals("incorrect number of elements", 2, nodeArray.length());
+    // 3 nodes, including the unhealthy node and the new node.
+    assertEquals("incorrect number of elements", 3, nodeArray.length());
   }
 
   @Test
@@ -172,7 +174,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("nodes").queryParam("state", NodeState.NEW.toString())
+        .path("nodes").queryParam("states", NodeState.NEW.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -195,7 +197,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes")
-        .queryParam("state", NodeState.DECOMMISSIONED.toString())
+        .queryParam("states", NodeState.DECOMMISSIONED.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
@@ -211,7 +213,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
 
     try {
       r.path("ws").path("v1").path("cluster").path("nodes")
-          .queryParam("state", "BOGUSSTATE").accept(MediaType.APPLICATION_JSON)
+          .queryParam("states", "BOGUSSTATE").accept(MediaType.APPLICATION_JSON)
           .get(JSONObject.class);
 
       fail("should have thrown exception querying invalid state");
@@ -255,7 +257,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.sendNodeLost(nm2);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("nodes").queryParam("state", NodeState.LOST.toString())
+        .path("nodes").queryParam("states", NodeState.LOST.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -314,7 +316,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
     rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("nodes").queryParam("state", "running")
+        .path("nodes").queryParam("states", "running")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
@@ -334,7 +336,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
     rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("nodes").queryParam("state", "UNHEALTHY")
+        .path("nodes").queryParam("states", "UNHEALTHY")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
@@ -347,6 +349,11 @@ public class TestRMWebServicesNodes extends JerseyTest {
     WebResource r = resource();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
+    rm.sendNodeStarted(nm1);
+    rm.sendNodeStarted(nm2);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.RUNNING);
+
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path(path).accept(media).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -620,7 +627,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     rm.sendNodeLost(nm3);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("nodes").queryParam("state", "aLl")
+        .path("nodes")
+        .queryParam("states", Joiner.on(',').join(EnumSet.allOf(NodeState.class)))
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
