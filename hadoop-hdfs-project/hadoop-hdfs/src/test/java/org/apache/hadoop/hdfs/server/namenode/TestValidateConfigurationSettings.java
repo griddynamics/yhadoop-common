@@ -75,7 +75,7 @@ public class TestValidateConfigurationSettings {
       throws IOException {
 
     Configuration conf = new HdfsConfiguration();
-    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+    File nameDir = new File(MiniDFSCluster.newDfsBaseDir(), "name");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         nameDir.getAbsolutePath());
 
