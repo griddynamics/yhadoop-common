@@ -175,7 +175,9 @@ public class TestFSImageWithSnapshot {
     hdfs.createSnapshot(root, "s1");
     
     cluster.shutdown();
-    cluster = new MiniDFSCluster.Builder(conf).format(false)
+    cluster = new MiniDFSCluster.Builder(conf)
+        .dfsBaseDir(cluster.getDfsBaseDir())
+        .format(false)
         .numDataNodes(REPLICATION).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
@@ -186,7 +188,9 @@ public class TestFSImageWithSnapshot {
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     cluster.shutdown();
-    cluster = new MiniDFSCluster.Builder(conf).format(false)
+    cluster = new MiniDFSCluster.Builder(conf)
+        .dfsBaseDir(cluster.getDfsBaseDir())
+        .format(false)
         .numDataNodes(REPLICATION).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
@@ -212,7 +216,9 @@ public class TestFSImageWithSnapshot {
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     cluster.shutdown();
-    cluster = new MiniDFSCluster.Builder(conf).format(false)
+    cluster = new MiniDFSCluster.Builder(conf)
+        .dfsBaseDir(cluster.getDfsBaseDir())
+        .format(false)
         .numDataNodes(REPLICATION).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
@@ -407,7 +413,9 @@ public class TestFSImageWithSnapshot {
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     
     cluster.shutdown();
-    cluster = new MiniDFSCluster.Builder(conf).format(false)
+    cluster = new MiniDFSCluster.Builder(conf)
+        .dfsBaseDir(cluster.getDfsBaseDir())
+        .format(false)
         .numDataNodes(REPLICATION).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
@@ -437,7 +445,9 @@ public class TestFSImageWithSnapshot {
     
     // restart cluster
     cluster.shutdown();
-    cluster = new MiniDFSCluster.Builder(conf).format(false)
+    cluster = new MiniDFSCluster.Builder(conf)
+        .dfsBaseDir(cluster.getDfsBaseDir())
+        .format(false)
         .numDataNodes(REPLICATION).build();
     cluster.waitActive();
     hdfs = cluster.getFileSystem();
@@ -490,6 +500,7 @@ public class TestFSImageWithSnapshot {
     // restart cluster
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
+        .dfsBaseDir(cluster.getDfsBaseDir())
         .format(false).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
@@ -501,7 +512,9 @@ public class TestFSImageWithSnapshot {
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     
     cluster.shutdown();
-    cluster = new MiniDFSCluster.Builder(conf).format(false)
+    cluster = new MiniDFSCluster.Builder(conf)
+        .dfsBaseDir(cluster.getDfsBaseDir())
+        .format(false)
         .numDataNodes(REPLICATION).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
