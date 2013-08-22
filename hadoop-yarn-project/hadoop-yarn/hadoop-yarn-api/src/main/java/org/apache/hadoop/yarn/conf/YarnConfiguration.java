@@ -259,7 +259,7 @@ public class YarnConfiguration extends Configuration {
   
   /** URI for FileSystemRMStateStore */
   public static final String FS_RM_STATE_STORE_URI =
-                                           RM_PREFIX + "fs.rm-state-store.uri";
+                                           RM_PREFIX + "fs.state-store.uri";
 
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
@@ -655,19 +655,17 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
 
-  /** Max time to wait to establish a connection to RM
-   */
-  public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
-      RM_PREFIX + "resourcemanager.connect.max.wait.secs";
-  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS =
-      15*60;
+  /** Max time to wait to establish a connection to RM */
+  public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
+      RM_PREFIX + "connect.max-wait.ms";
+  public static final int DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =
+      15 * 60 * 1000;
 
-  /** Time interval between each attempt to connect to RM
-   */
-  public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS =
-      RM_PREFIX + "resourcemanager.connect.retry_interval.secs";
-  public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
-      = 30;
+  /** Time interval between each attempt to connect to RM */
+  public static final String RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS =
+      RM_PREFIX + "connect.retry-interval.ms";
+  public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS
+      = 30 * 1000;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
@@ -711,6 +709,14 @@ public class YarnConfiguration extends Configuration {
    */
   public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
 
+  /**
+   * Whether users are explicitly trying to control resource monitoring
+   * configuration for the MiniYARNCluster. Disabled by default.
+   */
+  public static final String YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING =
+      YARN_PREFIX + "minicluster.control-resource-monitoring";
+  public static final boolean
+      DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
 
   /** The log directory for the containers */
   public static final String YARN_APP_CONTAINER_LOG_DIR =
