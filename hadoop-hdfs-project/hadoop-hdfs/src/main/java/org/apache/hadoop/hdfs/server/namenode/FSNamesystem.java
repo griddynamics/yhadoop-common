@@ -2153,10 +2153,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new FileNotFoundException("failed to append to non-existent file "
           + src + " on client " + clientMachine);
       }
-      final INodeFile myFile = INodeFile.valueOf(inode, src, true);
+      INodeFile myFile = INodeFile.valueOf(inode, src, true);
       // Opening an existing file for write - may need to recover lease.
       recoverLeaseInternal(myFile, src, holder, clientMachine, false);
-
+      
+      // recoverLeaseInternal may create a new InodeFile via 
+      // finalizeINodeFileUnderConstruction so we need to refresh 
+      // the referenced file.  
+      myFile = INodeFile.valueOf(dir.getINode(src), src, true);
+      
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
       return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode,
@@ -3410,12 +3415,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  ContentSummary getContentSummary(String src) throws AccessControlException,
-      FileNotFoundException, UnresolvedLinkException, StandbyException {
+  /**
+   * Get the content summary for a specific file/dir.
+   *
+   * @param src The string representation of the path to the file
+   *
+   * @throws AccessControlException if access is denied
+   * @throws UnresolvedLinkException if a symlink is encountered.
+   * @throws FileNotFoundException if no file exists
+   * @throws StandbyException
+   * @throws IOException for issues with writing to the audit log
+   *
+   * @return object containing information regarding the file
+   *         or null if file not found
+   */
+  ContentSummary getContentSummary(String src) throws IOException {
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
+    boolean success = true;
     try {
       checkOperation(OperationCategory.READ);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
@@ -3423,8 +3442,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkPermission(pc, src, false, null, null, null, FsAction.READ_EXECUTE);
       }
       return dir.getContentSummary(src);
+
+    } catch (AccessControlException ace) {
+      success = false;
+      throw ace;
     } finally {
       readUnlock();
+      logAuditEvent(success, "contentSummary", src);
     }
   }
 
@@ -6364,6 +6388,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return JSON.toString(jasList);
   }
 
+  @Override // NameNodeMxBean
+  public String getJournalTransactionInfo() {
+    Map<String, String> txnIdMap = new HashMap<String, String>();
+    txnIdMap.put("LastAppliedOrWrittenTxId",
+        Long.toString(this.getFSImage().getLastAppliedOrWrittenTxId()));
+    txnIdMap.put("MostRecentCheckpointTxId",
+        Long.toString(this.getFSImage().getMostRecentCheckpointTxId()));
+    return JSON.toString(txnIdMap);
+  }
+  
   @Override  // NameNodeMXBean
   public String getNNStarted() {
     return getStartTime().toString();
