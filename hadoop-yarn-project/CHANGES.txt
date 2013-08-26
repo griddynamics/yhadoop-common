@@ -48,6 +48,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1074. Cleaned up YARN CLI application list to only display running
     applications by default. (Xuan Gong via vinodkv)
     
+    YARN-1093. Corrections to Fair Scheduler documentation (Wing Yew Poon via
+    Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -95,6 +98,9 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1094. Fixed a blocker with RM restart code because of which RM crashes
     when try to recover an existing app. (vinodkv)
+
+    YARN-1008. MiniYARNCluster with multiple nodemanagers, all nodes have same 
+    key for allocations. (tucu)
 
 Release 2.1.0-beta - 2013-08-22
 
