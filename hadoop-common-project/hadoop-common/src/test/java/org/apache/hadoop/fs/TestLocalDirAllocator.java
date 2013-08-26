@@ -101,8 +101,10 @@ public class TestLocalDirAllocator {
   }
 
   private static void rmBufferDirs() throws IOException {
-    assertTrue(!localFs.exists(BUFFER_PATH_ROOT) ||
-        localFs.delete(BUFFER_PATH_ROOT, true));
+    if (!localFs.exists(BUFFER_PATH_ROOT))
+      return;
+    Shell.execCommand(Shell.getSetPermissionCommand("u+w", true, BUFFER_DIR_ROOT));
+    assertTrue(localFs.delete(BUFFER_PATH_ROOT, true));
   }
 
   private static void validateTempDirCreation(String dir) throws IOException {
