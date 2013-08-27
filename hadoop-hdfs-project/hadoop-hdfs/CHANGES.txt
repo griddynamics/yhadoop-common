@@ -336,6 +336,9 @@ Release 2.1.1-beta - UNRELEASED
     HDFS-3245. Add metrics and web UI for cluster version summary. (Ravi
     Prakash via kihwal)
 
+    HDFS-5128. Allow multiple net interfaces to be used with HA namenode RPC
+    server. (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -391,6 +394,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5124. DelegationTokenSecretManager#retrievePassword can cause deadlock 
     in NameNode. (Daryn Sharp via jing9)
+
+    HDFS-5132. Deadlock in NameNode between SafeModeMonitor#run and 
+    DatanodeManager#handleHeartbeat. (kihwal)
 
 Release 2.1.0-beta - 2013-08-22
 
