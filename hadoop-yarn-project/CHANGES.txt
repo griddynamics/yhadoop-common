@@ -57,6 +57,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-1083. Changed ResourceManager to fail when the expiry interval is less
     than the configured node-heartbeat interval. (Zhijie Shen via vinodkv)
 
+    YARN-1081. Made a trivial change to YARN node CLI header to avoid potential
+    confusion. (Akira AJISAKA via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -110,6 +113,9 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-981. Fixed YARN webapp so that /logs servlet works like before. (Jian He
     via vinodkv)
+
+    YARN-602. Fixed NodeManager to not let users override some mandatory 
+    environmental variables. (Kenji Kikushima  via vinodkv)
 
 Release 2.1.0-beta - 2013-08-22
 
