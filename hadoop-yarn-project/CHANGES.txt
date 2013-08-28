@@ -54,6 +54,9 @@ Release 2.1.1-beta - UNRELEASED
     YARN-942. In Fair Scheduler documentation, inconsistency on which
     properties have prefix (Akira Ajisaka via Sandy Ryza)
 
+    YARN-1083. Changed ResourceManager to fail when the expiry interval is less
+    than the configured node-heartbeat interval. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -104,6 +107,9 @@ Release 2.1.1-beta - UNRELEASED
 
     YARN-1008. MiniYARNCluster with multiple nodemanagers, all nodes have same 
     key for allocations. (tucu)
+
+    YARN-981. Fixed YARN webapp so that /logs servlet works like before. (Jian He
+    via vinodkv)
 
 Release 2.1.0-beta - 2013-08-22
 
