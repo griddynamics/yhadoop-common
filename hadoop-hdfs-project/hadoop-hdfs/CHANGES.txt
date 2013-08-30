@@ -120,6 +120,9 @@ Trunk (Unreleased)
 
     HDFS-4904. Remove JournalService. (Arpit Agarwal via cnauroth)
 
+    HDFS-5144. Document time unit to NameNodeMetrics. (Akira Ajisaka via
+    suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -403,6 +406,9 @@ Release 2.1.1-beta - UNRELEASED
 
     HDFS-5077. NPE in FSNamesystem.commitBlockSynchronization().
     (Plamen Jeliazkov via shv)
+
+    HDFS-5140. Too many safemode monitor threads being created in the standby 
+    namenode causing it to fail with out of memory error. (jing9)
 
 Release 2.1.0-beta - 2013-08-22
 
