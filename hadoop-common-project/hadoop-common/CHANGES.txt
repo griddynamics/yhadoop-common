@@ -56,9 +56,6 @@ Trunk (Unreleased)
     HADOOP-8719. Workaround for kerberos-related log errors upon running any
     hadoop command on OSX. (Jianbin Wei via harsh)
 
-    HADOOP-8814. Replace string equals "" by String#isEmpty().
-    (Brandon Li via suresh)
-
     HADOOP-8588. SerializationFactory shouldn't throw a
     NullPointerException if the serializations list is empty.
     (Sho Shimauchi via harsh)
@@ -271,6 +268,15 @@ Trunk (Unreleased)
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
 
+    HADOOP-9583. test-patch gives +1 despite build failure when running tests.
+    (jlowe via kihwal)
+
+    HADOOP-9847. TestGlobPath symlink tests fail to cleanup properly.
+    (cmccabe via wang)
+
+    HADOOP-9740. Fix FsShell '-text' command to be able to read Avro
+    files stored in HDFS and other filesystems. (Allan Yan via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -284,6 +290,11 @@ Release 2.3.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-9784. Add a builder for HttpServer. (Junping Du via llu)
+
+    HADOOP 9871. Fix intermittent findbugs warnings in DefaultMetricsSystem.
+    (Junping Du via llu)
 
     HADOOP-9319. Update bundled LZ4 source to r99. (Binglin Chang via llu)
 
@@ -304,6 +315,24 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9758.  Provide configuration option for FileSystem/FileContext
     symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-9848. Create a MiniKDC for use with security testing. 
+    (ywskycn via tucu)
+
+    HADOOP-9860. Remove class HackedKeytab and HackedKeytabEncoder from 
+    hadoop-minikdc once jira DIRSERVER-1882 solved. (ywskycn via tucu)
+
+    HADOOP-9866. convert hadoop-auth testcases requiring kerberos to 
+    use minikdc. (ywskycn via tucu)
+
+    HADOOP-9487 Deprecation warnings in Configuration should go to their
+    own log or otherwise be suppressible (Chu Tong via stevel)
+
+    HADOOP-9889. Refresh the Krb5 configuration when creating a new kdc in
+    Hadoop-MiniKDC (Wei Yan via Sandy Ryza)
+
+    HADOOP-9915.  o.a.h.fs.Stat support on Mac OS X  (Binglin Chang via Colin
+    Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -319,6 +348,21 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
     with symlinks. (Colin Patrick McCabe via Andrew Wang)
 
+    HADOOP-9652.  RawLocalFs#getFileLinkStatus does not fill in the link owner
+    and mode.  (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-9875.  TestDoAsEffectiveUser can fail on JDK 7.  (Aaron T. Myers via
+    Colin Patrick McCabe)
+
+    HADOOP-9865.  FileContext#globStatus has a regression with respect to
+    relative path.  (Chuan Lin via Colin Patrick McCabe)
+
+
+    HADOOP-9909. org.apache.hadoop.fs.Stat should permit other LANG.
+    (Shinichi Yamashita via Andrew Wang)
+
+    HADOOP-9908. Fix NPE when versioninfo properties file is missing (todd)
+
 Release 2.1.1-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -326,6 +370,11 @@ Release 2.1.1-beta - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-9910. proxy server start and stop documentation wrong
+    (Andre Kelpe via harsh)
+
+    HADOOP-9446. Support Kerberos SPNEGO for IBM JDK. (Yu Gao via llu)
  
     HADOOP-9787. ShutdownHelper util to shutdown threads and threadpools.
     (Karthik Kambatla via Sandy Ryza)
@@ -340,9 +389,27 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9789. Support server advertised kerberos principals (daryn)
 
+    HADOOP-8814. Replace string equals "" by String#isEmpty().
+    (Brandon Li via suresh)
+
+    HADOOP-9802. Support Snappy codec on Windows. (cnauroth)
+
+    HADOOP-9879. Move the version info of zookeeper dependencies to
+    hadoop-project/pom (Karthik Kambatla via Sandy Ryza)
+    
+    HADOOP-9886. Turn warning message in RetryInvocationHandler to debug (arpit)
+
+    HADOOP-9906. Move HAZKUtil to o.a.h.util.ZKUtil and make inner-classes
+    public (Karthik Kambatla via Sandy Ryza)
+
+    HADOOP-9918. Add addIfService to CompositeService (Karthik Kambatla via
+    Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9916. Fix race in ipc.Client retry. (Binglin Chang via llu)
 
     HADOOP-9768. chown and chgrp reject users and groups with spaces on platforms
     where spaces are otherwise acceptable. (cnauroth)
@@ -363,7 +430,31 @@ Release 2.1.1-beta - UNRELEASED
 
     HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)
 
-Release 2.1.0-beta - 2013-08-06
+    HADOOP-9857. Tests block and sometimes timeout on Windows due to invalid
+    entropy source. (cnauroth)
+
+    HADOOP-9381. Document dfs cp -f option. (Keegan Witt, suresh via suresh)
+
+    HADOOP-9868. Server must not advertise kerberos realm. (daryn via kihwal)
+
+    HADOOP-9880. SASL changes from HADOOP-9421 breaks Secure HA NN. (daryn via
+    jing9)
+
+    HADOOP-9887. globStatus does not correctly handle paths starting with a drive
+    spec on Windows. (Chuan Liu via cnauroth)
+
+    HADOOP-9894.  Race condition in Shell leads to logged error stream handling
+    exceptions (Arpit Agarwal)
+
+    HADOOP-9774. RawLocalFileSystem.listStatus() return absolute paths when
+    input path is relative on Windows. (Shanyu Zhao via ivanmi)
+
+    HADOOP-9924. FileUtil.createJarWithClassPath() does not generate relative
+    classpath correctly. (Shanyu Zhao via ivanmi)
+
+    HADOOP-9932. Improper synchronization in RetryCache. (kihwal)
+
+Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
 
@@ -559,6 +650,10 @@ Release 2.1.0-beta - 2013-08-06
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
     (todd)
+
+    HADOOP-9845. Update protobuf to 2.5 from 2.4.x. (tucu)
+
+    HADOOP-9872. Improve protoc version handling and detection. (tucu)
 
   BUG FIXES
 
@@ -2016,6 +2111,11 @@ Release 0.23.10 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-9686. Easy access to final parameters in Configuration (Jason Lowe
+    via jeagles)
+
+    HADOOP-8704. add request logging to jetty/httpserver (jeagles)
 
   OPTIMIZATIONS
 

@@ -53,6 +53,21 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 
+/**
+ * Embedded Yarn minicluster for testcases that need to interact with a cluster.
+ * <p/>
+ * In a real cluster, resource request matching is done using the hostname, and
+ * by default Yarn minicluster works in the exact same way as a real cluster.
+ * <p/>
+ * If a testcase needs to use multiple nodes and exercise resource request 
+ * matching to a specific node, then the property 
+ * {@YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} should be set
+ * <code>true</code> in the configuration used to initialize the minicluster.
+ * <p/>
+ * With this property set to <code>true</code>, the matching will be done using
+ * the <code>hostname:port</code> of the namenodes. In such case, the AM must
+ * do resource request using <code>hostname:port</code> as the location.
+ */
 public class MiniYARNCluster extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(MiniYARNCluster.class);
@@ -304,6 +319,16 @@ public class MiniYARNCluster extends CompositeService {
                         MiniYARNCluster.getHostname() + ":0");
         getConfig().set(YarnConfiguration.NM_WEBAPP_ADDRESS,
                         MiniYARNCluster.getHostname() + ":0");
+
+        // Disable resource checks by default
+        if (!getConfig().getBoolean(
+            YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
+            YarnConfiguration.
+                DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING)) {
+          getConfig().setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+          getConfig().setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+        }
+
         LOG.info("Starting NM: " + index);
         nodeManagers[index].init(getConfig());
         new Thread() {
