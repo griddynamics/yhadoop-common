@@ -45,7 +45,6 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.test.PathUtils;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Test;
 import org.apache.hadoop.security.UserGroupInformation;

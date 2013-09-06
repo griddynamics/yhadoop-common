@@ -60,19 +60,19 @@ public class TestSlive {
   }
 
   /** gets the test write location according to the coding guidelines */
-  private File getWriteLoc() {
-    File testDir = PathUtils.getTestDir(getClass());
+  private static File getWriteLoc() {
+    File testDir = PathUtils.getTestDir(TestSlive.class);
     testDir.mkdirs();
     return testDir;
   }
 
   /** gets where the MR job places its data + output + results */
-  private File getFlowLocation() {
+  private static File getFlowLocation() {
     return new File(getWriteLoc(), "flow");
   }
 
   /** gets the test directory which is created by the mkdir op */
-  private File getTestDir() {
+  private static File getTestDir() {
     return new File(getWriteLoc(), "slivedir");
   }
 
@@ -80,7 +80,7 @@ public class TestSlive {
    * gets the test file location
    * which is used for reading, appending and created
    */
-  private File getTestFile() {
+  private static File getTestFile() {
     return new File(getWriteLoc(), "slivefile");
   }
 
@@ -88,16 +88,16 @@ public class TestSlive {
    * gets the rename file which is used in combination
    * with the test file to do a rename operation
    */
-  private File getTestRenameFile() {
+  private static File getTestRenameFile() {
     return new File(getWriteLoc(), "slivefile1");
   }
 
   /** gets the MR result file name */
-  private File getResultFile() {
+  private static File getResultFile() {
     return new File(getWriteLoc(), "sliveresfile");
   }
 
-  private File getImaginaryFile() {
+  private static File getImaginaryFile() {
     return new File(getWriteLoc(), "slivenofile");
   }
 

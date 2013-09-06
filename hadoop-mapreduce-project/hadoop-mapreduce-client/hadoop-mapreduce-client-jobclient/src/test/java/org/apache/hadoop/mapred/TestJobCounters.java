@@ -569,6 +569,7 @@ public class TestJobCounters {
     }
   }
   
+  @SuppressWarnings("deprecation")
   private long getTaskCounterUsage (JobClient client, JobID id, int numReports,
                                     int taskId, TaskType type) 
   throws Exception {
@@ -642,6 +643,7 @@ public class TestJobCounters {
    * @throws IOException
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testHeapUsageCounter() throws Exception {
     JobConf conf = new JobConf();
     // create a local filesystem handle
