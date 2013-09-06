@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.server.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
@@ -41,7 +42,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeMan
 
 import com.google.protobuf.ServiceException;
 
-public class ResourceTrackerPBClientImpl implements ResourceTracker {
+public class ResourceTrackerPBClientImpl implements ResourceTracker, Closeable {
 
 private ResourceTrackerPB proxy;
   
@@ -50,10 +51,17 @@ private ResourceTrackerPB proxy;
     proxy = (ResourceTrackerPB)RPC.getProxy(
         ResourceTrackerPB.class, clientVersion, addr, conf);
   }
-  
+
+  @Override
+  public void close() {
+    if(this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
+  }
+
   @Override
   public RegisterNodeManagerResponse registerNodeManager(
-      RegisterNodeManagerRequest request) throws YarnRemoteException,
+      RegisterNodeManagerRequest request) throws YarnException,
       IOException {
     RegisterNodeManagerRequestProto requestProto = ((RegisterNodeManagerRequestPBImpl)request).getProto();
     try {
@@ -66,7 +74,7 @@ private ResourceTrackerPB proxy;
 
   @Override
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     NodeHeartbeatRequestProto requestProto = ((NodeHeartbeatRequestPBImpl)request).getProto();
     try {
       return new NodeHeartbeatResponsePBImpl(proxy.nodeHeartbeat(null, requestProto));

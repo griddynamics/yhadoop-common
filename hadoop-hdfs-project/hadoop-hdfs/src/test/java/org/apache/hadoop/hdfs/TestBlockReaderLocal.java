@@ -121,8 +121,8 @@ public class TestBlockReaderLocal {
       fsIn.close();
       fsIn = null;
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
-      File dataFile = cluster.getBlockReplica(0, block);
-      File metaFile = cluster.getBlockMetadataFile(0, block);
+      File dataFile = MiniDFSCluster.getBlockFile(0, block);
+      File metaFile = MiniDFSCluster.getBlockMetadataFile(0, block);
 
       DatanodeID datanodeID = cluster.getDataNodes().get(0).getDatanodeId();
       cluster.shutdown();
@@ -130,7 +130,7 @@ public class TestBlockReaderLocal {
       test.setup(dataFile, checksum);
       dataIn = new FileInputStream(dataFile);
       checkIn = new FileInputStream(metaFile);
-      blockReaderLocal = new BlockReaderLocal(conf,
+      blockReaderLocal = new BlockReaderLocal(new DFSClient.Conf(conf),
           TEST_PATH.getName(), block, 0, -1,
           dataIn, checkIn, datanodeID, checksum, null);
       dataIn = null;

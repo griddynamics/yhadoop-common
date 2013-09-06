@@ -57,7 +57,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -124,14 +123,6 @@ public class MiniDFSCluster {
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
 
-  /**
-   * By default, the same directory is used for each cluster DFS data. 
-   * Alternatively, a dedicated directory may be used for every instance, 
-   * and in this mode deprecated static methods like 
-   * {@link MiniDFSCluster#getStorageDir(int, int)} may not be used.
-   */
-  private static boolean MINI_CLUSTER_DEDICATED_DIRS = Boolean.valueOf(System.getProperty("miniClusterDedicatedDirs", "false")); 
-  
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
   /**
@@ -158,18 +149,9 @@ public class MiniDFSCluster {
     private boolean checkExitOnShutdown = true;
     private boolean checkDataNodeAddrConfig = false;
     private boolean checkDataNodeHostConfig = false;
-    private String dfsBaseDir = null;
     
     public Builder(Configuration conf) {
       this.conf = conf;
-    }
-    
-    /**
-     * Default: auto generated temp dir
-     */
-    public Builder dfsBaseDir(String dfsBaseDir) {
-        this.dfsBaseDir = dfsBaseDir;
-        return this;
     }
     
     /**
@@ -349,8 +331,7 @@ public class MiniDFSCluster {
         builder.nnTopology.countNameNodes() + " namenodes.");
     nameNodes = new NameNodeInfo[builder.nnTopology.countNameNodes()];
       
-    initMiniDFSCluster(builder.dfsBaseDir,
-                       builder.conf,
+    initMiniDFSCluster(builder.conf,
                        builder.numDataNodes,
                        builder.format,
                        builder.manageNameDfsDirs,
@@ -390,7 +371,6 @@ public class MiniDFSCluster {
   protected int numDataNodes;
   protected List<DataNodeProperties> dataNodes = 
                          new ArrayList<DataNodeProperties>();
-  private String dfsBaseDir;
   private File base_dir;
   private File data_dir;
   private boolean waitSafeMode = true;
@@ -604,7 +584,7 @@ public class MiniDFSCluster {
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
-    initMiniDFSCluster(null, conf, numDataNodes, format,
+    initMiniDFSCluster(conf, numDataNodes, format,
         manageNameDfsDirs, true, manageDataDfsDirs, manageDataDfsDirs,
         operation, racks, hosts,
         simulatedCapacities, null, true, false,
@@ -612,7 +592,7 @@ public class MiniDFSCluster {
   }
 
   private void initMiniDFSCluster(
-      String dfsBaseDir, Configuration conf,
+      Configuration conf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageNameDfsSharedDirs, boolean enableManagedDfsDirsRedundancy,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
@@ -629,8 +609,7 @@ public class MiniDFSCluster {
     }
 
     this.conf = conf;
-    this.dfsBaseDir = dfsBaseDir;
-    base_dir = new File(getDfsBaseDir());
+    base_dir = new File(determineDfsBaseDir());
     data_dir = new File(base_dir, "data");
     this.waitSafeMode = waitSafeMode;
     this.checkExitOnShutdown = checkExitOnShutdown;
@@ -1424,8 +1403,6 @@ public class MiniDFSCluster {
     return nameNodes[nnIndex].nameNode.getServiceRpcAddress().getPort();
   }
     
-  
-  
   /**
    * Shutdown all the nodes in the cluster.
    */
@@ -1571,7 +1548,7 @@ public class MiniDFSCluster {
   public String readBlockOnDataNode(int i, ExtendedBlock block)
       throws IOException {
     assert (i >= 0 && i < dataNodes.size()) : "Invalid datanode "+i;
-    File blockFile = getBlockReplica(i, block);
+    File blockFile = getBlockFile(i, block);
     if (blockFile != null && blockFile.exists()) {
       return DFSTestUtil.readFile(blockFile);
     }
@@ -1579,29 +1556,6 @@ public class MiniDFSCluster {
   }
 
   /**
-   * Get a storage directory for a datanode. There are two storage directories
-   * per datanode:
-   * <ol>
-   * <li><base directory>/data/data<2*dnIndex + 1></li>
-   * <li><base directory>/data/data<2*dnIndex + 2></li>
-   * </ol>
-   * 
-   * @param dnIndex datanode index (starts from 0)
-   * @param dirIndex directory index (0 or 1). Index 0 provides access to the
-   *          first storage directory. Index 1 provides access to the second
-   *          storage directory.
-   * @return Storage directory
-   * 
-   * @deprecated Use {@link #getInstanceStorageDir(int, int)} instead.
-   */
-  public static File getStorageDir(int dnIndex, int dirIndex) {
-    if (MINI_CLUSTER_DEDICATED_DIRS) {
-      throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
-    }
-    return new File(getBaseDirectory(), getStorageDirPath(dnIndex, dirIndex));
-  }
-  
-  /**
    * Corrupt a block on a particular datanode.
    *
    * @param i index of the datanode
@@ -1610,31 +1564,10 @@ public class MiniDFSCluster {
    * the contents of the block (on the same datanode) differ.
    * @return true if a replica was corrupted, false otherwise
    * Types: delete, write bad data, truncate
-   * 
-   * @deprecated Use {@link #corruptBlockReplica(int, ExtendedBlock)} instead.
    */
   public static boolean corruptReplica(int i, ExtendedBlock blk)
       throws IOException {
-    if (MINI_CLUSTER_DEDICATED_DIRS) {
-      throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
-    }
     File blockFile = getBlockFile(i, blk);
-    return corruptBlock(blockFile);
-  }
-  
-  /**
-   * Corrupt a block on a particular datanode.
-   *
-   * @param i index of the datanode
-   * @param blk name of the block
-   * @throws IOException on error accessing the given block or if
-   * the contents of the block (on the same datanode) differ.
-   * @return true if a replica was corrupted, false otherwise
-   * Types: delete, write bad data, truncate
-   */
-  public boolean corruptBlockReplica(int i, ExtendedBlock blk)
-      throws IOException {
-    File blockFile = getBlockReplica(i, blk);
     return corruptBlock(blockFile);
   }
 
@@ -2014,7 +1947,7 @@ public class MiniDFSCluster {
   }
 
   public void formatDataNodeDirs() throws IOException {
-    base_dir = new File(getDfsBaseDir());
+    base_dir = new File(determineDfsBaseDir());
     data_dir = new File(base_dir, "data");
     if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
       throw new IOException("Cannot remove data directory: " + data_dir);
@@ -2119,6 +2052,10 @@ public class MiniDFSCluster {
     NameNodeAdapter.setLeasePeriod(getNamesystem(), soft, hard);
   }
   
+  public void setLeasePeriod(long soft, long hard, int nnIndex) {
+    NameNodeAdapter.setLeasePeriod(getNamesystem(nnIndex), soft, hard);
+  }
+  
   public void setWaitSafeMode(boolean wait) {
     this.waitSafeMode = wait;
   }
@@ -2142,21 +2079,6 @@ public class MiniDFSCluster {
   }
 
   /**
-   * Get the base directory for any DFS cluster whose configuration does
-    * not explicitly set it. This is done by retrieving the system property
-    * {@link #PROP_TEST_BUILD_DATA} (defaulting to "build/test/data" ),
-    * and returning that directory with a subdir of /dfs.
-    * 
-    * @deprecated Use {@link #getDfsBaseDir()} instead.
-   */
-  public static String getBaseDirectory() {
-      if (MINI_CLUSTER_DEDICATED_DIRS) {
-          throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
-      }
-      return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/";
-  }
-
-  /**
    * Get the base directory for this MiniDFS instance.
    * <p/>
    * Within the MiniDFCluster class and any subclasses, this method should be
@@ -2168,26 +2090,23 @@ public class MiniDFSCluster {
    * If this is null, then {@link #getBaseDirectory()} is called.
    * @return the base directory for this instance.
    */
-  public String getDfsBaseDir() {
-    if (dfsBaseDir == null) {
-      dfsBaseDir = conf.get(HDFS_MINIDFS_BASEDIR, null);
-      if (dfsBaseDir == null) {
-          dfsBaseDir = newDfsBaseDir();
-      }
+  protected String determineDfsBaseDir() {
+    String dfsdir = conf.get(HDFS_MINIDFS_BASEDIR, null);
+    if (dfsdir == null) {
+      dfsdir = getBaseDirectory();
     }
-    return dfsBaseDir;
+    return dfsdir;
   }
 
   /**
-   * Generate a new base directory name for any DFS cluster whose configuration does
+   * Get the base directory for any DFS cluster whose configuration does
    * not explicitly set it. This is done by retrieving the system property
    * {@link #PROP_TEST_BUILD_DATA} (defaulting to "build/test/data" ),
-   * and returning that directory with a subdir of /dfs plus a random subdir.
+   * and returning that directory with a subdir of /dfs.
    * @return a directory for use as a miniDFS filesystem.
    */
-  public static String newDfsBaseDir() {
-    String uniquePart = MINI_CLUSTER_DEDICATED_DIRS ? "/" + RandomStringUtils.randomAlphanumeric(10) : "";
-    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + uniquePart + "/dfs/";
+  public static String getBaseDirectory() {
+    return System.getProperty(PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/";
   }
 
   /**
@@ -2202,6 +2121,24 @@ public class MiniDFSCluster {
    */
   public File getInstanceStorageDir(int dnIndex, int dirIndex) {
     return new File(base_dir, getStorageDirPath(dnIndex, dirIndex));
+  }
+
+  /**
+   * Get a storage directory for a datanode. There are two storage directories
+   * per datanode:
+   * <ol>
+   * <li><base directory>/data/data<2*dnIndex + 1></li>
+   * <li><base directory>/data/data<2*dnIndex + 2></li>
+   * </ol>
+   *
+   * @param dnIndex datanode index (starts from 0)
+   * @param dirIndex directory index (0 or 1). Index 0 provides access to the
+   *          first storage directory. Index 1 provides access to the second
+   *          storage directory.
+   * @return Storage directory
+   */
+  public static File getStorageDir(int dnIndex, int dirIndex) {
+    return new File(getBaseDirectory(), getStorageDirPath(dnIndex, dirIndex));
   }
 
   /**
@@ -2224,7 +2161,7 @@ public class MiniDFSCluster {
   public static String getDNCurrentDir(File storageDir) {
     return storageDir + "/" + Storage.STORAGE_DIR_CURRENT + "/";
   }
-  
+
   /**
    * Get directory corresponding to block pool directory in the datanode
    * @param storageDir the storage directory of a datanode.
@@ -2306,7 +2243,7 @@ public class MiniDFSCluster {
     if (dataNodes.size() == 0) return new File[0];
     ArrayList<File> list = new ArrayList<File>();
     for (int i=0; i < dataNodes.size(); i++) {
-      File blockFile = getBlockReplica(i, block);
+      File blockFile = getBlockFile(i, block);
       if (blockFile != null) {
         list.add(blockFile);
       }
@@ -2318,16 +2255,11 @@ public class MiniDFSCluster {
    * Get the block data file for a block from a given datanode
    * @param dnIndex Index of the datanode to get block files for
    * @param block block for which corresponding files are needed
-   * 
-   * @deprecated Use {@link #getBlockReplica(int, ExtendedBlock)} instead.
    */
   public static File getBlockFile(int dnIndex, ExtendedBlock block) {
-    if (MINI_CLUSTER_DEDICATED_DIRS) {
-      throw new RuntimeException("MiniDFSCluster is in dedicated dirs mode. Switch to non-deprecated methods.");
-    }
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
-      File storageDir = getStorageDir(dnIndex, i);
+      File storageDir = MiniDFSCluster.getStorageDir(dnIndex, i);
       File blockFile = getBlockFile(storageDir, block);
       if (blockFile.exists()) {
         return blockFile;
@@ -2337,32 +2269,15 @@ public class MiniDFSCluster {
   }
   
   /**
-   * Get files related to a block for a given datanode
-   * @param dnIndex Index of the datanode to get block files for
-   * @param block block for which corresponding files are needed
-   */
-  public File getBlockReplica(int dnIndex, ExtendedBlock block) {
-    // Check for block file in the two storage directories of the datanode
-    for (int i = 0; i <=1 ; i++) {
-      File storageDir = getInstanceStorageDir(dnIndex, i);
-      File blockFile = getBlockFile(storageDir, block);
-      if (blockFile.exists()) {
-        return blockFile;
-      }
-    }
-    return null;
-  }
-
-  /**
    * Get the block metadata file for a block from a given datanode
    * 
    * @param dnIndex Index of the datanode to get block files for
    * @param block block for which corresponding files are needed
    */
-  public File getBlockMetadataFile(int dnIndex, ExtendedBlock block) {
+  public static File getBlockMetadataFile(int dnIndex, ExtendedBlock block) {
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
-      File storageDir = getInstanceStorageDir(dnIndex, i);
+      File storageDir = MiniDFSCluster.getStorageDir(dnIndex, i);
       File blockMetaFile = getBlockMetadataFile(storageDir, block);
       if (blockMetaFile.exists()) {
         return blockMetaFile;
@@ -2440,13 +2355,16 @@ public class MiniDFSCluster {
     } else {
       if (checkDataNodeAddrConfig) {
         conf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
-        conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-        conf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
       } else {
         conf.set(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
-        conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-        conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
       }
+    }
+    if (checkDataNodeAddrConfig) {
+      conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
+    } else {
+      conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
     }
   }
   

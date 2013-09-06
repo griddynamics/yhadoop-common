@@ -64,9 +64,6 @@ public class OfflineEditsViewerHelper {
 
   /**
    * Generates edits with all op codes and returns the edits filename
-   *
-   * @param dfsDir DFS directory (where to setup MiniDFS cluster)
-   * @param editsFilename where to copy the edits
    */
   public String generateEdits() throws IOException {
     CheckpointSignature signature = runOperations();
@@ -93,9 +90,11 @@ public class OfflineEditsViewerHelper {
   /**
    * Sets up a MiniDFSCluster, configures it to create one edits file,
    * starts DelegationTokenSecretManager (to get security op codes)
+   *
+   * @param dfsDir DFS directory (where to setup MiniDFS cluster)
    */
-  public void startCluster() throws IOException {
-    String dfsDir = MiniDFSCluster.newDfsBaseDir();
+  public void startCluster(String dfsDir) throws IOException {
+
     // same as manageDfsDirs but only one edits file instead of two
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
       Util.fileAsURI(new File(dfsDir, "name")).toString());
@@ -109,7 +108,7 @@ public class OfflineEditsViewerHelper {
     config.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     cluster =
-      new MiniDFSCluster.Builder(config).dfsBaseDir(dfsDir).manageNameDfsDirs(false).build();
+      new MiniDFSCluster.Builder(config).manageNameDfsDirs(false).build();
     cluster.waitClusterUp();
   }
 
@@ -140,7 +139,7 @@ public class OfflineEditsViewerHelper {
     DistributedFileSystem dfs =
       (DistributedFileSystem)cluster.getFileSystem();
     FileContext fc = FileContext.getFileContext(cluster.getURI(0), config);
-    // OP_ADD 0, OP_SET_GENSTAMP 10
+    // OP_ADD 0
     Path pathFileCreate = new Path("/file_create_u\1F431");
     FSDataOutputStream s = dfs.create(pathFileCreate);
     // OP_CLOSE 9

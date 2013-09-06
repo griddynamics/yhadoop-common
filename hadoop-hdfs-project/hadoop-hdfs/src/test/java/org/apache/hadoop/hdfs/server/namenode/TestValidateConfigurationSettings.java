@@ -25,11 +25,13 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.junit.Test;
 
 /**
@@ -37,6 +39,11 @@ import org.junit.Test;
  * to the NameNode
  */
 public class TestValidateConfigurationSettings {
+
+  @After
+  public void cleanUp() {
+    FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
+  }
 
   /**
    * Tests setting the rpc port to the same as the web port to test that 
@@ -48,7 +55,7 @@ public class TestValidateConfigurationSettings {
       throws IOException {
 
     Configuration conf = new HdfsConfiguration();
-    File nameDir = new File(MiniDFSCluster.newDfsBaseDir(), "name");
+    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         nameDir.getAbsolutePath());
 
@@ -104,8 +111,11 @@ public class TestValidateConfigurationSettings {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
     
     // Set a nameservice-specific configuration for name dir
-    File dir = new File(MiniDFSCluster.newDfsBaseDir(),
+    File dir = new File(MiniDFSCluster.getBaseDirectory(),
         "testGenericKeysForNameNodeFormat");
+    if (dir.exists()) {
+      FileUtil.fullyDelete(dir);
+    }
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + ".ns1",
         dir.getAbsolutePath());
     

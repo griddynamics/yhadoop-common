@@ -52,21 +52,21 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.Test;
@@ -108,7 +108,7 @@ public class TestClientRMTokens {
     clientRMService.init(conf);
     clientRMService.start();
 
-    ClientRMProtocol clientRMWithDT = null;
+    ApplicationClientProtocol clientRMWithDT = null;
     try {
 
       // Create a user for the renewr and fake the authentication-method
@@ -134,7 +134,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
       } catch (IOException e) {
         fail("Unexpected exception" + e);
-      }  catch (YarnRemoteException e) {
+      }  catch (YarnException e) {
         fail("Unexpected exception" + e);
       }
       
@@ -159,7 +159,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
       } catch (IOException e) {
         fail("Unexpected exception" + e);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         fail("Unexpected exception" + e);
       }
       
@@ -199,7 +199,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
       } catch (IOException e) {
         fail("Unexpected exception" + e);
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
         fail("Unexpected exception" + e);
       }
       cancelDelegationToken(loggedInUser, clientRMService, token);
@@ -217,7 +217,7 @@ public class TestClientRMTokens {
         clientRMWithDT.getNewApplication(request);
         fail("Should not have succeeded with a cancelled delegation token");
       } catch (IOException e) {
-      } catch (YarnRemoteException e) {
+      } catch (YarnException e) {
       }
 
 
@@ -351,13 +351,13 @@ public class TestClientRMTokens {
   // the kerberos based rpc.
   private org.apache.hadoop.yarn.api.records.Token getDelegationToken(
       final UserGroupInformation loggedInUser,
-      final ClientRMProtocol clientRMService, final String renewerString)
+      final ApplicationClientProtocol clientRMService, final String renewerString)
       throws IOException, InterruptedException {
     org.apache.hadoop.yarn.api.records.Token token = loggedInUser
         .doAs(new PrivilegedExceptionAction<org.apache.hadoop.yarn.api.records.Token>() {
           @Override
             public org.apache.hadoop.yarn.api.records.Token run()
-                throws YarnRemoteException, IOException {
+                throws YarnException, IOException {
             GetDelegationTokenRequest request = Records
                 .newRecord(GetDelegationTokenRequest.class);
             request.setRenewer(renewerString);
@@ -369,12 +369,12 @@ public class TestClientRMTokens {
   }
   
   private long renewDelegationToken(final UserGroupInformation loggedInUser,
-      final ClientRMProtocol clientRMService,
+      final ApplicationClientProtocol clientRMService,
       final org.apache.hadoop.yarn.api.records.Token dToken)
       throws IOException, InterruptedException {
     long nextExpTime = loggedInUser.doAs(new PrivilegedExceptionAction<Long>() {
       @Override
-      public Long run() throws YarnRemoteException, IOException {
+      public Long run() throws YarnException, IOException {
         RenewDelegationTokenRequest request = Records
             .newRecord(RenewDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -386,12 +386,12 @@ public class TestClientRMTokens {
   }
   
   private void cancelDelegationToken(final UserGroupInformation loggedInUser,
-      final ClientRMProtocol clientRMService,
+      final ApplicationClientProtocol clientRMService,
       final org.apache.hadoop.yarn.api.records.Token dToken)
       throws IOException, InterruptedException {
     loggedInUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
-      public Void run() throws YarnRemoteException, IOException {
+      public Void run() throws YarnException, IOException {
         CancelDelegationTokenRequest request = Records
             .newRecord(CancelDelegationTokenRequest.class);
         request.setDelegationToken(dToken);
@@ -401,7 +401,7 @@ public class TestClientRMTokens {
     });
   }
   
-  private ClientRMProtocol getClientRMProtocolWithDT(
+  private ApplicationClientProtocol getClientRMProtocolWithDT(
       org.apache.hadoop.yarn.api.records.Token token,
       final InetSocketAddress rmAddress, String user, final Configuration conf) {
     // Maybe consider converting to Hadoop token, serialize de-serialize etc
@@ -409,14 +409,14 @@ public class TestClientRMTokens {
 
     UserGroupInformation ugi = UserGroupInformation
         .createRemoteUser(user);
-    ugi.addToken(ProtoUtils.convertFromProtoFormat(token, rmAddress));
+    ugi.addToken(ConverterUtils.convertFromYarn(token, rmAddress));
 
     final YarnRPC rpc = YarnRPC.create(conf);
-    ClientRMProtocol clientRMWithDT = ugi
-        .doAs(new PrivilegedAction<ClientRMProtocol>() {
+    ApplicationClientProtocol clientRMWithDT = ugi
+        .doAs(new PrivilegedAction<ApplicationClientProtocol>() {
           @Override
-          public ClientRMProtocol run() {
-            return (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
+          public ApplicationClientProtocol run() {
+            return (ApplicationClientProtocol) rpc.getProxy(ApplicationClientProtocol.class,
                 rmAddress, conf);
           }
         });
@@ -440,11 +440,11 @@ public class TestClientRMTokens {
     }
 
     @Override
-    public void stop() {
+    protected void serviceStop() throws Exception {
       if (rmDTSecretManager != null) {
         rmDTSecretManager.stopThreads();
       }
-      super.stop();
+      super.serviceStop();
     }
 
     

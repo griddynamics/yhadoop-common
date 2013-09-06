@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -49,7 +50,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -76,7 +77,7 @@ public class TestNMWebServer {
   }
   
   private int startNMWebAppServer(String webAddr) {
-    Context nmContext = new NodeManager.NMContext(null);
+    Context nmContext = new NodeManager.NMContext(null, null, null, null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -104,26 +105,37 @@ public class TestNMWebServer {
     conf.set(YarnConfiguration.NM_WEBAPP_ADDRESS, webAddr);
     WebServer server = new WebServer(nmContext, resourceView,
         new ApplicationACLsManager(conf), dirsHandler);
-    server.init(conf);
-    server.start();
-    return server.getPort();
+    try {
+      server.init(conf);
+      server.start();
+      return server.getPort();
+    } finally {
+      server.stop();
+      healthChecker.stop();
+    }
   }
   
   @Test
   public void testNMWebAppWithOutPort() throws IOException {
     int port = startNMWebAppServer("0.0.0.0");
-    Assert.assertTrue("Port is not updated", port > 0);
+    validatePortVal(port);
   }
-  
-  @Test
-  public void testNMWebAppWithEphemeralPort() throws IOException {
-    int port = startNMWebAppServer("0.0.0.0:0"); 
-    Assert.assertTrue("Port is not updated", port > 0);
+
+  private void validatePortVal(int portVal) {
+    Assert.assertTrue("Port is not updated", portVal > 0);
+    Assert.assertTrue("Port is default "+ YarnConfiguration.DEFAULT_NM_PORT,
+                      portVal !=YarnConfiguration.DEFAULT_NM_PORT);
   }
 
   @Test
-  public void testNMWebApp() throws IOException {
-    Context nmContext = new NodeManager.NMContext(null);
+  public void testNMWebAppWithEphemeralPort() throws IOException {
+    int port = startNMWebAppServer("0.0.0.0:0"); 
+    validatePortVal(port);
+  }
+
+  @Test
+  public void testNMWebApp() throws IOException, YarnException {
+    Context nmContext = new NodeManager.NMContext(null, null, null, null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -208,10 +220,10 @@ public class TestNMWebServer {
 
   private void writeContainerLogs(Context nmContext,
       ContainerId containerId, LocalDirsHandlerService dirsHandler)
-        throws IOException {
+        throws IOException, YarnException {
     // ContainerLogDir should be created
     File containerLogDir =
-        ContainerLogsPage.ContainersLogsBlock.getContainerLogDirs(containerId,
+        ContainerLogsUtils.getContainerLogDirs(containerId,
             dirsHandler).get(0);
     containerLogDir.mkdirs();
     for (String fileType : new String[] { "stdout", "stderr", "syslog" }) {

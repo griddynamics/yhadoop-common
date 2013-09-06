@@ -56,6 +56,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.ClusterInfo;
 import org.apache.hadoop.mapreduce.v2.app.ControlledClock;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
@@ -73,18 +74,17 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.ClusterInfo;
-import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -198,8 +198,9 @@ public class TestTaskAttempt{
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.MAP_MEMORY_MB, mapMemMb);
     conf.setInt(MRJobConfig.REDUCE_MEMORY_MB, reduceMemMb);
-    app.setClusterInfo(new ClusterInfo(Resource
-      .newInstance(minContainerSize, 1), Resource.newInstance(10240, 1)));
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 
+      minContainerSize);
+    app.setClusterInfo(new ClusterInfo(Resource.newInstance(10240, 1)));
 
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
@@ -248,7 +249,7 @@ public class TestTaskAttempt{
 
   private TaskAttemptImpl createMapTaskAttemptImplForTest(
       EventHandler eventHandler, TaskSplitMetaInfo taskSplitMetaInfo, Clock clock) {
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
     TaskAttemptListener taListener = mock(TaskAttemptListener.class);
@@ -318,7 +319,7 @@ public class TestTaskAttempt{
 
   @Test
   public void testLaunchFailedWhileKilling() throws Exception {
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
+    ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
@@ -368,7 +369,7 @@ public class TestTaskAttempt{
 
   @Test
   public void testContainerCleanedWhileRunning() throws Exception {
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
+    ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
@@ -393,7 +394,6 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(clusterInfo.getMinContainerCapability()).thenReturn(resource);
     when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl =
@@ -426,7 +426,7 @@ public class TestTaskAttempt{
 
   @Test
   public void testContainerCleanedWhileCommitting() throws Exception {
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
+    ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
@@ -451,7 +451,6 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(clusterInfo.getMinContainerCapability()).thenReturn(resource);
     when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl =
@@ -487,7 +486,7 @@ public class TestTaskAttempt{
 
   @Test
   public void testDoubleTooManyFetchFailure() throws Exception {
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
+    ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId =
       ApplicationAttemptId.newInstance(appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
@@ -512,7 +511,6 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(clusterInfo.getMinContainerCapability()).thenReturn(resource);
     when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl =
@@ -554,7 +552,7 @@ public class TestTaskAttempt{
 
   @Test
   public void testAppDiognosticEventOnUnassignedTask() throws Exception {
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
+    ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
@@ -580,7 +578,6 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(clusterInfo.getMinContainerCapability()).thenReturn(resource);
     when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
@@ -604,7 +601,7 @@ public class TestTaskAttempt{
 
   @Test
   public void testAppDiognosticEventOnNewTask() throws Exception {
-    ApplicationId appId = BuilderUtils.newApplicationId(1, 2);
+    ApplicationId appId = ApplicationId.newInstance(1, 2);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 0);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
@@ -630,7 +627,6 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(clusterInfo.getMinContainerCapability()).thenReturn(resource);
     when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,

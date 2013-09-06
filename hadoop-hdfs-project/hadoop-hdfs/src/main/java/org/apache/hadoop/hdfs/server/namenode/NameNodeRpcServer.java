@@ -70,6 +70,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -77,27 +79,19 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeProtocolService;
-import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
-import org.apache.hadoop.hdfs.protocol.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshAuthorizationPolicyProtocolService;
-import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolServerSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolServerSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshUserMappingsProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.RefreshUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -128,11 +122,21 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshAuthorizationPolicyProtocolService;
+import org.apache.hadoop.security.proto.RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService;
+import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolPB;
+import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolServerSideTranslatorPB;
+import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
+import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
+import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
+import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 /**
@@ -215,6 +219,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     InetSocketAddress serviceRpcAddr = nn.getServiceRpcServerAddress(conf);
     if (serviceRpcAddr != null) {
+      String bindHost = nn.getServiceRpcServerBindHost(conf);
+      if (bindHost == null) {
+        bindHost = serviceRpcAddr.getHostName();
+      }
+      LOG.info("Service RPC server is binding to " + bindHost + ":" +
+          serviceRpcAddr.getPort());
+
       int serviceHandlerCount =
         conf.getInt(DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
                     DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
@@ -222,7 +233,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           .setProtocol(
               org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
           .setInstance(clientNNPbService)
-          .setBindAddress(serviceRpcAddr.getHostName())
+          .setBindAddress(bindHost)
           .setPort(serviceRpcAddr.getPort())
           .setNumHandlers(serviceHandlerCount)
           .setVerbose(false)
@@ -243,7 +254,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
       DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
           getUserMappingService, serviceRpcServer);
   
-      serviceRPCAddress = serviceRpcServer.getListenerAddress();
+      // Update the address with the correct port
+      InetSocketAddress listenAddr = serviceRpcServer.getListenerAddress();
+      serviceRPCAddress = new InetSocketAddress(
+            serviceRpcAddr.getHostName(), listenAddr.getPort());
       nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
     } else {
       serviceRpcServer = null;
@@ -251,11 +265,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     InetSocketAddress rpcAddr = nn.getRpcServerAddress(conf);
+    String bindHost = nn.getRpcServerBindHost(conf);
+    if (bindHost == null) {
+      bindHost = rpcAddr.getHostName();
+    }
+    LOG.info("RPC server is binding to " + bindHost + ":" + rpcAddr.getPort());
+
     clientRpcServer = new RPC.Builder(conf)
         .setProtocol(
             org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
         .setInstance(clientNNPbService)
-        .setBindAddress(rpcAddr.getHostName())
+        .setBindAddress(bindHost)
         .setPort(rpcAddr.getPort())
         .setNumHandlers(handlerCount)
         .setVerbose(false)
@@ -287,7 +307,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
-    clientRpcAddress = clientRpcServer.getListenerAddress();
+    InetSocketAddress listenAddr = clientRpcServer.getListenerAddress();
+      clientRpcAddress = new InetSocketAddress(
+          rpcAddr.getHostName(), listenAddr.getPort());
     nn.setRpcServerAddress(conf, clientRpcAddress);
     
     minimumDataNodeVersion = conf.get(
@@ -306,8 +328,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
         QuotaExceededException.class,
         RecoveryInProgressException.class,
         AccessControlException.class,
-        InvalidToken.class);
+        InvalidToken.class,
+        LeaseExpiredException.class,
+        NSQuotaExceededException.class,
+        DSQuotaExceededException.class);
  }
+
+  /** Allow access to the client RPC server for testing */
+  @VisibleForTesting
+  RPC.Server getClientRpcServer() {
+    return clientRpcServer;
+  }
   
   /**
    * Start client and service RPC servers.
@@ -349,6 +380,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return clientRpcAddress;
   }
 
+  private static UserGroupInformation getRemoteUser() throws IOException {
+    return NameNode.getRemoteUser();
+  }
+
+
   /////////////////////////////////////////////////////
   // NamenodeProtocol
   /////////////////////////////////////////////////////
@@ -383,8 +419,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // NamenodeProtocol
-  public NamenodeRegistration register(NamenodeRegistration registration)
-  throws IOException {
+  public NamenodeRegistration registerSubordinateNamenode(
+      NamenodeRegistration registration) throws IOException {
     namesystem.checkSuperuserPrivilege();
     verifyLayoutVersion(registration.getVersion());
     NamenodeRegistration myRegistration = nn.setRegistration();
@@ -457,7 +493,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     HdfsFileStatus fileStatus = namesystem.startFile(src, new PermissionStatus(
-        UserGroupInformation.getCurrentUser().getShortUserName(), null, masked),
+        getRemoteUser().getShortUserName(), null, masked),
         clientName, clientMachine, flag.get(), createParent, replication,
         blockSize);
     metrics.incrFilesCreated();
@@ -569,13 +605,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public boolean complete(String src, String clientName, ExtendedBlock last)
+  public boolean complete(String src, String clientName,
+                          ExtendedBlock last,  long fileId)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.complete: "
-          + src + " for " + clientName);
+          + src + " fileId=" + fileId +" for " + clientName);
     }
-    return namesystem.completeFile(src, clientName, last);
+    return namesystem.completeFile(src, clientName, last, fileId);
   }
 
   /**
@@ -689,7 +726,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     return namesystem.mkdirs(src,
-        new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
+        new PermissionStatus(getRemoteUser().getShortUserName(),
             null, masked), createParent);
   }
 
@@ -881,7 +918,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if ("".equals(target)) {
       throw new IOException("Invalid symlink target");
     }
-    final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    final UserGroupInformation ugi = getRemoteUser();
     namesystem.createSymlink(target, link,
       new PermissionStatus(ugi.getShortUserName(), null, dirPerms), createParent);
   }
@@ -889,19 +926,21 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public String getLinkTarget(String path) throws IOException {
     metrics.incrGetLinkTargetOps();
+    HdfsFileStatus stat = null;
     try {
-      HdfsFileStatus stat = namesystem.getFileInfo(path, false);
-      if (stat != null) {
-        // NB: getSymlink throws IOException if !stat.isSymlink() 
-        return stat.getSymlink();
-      }
+      stat = namesystem.getFileInfo(path, false);
     } catch (UnresolvedPathException e) {
       return e.getResolvedPath().toString();
     } catch (UnresolvedLinkException e) {
       // The NameNode should only throw an UnresolvedPathException
       throw new AssertionError("UnresolvedLinkException thrown");
     }
-    return null;
+    if (stat == null) {
+      throw new FileNotFoundException("File does not exist: " + path);
+    } else if (!stat.isSymlink()) {
+      throw new IOException("Path " + path + " is not a symbolic link");
+    }
+    return stat.getSymlink();
   }
 
 
@@ -951,7 +990,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
           +" blocks.");
     }
-    namesystem.getBlockManager().processIncrementalBlockReport(
+    namesystem.processIncrementalBlockReport(
         nodeReg, poolId, receivedAndDeletedBlocks[0].getBlocks());
   }
 
@@ -1014,7 +1053,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // RefreshAuthorizationPolicyProtocol
   public void refreshUserToGroupsMappings() throws IOException {
     LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
-             UserGroupInformation.getCurrentUser().getShortUserName());
+             getRemoteUser().getShortUserName());
     Groups.getUserToGroupsMappingService().refresh();
   }
 

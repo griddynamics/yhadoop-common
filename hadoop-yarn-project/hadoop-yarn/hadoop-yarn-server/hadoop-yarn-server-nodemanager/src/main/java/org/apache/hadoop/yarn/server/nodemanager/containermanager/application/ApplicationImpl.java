@@ -73,14 +73,13 @@ public class ApplicationImpl implements Application {
   Map<ContainerId, Container> containers =
       new HashMap<ContainerId, Container>();
 
-  public ApplicationImpl(Dispatcher dispatcher,
-      ApplicationACLsManager aclsManager, String user, ApplicationId appId,
+  public ApplicationImpl(Dispatcher dispatcher, String user, ApplicationId appId,
       Credentials credentials, Context context) {
     this.dispatcher = dispatcher;
     this.user = user;
     this.appId = appId;
     this.credentials = credentials;
-    this.aclsManager = aclsManager;
+    this.aclsManager = context.getApplicationACLsManager();
     this.context = context;
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
@@ -391,9 +390,6 @@ public class ApplicationImpl implements Application {
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
-
-      // Inform the ContainerTokenSecretManager
-      app.context.getContainerTokenSecretManager().appFinished(app.appId);
 
       // Inform the logService
       app.dispatcher.getEventHandler().handle(

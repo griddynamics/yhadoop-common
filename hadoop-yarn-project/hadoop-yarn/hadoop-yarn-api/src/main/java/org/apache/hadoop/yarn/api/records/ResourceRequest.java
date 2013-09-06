@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.io.Serializable;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -38,14 +40,20 @@ import org.apache.hadoop.yarn.util.Records;
  *     </li>
  *     <li>{@link Resource} required for each request.</li>
  *     <li>
- *       Number of containers of such specifications which are required 
+ *       Number of containers, of above specifications, which are required 
  *       by the application.
+ *     </li>
+ *     <li>
+ *       A boolean <em>relaxLocality</em> flag, defaulting to <code>true</code>,
+ *       which tells the <code>ResourceManager</code> if the application wants
+ *       locality to be loose (i.e. allows fall-through to rack or <em>any</em>)
+ *       or strict (i.e. specify hard constraint on resource allocation).
  *     </li>
  *   </ul>
  * </p>
  * 
  * @see Resource
- * @see AMRMProtocol#allocate(org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest)
+ * @see ApplicationMasterProtocol#allocate(org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest)
  */
 @Public
 @Stable
@@ -53,14 +61,46 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
 
   @Public
   @Stable
-  public static ResourceRequest newInstance(Priority priority,
-      String hostName, Resource capability, int numContainers) {
+  public static ResourceRequest newInstance(Priority priority, String hostName,
+      Resource capability, int numContainers) {
+    return newInstance(priority, hostName, capability, numContainers, true);
+  }
+
+  @Public
+  @Stable
+  public static ResourceRequest newInstance(Priority priority, String hostName,
+      Resource capability, int numContainers, boolean relaxLocality) {
     ResourceRequest request = Records.newRecord(ResourceRequest.class);
     request.setPriority(priority);
     request.setResourceName(hostName);
     request.setCapability(capability);
     request.setNumContainers(numContainers);
+    request.setRelaxLocality(relaxLocality);
     return request;
+  }
+
+  @Public
+  @Stable
+  public static class ResourceRequestComparator implements
+      java.util.Comparator<ResourceRequest>, Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public int compare(ResourceRequest r1, ResourceRequest r2) {
+
+      // Compare priority, host and capability
+      int ret = r1.getPriority().compareTo(r2.getPriority());
+      if (ret == 0) {
+        String h1 = r1.getResourceName();
+        String h2 = r2.getResourceName();
+        ret = h1.compareTo(h2);
+      }
+      if (ret == 0) {
+        ret = r1.getCapability().compareTo(r2.getCapability());
+      }
+      return ret;
+    }
   }
 
   /**
@@ -78,6 +118,8 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
    * @return whether the given <em>host/rack</em> string represents an arbitrary
    * host name
    */
+  @Public
+  @Stable
   public static boolean isAnyLocation(String hostName) {
     return ANY.equals(hostName);
   }
@@ -113,10 +155,10 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public abstract String getResourceName();
 
   /**
-   * Set the resource (e.g. <em>host/rack</em>) on which the allocation 
+   * Set the resource name (e.g. <em>host/rack</em>) on which the allocation 
    * is desired.
    * 
-   * A special value of <em>*</em> signifies that <em>any</em> resource 
+   * A special value of <em>*</em> signifies that <em>any</em> resource name
    * (e.g. host/rack) is acceptable. 
    * 
    * @param resourceName (e.g. <em>host/rack</em>) on which the 
@@ -171,24 +213,24 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public abstract boolean getRelaxLocality();
   
   /**
-   * For a request at a network hierarchy level, set whether locality can be relaxed
-   * to that level and beyond.
+   * <p>For a request at a network hierarchy level, set whether locality can be relaxed
+   * to that level and beyond.<p>
    * 
-   * If the flag is off on a rack-level <code>ResourceRequest</code>,
+   * <p>If the flag is off on a rack-level <code>ResourceRequest</code>,
    * containers at that request's priority will not be assigned to nodes on that
    * request's rack unless requests specifically for those nodes have also been
-   * submitted.
+   * submitted.<p>
    * 
-   * If the flag is off on an {@link ResourceRequest#ANY}-level
+   * <p>If the flag is off on an {@link ResourceRequest#ANY}-level
    * <code>ResourceRequest</code>, containers at that request's priority will
    * only be assigned on racks for which specific requests have also been
-   * submitted.
+   * submitted.<p>
    * 
-   * For example, to request a container strictly on a specific node, the
+   * <p>For example, to request a container strictly on a specific node, the
    * corresponding rack-level and any-level requests should have locality
    * relaxation set to false.  Similarly, to request a container strictly on a
    * specific rack, the corresponding any-level request should have locality
-   * relaxation set to false.
+   * relaxation set to false.<p>
    * 
    * @param relaxLocality whether locality relaxation is enabled with this
    * <code>ResourceRequest</code>.

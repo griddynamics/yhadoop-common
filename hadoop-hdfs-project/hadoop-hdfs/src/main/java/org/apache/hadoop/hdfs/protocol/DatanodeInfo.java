@@ -47,6 +47,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private long lastUpdate;
   private int xceiverCount;
   private String location = NetworkTopology.DEFAULT_RACK;
+  private String softwareVersion;
   
   // Datanode administrative states
   public enum AdminStates {
@@ -329,7 +330,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
    * Check if the datanode is in stale state. Here if 
    * the namenode has not received heartbeat msg from a 
    * datanode for more than staleInterval (default value is
-   * {@link DFSConfigKeys#DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT}),
+   * {@link DFSConfigKeys#DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT}),
    * the datanode will be treated as stale node.
    * 
    * @param staleInterval
@@ -382,5 +383,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
     // Sufficient to use super equality as datanodes are uniquely identified
     // by DatanodeID
     return (this == obj) || super.equals(obj);
+  }
+
+  public String getSoftwareVersion() {
+    return softwareVersion;
+  }
+
+  public void setSoftwareVersion(String softwareVersion) {
+    this.softwareVersion = softwareVersion;
   }
 }

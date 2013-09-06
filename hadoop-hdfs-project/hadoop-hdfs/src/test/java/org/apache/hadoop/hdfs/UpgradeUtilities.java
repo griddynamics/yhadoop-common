@@ -56,7 +56,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 
 /**
- * This class defines a number of helper methods used by the
+ * This class defines a number of static helper methods used by the
  * DFS Upgrade unit tests.  By default, a singleton master populated storage
  * directory is created for a Namenode (contains edits, fsimage,
  * version, and time files) and a Datanode (contains version and
@@ -66,42 +66,44 @@ import com.google.common.primitives.Bytes;
  */
 public class UpgradeUtilities {
 
-  protected final String dfsBaseDir;
+  // Root scratch directory on local filesystem 
+  private static File TEST_ROOT_DIR = 
+                      new File(MiniDFSCluster.getBaseDirectory());
   // The singleton master storage directory for Namenode
-  private final File namenodeStorage;
+  private static File namenodeStorage = new File(TEST_ROOT_DIR, "namenodeMaster");
   // A checksum of the contents in namenodeStorage directory
-  private long namenodeStorageChecksum;
+  private static long namenodeStorageChecksum;
   // The namespaceId of the namenodeStorage directory
-  private int namenodeStorageNamespaceID;
+  private static int namenodeStorageNamespaceID;
   // The clusterId of the namenodeStorage directory
-  private String namenodeStorageClusterID;
+  private static String namenodeStorageClusterID;
   // The blockpoolId of the namenodeStorage directory
-  private String namenodeStorageBlockPoolID;
+  private static String namenodeStorageBlockPoolID;
   // The fsscTime of the namenodeStorage directory
-  private long namenodeStorageFsscTime;
+  private static long namenodeStorageFsscTime;
   // The singleton master storage directory for Datanode
-  private final File datanodeStorage;
+  private static File datanodeStorage = new File(TEST_ROOT_DIR, "datanodeMaster");
   // A checksum of the contents in datanodeStorage directory
-  private long datanodeStorageChecksum;
+  private static long datanodeStorageChecksum;
   // A checksum of the contents in blockpool storage directory
-  private long blockPoolStorageChecksum;
+  private static long blockPoolStorageChecksum;
   // A checksum of the contents in blockpool finalize storage directory
-  private long blockPoolFinalizedStorageChecksum;
+  private static long blockPoolFinalizedStorageChecksum;
   // A checksum of the contents in blockpool rbw storage directory
-  private long blockPoolRbwStorageChecksum;
+  private static long blockPoolRbwStorageChecksum;
 
   /**
+   * Initialize the data structures used by this class.  
+   * IMPORTANT NOTE: This method must be called once before calling 
+   *                 any other public method on this class.  
+   * <p>
    * Creates a singleton master populated storage
    * directory for a Namenode (contains edits, fsimage,
    * version, and time files) and a Datanode (contains version and
    * block files).  This can be a lengthy operation.
    */
-  public UpgradeUtilities(String dfsBaseDir) throws Exception {
-    this.dfsBaseDir = dfsBaseDir;
-    namenodeStorage = new File(dfsBaseDir, "namenodeMaster");
-    datanodeStorage = new File(dfsBaseDir, "datanodeMaster");
-    
-    createEmptyDirs(new String[] {dfsBaseDir});
+  public static void initialize() throws Exception {
+    createEmptyDirs(new String[] {TEST_ROOT_DIR.toString()});
     Configuration config = new HdfsConfiguration();
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
     config.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, namenodeStorage.toString());
@@ -115,7 +117,6 @@ public class UpgradeUtilities {
       // format and start NameNode and start DataNode
       DFSTestUtil.formatNameNode(config);
       cluster =  new MiniDFSCluster.Builder(config)
-                                   .dfsBaseDir(dfsBaseDir)
                                    .numDataNodes(1)
                                    .startupOption(StartupOption.REGULAR)
                                    .format(false)
@@ -189,15 +190,15 @@ public class UpgradeUtilities {
    * {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} with the specified 
    * number of directory entries. Also initialize dfs.blockreport.intervalMsec.
    */
-  public Configuration initializeStorageStateConf(int numDirs,
+  public static Configuration initializeStorageStateConf(int numDirs,
                                                          Configuration conf) {
     StringBuffer nameNodeDirs =
-      new StringBuffer(new File(dfsBaseDir, "name1").toString());
+      new StringBuffer(new File(TEST_ROOT_DIR, "name1").toString());
     StringBuffer dataNodeDirs =
-      new StringBuffer(new File(dfsBaseDir, "data1").toString());
+      new StringBuffer(new File(TEST_ROOT_DIR, "data1").toString());
     for (int i = 2; i <= numDirs; i++) {
-      nameNodeDirs.append("," + new File(dfsBaseDir, "name"+i));
-      dataNodeDirs.append("," + new File(dfsBaseDir, "data"+i));
+      nameNodeDirs.append("," + new File(TEST_ROOT_DIR, "name"+i));
+      dataNodeDirs.append("," + new File(TEST_ROOT_DIR, "data"+i));
     }
     if (conf == null) {
       conf = new HdfsConfiguration();
@@ -227,7 +228,7 @@ public class UpgradeUtilities {
    * Return the checksum for the singleton master storage directory
    * for namenode
    */
-  public long checksumMasterNameNodeContents() {
+  public static long checksumMasterNameNodeContents() {
     return namenodeStorageChecksum;
   }
   
@@ -235,7 +236,7 @@ public class UpgradeUtilities {
    * Return the checksum for the singleton master storage directory
    * for datanode
    */
-  public long checksumMasterDataNodeContents() {
+  public static long checksumMasterDataNodeContents() {
     return datanodeStorageChecksum;
   }
   
@@ -243,7 +244,7 @@ public class UpgradeUtilities {
    * Return the checksum for the singleton master storage directory
    * for block pool.
    */
-  public long checksumMasterBlockPoolContents() {
+  public static long checksumMasterBlockPoolContents() {
     return blockPoolStorageChecksum;
   }
   
@@ -251,7 +252,7 @@ public class UpgradeUtilities {
    * Return the checksum for the singleton master storage directory
    * for finalized dir under block pool.
    */
-  public long checksumMasterBlockPoolFinalizedContents() {
+  public static long checksumMasterBlockPoolFinalizedContents() {
     return blockPoolFinalizedStorageChecksum;
   }
   
@@ -259,7 +260,7 @@ public class UpgradeUtilities {
    * Return the checksum for the singleton master storage directory
    * for rbw dir under block pool.
    */
-  public long checksumMasterBlockPoolRbwContents() {
+  public static long checksumMasterBlockPoolRbwContents() {
     return blockPoolRbwStorageChecksum;
   }
   
@@ -323,7 +324,7 @@ public class UpgradeUtilities {
    * @param dirName directory under which storage directory is created
    * @return the array of created directories
    */
-  public File[] createNameNodeStorageDirs(String[] parents,
+  public static File[] createNameNodeStorageDirs(String[] parents,
       String dirName) throws Exception {
     File[] retVal = new File[parents.length];
     for (int i = 0; i < parents.length; i++) {
@@ -351,7 +352,7 @@ public class UpgradeUtilities {
    * @param dirName directory under which storage directory is created
    * @return the array of created directories
    */
-  public File[] createDataNodeStorageDirs(String[] parents,
+  public static File[] createDataNodeStorageDirs(String[] parents,
       String dirName) throws Exception {
     File[] retVal = new File[parents.length];
     for (int i = 0; i < parents.length; i++) {
@@ -380,7 +381,7 @@ public class UpgradeUtilities {
    * @param bpid block pool id for which the storage directory is created.
    * @return the array of created directories
    */
-  public File[] createBlockPoolStorageDirs(String[] parents,
+  public static File[] createBlockPoolStorageDirs(String[] parents,
       String dirName, String bpid) throws Exception {
     File[] retVal = new File[parents.length];
     Path bpCurDir = new Path(MiniDFSCluster.getBPDir(datanodeStorage,
@@ -523,7 +524,7 @@ public class UpgradeUtilities {
    * The UpgradeUtilities.initialize() method must be called once before
    * calling this method.
    */
-  public int getCurrentNamespaceID(MiniDFSCluster cluster) throws IOException {
+  public static int getCurrentNamespaceID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
       return cluster.getNameNodeRpc().versionRequest().getNamespaceID();
     }
@@ -534,7 +535,7 @@ public class UpgradeUtilities {
    * Return the cluster ID inherent in the currently running
    * Namenode. 
    */
-  public String getCurrentClusterID(MiniDFSCluster cluster) throws IOException {
+  public static String getCurrentClusterID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
       return cluster.getNameNodeRpc().versionRequest().getClusterID();
     }
@@ -545,7 +546,7 @@ public class UpgradeUtilities {
    * Return the blockpool ID inherent in the currently running
    * Namenode. 
    */
-  public String getCurrentBlockPoolID(MiniDFSCluster cluster) throws IOException {
+  public static String getCurrentBlockPoolID(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
       return cluster.getNameNodeRpc().versionRequest().getBlockPoolID();
     }
@@ -560,7 +561,7 @@ public class UpgradeUtilities {
    * The UpgradeUtilities.initialize() method must be called once before
    * calling this method.
    */
-  public long getCurrentFsscTime(MiniDFSCluster cluster) throws IOException {
+  public static long getCurrentFsscTime(MiniDFSCluster cluster) throws IOException {
     if (cluster != null) {
       return cluster.getNameNodeRpc().versionRequest().getCTime();
     }

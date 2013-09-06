@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
@@ -35,7 +36,8 @@ import org.apache.hadoop.hdfs.server.namenode.Quota;
  * @param <D> The diff type, which must extend {@link AbstractINodeDiff}.
  */
 abstract class AbstractINodeDiffList<N extends INode,
-                                     D extends AbstractINodeDiff<N, D>> 
+                                     A extends INodeAttributes,
+                                     D extends AbstractINodeDiff<N, A, D>> 
     implements Iterable<D> {
   /** Diff list sorted by snapshot IDs, i.e. in chronological order. */
   private final List<D> diffs = new ArrayList<D>();
@@ -54,7 +56,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   abstract D createDiff(Snapshot snapshot, N currentINode);
 
   /** @return a snapshot copy of the current inode. */  
-  abstract N createSnapshotCopy(N currentINode);
+  abstract A createSnapshotCopy(N currentINode);
 
   /**
    * Delete a snapshot. The synchronization of the diff list will be done 
@@ -68,7 +70,8 @@ abstract class AbstractINodeDiffList<N extends INode,
    */
   public final Quota.Counts deleteSnapshotDiff(final Snapshot snapshot,
       Snapshot prior, final N currentINode,
-      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
+      final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, boolean countDiffChange) 
       throws QuotaExceededException {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot.getId());
     
@@ -80,31 +83,33 @@ abstract class AbstractINodeDiffList<N extends INode,
         diffs.get(snapshotIndex).setSnapshot(prior);
       } else {
         removed = diffs.remove(0);
-        counts.add(Quota.NAMESPACE, 1);
-        // We add 1 to the namespace quota usage since we delete a diff. 
-        // The quota change will be propagated to 
-        // 1) ancestors in the current tree, and 
-        // 2) src tree of any renamed ancestor.
-        // Because for 2) we do not calculate the number of diff for quota 
-        // usage, we need to compensate this diff change for 2)
-        currentINode.addSpaceConsumedToRenameSrc(1, 0, false, snapshot.getId());
+        if (countDiffChange) {
+          counts.add(Quota.NAMESPACE, 1);
+        } else {
+          // the currentINode must be a descendant of a WithName node, which set
+          // countDiffChange to false. In that case we should count in the diff
+          // change when updating the quota usage in the current tree
+          currentINode.addSpaceConsumed(-1, 0, false);
+        }
         counts.add(removed.destroyDiffAndCollectBlocks(currentINode,
             collectedBlocks, removedINodes));
       }
     } else if (snapshotIndex > 0) {
-      final AbstractINodeDiff<N, D> previous = diffs.get(snapshotIndex - 1);
+      final AbstractINodeDiff<N, A, D> previous = diffs.get(snapshotIndex - 1);
       if (!previous.getSnapshot().equals(prior)) {
         diffs.get(snapshotIndex).setSnapshot(prior);
       } else {
         // combine the to-be-removed diff with its previous diff
         removed = diffs.remove(snapshotIndex);
-        counts.add(Quota.NAMESPACE, 1);
-        currentINode.addSpaceConsumedToRenameSrc(1, 0, false, snapshot.getId());
+        if (countDiffChange) {
+          counts.add(Quota.NAMESPACE, 1);
+        } else {
+          currentINode.addSpaceConsumed(-1, 0, false);
+        }
         if (previous.snapshotINode == null) {
           previous.snapshotINode = removed.snapshotINode;
-        } else if (removed.snapshotINode != null) {
-          removed.snapshotINode.clear();
         }
+
         counts.add(previous.combinePosteriorAndCollectBlocks(
             currentINode, removed, collectedBlocks, removedINodes));
         previous.setPosterior(removed.getPosterior());
@@ -117,7 +122,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
   final D addDiff(Snapshot latest, N currentINode)
       throws QuotaExceededException {
-    currentINode.addSpaceConsumed(1, 0, true, Snapshot.INVALID_ID);
+    currentINode.addSpaceConsumed(1, 0, true);
     return addLast(createDiff(latest, currentINode));
   }
 
@@ -146,7 +151,7 @@ abstract class AbstractINodeDiffList<N extends INode,
 
   /** @return the last snapshot. */
   public final Snapshot getLastSnapshot() {
-    final AbstractINodeDiff<N, D> last = getLast();
+    final AbstractINodeDiff<N, A, D> last = getLast();
     return last == null? null: last.getSnapshot();
   }
   
@@ -266,9 +271,9 @@ abstract class AbstractINodeDiffList<N extends INode,
    *         Note that the current inode is returned if there is no change
    *         between the given snapshot and the current state. 
    */
-  N getSnapshotINode(final Snapshot snapshot, final N currentINode) {
+  A getSnapshotINode(final Snapshot snapshot, final A currentINode) {
     final D diff = getDiff(snapshot);
-    final N inode = diff == null? null: diff.getSnapshotINode();
+    final A inode = diff == null? null: diff.getSnapshotINode();
     return inode == null? currentINode: inode;
   }
 
@@ -293,7 +298,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  public void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy)
+  public void saveSelf2Snapshot(Snapshot latest, N currentINode, A snapshotCopy)
       throws QuotaExceededException {
     if (latest != null) {
       D diff = checkAndAddLatestSnapshotDiff(latest, currentINode);

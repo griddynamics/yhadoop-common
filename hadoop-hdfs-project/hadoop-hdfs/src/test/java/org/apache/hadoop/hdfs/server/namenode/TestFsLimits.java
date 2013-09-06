@@ -72,7 +72,7 @@ public class TestFsLimits {
   public void setUp() throws IOException {
     conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-             fileAsURI(new File(MiniDFSCluster.newDfsBaseDir(),
+             fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
                                 "namenode")).toString());
 
     rootInode = new INodeDirectoryWithQuota(getMockNamesystem()

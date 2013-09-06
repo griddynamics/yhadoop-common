@@ -49,8 +49,6 @@ public class TestDFSStorageStateRecovery {
   private Configuration conf = null;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
-  private String dfsBaseDir;
-  private UpgradeUtilities util;
   
   // Constants for indexes into test case table below.
   private static final int CURRENT_EXISTS = 0;
@@ -140,15 +138,15 @@ public class TestDFSStorageStateRecovery {
    */
   String[] createNameNodeStorageState(boolean[] state) throws Exception {
     String[] baseDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
-    util.createEmptyDirs(baseDirs);
+    UpgradeUtilities.createEmptyDirs(baseDirs);
     if (state[CURRENT_EXISTS])  // current
-      util.createNameNodeStorageDirs(baseDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "current");
     if (state[PREVIOUS_EXISTS])  // previous
-      util.createNameNodeStorageDirs(baseDirs, "previous");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "previous");
     if (state[PREVIOUS_TMP_EXISTS])  // previous.tmp
-      util.createNameNodeStorageDirs(baseDirs, "previous.tmp");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "previous.tmp");
     if (state[REMOVED_TMP_EXISTS])  // removed.tmp
-      util.createNameNodeStorageDirs(baseDirs, "removed.tmp");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "removed.tmp");
 
     return baseDirs;
   }
@@ -168,15 +166,15 @@ public class TestDFSStorageStateRecovery {
    */
   String[] createDataNodeStorageState(boolean[] state) throws Exception {
     String[] baseDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
-    util.createEmptyDirs(baseDirs);
+    UpgradeUtilities.createEmptyDirs(baseDirs);
     if (state[CURRENT_EXISTS])  // current
-      util.createDataNodeStorageDirs(baseDirs, "current");
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "current");
     if (state[PREVIOUS_EXISTS])  // previous
-      util.createDataNodeStorageDirs(baseDirs, "previous");
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "previous");
     if (state[PREVIOUS_TMP_EXISTS])  // previous.tmp
-      util.createDataNodeStorageDirs(baseDirs, "previous.tmp");
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "previous.tmp");
     if (state[REMOVED_TMP_EXISTS])  // removed.tmp
-      util.createDataNodeStorageDirs(baseDirs, "removed.tmp");
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "removed.tmp");
 
     return baseDirs;
   }
@@ -197,21 +195,22 @@ public class TestDFSStorageStateRecovery {
    */
   String[] createBlockPoolStorageState(String bpid, boolean[] state) throws Exception {
     String[] baseDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
-    util.createEmptyDirs(baseDirs);
-    util.createDataNodeStorageDirs(baseDirs, "current");
+    UpgradeUtilities.createEmptyDirs(baseDirs);
+    UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "current");
     
     // After copying the storage directories from master datanode, empty
     // the block pool storage directories
-    String[] bpDirs = util.createEmptyBPDirs(baseDirs, bpid);
+    String[] bpDirs = UpgradeUtilities.createEmptyBPDirs(baseDirs, bpid);
     if (state[CURRENT_EXISTS]) // current
-      util.createBlockPoolStorageDirs(baseDirs, "current", bpid);
+      UpgradeUtilities.createBlockPoolStorageDirs(baseDirs, "current", bpid);
     if (state[PREVIOUS_EXISTS]) // previous
-      util.createBlockPoolStorageDirs(baseDirs, "previous", bpid);
+      UpgradeUtilities.createBlockPoolStorageDirs(baseDirs, "previous", bpid);
     if (state[PREVIOUS_TMP_EXISTS]) // previous.tmp
-      util.createBlockPoolStorageDirs(baseDirs, "previous.tmp",
+      UpgradeUtilities.createBlockPoolStorageDirs(baseDirs, "previous.tmp",
           bpid);
     if (state[REMOVED_TMP_EXISTS]) // removed.tmp
-      util.createBlockPoolStorageDirs(baseDirs, "removed.tmp", bpid);
+      UpgradeUtilities
+          .createBlockPoolStorageDirs(baseDirs, "removed.tmp", bpid);
     return bpDirs;
   }
   
@@ -239,9 +238,9 @@ public class TestDFSStorageStateRecovery {
       for (int i = 0; i < baseDirs.length; i++) {
         assertTrue(new File(baseDirs[i],"previous").isDirectory());
         assertEquals(
-                     util.checksumContents(
+                     UpgradeUtilities.checksumContents(
                                                        NAME_NODE, new File(baseDirs[i],"previous")),
-                     util.checksumMasterNameNodeContents());
+                     UpgradeUtilities.checksumMasterNameNodeContents());
       }
     }
   }
@@ -260,16 +259,16 @@ public class TestDFSStorageStateRecovery {
     if (currentShouldExist) {
       for (int i = 0; i < baseDirs.length; i++) {
         assertEquals(
-                     util.checksumContents(DATA_NODE, new File(baseDirs[i],"current")),
-                     util.checksumMasterDataNodeContents());
+                     UpgradeUtilities.checksumContents(DATA_NODE, new File(baseDirs[i],"current")),
+                     UpgradeUtilities.checksumMasterDataNodeContents());
       }
     }
     if (previousShouldExist) {
       for (int i = 0; i < baseDirs.length; i++) {
         assertTrue(new File(baseDirs[i],"previous").isDirectory());
         assertEquals(
-                     util.checksumContents(DATA_NODE, new File(baseDirs[i],"previous")),
-                     util.checksumMasterDataNodeContents());
+                     UpgradeUtilities.checksumContents(DATA_NODE, new File(baseDirs[i],"previous")),
+                     UpgradeUtilities.checksumMasterDataNodeContents());
       }
     }
   }
@@ -291,8 +290,8 @@ public class TestDFSStorageStateRecovery {
     if (currentShouldExist) {
       for (int i = 0; i < baseDirs.length; i++) {
         File bpCurDir = new File(baseDirs[i], Storage.STORAGE_DIR_CURRENT);
-        assertEquals(util.checksumContents(DATA_NODE, bpCurDir),
-                     util.checksumMasterBlockPoolContents());
+        assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, bpCurDir),
+                     UpgradeUtilities.checksumMasterBlockPoolContents());
       }
     }
     if (previousShouldExist) {
@@ -300,14 +299,14 @@ public class TestDFSStorageStateRecovery {
         File bpPrevDir = new File(baseDirs[i], Storage.STORAGE_DIR_PREVIOUS);
         assertTrue(bpPrevDir.isDirectory());
         assertEquals(
-                     util.checksumContents(DATA_NODE, bpPrevDir),
-                     util.checksumMasterBlockPoolContents());
+                     UpgradeUtilities.checksumContents(DATA_NODE, bpPrevDir),
+                     UpgradeUtilities.checksumMasterBlockPoolContents());
       }
     }
   }
   
   private MiniDFSCluster createCluster(Configuration c) throws IOException {
-    return new MiniDFSCluster.Builder(c).dfsBaseDir(dfsBaseDir)
+    return new MiniDFSCluster.Builder(c)
                              .numDataNodes(0)
                              .startupOption(StartupOption.REGULAR)
                              .format(false)
@@ -326,7 +325,7 @@ public class TestDFSStorageStateRecovery {
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
-      conf = util.initializeStorageStateConf(numDirs, conf);
+      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_NN_TEST_CASES; i++) {
         boolean[] testCase = testCases[i];
         boolean shouldRecover = testCase[SHOULD_RECOVER];
@@ -371,7 +370,7 @@ public class TestDFSStorageStateRecovery {
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
-      conf = util.initializeStorageStateConf(numDirs, conf);
+      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_DN_TEST_CASES; i++) {
         boolean[] testCase = testCases[i];
         boolean shouldRecover = testCase[SHOULD_RECOVER];
@@ -409,11 +408,11 @@ public class TestDFSStorageStateRecovery {
     String[] baseDirs;
 
     // First setup the datanode storage directory
-    String bpid = util.getCurrentBlockPoolID(null);
+    String bpid = UpgradeUtilities.getCurrentBlockPoolID(null);
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
       conf.setInt("dfs.datanode.scan.period.hours", -1);      
-      conf = util.initializeStorageStateConf(numDirs, conf);
+      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_DN_TEST_CASES; i++) {
         boolean[] testCase = testCases[i];
         boolean shouldRecover = testCase[SHOULD_RECOVER];
@@ -445,8 +444,7 @@ public class TestDFSStorageStateRecovery {
   @Before
   public void setUp() throws Exception {
     LOG.info("Setting up the directory structures.");
-    dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
-    util = new UpgradeUtilities(dfsBaseDir);
+    UpgradeUtilities.initialize();
   }
 
   @After

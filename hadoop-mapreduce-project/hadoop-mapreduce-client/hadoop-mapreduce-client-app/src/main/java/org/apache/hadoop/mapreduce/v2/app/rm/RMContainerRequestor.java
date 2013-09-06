@@ -36,17 +36,16 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 
 /**
@@ -74,7 +73,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   // use custom comparator to make sure ResourceRequest objects differing only in 
   // numContainers dont end up as duplicates
   private final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>(
-      new org.apache.hadoop.yarn.util.BuilderUtils.ResourceRequestComparator());
+      new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
   private final Set<ContainerId> release = new TreeSet<ContainerId>(); 
 
   private boolean nodeBlacklistingEnabled;
@@ -125,8 +124,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     nodeBlacklistingEnabled = 
       conf.getBoolean(MRJobConfig.MR_AM_JOB_NODE_BLACKLISTING_ENABLE, true);
     LOG.info("nodeBlacklistingEnabled:" + nodeBlacklistingEnabled);
@@ -138,7 +137,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
             MRJobConfig.DEFAULT_MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERCENT);
     LOG.info("maxTaskFailuresPerNode is " + maxTaskFailuresPerNode);
     if (blacklistDisablePercent < -1 || blacklistDisablePercent > 100) {
-      throw new YarnException("Invalid blacklistDisablePercent: "
+      throw new YarnRuntimeException("Invalid blacklistDisablePercent: "
           + blacklistDisablePercent
           + ". Should be an integer between 0 and 100 or -1 to disabled");
     }
@@ -146,14 +145,14 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   protected AllocateResponse makeRemoteRequest() throws IOException {
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
-        applicationAttemptId, lastResponseID, super.getApplicationProgress(),
-        new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
-            release));
+    AllocateRequest allocateRequest =
+        AllocateRequest.newInstance(lastResponseID,
+          super.getApplicationProgress(), new ArrayList<ResourceRequest>(ask),
+          new ArrayList<ContainerId>(release), null);
     AllocateResponse allocateResponse;
     try {
       allocateResponse = scheduler.allocate(allocateRequest);
-    } catch (YarnRemoteException e) {
+    } catch (YarnException e) {
       throw new IOException(e);
     }
     lastResponseID = allocateResponse.getResponseId();
@@ -242,7 +241,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
               ResourceRequest zeroedRequest =
                   ResourceRequest.newInstance(req.getPriority(),
                     req.getResourceName(), req.getCapability(),
-                    req.getNumContainers());
+                    req.getNumContainers(), req.getRelaxLocality());
 
               zeroedRequest.setNumContainers(0);
               // to be sent to RM on next heartbeat
@@ -424,5 +423,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     ContainerRequest newReq = new ContainerRequest(orig.attemptID, orig.capability,
         hosts, orig.racks, orig.priority); 
     return newReq;
+  }
+  
+  public Set<String> getBlacklistedNodes() {
+    return blacklistedNodes;
   }
 }

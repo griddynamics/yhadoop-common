@@ -23,13 +23,13 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -53,26 +53,28 @@ public class WebServer extends AbstractService {
   }
 
   @Override
-  public synchronized void init(Configuration conf) {
-    super.init(conf);
-  }
-
-  @Override
-  public synchronized void start() {
+  protected void serviceStart() throws Exception {
     String bindAddress = getConfig().get(YarnConfiguration.NM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {
       this.webApp =
-          WebApps.$for("node", Context.class, this.nmContext, "ws")
-              .at(bindAddress).with(getConfig()).start(this.nmWebApp);
+          WebApps
+            .$for("node", Context.class, this.nmContext, "ws")
+            .at(bindAddress)
+            .with(getConfig())
+            .withHttpSpnegoPrincipalKey(
+              YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY)
+            .withHttpSpnegoKeytabKey(
+              YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+            .start(this.nmWebApp);
       this.port = this.webApp.httpServer().getPort();
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
       LOG.error(msg, e);
-      throw new YarnException(msg);
+      throw new YarnRuntimeException(msg, e);
     }
-    super.start();
+    super.serviceStart();
   }
 
   public int getPort() {
@@ -80,11 +82,12 @@ public class WebServer extends AbstractService {
   }
 
   @Override
-  public synchronized void stop() {
+  protected void serviceStop() throws Exception {
     if (this.webApp != null) {
+      LOG.debug("Stopping webapp");
       this.webApp.stop();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   public static class NMWebApp extends WebApp implements YarnWebParams {

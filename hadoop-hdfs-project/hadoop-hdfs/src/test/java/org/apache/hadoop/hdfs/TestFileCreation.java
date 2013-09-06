@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -502,7 +503,7 @@ public class TestFileCreation {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
       DFSClient client = dfs.dfs;
 
       // create a new file.
@@ -562,7 +563,7 @@ public class TestFileCreation {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
       DFSClient client = dfs.dfs;
 
       // create a new file.
@@ -665,7 +666,6 @@ public class TestFileCreation {
       } catch (InterruptedException e) {
       }
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                               .dfsBaseDir(cluster.getDfsBaseDir())
                                                .format(false)
                                                .build();
       cluster.waitActive();
@@ -678,7 +678,6 @@ public class TestFileCreation {
       } catch (InterruptedException e) {
       }
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
-                                                .dfsBaseDir(cluster.getDfsBaseDir())
                                                 .format(false)
                                                 .build();
       cluster.waitActive();
@@ -705,7 +704,7 @@ public class TestFileCreation {
       stm4.close();
 
       // verify that new block is associated with this file
-      DFSClient client = ((DistributedFileSystem)fs).dfs;
+      DFSClient client = fs.dfs;
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
@@ -953,7 +952,7 @@ public class TestFileCreation {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
 
       // create a new file.
       final String f = DIR + "foo";
@@ -1014,7 +1013,7 @@ public class TestFileCreation {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
 
       // create a new file.
       final String f = DIR + "foofs";
@@ -1046,7 +1045,7 @@ public class TestFileCreation {
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
-      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
 
       // create a new file.
       final String f = DIR + "testFsCloseAfterClusterShutdown";
@@ -1161,6 +1160,39 @@ public class TestFileCreation {
       cluster.restartNameNode();
 
     } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test complete(..) - verifies that the fileId in the request
+   * matches that of the Inode.
+   * This test checks that FileNotFoundException exception is thrown in case
+   * the fileId does not match.
+   */
+  @Test
+  public void testFileIdMismatch() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    DistributedFileSystem dfs = null;
+    try {
+      cluster.waitActive();
+      dfs = cluster.getFileSystem();
+      DFSClient client = dfs.dfs;
+
+      final Path f = new Path("/testFileIdMismatch.txt");
+      createFile(dfs, f, 3);
+      long someOtherFileId = -1;
+      try {
+        cluster.getNameNodeRpc()
+            .complete(f.toString(), client.clientName, null, someOtherFileId);
+        fail();
+      } catch(FileNotFoundException fnf) {
+        FileSystem.LOG.info("Caught Expected FileNotFoundException: ", fnf);
+      }
+    } finally {
+      IOUtils.closeStream(dfs);
       cluster.shutdown();
     }
   }

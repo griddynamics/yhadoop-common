@@ -45,11 +45,9 @@ import org.apache.hadoop.test.GenericTestUtils;
  */
 public class TestSecondaryNameNodeUpgrade {
 
-  private final String dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
-  private final File hdfsDir = new File(dfsBaseDir);
-    
   @Before
   public void cleanupCluster() throws IOException {
+    File hdfsDir = new File(MiniDFSCluster.getBaseDirectory()).getCanonicalFile();
     System.out.println("cleanupCluster deleting " + hdfsDir);
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
       throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
@@ -64,7 +62,7 @@ public class TestSecondaryNameNodeUpgrade {
     try {
       Configuration conf = new HdfsConfiguration();
 
-      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir).build();
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
       conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");

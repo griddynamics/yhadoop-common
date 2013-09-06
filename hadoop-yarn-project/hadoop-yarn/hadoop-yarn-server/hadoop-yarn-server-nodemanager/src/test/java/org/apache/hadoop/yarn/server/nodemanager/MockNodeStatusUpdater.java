@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -61,13 +61,17 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
   protected ResourceTracker getRMClient() {
     return resourceTracker;
   }
+  @Override
+  protected void stopRMProxy() {
+    return;
+  }
   
   private static class MockResourceTracker implements ResourceTracker {
     private int heartBeatID;
 
     @Override
     public RegisterNodeManagerResponse registerNodeManager(
-        RegisterNodeManagerRequest request) throws YarnRemoteException,
+        RegisterNodeManagerRequest request) throws YarnException,
         IOException {
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -75,20 +79,21 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
       masterKey.setKeyId(123);
       masterKey.setBytes(ByteBuffer.wrap(new byte[] { new Integer(123)
         .byteValue() }));
-      response.setMasterKey(masterKey);
+      response.setContainerTokenMasterKey(masterKey);
+      response.setNMTokenMasterKey(masterKey);
       return response;
     }
 
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-        throws YarnRemoteException, IOException {
+        throws YarnException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
       LOG.info("Got heartbeat number " + heartBeatID);
       nodeStatus.setResponseId(heartBeatID++);
 
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils
           .newNodeHeartbeatResponse(heartBeatID, null, null,
-              null, null, 1000L);
+              null, null, null, 1000L);
       return nhResponse;
     }
   }

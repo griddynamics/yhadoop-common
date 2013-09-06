@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -1055,7 +1056,8 @@ public class PBHelper {
             fs.getSymlink().toByteArray() : null,
         fs.getPath().toByteArray(),
         fs.hasFileId()? fs.getFileId(): INodeId.GRANDFATHER_INODE_ID,
-        fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null);
+        fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
+        fs.hasChildrenNum() ? fs.getChildrenNum() : -1);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1072,6 +1074,7 @@ public class PBHelper {
         status.getGroup(),
         status.getPath().toByteArray(),
         status.getFileId(),
+        status.getChildrenNum(),
         sdirStatusProto.getSnapshotNumber(),
         sdirStatusProto.getSnapshotQuota(),
         sdirStatusProto.getParentFullpath().toByteArray());
@@ -1099,6 +1102,7 @@ public class PBHelper {
       setOwner(fs.getOwner()).
       setGroup(fs.getGroup()).
       setFileId(fs.getFileId()).
+      setChildrenNum(fs.getChildrenNum()).
       setPath(ByteString.copyFrom(fs.getLocalNameInBytes()));
     if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
@@ -1308,10 +1312,10 @@ public class PBHelper {
       NNHAStatusHeartbeatProto.newBuilder();
     switch (hb.getState()) {
       case ACTIVE:
-        builder.setState(NNHAStatusHeartbeatProto.State.ACTIVE);
+        builder.setState(HAServiceProtocolProtos.HAServiceStateProto.ACTIVE);
         break;
       case STANDBY:
-        builder.setState(NNHAStatusHeartbeatProto.State.STANDBY);
+        builder.setState(HAServiceProtocolProtos.HAServiceStateProto.STANDBY);
         break;
       default:
         throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" +

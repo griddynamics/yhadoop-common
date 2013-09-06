@@ -23,19 +23,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -44,7 +45,8 @@ import com.google.common.base.Preconditions;
 /**
  * Directory INode class.
  */
-public class INodeDirectory extends INodeWithAdditionalFields {
+public class INodeDirectory extends INodeWithAdditionalFields
+    implements INodeDirectoryAttributes {
   /** Cast INode to INodeDirectory. */
   public static INodeDirectory valueOf(INode inode, Object path
       ) throws FileNotFoundException, PathIsNotDirectoryException {
@@ -499,7 +501,8 @@ public class INodeDirectory extends INodeWithAdditionalFields {
   /** Call cleanSubtree(..) recursively down the subtree. */
   public Quota.Counts cleanSubtreeRecursively(final Snapshot snapshot,
       Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) throws QuotaExceededException {
+      final List<INode> removedINodes, final Map<INode, INode> excludedNodes, 
+      final boolean countDiffChange) throws QuotaExceededException {
     Quota.Counts counts = Quota.Counts.newInstance();
     // in case of deletion snapshot, since this call happens after we modify
     // the diff list, the snapshot to be deleted has been combined or renamed
@@ -508,9 +511,14 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     // INodeDirectoryWithSnapshot#cleanSubtree)
     Snapshot s = snapshot != null && prior != null ? prior : snapshot;
     for (INode child : getChildrenList(s)) {
-      Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
-          collectedBlocks, removedINodes);
-      counts.add(childCounts);
+      if (snapshot != null && excludedNodes != null
+          && excludedNodes.containsKey(child)) {
+        continue;
+      } else {
+        Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
+            collectedBlocks, removedINodes, countDiffChange);
+        counts.add(childCounts);
+      }
     }
     return counts;
   }
@@ -527,8 +535,9 @@ public class INodeDirectory extends INodeWithAdditionalFields {
   
   @Override
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks, 
-      final List<INode> removedINodes) throws QuotaExceededException {
+      final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, final boolean countDiffChange)
+      throws QuotaExceededException {
     if (prior == null && snapshot == null) {
       // destroy the whole subtree and collect blocks that should be deleted
       Quota.Counts counts = Quota.Counts.newInstance();
@@ -538,7 +547,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     } else {
       // process recursively down the subtree
       Quota.Counts counts = cleanSubtreeRecursively(snapshot, prior,
-          collectedBlocks, removedINodes);
+          collectedBlocks, removedINodes, null, countDiffChange);
       if (isQuotaSet()) {
         ((INodeDirectoryWithQuota) this).addSpaceConsumed2Cache(
             -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
@@ -550,12 +559,12 @@ public class INodeDirectory extends INodeWithAdditionalFields {
   /**
    * Compare the metadata with another INodeDirectory
    */
-  public boolean metadataEquals(INodeDirectory other) {
-    return other != null && getNsQuota() == other.getNsQuota()
+  @Override
+  public boolean metadataEquals(INodeDirectoryAttributes other) {
+    return other != null
+        && getNsQuota() == other.getNsQuota()
         && getDsQuota() == other.getDsQuota()
-        && getUserName().equals(other.getUserName())
-        && getGroupName().equals(other.getGroupName())
-        && getFsPermission().equals(other.getFsPermission());
+        && getPermissionLong() == other.getPermissionLong();
   }
   
   /*
@@ -645,5 +654,9 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     public SnapshotAndINode(Snapshot snapshot) {
       this(snapshot, snapshot.getRoot());
     }
+  }
+
+  public final int getChildrenNum(final Snapshot snapshot) {
+    return getChildrenList(snapshot).size();
   }
 }

@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -39,20 +39,21 @@ public class LocalRMInterface implements ResourceTracker {
   
   @Override
   public RegisterNodeManagerResponse registerNodeManager(
-      RegisterNodeManagerRequest request) throws YarnRemoteException,
+      RegisterNodeManagerRequest request) throws YarnException,
       IOException {
     RegisterNodeManagerResponse response = recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
     MasterKey masterKey = new MasterKeyPBImpl();
     masterKey.setKeyId(123);
     masterKey.setBytes(ByteBuffer.wrap(new byte[] { new Integer(123)
       .byteValue() }));
-    response.setMasterKey(masterKey);
+    response.setContainerTokenMasterKey(masterKey);
+    response.setNMTokenMasterKey(masterKey);
     return response;
   }
 
   @Override
   public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
-      throws YarnRemoteException, IOException {
+      throws YarnException, IOException {
     NodeHeartbeatResponse response = recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
     return response;
   }

@@ -22,6 +22,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 import org.apache.hadoop.yarn.factories.RpcServerFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
@@ -50,12 +51,12 @@ public class TestRpcFactoryProvider {
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
       Assert.fail("Expected an exception - unknown serializer");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
     }
     try {
       serverFactory = RpcFactoryProvider.getServerFactory(conf);
       Assert.fail("Expected an exception - unknown serializer");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
     }
     
     conf = new Configuration();
@@ -65,11 +66,11 @@ public class TestRpcFactoryProvider {
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
       Assert.fail("Expected an exception - unknown class");
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
     }
     try {
       serverFactory = RpcFactoryProvider.getServerFactory(conf);
-    } catch (YarnException e) {
+    } catch (YarnRuntimeException e) {
       Assert.fail("Error while loading factory using reflection: [" + RpcServerFactoryPBImpl.class.getName() + "]");
     }
   }

@@ -137,7 +137,123 @@ Trunk (Unreleased)
     MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
     Mitic via hitesh)
 
-Release 2.1.0-beta - UNRELEASED
+Release 2.3.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    MAPREDUCE-5265. History server admin service to refresh user and superuser
+    group mappings (Ashwin Shankar via jlowe)
+
+    MAPREDUCE-5356. Ability to refresh aggregated log retention period and
+    check interval (Ashwin Shankar via jlowe)
+
+    MAPREDUCE-5386. Ability to refresh history server job retention and job
+    cleaner settings (Ashwin Shankar via jlowe)
+
+    MAPREDUCE-5411. Refresh size of loaded job cache on history server (Ashwin
+    Shankar via jlowe)
+
+  IMPROVEMENTS
+
+    MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
+    Aaron Kimball via Sandy Ryza)
+
+  OPTIMIZATIONS
+
+    MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
+
+  BUG FIXES
+
+    MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
+    task-state (Ashwin Shankar via jlowe)
+
+    MAPREDUCE-5380. Invalid mapred command should return non-zero exit code
+    (Stephen Chu via jlowe)
+
+    MAPREDUCE-5404. HSAdminServer does not use ephemeral ports in minicluster
+    mode (Ted Yu via jlowe)
+
+Release 2.1.1-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-5478. TeraInputFormat unnecessarily defines its own FileSplit
+    subclass (Sandy Ryza)
+
+  OPTIMIZATIONS
+
+    MAPREDUCE-5446. TestJobHistoryEvents and TestJobHistoryParsing have race
+    conditions (jlowe via kihwal)
+
+    MAPREDUCE-5462. In map-side sort, swap entire meta entries instead of
+    indexes for better cache performance. (Sandy Ryza)
+
+    MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
+    (Hairong Kuang and Jason Lowe via jlowe)
+
+  BUG FIXES
+
+    MAPREDUCE-5385. Fixed a bug with JobContext getCacheFiles API. (Omkar Vinit
+    Joshi via vinodkv)
+
+    MAPREDUCE-5428.  HistoryFileManager doesn't stop threads when service is
+    stopped (Karthik Kambatla via jlowe)
+
+    MAPREDUCE-5251. Reducer should not implicate map attempt if it has
+    insufficient space to fetch map output (Ashwin Shankar via jlowe)
+
+    MAPREDUCE-5317. Stale files left behind for failed jobs (Ravi Prakash via
+    jlowe)
+
+    MAPREDUCE-5358. MRAppMaster throws invalid transitions for JobImpl
+    (Devaraj K via jlowe)
+
+    MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
+    input path dir (Devaraj K via jlowe)
+
+    MAPREDUCE-5440. TestCopyCommitter Fails on JDK7 (Robert Parker via jlowe)
+
+    MAPREDUCE-5367. Local jobs all use same local working directory
+    (Sandy Ryza)
+
+    MAPREDUCE-5425. Junit in TestJobHistoryServer failing in jdk 7 (Robert
+    Parker via jlowe)
+
+    MAPREDUCE-5454. TestDFSIO fails intermittently on JDK7 (Karthik Kambatla
+    via Sandy Ryza)
+
+    MAPREDUCE-5001. LocalJobRunner has race condition resulting in job
+    failures (Sandy Ryza via jlowe)
+
+    MAPREDUCE-5466. Changed MR AM to not promote history files of intermediate
+    AMs in case they are exiting because of errors and thus help history-server
+    pick up the right history file for the last successful AM. (Jian He via
+    vinodkv)
+
+    MAPREDUCE-5468. Fix MR AM recovery for map-only jobs. (vinodkv via
+    acmurthy)
+
+    MAPREDUCE-5470. LocalJobRunner does not work on Windows. (Sandy Ryza via
+    cnauroth)
+
+    MAPREDUCE-5476. Changed MR AM recovery code to cleanup staging-directory
+    only after unregistering from the RM. (Jian He via vinodkv)
+
+    MAPREDUCE-5483. revert MAPREDUCE-5357. (rkanter via tucu)
+
+    MAPREDUCE-5441. Changed MR AM to return RUNNING state if exiting when RM
+    commands to reboot, so that client can continue to track the overall job.
+    (Jian He via vinodkv)
+
+    MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
+
+Release 2.1.0-beta - 2013-08-22
 
   INCOMPATIBLE CHANGES
 
@@ -276,6 +392,31 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5274. Bring back SecureShuffleUtils.toHex in mapreduce for binary
     compatibility with 1.x APIs. (Mayank Bansal via vinodkv)
 
+    MAPREDUCE-5300. Fix backward incompatibility for
+    o.a.h.mapreduce.filecache.DistributedCache. (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5283. Over 10 different tests have near identical
+    implementations of AppContext (Sandy Ryza via jlowe)
+
+    MAPREDUCE-5199. Removing ApplicationTokens file as it is no longer needed.
+    (Daryn Sharp via vinodkv)
+
+    MAPREDUCE-5192. Allow for alternate resolutions of TaskCompletionEvents.
+    (cdouglas via acmurthy)
+
+    MAPREDUCE-5184. Document compatibility for MapReduce applications in
+    hadoop-2 vis-a-vis hadoop-1. (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5194. Heed interrupts during Fetcher shutdown. (cdouglas)
+
+    MAPREDUCE-5326. Added version to shuffle header. (Zhijie Shen via
+    acmurthy)
+
+    MAPREDUCE-5333. Add test that verifies MRAM works correctly when sending
+    requests with non-normalized capabilities. (ywskycn via tucu)
+
+    MAPREDUCE-5398. MR changes for YARN-513 (Jian He via bikas)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
@@ -283,6 +424,9 @@ Release 2.1.0-beta - UNRELEASED
 
     MAPREDUCE-5268. Improve history server startup performance (Karthik
     Kambatla via jlowe)
+
+    MAPREDUCE-5352. Optimize node local splits generated by
+    CombineFileInputFormat. (sseth)
 
   BUG FIXES
 
@@ -481,6 +625,73 @@ Release 2.1.0-beta - UNRELEASED
     of the entire Container in the startContainer call - YARN-684.
     (Vinod Kumar Vavilapalli via sseth)
 
+    MAPREDUCE-5299. Fix backward incompatibility for TaskCompletionEvent by
+    adding back setTaskID. (Zhijie Shen via acmurthy) 
+
+    MAPREDUCE-5296. Fix backward incompatibility for JobControl by adding the
+    omitted addJob. (Zhijie Shen via acmurthy) 
+
+    MAPREDUCE-5245. Added back constants to JobConf to fix incompatibilities.  
+    (Zhijie Shen via acmurthy) 
+
+    MAPREDUCE-5297. Updated MR App since BuilderUtils is no longer public
+    after YARN-748. (Jian He via vinodkv)
+
+    MAPREDUCE-5301. Updated MR code to work with YARN-635 changes of renaming
+    YarnRemoteException to YarnException. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-5308. Shuffling to memory can get out-of-sync when fetching
+    multiple compressed map outputs (Nathan Roberts via jlowe)
+
+    MAPREDUCE-5315.  DistCp reports success even on failure. (mithun and jlowe
+    via daryn)
+
+    MAPREDUCE-5259. TestTaskLog fails on Windows because of path separators
+    missmatch. (Ivan Mitic via cnauroth)
+
+    MAPREDUCE-4019. -list-attempt-ids is not working (Ashwin Shankar,
+    Devaraj K, and B Anil Kumar via jlowe)
+
+    MAPREDUCE-5334. Fix failing unit tests - TestContainerLauncher,
+    TestContainerLauncherImpl. (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-5325. MR changes related to YARN-727. ClientRMProtocol.getAllApplications
+    should accept ApplicationType as a parameter. (Xuan Gong via hitesh)
+
+    MAPREDUCE-5291. Change MR App to use updated property names in
+    container-log4j.properties. (Zhijie Shen via sseth)
+
+    MAPREDUCE-5303. Changed MR app after moving ProtoBase to package impl.pb via
+    YARN-724. (Jian He via vinodkv)
+
+    MAPREDUCE-5312. TestRMNMInfo is failing. (sandyr via tucu)
+
+    MAPREDUCE-5304. mapreduce.Job killTask/failTask/getTaskCompletionEvents 
+    methods have incompatible signature changes. (kkambatl via tucu)
+
+    MAPREDUCE-5298. Moved MapReduce services to YARN-530 stricter lifecycle.
+    (Steve Loughran via vinodkv)
+
+    MAPREDUCE-5319. Set user.name in job.xml. (Xuan Gong via acmurthy)
+
+    MAPREDUCE-5310. MRAM should not normalize allocation request capabilities.
+    (tucu)
+
+    MAPREDUCE-5213. Re-assess TokenCache methods marked @Private. 
+    (kkambatl via tucu)
+
+    MAPREDUCE-5412. Update MR app to use multiple containers API of
+    ContainerManager after YARN-926. (Jian He via vinodkv)
+
+    MAPREDUCE-5421. Fixed TestNonExistentJob failure after YARN-873. (Junping Du
+    via vinodkv)
+
+    MAPREDUCE-5419. TestSlive is getting FileNotFound Exception (Robert Parker
+    via jlowe)
+
+    MAPREDUCE-5399. Unnecessary Configuration instantiation in IFileInputStream
+    slows down merge. (Stanislav Barton via Sandy Ryza)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
@@ -505,10 +716,28 @@ Release 2.1.0-beta - UNRELEASED
     MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
-    MAPREDUCE-5291. Change MR App to use updated property names in
-    container-log4j.properties. (Zhijie Shen via sseth)
+    MAPREDUCE-5355. MiniMRYarnCluster with localFs does not work on Windows.
+    (Chuan Liu via cnauroth)
 
-Release 2.0.5-alpha - UNRELEASED
+    MAPREDUCE-5359. JobHistory should not use File.separator to match timestamp
+    in path. (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5357. Job staging directory owner checking could fail on Windows.
+    (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5360. TestMRJobClient fails on Windows due to path format.
+    (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5366. TestMRAsyncDiskService fails on Windows. (Chuan Liu via
+    cnauroth)
+
+    MAPREDUCE-5187. Create mapreduce command scripts on Windows. (Chuan Liu via
+    cnauroth)
+
+    MAPREDUCE-4374. Fix child task environment variable config and add support
+    for Windows. (Chuan Liu via cnauroth)
+
+Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
 
@@ -1067,7 +1296,7 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
 
-Release 0.23.9 - UNRELEASED
+Release 0.23.10 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -1077,12 +1306,64 @@ Release 0.23.9 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
+    (Hairong Kuang and Jason Lowe via jlowe)
+
+  BUG FIXES
+
+    MAPREDUCE-3193. FileInputFormat doesn't read files recursively in the
+    input path dir (Devaraj K via jlowe)
+
+    MAPREDUCE-5380. Invalid mapred command should return non-zero exit code
+    (Stephen Chu via jlowe)
+
+    MAPREDUCE-5317. Stale files left behind for failed jobs (Ravi Prakash via
+    jlowe)
+
+    MAPREDUCE-5251. Reducer should not implicate map attempt if it has
+    insufficient space to fetch map output (Ashwin Shankar via jlowe)
+
+    MAPREDUCE-5419. TestSlive is getting FileNotFound Exception (Robert Parker
+    via jlowe)
+
+    MAPREDUCE-5440. TestCopyCommitter Fails on JDK7 (Robert Parker via jlowe)
+
+    MAPREDUCE-5001. LocalJobRunner has race condition resulting in job
+    failures (Sandy Ryza via jlowe)
+
+    MAPREDUCE-5475. MRClientService does not verify ACLs properly (jlowe)
+
+Release 0.23.9 - 2013-07-08
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-5084. fix coverage org.apache.hadoop.mapreduce.v2.app.webapp and
+    org.apache.hadoop.mapreduce.v2.hs.webapp (Aleksey Gorshkov via jeagles)
+
+  OPTIMIZATIONS
+
     MAPREDUCE-5268. Improve history server startup performance (Karthik
     Kambatla via jlowe)
 
   BUG FIXES
 
-Release 0.23.8 - UNRELEASED
+    MAPREDUCE-5308. Shuffling to memory can get out-of-sync when fetching
+    multiple compressed map outputs (Nathan Roberts via jlowe)
+
+    MAPREDUCE-5315.  DistCp reports success even on failure. (mithun and jlowe
+    via daryn)
+
+    MAPREDUCE-4019. -list-attempt-ids is not working (Ashwin Shankar,
+    Devaraj K, and B Anil Kumar via jlowe)
+
+    MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
+    task-state (Ashwin Shankar via jlowe)
+
+Release 0.23.8 - 2013-06-05
 
   INCOMPATIBLE CHANGES
 
@@ -1106,7 +1387,7 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-4927. Historyserver 500 error due to NPE when accessing specific
     counters page for failed job. (Ashwin Shankar via jlowe)
 
-Release 0.23.7 - UNRELEASED
+Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
 
@@ -1175,7 +1456,7 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
     (Thomas Graves via jlowe)
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 

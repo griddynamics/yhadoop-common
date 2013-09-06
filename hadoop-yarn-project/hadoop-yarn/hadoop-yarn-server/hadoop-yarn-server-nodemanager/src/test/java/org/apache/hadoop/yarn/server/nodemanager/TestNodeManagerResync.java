@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CyclicBarrier;
@@ -31,15 +33,16 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.NMNotYetReadyException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.NMNotYetReadyException;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.After;
@@ -82,7 +85,7 @@ public class TestNodeManagerResync {
   @SuppressWarnings("unchecked")
   @Test
   public void testKillContainersOnResync() throws IOException,
-      InterruptedException, YarnRemoteException {
+      InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager1();
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);
@@ -110,7 +113,7 @@ public class TestNodeManagerResync {
   @SuppressWarnings("unchecked")
   @Test
   public void testBlockNewContainerRequestsOnStartAndResync()
-      throws IOException, InterruptedException, YarnRemoteException {
+      throws IOException, InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager2();
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);
@@ -166,7 +169,7 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void registerWithRM() throws YarnRemoteException, IOException {
+      protected void registerWithRM() throws YarnException, IOException {
         super.registerWithRM();
         registrationCount++;
       }
@@ -184,6 +187,7 @@ public class TestNodeManagerResync {
         } catch (InterruptedException e) {
         } catch (BrokenBarrierException e) {
         } catch (AssertionError ae) {
+          ae.printStackTrace();
           assertionFailedInThread.set(true);
         }
       }
@@ -228,6 +232,7 @@ public class TestNodeManagerResync {
               .setStopThreadFlag(false);
               super.setBlockNewContainerRequests(blockNewContainerRequests);
             } catch (InterruptedException e) {
+              e.printStackTrace();
             }
           }
         }
@@ -258,6 +263,7 @@ public class TestNodeManagerResync {
         } catch (InterruptedException e) {
         } catch (BrokenBarrierException e) {
         } catch (AssertionError ae) {
+          ae.printStackTrace();
           assertionFailedInThread.set(true);
         }
       }
@@ -279,25 +285,27 @@ public class TestNodeManagerResync {
         try {
           while (!isStopped && numContainers < 10) {
             ContainerId cId = TestNodeManagerShutdown.createContainerId();
-            StartContainerRequest startRequest =
-                recordFactory.newRecordInstance(StartContainerRequest.class);
-            startRequest.setContainerLaunchContext(containerLaunchContext);
-            startRequest.setContainerToken(null);
+            StartContainerRequest scRequest =
+                StartContainerRequest.newInstance(containerLaunchContext,
+                  null);
+            List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+            list.add(scRequest);
+            StartContainersRequest allRequests =
+                StartContainersRequest.newInstance(list);
             System.out.println("no. of containers to be launched: "
                 + numContainers);
             numContainers++;
             try {
-              getContainerManager().startContainer(startRequest);
-            } catch (YarnRemoteException e) {
+              getContainerManager().startContainers(allRequests);
+            } catch (YarnException e) {
               numContainersRejected++;
               Assert.assertTrue(e.getMessage().contains(
                 "Rejecting new containers as NodeManager has not" +
                 " yet connected with ResourceManager"));
-              // TO DO: This should be replaced to explicitly check exception
-              // class name after YARN-142
-              Assert.assertTrue(e.getMessage().contains(
-                NMNotYetReadyException.class.getName()));
+              Assert.assertEquals(NMNotYetReadyException.class.getName(), e
+                .getClass().getName());
             } catch (IOException e) {
+              e.printStackTrace();
               assertionFailedInThread.set(true);
             }
           }

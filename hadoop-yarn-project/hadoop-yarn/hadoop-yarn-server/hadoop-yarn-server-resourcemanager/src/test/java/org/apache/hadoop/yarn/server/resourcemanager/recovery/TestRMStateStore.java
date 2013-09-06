@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -25,11 +26,11 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
+
+import javax.crypto.SecretKey;
 
 import junit.framework.Assert;
 
@@ -54,8 +55,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMSta
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
@@ -105,8 +105,6 @@ public class TestRMStateStore {
 
   interface RMStateStoreHelper {
     RMStateStore getRMStateStore() throws Exception;
-    void addOrphanAttemptIfNeeded(RMStateStore testStore,
-                                  TestDispatcher dispatcher) throws Exception;
     boolean isFinalStateValid() throws Exception;
   }
 
@@ -131,7 +129,10 @@ public class TestRMStateStore {
     class TestFileSystemRMStore extends FileSystemRMStateStore {
       TestFileSystemRMStore(Configuration conf) throws Exception {
         init(conf);
+        Assert.assertNull(fs);
         assertTrue(workingDirPathURI.equals(fsWorkingPath));
+        start();
+        Assert.assertNotNull(fs);
       }
     }
 
@@ -151,15 +152,6 @@ public class TestRMStateStore {
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI, workingDirPathURI.toString());
       this.store = new TestFileSystemRMStore(conf);
       return store;
-    }
-
-    @Override
-    public void addOrphanAttemptIfNeeded(RMStateStore testStore,
-                                 TestDispatcher dispatcher) throws Exception {
-      ApplicationAttemptId attemptId = ConverterUtils.toApplicationAttemptId(
-                                      "appattempt_1352994193343_0003_000001");
-      storeAttempt(testStore, attemptId,
-          "container_1352994193343_0003_01_000001", null, null, dispatcher);
     }
 
     @Override
@@ -205,8 +197,8 @@ public class TestRMStateStore {
   }
 
   ContainerId storeAttempt(RMStateStore store, ApplicationAttemptId attemptId,
-      String containerIdStr, Token<ApplicationTokenIdentifier> appToken,
-      Token<ClientTokenIdentifier> clientToken, TestDispatcher dispatcher)
+      String containerIdStr, Token<AMRMTokenIdentifier> appToken,
+      SecretKey clientTokenMasterKey, TestDispatcher dispatcher)
       throws Exception {
 
     Container container = new ContainerPBImpl();
@@ -214,8 +206,9 @@ public class TestRMStateStore {
     RMAppAttempt mockAttempt = mock(RMAppAttempt.class);
     when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
     when(mockAttempt.getMasterContainer()).thenReturn(container);
-    when(mockAttempt.getApplicationToken()).thenReturn(appToken);
-    when(mockAttempt.getClientToken()).thenReturn(clientToken);
+    when(mockAttempt.getAMRMToken()).thenReturn(appToken);
+    when(mockAttempt.getClientTokenMasterKey())
+        .thenReturn(clientTokenMasterKey);
     dispatcher.attemptId = attemptId;
     dispatcher.storedException = null;
     store.storeApplicationAttempt(mockAttempt);
@@ -223,17 +216,16 @@ public class TestRMStateStore {
     return container.getId();
   }
 
-  @SuppressWarnings("unchecked")
   void testRMAppStateStore(RMStateStoreHelper stateStoreHelper) throws Exception {
     long submitTime = System.currentTimeMillis();
     Configuration conf = new YarnConfiguration();
     RMStateStore store = stateStoreHelper.getRMStateStore();
     TestDispatcher dispatcher = new TestDispatcher();
-    store.setDispatcher(dispatcher);
+    store.setRMDispatcher(dispatcher);
 
-    ApplicationTokenSecretManager appTokenMgr =
-        new ApplicationTokenSecretManager(conf);
-    ClientToAMTokenSecretManagerInRM clientTokenMgr =
+    AMRMTokenSecretManager appTokenMgr =
+        new AMRMTokenSecretManager(conf);
+    ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
         new ClientToAMTokenSecretManagerInRM();
 
     ApplicationAttemptId attemptId1 = ConverterUtils
@@ -241,33 +233,33 @@ public class TestRMStateStore {
     ApplicationId appId1 = attemptId1.getApplicationId();
     storeApp(store, appId1, submitTime);
 
-    // create application token1 for attempt1
-    List<Token<?>> appAttemptToken1 =
-        generateTokens(attemptId1, appTokenMgr, clientTokenMgr, conf);
+    // create application token and client token key for attempt1
+    Token<AMRMTokenIdentifier> appAttemptToken1 =
+        generateAMRMToken(attemptId1, appTokenMgr);
     HashSet<Token<?>> attemptTokenSet1 = new HashSet<Token<?>>();
-    attemptTokenSet1.addAll(appAttemptToken1);
+    attemptTokenSet1.add(appAttemptToken1);
+    SecretKey clientTokenKey1 =
+        clientToAMTokenMgr.registerApplication(attemptId1);
 
     ContainerId containerId1 = storeAttempt(store, attemptId1,
           "container_1352994193343_0001_01_000001",
-          (Token<ApplicationTokenIdentifier>) (appAttemptToken1.get(0)),
-          (Token<ClientTokenIdentifier>)(appAttemptToken1.get(1)),
-          dispatcher);
+          appAttemptToken1, clientTokenKey1, dispatcher);
 
     String appAttemptIdStr2 = "appattempt_1352994193343_0001_000002";
     ApplicationAttemptId attemptId2 =
         ConverterUtils.toApplicationAttemptId(appAttemptIdStr2);
 
-    // create application token2 for attempt2
-    List<Token<?>> appAttemptToken2 =
-        generateTokens(attemptId2, appTokenMgr, clientTokenMgr, conf);
+    // create application token and client token key for attempt2
+    Token<AMRMTokenIdentifier> appAttemptToken2 =
+        generateAMRMToken(attemptId2, appTokenMgr);
     HashSet<Token<?>> attemptTokenSet2 = new HashSet<Token<?>>();
-    attemptTokenSet2.addAll(appAttemptToken2);
+    attemptTokenSet2.add(appAttemptToken2);
+    SecretKey clientTokenKey2 =
+        clientToAMTokenMgr.registerApplication(attemptId2);
 
     ContainerId containerId2 = storeAttempt(store, attemptId2,
           "container_1352994193343_0001_02_000001",
-          (Token<ApplicationTokenIdentifier>) (appAttemptToken2.get(0)),
-          (Token<ClientTokenIdentifier>)(appAttemptToken2.get(1)),
-          dispatcher);
+          appAttemptToken2, clientTokenKey2, dispatcher);
 
     ApplicationAttemptId attemptIdRemoved = ConverterUtils
         .toApplicationAttemptId("appattempt_1352994193343_0002_000001");
@@ -289,9 +281,6 @@ public class TestRMStateStore {
     attempts.put(attemptIdRemoved, mockRemovedAttempt);
     store.removeApplication(mockRemovedApp);
 
-    // add orphan attempt file to simulate incomplete removal of app state
-    stateStoreHelper.addOrphanAttemptIfNeeded(store, dispatcher);
-
     // let things settle down
     Thread.sleep(1000);
     store.close();
@@ -300,9 +289,6 @@ public class TestRMStateStore {
     store = stateStoreHelper.getRMStateStore();
     RMState state = store.loadState();
     Map<ApplicationId, ApplicationState> rmAppState = state.getApplicationState();
-
-    // removed app or orphan attempt is not loaded
-    assertEquals(1, rmAppState.size());
 
     ApplicationState appState = rmAppState.get(appId1);
     // app is loaded
@@ -320,8 +306,12 @@ public class TestRMStateStore {
     assertEquals(containerId1, attemptState.getMasterContainer().getId());
     // attempt1 applicationToken is loaded correctly
     HashSet<Token<?>> savedTokens = new HashSet<Token<?>>();
-    savedTokens.addAll(attemptState.getAppAttemptTokens().getAllTokens());
+    savedTokens.addAll(attemptState.getAppAttemptCredentials().getAllTokens());
     assertEquals(attemptTokenSet1, savedTokens);
+    // attempt1 client token master key is loaded correctly
+    assertArrayEquals(clientTokenKey1.getEncoded(),
+        attemptState.getAppAttemptCredentials()
+        .getSecretKey(RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME));
 
     attemptState = appState.getAttempt(attemptId2);
     // attempt2 is loaded correctly
@@ -331,8 +321,12 @@ public class TestRMStateStore {
     assertEquals(containerId2, attemptState.getMasterContainer().getId());
     // attempt2 applicationToken is loaded correctly
     savedTokens.clear();
-    savedTokens.addAll(attemptState.getAppAttemptTokens().getAllTokens());
+    savedTokens.addAll(attemptState.getAppAttemptCredentials().getAllTokens());
     assertEquals(attemptTokenSet2, savedTokens);
+    // attempt2 client token master key is loaded correctly
+    assertArrayEquals(clientTokenKey2.getEncoded(),
+        attemptState.getAppAttemptCredentials()
+        .getSecretKey(RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME));
 
     // assert store is in expected state after everything is cleaned
     assertTrue(stateStoreHelper.isFinalStateValid());
@@ -344,7 +338,7 @@ public class TestRMStateStore {
       RMStateStoreHelper stateStoreHelper) throws Exception {
     RMStateStore store = stateStoreHelper.getRMStateStore();
     TestDispatcher dispatcher = new TestDispatcher();
-    store.setDispatcher(dispatcher);
+    store.setRMDispatcher(dispatcher);
 
     // store RM delegation token;
     RMDelegationTokenIdentifier dtId1 =
@@ -371,23 +365,14 @@ public class TestRMStateStore {
     Assert.assertEquals(sequenceNumber, secretManagerState.getDTSequenceNumber());
   }
 
-  private List<Token<?>> generateTokens(ApplicationAttemptId attemptId,
-      ApplicationTokenSecretManager appTokenMgr,
-      ClientToAMTokenSecretManagerInRM clientTokenMgr, Configuration conf) {
-    ApplicationTokenIdentifier appTokenId =
-        new ApplicationTokenIdentifier(attemptId);
-    Token<ApplicationTokenIdentifier> appToken =
-        new Token<ApplicationTokenIdentifier>(appTokenId, appTokenMgr);
+  private Token<AMRMTokenIdentifier> generateAMRMToken(
+      ApplicationAttemptId attemptId,
+      AMRMTokenSecretManager appTokenMgr) {
+    AMRMTokenIdentifier appTokenId =
+        new AMRMTokenIdentifier(attemptId);
+    Token<AMRMTokenIdentifier> appToken =
+        new Token<AMRMTokenIdentifier>(appTokenId, appTokenMgr);
     appToken.setService(new Text("appToken service"));
-
-    ClientTokenIdentifier clientTokenId = new ClientTokenIdentifier(attemptId);
-    clientTokenMgr.registerApplication(attemptId);
-    Token<ClientTokenIdentifier> clientToken =
-        new Token<ClientTokenIdentifier>(clientTokenId, clientTokenMgr);
-    clientToken.setService(new Text("clientToken service"));
-    List<Token<?>> tokenPair = new ArrayList<Token<?>>();
-    tokenPair.add(0, appToken);
-    tokenPair.add(1, clientToken);
-    return tokenPair;
+    return appToken;
   }
 }

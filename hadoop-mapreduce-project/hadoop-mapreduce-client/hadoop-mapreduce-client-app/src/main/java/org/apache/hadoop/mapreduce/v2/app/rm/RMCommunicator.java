@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,25 +36,26 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
@@ -64,15 +65,13 @@ public abstract class RMCommunicator extends AbstractService
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
-  protected ApplicationAttemptId applicationAttemptId;
   private final AtomicBoolean stopped;
   protected Thread allocatorThread;
   @SuppressWarnings("rawtypes")
   protected EventHandler eventHandler;
-  protected AMRMProtocol scheduler;
+  protected ApplicationMasterProtocol scheduler;
   private final ClientService clientService;
   protected int lastResponseID;
-  private Resource minContainerCapability;
   private Resource maxContainerCapability;
   protected Map<ApplicationAccessType, String> applicationACLs;
   private volatile long lastHeartbeatTime;
@@ -93,28 +92,27 @@ public abstract class RMCommunicator extends AbstractService
     this.context = context;
     this.eventHandler = context.getEventHandler();
     this.applicationId = context.getApplicationID();
-    this.applicationAttemptId = context.getApplicationAttemptId();
     this.stopped = new AtomicBoolean(false);
     this.heartbeatCallbacks = new ConcurrentLinkedQueue<Runnable>();
   }
 
   @Override
-  public void init(Configuration conf) {
-    super.init(conf);
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
     rmPollInterval =
         conf.getInt(MRJobConfig.MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS,
             MRJobConfig.DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS);
   }
 
   @Override
-  public void start() {
+  protected void serviceStart() throws Exception {
     scheduler= createSchedulerProxy();
     register();
     startAllocatorThread();
     JobID id = TypeConverter.fromYarn(this.applicationId);
     JobId jobId = TypeConverter.toYarn(id);
     job = context.getJob(jobId);
-    super.start();
+    super.serviceStart();
   }
 
   protected AppContext getContext() {
@@ -144,7 +142,6 @@ public abstract class RMCommunicator extends AbstractService
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
-      request.setApplicationAttemptId(applicationAttemptId);
       if (serviceAddr != null) {
         request.setHost(serviceAddr.getHostName());
         request.setRpcPort(serviceAddr.getPort());
@@ -152,19 +149,23 @@ public abstract class RMCommunicator extends AbstractService
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
-      minContainerCapability = response.getMinimumResourceCapability();
       maxContainerCapability = response.getMaximumResourceCapability();
-      this.context.getClusterInfo().setMinContainerCapability(
-          minContainerCapability);
       this.context.getClusterInfo().setMaxContainerCapability(
           maxContainerCapability);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        setClientToAMToken(response.getClientToAMTokenMasterKey());        
+      }
       this.applicationACLs = response.getApplicationACLs();
-      LOG.info("minContainerCapability: " + minContainerCapability.getMemory());
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
-      throw new YarnException(are);
+      throw new YarnRuntimeException(are);
     }
+  }
+
+  private void setClientToAMToken(ByteBuffer clientToAMTokenMasterKey) {
+    byte[] key = clientToAMTokenMasterKey.array();
+    context.getClientToAMTokenSecretManager().setMasterKey(key);
   }
 
   protected void unregister() {
@@ -191,19 +192,12 @@ public abstract class RMCommunicator extends AbstractService
       LOG.info("History url is " + historyUrl);
 
       FinishApplicationMasterRequest request =
-          recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
-      request.setAppAttemptId(this.applicationAttemptId);
-      request.setFinishApplicationStatus(finishState);
-      request.setDiagnostics(sb.toString());
-      request.setTrackingUrl(historyUrl);
+          FinishApplicationMasterRequest.newInstance(finishState,
+            sb.toString(), historyUrl);
       scheduler.finishApplicationMaster(request);
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);
     }
-  }
-
-  protected Resource getMinContainerCapability() {
-    return minContainerCapability;
   }
 
   protected Resource getMaxContainerCapability() {
@@ -211,25 +205,28 @@ public abstract class RMCommunicator extends AbstractService
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (stopped.getAndSet(true)) {
       // return if already stopped
       return;
     }
-    allocatorThread.interrupt();
-    try {
-      allocatorThread.join();
-    } catch (InterruptedException ie) {
-      LOG.warn("InterruptedException while stopping", ie);
+    if (allocatorThread != null) {
+      allocatorThread.interrupt();
+      try {
+        allocatorThread.join();
+      } catch (InterruptedException ie) {
+        LOG.warn("InterruptedException while stopping", ie);
+      }
     }
     if(shouldUnregister) {
       unregister();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   protected void startAllocatorThread() {
     allocatorThread = new Thread(new Runnable() {
+      @SuppressWarnings("unchecked")
       @Override
       public void run() {
         while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
@@ -237,8 +234,17 @@ public abstract class RMCommunicator extends AbstractService
             Thread.sleep(rmPollInterval);
             try {
               heartbeat();
-            } catch (YarnException e) {
+            } catch (YarnRuntimeException e) {
               LOG.error("Error communicating with RM: " + e.getMessage() , e);
+              return;
+            } catch (InvalidToken e) {
+              // This can happen if the RM has been restarted, since currently
+              // when RM restarts AMRMToken is not populated back to
+              // AMRMTokenSecretManager yet. Once this is fixed, no need
+              // to send JOB_AM_REBOOT event in this method any more.
+              eventHandler.handle(new JobEvent(job.getID(),
+                JobEventType.JOB_AM_REBOOT));
+              LOG.error("Error in authencating with RM: " ,e);
               return;
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);
@@ -261,29 +267,14 @@ public abstract class RMCommunicator extends AbstractService
     allocatorThread.start();
   }
 
-  protected AMRMProtocol createSchedulerProxy() {
+  protected ApplicationMasterProtocol createSchedulerProxy() {
     final Configuration conf = getConfig();
-    final YarnRPC rpc = YarnRPC.create(conf);
-    final InetSocketAddress serviceAddr = conf.getSocketAddr(
-        YarnConfiguration.RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
-    UserGroupInformation currentUser;
     try {
-      currentUser = UserGroupInformation.getCurrentUser();
+      return ClientRMProxy.createRMProxy(conf, ApplicationMasterProtocol.class);
     } catch (IOException e) {
-      throw new YarnException(e);
+      throw new YarnRuntimeException(e);
     }
-
-    // CurrentUser should already have AMToken loaded.
-    return currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
-      @Override
-      public AMRMProtocol run() {
-        return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
-            serviceAddr, conf);
-      }
-    });
   }
 
   protected abstract void heartbeat() throws Exception;

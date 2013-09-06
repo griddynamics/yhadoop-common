@@ -141,6 +141,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
@@ -426,7 +427,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       boolean result = 
           server.complete(req.getSrc(), req.getClientName(),
-          req.hasLast() ? PBHelper.convert(req.getLast()) : null);
+          req.hasLast() ? PBHelper.convert(req.getLast()) : null,
+          req.hasFileId() ? req.getFileId() : INodeId.GRANDFATHER_INODE_ID);
       return CompleteResponseProto.newBuilder().setResult(result).build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -705,11 +707,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       HdfsFileStatus result = server.getFileLinkInfo(req.getSrc());
       if (result != null) {
-        System.out.println("got non null result for getFileLinkInfo for " + req.getSrc());
         return GetFileLinkInfoResponseProto.newBuilder().setFs(
             PBHelper.convert(result)).build();
       } else {
-        System.out.println("got  null result for getFileLinkInfo for " + req.getSrc());
         return VOID_GETFILELINKINFO_RESPONSE;      
       }
 

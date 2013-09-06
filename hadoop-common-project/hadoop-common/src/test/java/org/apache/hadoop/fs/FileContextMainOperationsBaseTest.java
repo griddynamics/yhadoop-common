@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -65,7 +66,13 @@ public abstract class FileContextMainOperationsBaseTest  {
 
   public Path localFsRootPath;
 
-  protected final FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
+  protected final FileContextTestHelper fileContextTestHelper =
+    createFileContextHelper();
+
+  protected FileContextTestHelper createFileContextHelper() {
+    return new FileContextTestHelper();
+  }
+
   protected static FileContext fc;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
@@ -75,7 +82,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     }
   };
 
-  //A test filter with returns any path containing a "b" 
+  //A test filter with returns any path containing an "x" or "X" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path file) {
@@ -626,6 +633,20 @@ public abstract class FileContextMainOperationsBaseTest  {
         filteredPaths));
   }
   
+  protected Path getHiddenPathForTest() {
+    return null;
+  }
+  
+  @Test
+  public void testGlobStatusFilterWithHiddenPathTrivialFilter()
+      throws Exception {
+    Path hidden = getHiddenPathForTest();
+    Assume.assumeNotNull(hidden);
+    FileStatus[] filteredPaths = fc.util().globStatus(hidden, DEFAULT_FILTER);
+    Assert.assertNotNull(filteredPaths);
+    Assert.assertEquals(1, filteredPaths.length);
+  }
+
   @Test
   public void testWriteReadAndDeleteEmptyFile() throws Exception {
     writeReadAndDelete(0);

@@ -62,8 +62,9 @@ public class TaskCompletionEvent
     super(eventId, taskId, idWithinJob, isMap, org.apache.hadoop.mapreduce.
           TaskCompletionEvent.Status.valueOf(status.name()), taskTrackerHttp);
   }
-  
-  static TaskCompletionEvent downgrade(
+
+  @Private
+  public static TaskCompletionEvent downgrade(
     org.apache.hadoop.mapreduce.TaskCompletionEvent event) {
     return new TaskCompletionEvent(event.getEventId(),
       TaskAttemptID.downgrade(event.getTaskAttemptId()),event.idWithinJob(),
@@ -105,7 +106,17 @@ public class TaskCompletionEvent
   public void setTaskId(String taskId) {
     this.setTaskAttemptId(TaskAttemptID.forName(taskId));
   }
-  
+
+  /**
+   * Sets task id.
+   * @param taskId
+   * @deprecated use {@link #setTaskAttemptId(TaskAttemptID)} instead.
+   */
+  @Deprecated
+  public void setTaskID(TaskAttemptID taskId) {
+    this.setTaskAttemptId(taskId);
+  }
+
   /**
    * Sets task id. 
    * @param taskId

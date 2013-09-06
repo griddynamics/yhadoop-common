@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -45,13 +44,13 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -62,8 +61,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -77,12 +76,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemoved
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.utils.Lock;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @LimitedPrivate("yarn")
 @Evolving
 @SuppressWarnings("unchecked")
-public class CapacityScheduler 
-implements ResourceScheduler, CapacitySchedulerContext, Configurable {
+public class CapacityScheduler
+  implements PreemptableResourceScheduler, CapacitySchedulerContext,
+             Configurable {
 
   private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
 
@@ -116,6 +119,44 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   public void setConf(Configuration conf) {
       yarnConf = conf;
   }
+  
+  private void validateConf(Configuration conf) {
+    // validate scheduler memory allocation setting
+    int minMem = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+    int maxMem = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+
+    if (minMem <= 0 || minMem > maxMem) {
+      throw new YarnRuntimeException("Invalid resource scheduler memory"
+        + " allocation configuration"
+        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
+        + "=" + minMem
+        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
+        + "=" + maxMem + ", min and max should be greater than 0"
+        + ", max should be no smaller than min.");
+    }
+
+    // validate scheduler vcores allocation setting
+    int minVcores = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+    int maxVcores = conf.getInt(
+      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+
+    if (minVcores <= 0 || minVcores > maxVcores) {
+      throw new YarnRuntimeException("Invalid resource scheduler vcores"
+        + " allocation configuration"
+        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
+        + "=" + minVcores
+        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
+        + "=" + maxVcores + ", min and max should be greater than 0"
+        + ", max should be no smaller than min.");
+    }
+  }
 
   @Override
   public Configuration getConf() {
@@ -144,7 +185,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   private boolean initialized = false;
 
   private ResourceCalculator calculator;
-  
+  private boolean usePortForNodeName;
+
   public CapacityScheduler() {}
 
   @Override
@@ -211,10 +253,11 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
       reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     if (!initialized) {
       this.conf = new CapacitySchedulerConfiguration(conf);
-      
+      validateConf(this.conf);
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
       this.calculator = this.conf.getResourceCalculator();
+      this.usePortForNodeName = this.conf.getUsePortForNodeName();
 
       this.rmContext = rmContext;
       
@@ -229,6 +272,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
       CapacitySchedulerConfiguration oldConf = this.conf; 
       this.conf = new CapacitySchedulerConfiguration(conf);
+      validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");
         reinitializeQueues(this.conf);
@@ -472,7 +516,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   @Override
   @Lock(Lock.NoLock.class)
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
-      List<ResourceRequest> ask, List<ContainerId> release) {
+      List<ResourceRequest> ask, List<ContainerId> release, 
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
 
     FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
@@ -483,8 +528,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     
     // Sanity check
     SchedulerUtils.normalizeRequests(
-        ask, calculator, getClusterResources(), minimumAllocation,
-        maximumAllocation);
+        ask, getResourceCalculator(), getClusterResources(),
+        getMinimumResourceCapability(), maximumAllocation);
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
@@ -523,7 +568,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
         application.showRequests();
   
         // Update application requests
-        application.updateResourceRequests(ask);
+        application.updateResourceRequests(ask, 
+            blacklistAdditions, blacklistRemovals);
   
         LOG.debug("allocate: post-update");
         application.showRequests();
@@ -535,9 +581,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
           " #ask=" + ask.size());
       }
 
-      return new Allocation(
-          application.pullNewlyAllocatedContainers(), 
-          application.getHeadroom());
+      return application.getAllocation(getResourceCalculator(),
+                   clusterResource, getMinimumResourceCapability());
     }
   }
 
@@ -630,7 +675,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
           SchedulerUtils.createAbnormalContainerStatus(
               container.getId(), 
               SchedulerUtils.UNRESERVED_CONTAINER), 
-          RMContainerEventType.RELEASED);
+          RMContainerEventType.RELEASED, null);
       }
 
     }
@@ -716,7 +761,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
 
   private synchronized void addNode(RMNode nodeManager) {
-    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager));
+    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager,
+        usePortForNodeName));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
     root.updateClusterResource(clusterResource);
     ++numNodeManagers;
@@ -769,7 +815,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     Container container = rmContainer.getContainer();
     
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
+    ApplicationAttemptId applicationAttemptId =
+      container.getId().getApplicationAttemptId();
     FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Container " + container + " of" +
@@ -784,7 +831,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     // Inform the queue
     LeafQueue queue = (LeafQueue)application.getQueue();
     queue.completedContainer(clusterResource, application, node, 
-        rmContainer, containerStatus, event);
+        rmContainer, containerStatus, event, null);
 
     LOG.info("Application " + applicationAttemptId + 
         " released container " + container.getId() +
@@ -826,5 +873,41 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     FiCaSchedulerNode node = getNode(nodeId);
     return node == null ? null : new SchedulerNodeReport(node);
   }
-  
+
+  @Override
+  public void dropContainerReservation(RMContainer container) {
+    if(LOG.isDebugEnabled()){
+      LOG.debug("DROP_RESERVATION:" + container.toString());
+    }
+    completedContainer(container,
+        SchedulerUtils.createAbnormalContainerStatus(
+            container.getContainerId(),
+            SchedulerUtils.UNRESERVED_CONTAINER),
+        RMContainerEventType.KILL);
+  }
+
+  @Override
+  public void preemptContainer(ApplicationAttemptId aid, RMContainer cont) {
+    if(LOG.isDebugEnabled()){
+      LOG.debug("PREEMPT_CONTAINER: application:" + aid.toString() +
+          " container: " + cont.toString());
+    }
+    FiCaSchedulerApp app = applications.get(aid);
+    if (app != null) {
+      app.addPreemptContainer(cont.getContainerId());
+    }
+  }
+
+  @Override
+  public void killContainer(RMContainer cont) {
+    if(LOG.isDebugEnabled()){
+      LOG.debug("KILL_CONTAINER: container" + cont.toString());
+    }
+    completedContainer(cont,
+        SchedulerUtils.createAbnormalContainerStatus(
+            cont.getContainerId(),"Container being forcibly preempted:"
+        + cont.getContainerId()),
+        RMContainerEventType.KILL);
+  }
+
 }

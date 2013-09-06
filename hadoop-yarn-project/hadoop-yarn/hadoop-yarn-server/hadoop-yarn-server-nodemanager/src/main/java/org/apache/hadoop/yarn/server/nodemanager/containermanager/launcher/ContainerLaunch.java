@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -48,19 +49,22 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
@@ -68,6 +72,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
+import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerLaunch implements Callable<Integer> {
@@ -86,6 +91,7 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Container container;
   private final Configuration conf;
   private final Context context;
+  private final ContainerManagerImpl containerManager;
   
   private volatile AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
   private volatile AtomicBoolean completed = new AtomicBoolean(false);
@@ -99,7 +105,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
   public ContainerLaunch(Context context, Configuration configuration,
       Dispatcher dispatcher, ContainerExecutor exec, Application app,
-      Container container, LocalDirsHandlerService dirsHandler) {
+      Container container, LocalDirsHandlerService dirsHandler,
+      ContainerManagerImpl containerManager) {
     this.context = context;
     this.conf = configuration;
     this.app = app;
@@ -107,6 +114,7 @@ public class ContainerLaunch implements Callable<Integer> {
     this.container = container;
     this.dispatcher = dispatcher;
     this.dirsHandler = dirsHandler;
+    this.containerManager = containerManager;
     this.sleepDelayBeforeSigKill =
         conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
             YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS);
@@ -119,22 +127,29 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked") // dispatcher not typed
   public Integer call() {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
-    final Map<Path,List<String>> localResources =
-        container.getLocalizedResources();
+    Map<Path,List<String>> localResources = null;
     ContainerId containerID = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerID);
     final List<String> command = launchContext.getCommands();
     int ret = -1;
 
     try {
+      localResources = container.getLocalizedResources();
+      if (localResources == null) {
+        RPCUtil.getRemoteException(
+            "Unable to get local resources when Container " + containerID +
+            " is at " + container.getContainerState());
+      }
+
       final String user = container.getUser();
       // /////////////////////////// Variable expansion
       // Before the container script gets written out.
       List<String> newCmds = new ArrayList<String>(command.size());
       String appIdStr = app.getAppId().toString();
+      String relativeContainerLogDir = ContainerLaunch
+          .getRelativeContainerLogDir(appIdStr, containerIdStr);
       Path containerLogDir =
-          dirsHandler.getLogPathForWrite(ContainerLaunch
-              .getRelativeContainerLogDir(appIdStr, containerIdStr), false);
+          dirsHandler.getLogPathForWrite(relativeContainerLogDir, false);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
@@ -189,6 +204,11 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> localDirs = dirsHandler.getLocalDirs();
       List<String> logDirs = dirsHandler.getLogDirs();
 
+      List<String> containerLogDirs = new ArrayList<String>();
+      for( String logDir : logDirs) {
+        containerLogDirs.add(logDir + Path.SEPARATOR + relativeContainerLogDir);
+      }
+
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
         throw new IOException("Most of the disks failed. "
@@ -213,9 +233,9 @@ public class ContainerLaunch implements Callable<Integer> {
             ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME, 
             new Path(containerWorkDir, 
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
-
         // Sanitize the container's environment
-        sanitizeEnv(environment, containerWorkDir, appDirs, localResources);
+        sanitizeEnv(environment, containerWorkDir, appDirs, containerLogDirs,
+          localResources);
         
         // Write out the environment
         writeLaunchEnv(containerScriptOutStream, environment, localResources,
@@ -301,6 +321,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * the process id is available.
    * @throws IOException
    */
+  @SuppressWarnings("unchecked") // dispatcher not typed
   public void cleanupContainer() throws IOException {
     ContainerId containerId = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerId);
@@ -348,13 +369,17 @@ public class ContainerLaunch implements Callable<Integer> {
               + " as user " + user
               + " for container " + containerIdStr
               + ", result=" + (result? "success" : "failed"));
-          new DelayedProcessKiller(user,
+          new DelayedProcessKiller(container, user,
               processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
         }
       }
     } catch (Exception e) {
-      LOG.warn("Got error when trying to cleanup container " + containerIdStr
-          + ", error=" + e.getMessage());
+      String message =
+          "Exception when trying to cleanup container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.warn(message);
+      dispatcher.getEventHandler().handle(
+        new ContainerDiagnosticsUpdateEvent(containerId, message));
     } finally {
       // cleanup pid file if present
       if (pidFilePath != null) {
@@ -505,7 +530,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
     @Override
     public void env(String key, String value) {
-      line("@set ", key, "=", value);
+      line("@set ", key, "=", value,
+          "\nif %errorlevel% neq 0 exit /b %errorlevel%");
     }
 
     @Override
@@ -543,9 +569,9 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
   
-  public void sanitizeEnv(Map<String, String> environment, 
-      Path pwd, List<Path> appDirs, Map<Path, List<String>> resources)
-      throws IOException {
+  public void sanitizeEnv(Map<String, String> environment, Path pwd,
+      List<Path> appDirs, List<String> containerLogDirs,
+      Map<Path, List<String>> resources) throws IOException {
     /**
      * Non-modifiable environment variables
      */
@@ -565,20 +591,21 @@ public class ContainerLaunch implements Callable<Integer> {
     environment.put(Environment.LOCAL_DIRS.name(),
         StringUtils.join(",", appDirs));
 
-    putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
+    environment.put(Environment.LOG_DIRS.name(),
+      StringUtils.join(",", containerLogDirs));
+
+    environment.put(Environment.USER.name(), container.getUser());
     
-    putEnvIfNotNull(environment, 
-        Environment.LOGNAME.name(),container.getUser());
-    
-    putEnvIfNotNull(environment, 
-        Environment.HOME.name(),
+    environment.put(Environment.LOGNAME.name(), container.getUser());
+
+    environment.put(Environment.HOME.name(),
         conf.get(
             YarnConfiguration.NM_USER_HOME_DIR, 
             YarnConfiguration.DEFAULT_NM_USER_HOME_DIR
             )
         );
     
-    putEnvIfNotNull(environment, Environment.PWD.name(), pwd.toString());
+    environment.put(Environment.PWD.name(), pwd.toString());
     
     putEnvIfNotNull(environment, 
         Environment.HADOOP_CONF_DIR.name(), 
@@ -657,6 +684,12 @@ public class ContainerLaunch implements Callable<Integer> {
           newClassPath.toString(), pwd, mergedEnv);
         environment.put(Environment.CLASSPATH.name(), classPathJar);
       }
+    }
+    // put AuxiliaryService data to environment
+    for (Map.Entry<String, ByteBuffer> meta : containerManager
+        .getAuxServiceMetaData().entrySet()) {
+      AuxiliaryServiceHelper.setServiceDataIntoEnv(
+          meta.getKey(), meta.getValue(), environment);
     }
   }
     

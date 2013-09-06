@@ -209,6 +209,7 @@ public class TestHDFSServerPorts {
   /**
    * Check whether the secondary name-node can be started.
    */
+  @SuppressWarnings("deprecation")
   private boolean canStartSecondaryNode(Configuration conf) throws IOException {
     // Using full name allows us not to have to add deprecation tag to
     // entire source file.

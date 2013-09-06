@@ -33,14 +33,14 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 @Unstable
@@ -109,7 +109,12 @@ public class AppSchedulable extends Schedulable {
 
   @Override
   public Resource getMinShare() {
-    return Resources.createResource(0);
+    return Resources.none();
+  }
+  
+  @Override
+  public Resource getMaxShare() {
+    return Resources.unbounded();
   }
 
   /**
@@ -180,7 +185,7 @@ public class AppSchedulable extends Schedulable {
    */
   private void reserve(Priority priority, FSSchedulerNode node,
       Container container, boolean alreadyReserved) {
-    LOG.info("Making reservation: node=" + node.getHostName() +
+    LOG.info("Making reservation: node=" + node.getNodeName() +
                                  " app_id=" + app.getApplicationId());
     if (!alreadyReserved) {
       getMetrics().reserveResource(app.getUser(), container.getResource());
@@ -249,13 +254,6 @@ public class AppSchedulable extends Schedulable {
         }
         return Resources.none();
       }
-      else {
-        // TODO this should subtract resource just assigned
-        // TEMPROARY
-        getMetrics().setAvailableResourcesToQueue(
-            scheduler.getClusterCapacity());
-      }
-
 
       // If we had previously made a reservation, delete it
       if (reserved) {
@@ -311,7 +309,7 @@ public class AppSchedulable extends Schedulable {
         ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
             node.getRackName());
         ResourceRequest localRequest = app.getResourceRequest(priority,
-            node.getHostName());
+            node.getNodeName());
         
         if (localRequest != null && !localRequest.getRelaxLocality()) {
           LOG.warn("Relax locality off is not supported on local request: "
@@ -371,7 +369,7 @@ public class AppSchedulable extends Schedulable {
   public boolean hasContainerForNode(Priority prio, FSSchedulerNode node) {
     ResourceRequest anyRequest = app.getResourceRequest(prio, ResourceRequest.ANY);
     ResourceRequest rackRequest = app.getResourceRequest(prio, node.getRackName());
-    ResourceRequest nodeRequest = app.getResourceRequest(prio, node.getHostName());
+    ResourceRequest nodeRequest = app.getResourceRequest(prio, node.getNodeName());
 
     return
         // There must be outstanding requests at the given priority:

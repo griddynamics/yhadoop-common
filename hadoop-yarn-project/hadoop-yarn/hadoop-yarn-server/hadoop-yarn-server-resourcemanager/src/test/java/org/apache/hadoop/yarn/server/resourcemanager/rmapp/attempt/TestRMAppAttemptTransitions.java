@@ -28,6 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +36,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -75,10 +77,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -101,6 +104,11 @@ public class TestRMAppAttemptTransitions {
   
   private RMApp application;
   private RMAppAttempt applicationAttempt;
+
+  private Configuration conf = new Configuration();
+  private AMRMTokenSecretManager amRMTokenManager = spy(new AMRMTokenSecretManager(conf));
+  private ClientToAMTokenSecretManagerInRM clientToAMTokenManager =
+      spy(new ClientToAMTokenSecretManagerInRM());
   
   private final class TestApplicationAttemptEventDispatcher implements
       EventHandler<RMAppAttemptEvent> {
@@ -162,13 +170,13 @@ public class TestRMAppAttemptTransitions {
         mock(ContainerAllocationExpirer.class);
     amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     amFinishingMonitor = mock(AMLivelinessMonitor.class);
-    Configuration conf = new Configuration();
     rmContext =
         new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-          null, new ApplicationTokenSecretManager(conf),
+          null, amRMTokenManager,
           new RMContainerTokenSecretManager(conf),
-          new ClientToAMTokenSecretManagerInRM());
+          new NMTokenSecretManagerInRM(conf),
+          clientToAMTokenManager);
     
     RMStateStore store = mock(RMStateStore.class);
     ((RMContextImpl) rmContext).setStateStore(store);
@@ -259,7 +267,11 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
-    
+    if (UserGroupInformation.isSecurityEnabled()) {
+      verify(clientToAMTokenManager).registerApplication(
+          applicationAttempt.getAppAttemptId());
+    }
+    assertNotNull(applicationAttempt.getAMRMToken());
     // Check events
     verify(masterService).
         registerAppAttempt(applicationAttempt.getAppAttemptId());
@@ -286,6 +298,7 @@ public class TestRMAppAttemptTransitions {
     // this works for unmanaged and managed AM's because this is actually doing
     // verify(application).handle(anyObject());
     verify(application).handle(any(RMAppRejectedEvent.class));
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   }
 
   /**
@@ -301,6 +314,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   }
   
   /**
@@ -330,7 +344,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
     verify(scheduler, times(expectedAllocateCount)).
     allocate(any(ApplicationAttemptId.class), 
-        any(List.class), any(List.class));
+        any(List.class), any(List.class), any(List.class), any(List.class));
 
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertNull(applicationAttempt.getMasterContainer());
@@ -345,6 +359,7 @@ public class TestRMAppAttemptTransitions {
   /**
    * {@link RMAppAttemptState#ALLOCATED}
    */
+  @SuppressWarnings("unchecked")
   private void testAppAttemptAllocatedState(Container amContainer) {
     assertEquals(RMAppAttemptState.ALLOCATED, 
         applicationAttempt.getAppAttemptState());
@@ -354,7 +369,9 @@ public class TestRMAppAttemptTransitions {
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).
         allocate(
-            any(ApplicationAttemptId.class), any(List.class), any(List.class));
+            any(
+                ApplicationAttemptId.class), any(List.class), any(List.class), 
+                any(List.class), any(List.class));
   }
   
   /**
@@ -372,6 +389,8 @@ public class TestRMAppAttemptTransitions {
     
     // Check events
     verify(application, times(2)).handle(any(RMAppFailedAttemptEvent.class));
+
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   }
 
   /**
@@ -417,6 +436,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getTrackingUrl());
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 0);
   }
 
   /**
@@ -437,6 +457,7 @@ public class TestRMAppAttemptTransitions {
         .getJustFinishedContainers().size());
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   }
   
   
@@ -465,6 +486,7 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptScheduledState();
   }
 
+  @SuppressWarnings("unchecked")
   private Container allocateApplicationAttempt() {
     scheduleApplicationAttempt();
     
@@ -480,6 +502,8 @@ public class TestRMAppAttemptTransitions {
     when(
         scheduler.allocate(
             any(ApplicationAttemptId.class), 
+            any(List.class), 
+            any(List.class), 
             any(List.class), 
             any(List.class))).
     thenReturn(allocation);
@@ -584,6 +608,7 @@ public class TestRMAppAttemptTransitions {
             applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.KILL));
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   } 
   
   @Test
@@ -647,6 +672,21 @@ public class TestRMAppAttemptTransitions {
   }
   
   @Test
+  public void testAMCrashAtAllocated() {
+    Container amContainer = allocateApplicationAttempt();
+    String containerDiagMsg = "some error";
+    int exitCode = 123;
+    ContainerStatus cs =
+        BuilderUtils.newContainerStatus(amContainer.getId(),
+          ContainerState.COMPLETE, containerDiagMsg, exitCode);
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      applicationAttempt.getAppAttemptId(), cs));
+    assertEquals(RMAppAttemptState.FAILED,
+      applicationAttempt.getAppAttemptState());
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+  }
+  
+  @Test
   public void testRunningToFailed() {
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
@@ -669,6 +709,27 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
   }
 
+  @Test
+  public void testRunningToKilled() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl");
+    applicationAttempt.handle(
+        new RMAppAttemptEvent(
+            applicationAttempt.getAppAttemptId(),
+            RMAppAttemptEventType.KILL));
+    assertEquals(RMAppAttemptState.KILLED,
+        applicationAttempt.getAppAttemptState());
+    assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
+    assertEquals(amContainer, applicationAttempt.getMasterContainer());
+    assertEquals(0, applicationAttempt.getRanNodes().size());
+    String rmAppPageUrl = pjoin(RM_WEBAPP_ADDR, "cluster", "app",
+        applicationAttempt.getAppAttemptId().getApplicationId());
+    assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
+    assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+  }
+
   @Test(timeout=10000)
   public void testLaunchedExpire() {
     Container amContainer = allocateApplicationAttempt();
@@ -683,6 +744,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   }
 
   @Test(timeout=20000)
@@ -700,6 +762,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
+    verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   }
 
   @Test 
@@ -806,4 +869,10 @@ public class TestRMAppAttemptTransitions {
         diagnostics, 0);
   }
   
+  private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {
+    verify(amRMTokenManager, times(count)).applicationMasterFinished(appAttemptId);
+    if (UserGroupInformation.isSecurityEnabled()) {
+      verify(clientToAMTokenManager, times(count)).unRegisterApplication(appAttemptId);
+    }
+  }
 }

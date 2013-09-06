@@ -42,8 +42,8 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -389,6 +389,13 @@ public class QueueManager {
           queueMaxApps, userMaxApps, queueWeights, userMaxAppsDefault,
           queueMaxAppsDefault, defaultSchedPolicy, minSharePreemptionTimeouts,
           queueAcls, fairSharePreemptionTimeout, defaultMinSharePreemptionTimeout);
+      
+      // Update metrics
+      for (FSQueue queue : queues.values()) {
+        FSQueueMetrics queueMetrics = queue.getMetrics();
+        queueMetrics.setMinShare(queue.getMinShare());
+        queueMetrics.setMaxShare(queue.getMaxShare());
+      }
       
       // Root queue should have empty ACLs.  As a queue's ACL is the union of
       // its ACL and all its parents' ACLs, setting the roots' to empty will

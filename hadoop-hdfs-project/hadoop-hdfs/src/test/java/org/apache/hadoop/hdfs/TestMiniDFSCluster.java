@@ -25,8 +25,8 @@ import static org.junit.Assume.assumeTrue;
 import java.io.File;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.junit.After;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,14 +43,10 @@ public class TestMiniDFSCluster {
   private static final String CLUSTER_3 = "cluster3";
   private static final String CLUSTER_4 = "cluster4";
   private static final String CLUSTER_5 = "cluster5";
-  protected String testDataPath;
+  protected File testDataPath;
   @Before
   public void setUp() {
-    testDataPath = MiniDFSCluster.newDfsBaseDir();
-  }
-  @After
-  public void tearDown() {
-    System.setProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA, testDataPath);
+    testDataPath = new File(PathUtils.getTestDir(getClass()), "miniclusters");
   }
 
   /**
@@ -114,7 +110,7 @@ public class TestMiniDFSCluster {
     MiniDFSCluster cluster4 = new MiniDFSCluster.Builder(conf).build();
     try {
       DistributedFileSystem dfs = (DistributedFileSystem) cluster4.getFileSystem();
-      dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
       cluster4.shutdown();
     } finally {
       while(cluster4.isClusterUp()){

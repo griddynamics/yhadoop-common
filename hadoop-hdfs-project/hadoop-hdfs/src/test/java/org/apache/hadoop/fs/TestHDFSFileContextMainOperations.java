@@ -41,11 +41,15 @@ import org.junit.Test;
 
 public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
-  private static FileContextTestHelper fileContextTestHelper = new FileContextTestHelper();
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static HdfsConfiguration CONF = new HdfsConfiguration();
   
+  @Override
+  protected FileContextTestHelper createFileContextHelper() {
+    return new FileContextTestHelper("/tmp/TestHDFSFileContextMainOperations");
+  }
+
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
@@ -55,23 +59,26 @@ public class TestHDFSFileContextMainOperations extends
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
+    // Make defaultWorkingDirectory snapshottable to enable 
+    // testGlobStatusFilterWithHiddenPathTrivialFilter
+    cluster.getFileSystem().allowSnapshot(defaultWorkingDirectory);
   }
 
   private static void restartCluster() throws IOException, LoginException {
-    String dfsBaseDir = null;
     if (cluster != null) {
-      dfsBaseDir = cluster.getDfsBaseDir();
       cluster.shutdown();
       cluster = null;
     }
-    cluster = new MiniDFSCluster.Builder(CONF).dfsBaseDir(dfsBaseDir)
-                                              .numDataNodes(1)
+    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(1)
                                               .format(false).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
+    // Make defaultWorkingDirectory snapshottable to enable 
+    // testGlobStatusFilterWithHiddenPathTrivialFilter
+    cluster.getFileSystem().allowSnapshot(defaultWorkingDirectory);
   }
       
   @AfterClass
@@ -91,6 +98,11 @@ public class TestHDFSFileContextMainOperations extends
     super.tearDown();
   }
 
+  @Override
+  protected Path getHiddenPathForTest() {
+    return new Path(defaultWorkingDirectory, ".snapshot");
+  }
+  
   @Override
   protected Path getDefaultWorkingDirectory() {
     return defaultWorkingDirectory;

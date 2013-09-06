@@ -23,6 +23,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Test;
 
 public class TestYarnUncaughtExceptionHandler {
@@ -30,7 +31,7 @@ public class TestYarnUncaughtExceptionHandler {
   private static final YarnUncaughtExceptionHandler exHandler =
         new YarnUncaughtExceptionHandler();
   /**
-   * Throw {@code YarnException} inside thread and
+   * Throw {@code YarnRuntimeException} inside thread and
    * check {@code YarnUncaughtExceptionHandler} instance
    *
    * @throws InterruptedException
@@ -39,7 +40,7 @@ public class TestYarnUncaughtExceptionHandler {
   public void testUncaughtExceptionHandlerWithRuntimeException()
       throws InterruptedException {
     final YarnUncaughtExceptionHandler spyYarnHandler = spy(exHandler);
-    final YarnException yarnException = new YarnException(
+    final YarnRuntimeException yarnException = new YarnRuntimeException(
         "test-yarn-runtime-exception");
     final Thread yarnThread = new Thread(new Runnable() {
       @Override

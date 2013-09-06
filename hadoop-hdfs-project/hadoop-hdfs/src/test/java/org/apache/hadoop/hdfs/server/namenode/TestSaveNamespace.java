@@ -80,7 +80,6 @@ public class TestSaveNamespace {
   }
   
   private static final Log LOG = LogFactory.getLog(TestSaveNamespace.class);
-  private static final String BASE_DIR = MiniDFSCluster.newDfsBaseDir();
 
   private static class FaultySaveImage implements Answer<Void> {
     int count = 0;
@@ -514,7 +513,7 @@ public class TestSaveNamespace {
     FSNamesystem spyFsn = spy(fsn);
     final FSNamesystem finalFsn = spyFsn;
     DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
-    doAnswer(delayer).when(spyFsn).getGenerationStamp();
+    doAnswer(delayer).when(spyFsn).getGenerationStampV2();
     
     ExecutorService pool = Executors.newFixedThreadPool(2);
     
@@ -584,7 +583,7 @@ public class TestSaveNamespace {
   @Test (timeout=30000)
   public void testSaveNamespaceWithRenamedLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
-        .dfsBaseDir(BASE_DIR).numDataNodes(1).build();
+        .numDataNodes(1).build();
     cluster.waitActive();
     DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
     OutputStream out = null;
@@ -607,7 +606,7 @@ public class TestSaveNamespace {
   @Test (timeout=30000)
   public void testSaveNamespaceWithDanglingLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
-        .dfsBaseDir(BASE_DIR).numDataNodes(1).build();
+        .numDataNodes(1).build();
     cluster.waitActive();
     DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
     try {
@@ -637,8 +636,9 @@ public class TestSaveNamespace {
   }
 
   private Configuration getConf() throws IOException {
-    String nameDirs = fileAsURI(new File(BASE_DIR, "name1")) + "," + 
-                      fileAsURI(new File(BASE_DIR, "name2"));
+    String baseDir = MiniDFSCluster.getBaseDirectory();
+    String nameDirs = fileAsURI(new File(baseDir, "name1")) + "," + 
+                      fileAsURI(new File(baseDir, "name2"));
 
     Configuration conf = new HdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");

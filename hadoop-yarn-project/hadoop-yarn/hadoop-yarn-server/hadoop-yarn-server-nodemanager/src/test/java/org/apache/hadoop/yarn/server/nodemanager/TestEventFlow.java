@@ -20,31 +20,33 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 
@@ -60,10 +62,10 @@ public class TestEventFlow {
   private static File remoteLogDir = new File("target",
       TestEventFlow.class.getName() + "-remoteLogDir").getAbsoluteFile();
   private static final long SIMULATED_RM_IDENTIFIER = 1234;
-
+  
   @Test
   public void testSuccessfulContainerLaunch() throws InterruptedException,
-      IOException, YarnRemoteException {
+      IOException, YarnException {
 
     FileContext localFS = FileContext.getLocalFSFileContext();
 
@@ -76,7 +78,8 @@ public class TestEventFlow {
 
     YarnConfiguration conf = new YarnConfiguration();
     
-    Context context = new NMContext(new NMContainerTokenSecretManager(conf)) {
+    Context context = new NMContext(new NMContainerTokenSecretManager(conf),
+        new NMTokenSecretManagerInNM(), null, null) {
       @Override
       public int getHttpPort() {
         return 1234;
@@ -103,6 +106,11 @@ public class TestEventFlow {
       protected ResourceTracker getRMClient() {
         return new LocalRMInterface();
       };
+
+          @Override
+          protected void stopRMProxy() {
+            return;
+          }
 
       @Override
       protected void startStatusUpdater() {
@@ -131,27 +139,26 @@ public class TestEventFlow {
         ApplicationAttemptId.newInstance(applicationId, 0);
     ContainerId cID = ContainerId.newInstance(applicationAttemptId, 0);
 
-    Resource r = BuilderUtils.newResource(1024, 1);
     String user = "testing";
-    String host = "127.0.0.1";
-    int port = 1234;
-    Token containerToken =
-        BuilderUtils.newContainerToken(cID, host, port, user, r,
-          System.currentTimeMillis() + 10000L, 123, "password".getBytes(),
-          SIMULATED_RM_IDENTIFIER);
-    StartContainerRequest request = 
-        recordFactory.newRecordInstance(StartContainerRequest.class);
-    request.setContainerLaunchContext(launchContext);
-    request.setContainerToken(containerToken);
-    containerManager.startContainer(request);
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(launchContext,
+          TestContainerManager.createContainerToken(cID,
+            SIMULATED_RM_IDENTIFIER, context.getNodeId(), user,
+            context.getContainerTokenSecretManager()));
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,
         ContainerState.RUNNING);
 
-    StopContainerRequest stopRequest = 
-        recordFactory.newRecordInstance(StopContainerRequest.class);
-    stopRequest.setContainerId(cID);
-    containerManager.stopContainer(stopRequest);
+    List<ContainerId> containerIds = new ArrayList<ContainerId>();
+    containerIds.add(cID);
+    StopContainersRequest stopRequest =
+        StopContainersRequest.newInstance(containerIds);
+    containerManager.stopContainers(stopRequest);
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,
         ContainerState.COMPLETE);
 

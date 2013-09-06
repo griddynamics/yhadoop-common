@@ -51,9 +51,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -144,8 +145,9 @@ public class TestRMAppTransitions {
     this.rmContext =
         new RMContextImpl(rmDispatcher, store,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-          null, new ApplicationTokenSecretManager(conf),
+          null, new AMRMTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
+          new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
 
     rmDispatcher.register(RMAppAttemptEventType.class,
@@ -724,7 +726,9 @@ public class TestRMAppTransitions {
   public void testGetAppReport() {
     RMApp app = createNewTestApp(null);
     assertAppState(RMAppState.NEW, app);
-    ApplicationReport report = app.createAndGetApplicationReport(true);
+    ApplicationReport report = app.createAndGetApplicationReport(null, true);
+    Assert.assertNotNull(report.getApplicationResourceUsageReport());
+    report = app.createAndGetApplicationReport("clientuser", true);
     Assert.assertNotNull(report.getApplicationResourceUsageReport());
   }
 }

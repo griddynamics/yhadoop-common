@@ -87,18 +87,18 @@ public class TestDFSStartupVersions {
    *    {currentNamespaceId,incorrectNamespaceId} X
    *      {pastFsscTime,currentFsscTime,futureFsscTime}
    */
-  private StorageData[] initializeVersions(UpgradeUtilities util) throws Exception {
+  private StorageData[] initializeVersions() throws Exception {
     int layoutVersionOld = Storage.LAST_UPGRADABLE_LAYOUT_VERSION;
     int layoutVersionCur = UpgradeUtilities.getCurrentLayoutVersion();
     int layoutVersionNew = Integer.MIN_VALUE;
-    int namespaceIdCur = util.getCurrentNamespaceID(null);
+    int namespaceIdCur = UpgradeUtilities.getCurrentNamespaceID(null);
     int namespaceIdOld = Integer.MIN_VALUE;
     long fsscTimeOld = Long.MIN_VALUE;
-    long fsscTimeCur = util.getCurrentFsscTime(null);
+    long fsscTimeCur = UpgradeUtilities.getCurrentFsscTime(null);
     long fsscTimeNew = Long.MAX_VALUE;
     String clusterID = "testClusterID";
     String invalidClusterID = "testClusterID";
-    String bpid = util.getCurrentBlockPoolID(null);
+    String bpid = UpgradeUtilities.getCurrentBlockPoolID(null);
     String invalidBpid = "invalidBpid";
     
     return new StorageData[] {
@@ -239,15 +239,13 @@ public class TestDFSStartupVersions {
    */
   @Test
   public void testVersions() throws Exception {
-    String dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
-    UpgradeUtilities util = new UpgradeUtilities(dfsBaseDir);
-    Configuration conf = util.initializeStorageStateConf(1, 
+    UpgradeUtilities.initialize();
+    Configuration conf = UpgradeUtilities.initializeStorageStateConf(1, 
                                                       new HdfsConfiguration());
-    StorageData[] versions = initializeVersions(util);
-    util.createNameNodeStorageDirs(
+    StorageData[] versions = initializeVersions();
+    UpgradeUtilities.createNameNodeStorageDirs(
         conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY), "current");
-    cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir)
-                                              .numDataNodes(0)
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
                                               .format(false)
                                               .manageDataDfsDirs(false)
                                               .manageNameDfsDirs(false)
@@ -255,15 +253,15 @@ public class TestDFSStartupVersions {
                                               .build();
     StorageData nameNodeVersion = new StorageData(
         UpgradeUtilities.getCurrentLayoutVersion(),
-        util.getCurrentNamespaceID(cluster),
-        util.getCurrentClusterID(cluster),
-        util.getCurrentFsscTime(cluster),
-        util.getCurrentBlockPoolID(cluster));
+        UpgradeUtilities.getCurrentNamespaceID(cluster),
+        UpgradeUtilities.getCurrentClusterID(cluster),
+        UpgradeUtilities.getCurrentFsscTime(cluster),
+        UpgradeUtilities.getCurrentBlockPoolID(cluster));
     
     log("NameNode version info", NAME_NODE, null, nameNodeVersion);
-    String bpid = util.getCurrentBlockPoolID(cluster);
+    String bpid = UpgradeUtilities.getCurrentBlockPoolID(cluster);
     for (int i = 0; i < versions.length; i++) {
-      File[] storage = util.createDataNodeStorageDirs(
+      File[] storage = UpgradeUtilities.createDataNodeStorageDirs(
           conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY), "current");
       log("DataNode version info", DATA_NODE, i, versions[i]);
       UpgradeUtilities.createDataNodeVersionFile(storage,

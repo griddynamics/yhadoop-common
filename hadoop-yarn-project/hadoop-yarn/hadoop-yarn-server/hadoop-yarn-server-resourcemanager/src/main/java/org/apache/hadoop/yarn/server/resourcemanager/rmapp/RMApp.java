@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 /**
- * The read interface to an Application in the ResourceManager. Take a
+ * The interface to an Application in the ResourceManager. Take a
  * look at {@link RMAppImpl} for its implementation. This interface
  * exposes methods to access various updates in application status/report.
  */
@@ -85,6 +85,13 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the queue to which the application was submitted to.
    */
   String getQueue();
+  
+  /**
+   * Reflects a change in the application's queue from the one specified in the
+   * {@link ApplicationSubmissionContext}.
+   * @param name the new queue name
+   */
+  void setQueue(String name);
 
   /**
    * The name of the application as set in {@link
@@ -121,10 +128,12 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    *   <li>resource usage report - all values are -1</li>
    * </ul>
    *
+   * @param clientUserName the user name of the client requesting the report
    * @param allowAccess whether to allow full access to the report
    * @return the {@link ApplicationReport} detailing the status of the application.
    */
-  ApplicationReport createAndGetApplicationReport(boolean allowAccess);
+  ApplicationReport createAndGetApplicationReport(String clientUserName,
+      boolean allowAccess);
   
   /**
    * To receive the collection of all {@link RMNode}s whose updates have been
@@ -168,9 +177,9 @@ public interface RMApp extends EventHandler<RMAppEvent> {
 
   /**
    * The final finish state of the AM when unregistering as in
-   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
+   * {@link FinishApplicationMasterRequest#setFinalApplicationStatus(FinalApplicationStatus)}.
    * @return the final finish state of the AM as set in
-   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
+   * {@link FinishApplicationMasterRequest#setFinalApplicationStatus(FinalApplicationStatus)}.
    */
   FinalApplicationStatus getFinalApplicationStatus();
 

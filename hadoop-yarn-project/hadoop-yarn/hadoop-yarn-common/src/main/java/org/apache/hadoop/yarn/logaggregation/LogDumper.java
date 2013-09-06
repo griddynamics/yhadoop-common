@@ -31,6 +31,9 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileContext;
@@ -47,6 +50,10 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
+@Public
+@Evolving
 public class LogDumper extends Configured implements Tool {
 
   private static final String CONTAINER_ID_OPTION = "containerId";
@@ -65,10 +72,18 @@ public class LogDumper extends Configured implements Tool {
       + "nodename:port (must be specified if container id is specified)");
     opts.addOption(APP_OWNER_OPTION, true,
       "AppOwner (assumed to be current user if not specified)");
+    opts.getOption(APPLICATION_ID_OPTION).setArgName("Application ID");
+    opts.getOption(CONTAINER_ID_OPTION).setArgName("Container ID");
+    opts.getOption(NODE_ADDRESS_OPTION).setArgName("Node Address");
+    opts.getOption(APP_OWNER_OPTION).setArgName("Application Owner");
+
+    Options printOpts = new Options();
+    printOpts.addOption(opts.getOption(CONTAINER_ID_OPTION));
+    printOpts.addOption(opts.getOption(NODE_ADDRESS_OPTION));
+    printOpts.addOption(opts.getOption(APP_OWNER_OPTION));
 
     if (args.length < 1) {
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("general options are: ", opts);
+      printHelpMessage(printOpts);
       return -1;
     }
 
@@ -85,16 +100,13 @@ public class LogDumper extends Configured implements Tool {
       appOwner = commandLine.getOptionValue(APP_OWNER_OPTION);
     } catch (ParseException e) {
       System.out.println("options parsing failed: " + e.getMessage());
-
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("general options are: ", opts);
+      printHelpMessage(printOpts);
       return -1;
     }
 
     if (appIdStr == null) {
       System.out.println("ApplicationId cannot be null!");
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("general options are: ", opts);
+      printHelpMessage(printOpts);
       return -1;
     }
 
@@ -112,8 +124,7 @@ public class LogDumper extends Configured implements Tool {
     } else if ((containerIdStr == null && nodeAddress != null)
         || (containerIdStr != null && nodeAddress == null)) {
       System.out.println("ContainerId or NodeAddress cannot be null!");
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("general options are: ", opts);
+      printHelpMessage(printOpts);
       resultCode = -1;
     } else {
       Path remoteRootLogDir =
@@ -133,6 +144,8 @@ public class LogDumper extends Configured implements Tool {
     return resultCode;
   }
 
+  @Private
+  @VisibleForTesting
   public int dumpAContainersLogs(String appId, String containerId,
       String nodeId, String jobOwner) throws IOException {
     Path remoteRootLogDir =
@@ -245,5 +258,13 @@ public class LogDumper extends Configured implements Tool {
     logDumper.setConf(conf);
     int exitCode = logDumper.run(args);
     System.exit(exitCode);
+  }
+
+  private void printHelpMessage(Options options) {
+    System.out.println("Retrieve logs for completed YARN applications.");
+    HelpFormatter formatter = new HelpFormatter();
+    formatter.printHelp("yarn logs -applicationId <application ID> [OPTIONS]", new Options());
+    formatter.setSyntaxPrefix("");
+    formatter.printHelp("general options are:", options);
   }
 }

@@ -33,12 +33,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.TestGenericJournalConf.DummyJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -53,18 +55,23 @@ public class TestAllowFormat {
   public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
     LogFactory.getLog(TestAllowFormat.class.getName());
-  private static final String DFS_BASE_DIR = MiniDFSCluster.newDfsBaseDir();
+  private static final File DFS_BASE_DIR = new File(PathUtils.getTestDir(TestAllowFormat.class), "dfs");
   private static Configuration config;
   private static MiniDFSCluster cluster = null;
 
   @BeforeClass
   public static void setUp() throws Exception {
     config = new Configuration();
+    if ( DFS_BASE_DIR.exists() && !FileUtil.fullyDelete(DFS_BASE_DIR) ) {
+      throw new IOException("Could not delete hdfs directory '" + DFS_BASE_DIR +
+                            "'");
+    }
     
     // Test has multiple name directories.
     // Format should not really prompt us if one of the directories exist,
     // but is empty. So in case the test hangs on an input, it means something
     // could be wrong in the format prompting code. (HDFS-1636)
+    LOG.info("hdfsdir is " + DFS_BASE_DIR.getAbsolutePath());
     File nameDir1 = new File(DFS_BASE_DIR, "name1");
     File nameDir2 = new File(DFS_BASE_DIR, "name2");
 
@@ -89,6 +96,11 @@ public class TestAllowFormat {
       cluster.shutdown();
       LOG.info("Stopping mini cluster");
     }
+    
+    if ( DFS_BASE_DIR.exists() && !FileUtil.fullyDelete(DFS_BASE_DIR) ) {
+      throw new IOException("Could not delete hdfs directory in tearDown '"
+                            + DFS_BASE_DIR + "'");
+    }	
   }
 
    /**
@@ -104,8 +116,7 @@ public class TestAllowFormat {
     NameNode nn;
     // 1. Create a new cluster and format DFS
     config.setBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, true);
-    cluster = new MiniDFSCluster.Builder(config).dfsBaseDir(DFS_BASE_DIR)
-                                                .manageDataDfsDirs(false)
+    cluster = new MiniDFSCluster.Builder(config).manageDataDfsDirs(false)
                                                 .manageNameDfsDirs(false)
                                                 .build();
     cluster.waitActive();

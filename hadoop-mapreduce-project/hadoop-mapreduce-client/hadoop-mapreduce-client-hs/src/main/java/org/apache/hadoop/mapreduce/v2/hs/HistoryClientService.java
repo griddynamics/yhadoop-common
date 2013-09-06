@@ -79,11 +79,11 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -112,7 +112,7 @@ public class HistoryClientService extends AbstractService {
     this.jhsDTSecretManager = jhsDTSecretManager;
   }
 
-  public void start() {
+  protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     initializeWebApp(conf);
@@ -139,7 +139,7 @@ public class HistoryClientService extends AbstractService {
                                               server.getListenerAddress());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
 
-    super.start();
+    super.serviceStart();
   }
 
   private void initializeWebApp(Configuration conf) {
@@ -149,21 +149,27 @@ public class HistoryClientService extends AbstractService {
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);
     // NOTE: there should be a .at(InetSocketAddress)
-    WebApps.$for("jobhistory", HistoryClientService.class, this, "ws")
-        .with(conf).at(NetUtils.getHostPortString(bindAddress)).start(webApp);
+    WebApps
+        .$for("jobhistory", HistoryClientService.class, this, "ws")
+        .with(conf)
+        .withHttpSpnegoKeytabKey(
+            JHAdminConfig.MR_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+        .withHttpSpnegoPrincipalKey(
+            JHAdminConfig.MR_WEBAPP_SPNEGO_USER_NAME_KEY)
+        .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
     conf.updateConnectAddr(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
                            webApp.getListenerAddress());
   }
 
   @Override
-  public void stop() {
+  protected void serviceStop() throws Exception {
     if (server != null) {
       server.stop();
     }
     if (webApp != null) {
       webApp.stop();
     }
-    super.stop();
+    super.serviceStop();
   }
 
   @Private
@@ -343,9 +349,10 @@ public class HistoryClientService extends AbstractService {
       Token<MRDelegationTokenIdentifier> realJHSToken =
           new Token<MRDelegationTokenIdentifier>(tokenIdentifier,
               jhsDTSecretManager);
-      org.apache.hadoop.yarn.api.records.Token mrDToken = BuilderUtils.newDelegationToken(
-        realJHSToken.getIdentifier(), realJHSToken.getKind().toString(),
-        realJHSToken.getPassword(), realJHSToken.getService().toString());
+      org.apache.hadoop.yarn.api.records.Token mrDToken =
+          org.apache.hadoop.yarn.api.records.Token.newInstance(
+            realJHSToken.getIdentifier(), realJHSToken.getKind().toString(),
+            realJHSToken.getPassword(), realJHSToken.getService().toString());
       response.setDelegationToken(mrDToken);
       return response;
     }

@@ -46,6 +46,7 @@ import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Test;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -178,12 +179,12 @@ public class TestNetworkedJob {
       
       try {
         client.getSetupTaskReports(jobId);
-      } catch (YarnException e) {
+      } catch (YarnRuntimeException e) {
         assertEquals(e.getMessage(), "Unrecognized task type: JOB_SETUP");
       }
       try {
         client.getCleanupTaskReports(jobId);
-      } catch (YarnException e) {
+      } catch (YarnRuntimeException e) {
         assertEquals(e.getMessage(), "Unrecognized task type: JOB_CLEANUP");
       }
       assertEquals(client.getReduceTaskReports(jobId).length, 0);

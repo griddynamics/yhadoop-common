@@ -32,6 +32,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -43,7 +44,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Test;
@@ -59,7 +60,7 @@ public class TestResourceTrackerService {
    * Test RM read NM next heartBeat Interval correctly from Configuration file,
    * and NM get next heartBeat Interval from RM correctly
    */
-  @Test (timeout = 5000)
+  @Test (timeout = 50000)
   public void testGetNextHeartBeatInterval() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, "4000");
@@ -391,15 +392,15 @@ public class TestResourceTrackerService {
       int count) throws Exception {
     
     int waitCount = 0;
-    while(rm.getRMContext().getRMNodes().get(nm1.getNodeId())
-        .getNodeHealthStatus().getIsNodeHealthy() == health
+    while((rm.getRMContext().getRMNodes().get(nm1.getNodeId())
+        .getState() != NodeState.UNHEALTHY) == health
         && waitCount++ < 20) {
       synchronized (this) {
         wait(100);
       }
     }
-    Assert.assertFalse(rm.getRMContext().getRMNodes().get(nm1.getNodeId())
-        .getNodeHealthStatus().getIsNodeHealthy() == health);
+    Assert.assertFalse((rm.getRMContext().getRMNodes().get(nm1.getNodeId())
+        .getState() != NodeState.UNHEALTHY) == health);
     Assert.assertEquals("Unhealthy metrics not incremented", count,
         ClusterMetrics.getMetrics().getUnhealthyNMs());
   }

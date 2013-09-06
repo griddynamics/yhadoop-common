@@ -65,7 +65,7 @@ public class TestDFSFinalize {
    * because its removal is asynchronous therefore we have no reliable
    * way to know when it will happen.  
    */
-  static void checkResult(String[] nameNodeDirs, String[] dataNodeDirs, UpgradeUtilities util) throws Exception {
+  static void checkResult(String[] nameNodeDirs, String[] dataNodeDirs) throws Exception {
     List<File> dirs = Lists.newArrayList();
     for (int i = 0; i < nameNodeDirs.length; i++) {
       File curDir = new File(nameNodeDirs[i], "current");
@@ -80,7 +80,7 @@ public class TestDFSFinalize {
       assertEquals(
                    UpgradeUtilities.checksumContents(
                                                      DATA_NODE, new File(dataNodeDirs[i],"current")),
-                   util.checksumMasterDataNodeContents());
+                   UpgradeUtilities.checksumMasterDataNodeContents());
     }
     for (int i = 0; i < nameNodeDirs.length; i++) {
       assertFalse(new File(nameNodeDirs[i],"previous").isDirectory());
@@ -92,8 +92,7 @@ public class TestDFSFinalize {
    */
   @Test
   public void testFinalize() throws Exception {
-    String dfsBaseDir = MiniDFSCluster.newDfsBaseDir();
-    UpgradeUtilities util = new UpgradeUtilities(dfsBaseDir);
+    UpgradeUtilities.initialize();
     
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       /* This test requires that "current" directory not change after
@@ -103,27 +102,27 @@ public class TestDFSFinalize {
        */
       conf = new HdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
-      conf = util.initializeStorageStateConf(numDirs, conf);
+      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
       
       log("Finalize with existing previous dir", numDirs);
-      util.createNameNodeStorageDirs(nameNodeDirs, "current");
-      util.createNameNodeStorageDirs(nameNodeDirs, "previous");
-      util.createDataNodeStorageDirs(dataNodeDirs, "current");
-      util.createDataNodeStorageDirs(dataNodeDirs, "previous");
-      cluster = new MiniDFSCluster.Builder(conf).dfsBaseDir(dfsBaseDir)
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "previous");
+      cluster = new MiniDFSCluster.Builder(conf)
                                   .format(false)
                                   .manageDataDfsDirs(false)
                                   .manageNameDfsDirs(false)
                                   .startupOption(StartupOption.REGULAR)
                                   .build();
       cluster.finalizeCluster(conf);
-      checkResult(nameNodeDirs, dataNodeDirs, util);
+      checkResult(nameNodeDirs, dataNodeDirs);
 
       log("Finalize without existing previous dir", numDirs);
       cluster.finalizeCluster(conf);
-      checkResult(nameNodeDirs, dataNodeDirs, util);
+      checkResult(nameNodeDirs, dataNodeDirs);
 
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);

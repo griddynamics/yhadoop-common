@@ -26,6 +26,7 @@ import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.*;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -279,6 +280,21 @@ public class TestLocalFileSystem {
         stats[0].getPath().toUri().getPath());
   }
   
+  @Test
+  public void testListStatusReturnConsistentPathOnWindows() throws IOException {
+    assumeTrue(Shell.WINDOWS);
+    String dirNoDriveSpec = TEST_ROOT_DIR;
+    if (dirNoDriveSpec.charAt(1) == ':')
+    	dirNoDriveSpec = dirNoDriveSpec.substring(2);
+    
+    File file = new File(dirNoDriveSpec, "foo");
+    file.mkdirs();
+    FileStatus[] stats = fileSys.listStatus(new Path(dirNoDriveSpec));
+    assertEquals("Unexpected number of stats", 1, stats.length);
+    assertEquals("Bad path from stat", new Path(file.getPath()).toUri().getPath(),
+        stats[0].getPath().toUri().getPath());
+  }
+  
   @Test(timeout = 10000)
   public void testReportChecksumFailure() throws IOException {
     base.mkdirs();
@@ -363,12 +379,12 @@ public class TestLocalFileSystem {
 
     FileStatus status = fileSys.getFileStatus(path);
     assertTrue("check we're actually changing something", newModTime != status.getModificationTime());
-    assertEquals(0, status.getAccessTime());
+    long accessTime = status.getAccessTime();
 
     fileSys.setTimes(path, newModTime, -1);
     status = fileSys.getFileStatus(path);
     assertEquals(newModTime, status.getModificationTime());
-    assertEquals(0, status.getAccessTime());
+    assertEquals(accessTime, status.getAccessTime());
   }
 
   /**
@@ -422,6 +438,88 @@ public class TestLocalFileSystem {
       stm.close();
     }
   }
+
+  /**
+   * Tests a simple rename of a directory.
+   */
+  @Test
+  public void testRenameDirectory() throws IOException {
+    Path src = new Path(TEST_ROOT_DIR, "dir1");
+    Path dst = new Path(TEST_ROOT_DIR, "dir2");
+    fileSys.delete(src, true);
+    fileSys.delete(dst, true);
+    assertTrue(fileSys.mkdirs(src));
+    assertTrue(fileSys.rename(src, dst));
+    assertTrue(fileSys.exists(dst));
+    assertFalse(fileSys.exists(src));
+  }
+
+  /**
+   * Tests that renaming a directory replaces the destination if the destination
+   * is an existing empty directory.
+   * 
+   * Before:
+   *   /dir1
+   *     /file1
+   *     /file2
+   *   /dir2
+   * 
+   * After rename("/dir1", "/dir2"):
+   *   /dir2
+   *     /file1
+   *     /file2
+   */
+  @Test
+  public void testRenameReplaceExistingEmptyDirectory() throws IOException {
+    Path src = new Path(TEST_ROOT_DIR, "dir1");
+    Path dst = new Path(TEST_ROOT_DIR, "dir2");
+    fileSys.delete(src, true);
+    fileSys.delete(dst, true);
+    assertTrue(fileSys.mkdirs(src));
+    writeFile(fileSys, new Path(src, "file1"), 1);
+    writeFile(fileSys, new Path(src, "file2"), 1);
+    assertTrue(fileSys.mkdirs(dst));
+    assertTrue(fileSys.rename(src, dst));
+    assertTrue(fileSys.exists(dst));
+    assertTrue(fileSys.exists(new Path(dst, "file1")));
+    assertTrue(fileSys.exists(new Path(dst, "file2")));
+    assertFalse(fileSys.exists(src));
+  }
+
+  /**
+   * Tests that renaming a directory to an existing directory that is not empty
+   * results in a full copy of source to destination.
+   * 
+   * Before:
+   *   /dir1
+   *     /dir2
+   *       /dir3
+   *         /file1
+   *         /file2
+   * 
+   * After rename("/dir1/dir2/dir3", "/dir1"):
+   *   /dir1
+   *     /dir3
+   *       /file1
+   *       /file2
+   */
+  @Test
+  public void testRenameMoveToExistingNonEmptyDirectory() throws IOException {
+    Path src = new Path(TEST_ROOT_DIR, "dir1/dir2/dir3");
+    Path dst = new Path(TEST_ROOT_DIR, "dir1");
+    fileSys.delete(src, true);
+    fileSys.delete(dst, true);
+    assertTrue(fileSys.mkdirs(src));
+    writeFile(fileSys, new Path(src, "file1"), 1);
+    writeFile(fileSys, new Path(src, "file2"), 1);
+    assertTrue(fileSys.exists(dst));
+    assertTrue(fileSys.rename(src, dst));
+    assertTrue(fileSys.exists(dst));
+    assertTrue(fileSys.exists(new Path(dst, "dir3")));
+    assertTrue(fileSys.exists(new Path(dst, "dir3/file1")));
+    assertTrue(fileSys.exists(new Path(dst, "dir3/file2")));
+    assertFalse(fileSys.exists(src));
+  }
   
   private void verifyRead(FSDataInputStream stm, byte[] fileContents,
        int seekOff, int toRead) throws IOException {
@@ -437,5 +535,19 @@ public class TestLocalFileSystem {
           "\noff=" + seekOff + " len=" + toRead;
       fail(s);
     }
+  }
+
+  @Test
+  public void testStripFragmentFromPath() throws Exception {
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    Path pathQualified = TEST_PATH.makeQualified(fs.getUri(),
+        fs.getWorkingDirectory());
+    Path pathWithFragment = new Path(
+        new URI(pathQualified.toString() + "#glacier"));
+    // Create test file with fragment
+    FileSystemTestHelper.createFile(fs, pathWithFragment);
+    Path resolved = fs.resolvePath(pathWithFragment);
+    assertEquals("resolvePath did not strip fragment from Path", pathQualified,
+        resolved);
   }
 }

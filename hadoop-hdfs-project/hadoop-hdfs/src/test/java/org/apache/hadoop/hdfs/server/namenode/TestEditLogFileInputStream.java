@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -40,7 +42,8 @@ public class TestEditLogFileInputStream {
   @Test
   public void testReadURL() throws Exception {
     // Start a simple web server which hosts the log data.
-    HttpServer server = new HttpServer("test", "0.0.0.0", 0, true);
+    HttpServer server = new HttpServer.Builder().setName("test")
+        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).build();
     server.start();
     try {
       server.addServlet("fakeLog", "/fakeLog", FakeLogServlet.class);
@@ -51,10 +54,10 @@ public class TestEditLogFileInputStream {
       // Read the edit log and verify that we got all of the data.
       EnumMap<FSEditLogOpCodes, Holder<Integer>> counts =
           FSImageTestUtil.countEditLogOpTypes(elis);
-      assertEquals(1L, (long)counts.get(FSEditLogOpCodes.OP_ADD).held);
-      assertEquals(1L, (long)counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP).held);
-      assertEquals(1L, (long)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
-     
+      assertThat(counts.get(FSEditLogOpCodes.OP_ADD).held, is(1));
+      assertThat(counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP_V1).held, is(1));
+      assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held, is(1));
+
       // Check that length header was picked up.
       assertEquals(FAKE_LOG_DATA.length, elis.length());
       elis.close();

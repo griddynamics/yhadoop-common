@@ -35,11 +35,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
@@ -54,12 +55,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils.ContainerIdComparator;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.BuilderUtils.ContainerIdComparator;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -93,9 +94,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final String httpAddress;
   private final Resource totalCapability;
   private final Node node;
-  private final NodeHealthStatus nodeHealthStatus = recordFactory
-      .newRecordInstance(NodeHealthStatus.class);
-  
+
+  private String healthReport;
+  private long lastHealthReportTime;
+
   /* set of containers that have just launched */
   private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
     new HashMap<ContainerId, ContainerStatus>();
@@ -180,9 +182,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.nodeAddress = hostName + ":" + cmPort;
     this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
-    this.nodeHealthStatus.setIsNodeHealthy(true);
-    this.nodeHealthStatus.setHealthReport("Healthy");
-    this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
+    this.healthReport = "Healthy";
+    this.lastHealthReportTime = System.currentTimeMillis();
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -246,25 +247,44 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
   
   @Override
-  public NodeHealthStatus getNodeHealthStatus() {
+  public String getHealthReport() {
     this.readLock.lock();
 
     try {
-      return this.nodeHealthStatus;
+      return this.healthReport;
     } finally {
       this.readLock.unlock();
     }
   }
-
-  private void setNodeHealthStatus(NodeHealthStatus status)
-  {
+  
+  public void setHealthReport(String healthReport) {
     this.writeLock.lock();
+
     try {
-      this.nodeHealthStatus.setHealthReport(status.getHealthReport());
-      this.nodeHealthStatus.setIsNodeHealthy(status.getIsNodeHealthy());
-      this.nodeHealthStatus.setLastHealthReportTime(status.getLastHealthReportTime());
+      this.healthReport = healthReport;
     } finally {
       this.writeLock.unlock();
+    }
+  }
+  
+  public void setLastHealthReportTime(long lastHealthReportTime) {
+    this.writeLock.lock();
+
+    try {
+      this.lastHealthReportTime = lastHealthReportTime;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+  
+  @Override
+  public long getLastHealthReportTime() {
+    this.readLock.lock();
+
+    try {
+      return this.lastHealthReportTime;
+    } finally {
+      this.readLock.unlock();
     }
   }
 
@@ -373,9 +393,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  private void updateMetricsForDeactivatedNode(NodeState finalState) {
+  private void updateMetricsForDeactivatedNode(NodeState initialState,
+                                               NodeState finalState) {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
-    metrics.decrNumActiveNodes();
+
+    switch (initialState) {
+      case RUNNING:
+        metrics.decrNumActiveNodes();
+        break;
+      case UNHEALTHY:
+        metrics.decrNumUnhealthyNMs();
+        break;
+    }
 
     switch (finalState) {
     case DECOMMISSIONED:
@@ -482,8 +511,14 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       // Inform the scheduler
       rmNode.nodeUpdateQueue.clear();
-      rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodeRemovedSchedulerEvent(rmNode));
+      // If the current state is NodeState.UNHEALTHY
+      // Then node is already been removed from the
+      // Scheduler
+      NodeState initialState = rmNode.getState();
+      if (!initialState.equals(NodeState.UNHEALTHY)) {
+        rmNode.context.getDispatcher().getEventHandler()
+          .handle(new NodeRemovedSchedulerEvent(rmNode));
+      }
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
               NodesListManagerEventType.NODE_UNUSABLE, rmNode));
@@ -495,7 +530,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getInactiveRMNodes().put(rmNode.nodeId.getHost(), rmNode);
 
       //Update the metrics
-      rmNode.updateMetricsForDeactivatedNode(finalState);
+      rmNode.updateMetricsForDeactivatedNode(initialState, finalState);
     }
   }
 
@@ -511,7 +546,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       NodeHealthStatus remoteNodeHealthStatus = 
           statusEvent.getNodeHealthStatus();
-      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
+      rmNode.setLastHealthReportTime(
+          remoteNodeHealthStatus.getLastHealthReportTime());
       if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
         LOG.info("Node " + rmNode.nodeId + " reported UNHEALTHY with details: "
             + remoteNodeHealthStatus.getHealthReport());
@@ -523,7 +560,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             new NodesListManagerEvent(
                 NodesListManagerEventType.NODE_UNUSABLE, rmNode));
         // Update metrics
-        rmNode.updateMetricsForDeactivatedNode(NodeState.UNHEALTHY);
+        rmNode.updateMetricsForDeactivatedNode(rmNode.getState(),
+            NodeState.UNHEALTHY);
         return NodeState.UNHEALTHY;
       }
 
@@ -575,9 +613,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeUpdateSchedulerEvent(rmNode));
       }
-      
-      rmNode.context.getDelegationTokenRenewer().updateKeepAliveApplications(
+
+      // Update DTRenewer in secure mode to keep these apps alive. Today this is
+      // needed for log-aggregation to finish long after the apps are gone.
+      if (UserGroupInformation.isSecurityEnabled()) {
+        rmNode.context.getDelegationTokenRenewer().updateKeepAliveApplications(
           statusEvent.getKeepAliveAppIds());
+      }
 
       return NodeState.RUNNING;
     }
@@ -593,7 +635,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // Switch the last heartbeatresponse.
       rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
       NodeHealthStatus remoteNodeHealthStatus = statusEvent.getNodeHealthStatus();
-      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
+      rmNode.setLastHealthReportTime(
+          remoteNodeHealthStatus.getLastHealthReportTime());
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));

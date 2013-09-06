@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
@@ -149,7 +151,6 @@ public class TestDatanodeBlockScanner {
     cluster.shutdown();
 
     cluster = new MiniDFSCluster.Builder(conf)
-                                .dfsBaseDir(cluster.getDfsBaseDir())
                                 .numDataNodes(1)
                                 .format(false).build();
     cluster.waitActive();
@@ -178,8 +179,8 @@ public class TestDatanodeBlockScanner {
     cluster.shutdown();
   }
 
-  public static boolean corruptReplica(MiniDFSCluster cluster, ExtendedBlock blk, int replica) throws IOException {
-    return cluster.corruptBlockReplica(replica, blk);
+  public static boolean corruptReplica(ExtendedBlock blk, int replica) throws IOException {
+    return MiniDFSCluster.corruptReplica(replica, blk);
   }
 
   @Test
@@ -201,7 +202,7 @@ public class TestDatanodeBlockScanner {
     assertFalse(DFSTestUtil.allBlockReplicasCorrupt(cluster, file1, 0));
 
     // Corrupt random replica of block 
-    assertTrue(cluster.corruptBlockReplica(rand, block));
+    assertTrue(MiniDFSCluster.corruptReplica(rand, block));
 
     // Restart the datanode hoping the corrupt block to be reported
     cluster.restartDataNode(rand);
@@ -212,9 +213,9 @@ public class TestDatanodeBlockScanner {
   
     // Corrupt all replicas. Now, block should be marked as corrupt
     // and we should get all the replicas 
-    assertTrue(cluster.corruptBlockReplica(0, block));
-    assertTrue(cluster.corruptBlockReplica(1, block));
-    assertTrue(cluster.corruptBlockReplica(2, block));
+    assertTrue(MiniDFSCluster.corruptReplica(0, block));
+    assertTrue(MiniDFSCluster.corruptReplica(1, block));
+    assertTrue(MiniDFSCluster.corruptReplica(2, block));
 
     // Trigger each of the DNs to scan this block immediately.
     // The block pool scanner doesn't run frequently enough on its own
@@ -287,7 +288,7 @@ public class TestDatanodeBlockScanner {
       // Corrupt numCorruptReplicas replicas of block 
       int[] corruptReplicasDNIDs = new int[numCorruptReplicas];
       for (int i=0, j=0; (j != numCorruptReplicas) && (i < numDataNodes); i++) {
-        if (corruptReplica(cluster, block, i)) {
+        if (corruptReplica(block, i)) {
           corruptReplicasDNIDs[j++] = i;
           LOG.info("successfully corrupted block " + block + " on node " 
                    + i + " " + cluster.getDataNodes().get(i).getDisplayName());
@@ -362,7 +363,6 @@ public class TestDatanodeBlockScanner {
     // Restart cluster and confirm block is verified on datanode 0,
     // then truncate it on datanode 0.
     cluster = new MiniDFSCluster.Builder(conf)
-                                .dfsBaseDir(cluster.getDfsBaseDir())
                                 .numDataNodes(REPLICATION_FACTOR)
                                 .format(false)
                                 .build();
@@ -373,7 +373,7 @@ public class TestDatanodeBlockScanner {
       assertTrue(waitForVerification(infoPort, fs, fileName, 1, startTime, TIMEOUT) >= startTime);
       
       // Truncate replica of block
-      if (!changeReplicaLength(cluster, block, 0, -1)) {
+      if (!changeReplicaLength(block, 0, -1)) {
         throw new IOException(
             "failed to find or change length of replica on node 0 "
             + cluster.getDataNodes().get(0).getDisplayName());
@@ -385,7 +385,6 @@ public class TestDatanodeBlockScanner {
     // Restart the cluster, add a node, and check that the truncated block is 
     // handled correctly
     cluster = new MiniDFSCluster.Builder(conf)
-                                .dfsBaseDir(cluster.getDfsBaseDir())
                                 .numDataNodes(REPLICATION_FACTOR)
                                 .format(false)
                                 .build();
@@ -404,7 +403,7 @@ public class TestDatanodeBlockScanner {
           cluster.getFileSystem(), fileName, REPLICATION_FACTOR);
       
       // Make sure that truncated block will be deleted
-      waitForBlockDeleted(cluster, block, 0, TIMEOUT);
+      waitForBlockDeleted(block, 0, TIMEOUT);
     } finally {
       cluster.shutdown();
     }
@@ -413,9 +412,9 @@ public class TestDatanodeBlockScanner {
   /**
    * Change the length of a block at datanode dnIndex
    */
-  static boolean changeReplicaLength(MiniDFSCluster cluster, ExtendedBlock blk, int dnIndex,
+  static boolean changeReplicaLength(ExtendedBlock blk, int dnIndex,
       int lenDelta) throws IOException {
-    File blockFile = cluster.getBlockReplica(dnIndex, blk);
+    File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
     if (blockFile != null && blockFile.exists()) {
       RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
       raFile.setLength(raFile.length()+lenDelta);
@@ -426,9 +425,9 @@ public class TestDatanodeBlockScanner {
     return false;
   }
   
-  private static void waitForBlockDeleted(MiniDFSCluster cluster, ExtendedBlock blk, int dnIndex,
+  private static void waitForBlockDeleted(ExtendedBlock blk, int dnIndex,
       long timeout) throws TimeoutException, InterruptedException {
-    File blockFile = cluster.getBlockReplica(dnIndex, blk);
+    File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
     long failtime = Time.now() 
                     + ((timeout > 0) ? timeout : Long.MAX_VALUE);
     while (blockFile != null && blockFile.exists()) {
@@ -437,7 +436,27 @@ public class TestDatanodeBlockScanner {
             + blockFile.getPath() + (blockFile.exists() ? " still exists; " : " is absent; "));
       }
       Thread.sleep(100);
-      blockFile = cluster.getBlockReplica(dnIndex, blk);
+      blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
     }
+  }
+  
+  private static final String BASE_PATH = (new File("/data/current/finalized"))
+      .getAbsolutePath();
+  
+  @Test
+  public void testReplicaInfoParsing() throws Exception {
+    testReplicaInfoParsingSingle(BASE_PATH, new int[0]);
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1", new int[]{1});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir43", new int[]{43});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1/subdir2/subdir3", new int[]{1, 2, 3});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1/subdir2/subdir43", new int[]{1, 2, 43});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir1/subdir23/subdir3", new int[]{1, 23, 3});
+    testReplicaInfoParsingSingle(BASE_PATH + "/subdir13/subdir2/subdir3", new int[]{13, 2, 3});
+  }
+  
+  private static void testReplicaInfoParsingSingle(String subDirPath, int[] expectedSubDirs) {
+    File testFile = new File(subDirPath);
+    assertArrayEquals(expectedSubDirs, ReplicaInfo.parseSubDirs(testFile).subDirs);
+    assertEquals(BASE_PATH, ReplicaInfo.parseSubDirs(testFile).baseDirPath);
   }
 }
