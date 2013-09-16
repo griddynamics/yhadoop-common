@@ -408,6 +408,9 @@ Release 2.1.1-beta - UNRELEASED
     HADOOP-9945. HAServiceState should have a state for stopped services.
     (Karthik Kambatla via atm)
 
+    HADOOP-9962. in order to avoid dependency divergence within Hadoop itself 
+    lets enable DependencyConvergence. (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -469,6 +472,9 @@ Release 2.1.1-beta - UNRELEASED
     (Robert Kanter via stevel)
 
     HADOOP-9935. set junit dependency to test scope. (André Kelpe via cnauroth)
+
+    HADOOP-9961. versions of a few transitive dependencies diverged between hadoop 
+    subprojects. (rvs via tucu)
 
 Release 2.1.0-beta - 2013-08-22
 
