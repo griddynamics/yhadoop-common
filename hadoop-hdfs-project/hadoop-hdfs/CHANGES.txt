@@ -244,6 +244,9 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-5122. Support failover and retry in WebHdfsFileSystem for NN HA.
+    (Haohui Mai via jing9)
+
   IMPROVEMENTS
 
     HDFS-4657.  Limit the number of blocks logged by the NN after a block
@@ -302,6 +305,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5170. BlockPlacementPolicyDefault uses the wrong classname when
     alerting to enable debug logging. (Andrew Wang)
+
+    HDFS-5031. BlockScanner scans the block multiple times. (Vinay via Arpit
+    Agarwal)
 
 Release 2.2.0 - UNRELEASED
 
