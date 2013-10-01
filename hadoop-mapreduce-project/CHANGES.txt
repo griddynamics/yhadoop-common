@@ -162,6 +162,8 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
     Aaron Kimball via Sandy Ryza)
 
+    MAPREDUCE-4421. Run MapReduce framework via the distributed cache (jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
@@ -254,6 +256,9 @@ Release 2.1.2 - UNRELEASED
     missing constructors. (Zhijie Shen via acmurthy)
 
     MAPREDUCE-5544. JobClient#getJob loads job conf twice. (Sandy Ryza)
+
+    MAPREDUCE-5536. Fixed MR AM and JHS to respect
+    mapreduce.jobhistory.webapp.https.address. (Omkar Vinit Joshi via vinodkv)
 
 Release 2.1.1-beta - 2013-09-23
 
