@@ -85,6 +85,8 @@ Release 2.1.2 - UNRELEASED
     YARN-899. Added back queue level administrator-acls so that there is no
     regression w.r.t 1.x. (Xuan Gong via vinodkv)
 
+    YARN-1228. Clean up Fair Scheduler configuration loading. (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -109,6 +111,11 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1070. Fixed race conditions in NodeManager during container-kill.
     (Zhijie Shen via vinodkv)
+
+    YARN-1215. Yarn URL should include userinfo. (Chuan Liu via cnauroth)
+
+    YARN-1262. TestApplicationCleanup relies on all containers assigned in a
+    single heartbeat (Karthik Kambatla via Sandy Ryza)
 
 Release 2.1.1-beta - 2013-09-23
 
