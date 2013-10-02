@@ -163,6 +163,11 @@
             <goals>
               <goal>test-jar</goal>
             </goals>
+            <configuration>
+              <excludes>
+                <exclude>**/hdfs-site.xml</exclude>
+              </excludes>
+            </configuration>
             <phase>test-compile</phase>
           </execution>
         </executions>
