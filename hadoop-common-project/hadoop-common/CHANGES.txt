@@ -315,9 +315,6 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9435.  Support building the JNI code against the IBM JVM.
     (Tian Hong Wang via Colin Patrick McCabe)
 
-    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
-    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
-
     HADOOP-9848. Create a MiniKDC for use with security testing. 
     (ywskycn via tucu)
 
@@ -396,6 +393,9 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
+    (todd)
+
 Release 2.1.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -409,6 +409,9 @@ Release 2.1.2 - UNRELEASED
 
     HADOOP-9976. Different versions of avro and avro-maven-plugin (Karthik
     Kambatla via Sandy Ryza)
+
+    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
+    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
 
   OPTIMIZATIONS
 
