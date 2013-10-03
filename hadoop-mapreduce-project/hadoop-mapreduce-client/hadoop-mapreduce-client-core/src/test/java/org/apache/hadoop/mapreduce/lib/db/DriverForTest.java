@@ -101,7 +101,6 @@ public class DriverForTest implements Driver {
     return true;
   }
   
-  @Override
   public Logger getParentLogger() throws SQLFeatureNotSupportedException {
     throw new SQLFeatureNotSupportedException();
   }
@@ -111,6 +110,3 @@ public class DriverForTest implements Driver {
   }
   
 }
-
-
-

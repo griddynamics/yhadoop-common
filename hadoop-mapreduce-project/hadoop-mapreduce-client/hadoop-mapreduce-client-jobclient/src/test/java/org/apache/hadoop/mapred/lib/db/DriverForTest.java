@@ -101,15 +101,12 @@ public class DriverForTest implements Driver {
     return true;
   }
   
+  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    throw new SQLFeatureNotSupportedException();
+  }
+
   private interface FakeConnection extends Connection{
     public void setSessionTimeZone(String arg);
   }
   
-  @Override
-  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-    throw new SQLFeatureNotSupportedException();
-  }
 }
-
-
-
