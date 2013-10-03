@@ -53,28 +53,8 @@ public class TestSnappyCompressorDecompressor {
 
   @Before
   public void before() {
-    assumeTrue(isNativeForSnappyLoadable());
-  }
-
-  private static boolean isNativeForSnappyLoadable() {
-    boolean snappyAvailable = false;
-    boolean loaded = false;
-    try {
-      System.loadLibrary("snappy");
-      log.warn("Snappy native library is available");
-      snappyAvailable = true;    
-      boolean hadoopNativeAvailable = NativeCodeLoader.isNativeCodeLoaded();
-      loaded = snappyAvailable && hadoopNativeAvailable;
-      if (loaded) {
-        log.info("Snappy native library loaded");
-      } else {
-        log.warn("Snappy native library not loaded");
-      }
-    } catch (Throwable t) {
-      log.warn("Failed to load snappy: ", t);
-      return false;
-    }
-    return loaded;       
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && 
+        NativeCodeLoader.buildSupportsSnappy());
   }
 
   @Test
