@@ -155,10 +155,14 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5411. Refresh size of loaded job cache on history server (Ashwin
     Shankar via jlowe)
 
+    MAPREDUCE-5332. Support token-preserving restart of history server (jlowe)
+
   IMPROVEMENTS
 
     MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
     Aaron Kimball via Sandy Ryza)
+
+    MAPREDUCE-4421. Run MapReduce framework via the distributed cache (jlowe)
 
   OPTIMIZATIONS
 
@@ -181,7 +185,21 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5522. Incorrect oreder expected from JobQueueInfo (Jinghui Wang
     via bobby)
 
+    MAPREDUCE-5514. Fix TestRMContainerAllocator. (Zhijie Shen via acmurthy) 
+
 Release 2.2.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.1.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -204,6 +222,56 @@ Release 2.2.0 - UNRELEASED
     needs to set up its own certificates etc and not depend on clusters'.
     (Omkar Vinit Joshi via vinodkv)
 
+    MAPREDUCE-5505. Clients should be notified job finished only after job
+    successfully unregistered (Zhijie Shen via bikas)
+
+    MAPREDUCE-5503. Fixed a test issue in TestMRJobClient. (Jian He via vinodkv)
+
+    MAPREDUCE-5170. Fixed a wrong log message in CombineFileInputFormat class.
+    (Sangjin Lee via vinodkv)
+
+    MAPREDUCE-5525. Increase timeout of TestDFSIO.testAppend and
+    TestMRJobsWithHistoryService.testJobHistoryData. (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
+    Parker via jlowe)
+
+    MAPREDUCE-5531. Fix compat with hadoop-1 in mapreduce.(TaskID,
+    TaskAttemptID) by re-introducing missing constructors. (Robert Kanter via
+    acmurthy)
+
+    MAPREDUCE-5545. org.apache.hadoop.mapred.TestTaskAttemptListenerImpl.testCommitWindow
+    times out (Robert Kanter via jlowe)
+
+    MAPREDUCE-5529. Fix compat with hadoop-1 in mapred.TotalOrderPartitioner
+    by re-introducing (get,set)PartitionFile which takes in JobConf. (Robert 
+    Kanter via acmurthy)
+
+    MAPREDUCE-5538. Fixed MR AppMaster to send job-notification URL only after
+    the job is really done - a bug caused by MAPREDUCE-5505. (Zhijie Shen via
+    vinodkv)
+
+    MAPREDUCE-5551. Fix compat with hadoop-1 in
+    SequenceFileAsBinaryOutputFormat.WritableValueBytes by re-introducing
+    missing constructors. (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5544. JobClient#getJob loads job conf twice. (Sandy Ryza)
+
+    MAPREDUCE-5536. Fixed MR AM and JHS to respect
+    mapreduce.jobhistory.webapp.https.address. (Omkar Vinit Joshi via vinodkv)
+
+    MAPREDUCE-5530. Fix compat with hadoop-1 in
+    mapred.lib.CombinFileInputFormat by re-introducing
+    isSplittable(FileSystem, Path) api and ensuring semantic compatibility.
+    (Robert Kanter via acmurthy)
+
+    MAPREDUCE-5459. Update documentation on how to run MRv1 examples on YARN.
+    (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5554. hdfs-site.xml included in hadoop-mapreduce-client-jobclient
+    tests jar is breaking tests for downstream components (Robert Kanter via
+    Sandy Ryza)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
@@ -220,6 +288,10 @@ Release 2.1.1-beta - 2013-09-23
     (Jian He via vinodkv)
 
     MAPREDUCE-5379. Include token tracking ids in jobconf. (kkambatl via tucu)
+
+    MAPREDUCE-5523. Added separate configuration properties for https for JHS 
+    without which even when https is enabled, it starts on http port itself.
+    (Omkar Vinit Joshi via vinodkv)
 
   OPTIMIZATIONS
 
@@ -1381,6 +1453,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5504. mapred queue -info inconsistent with types (Kousuke Saruta
     via tgraves)
+
+    MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
+    Parker via jlowe)
 
 Release 0.23.9 - 2013-07-08
 

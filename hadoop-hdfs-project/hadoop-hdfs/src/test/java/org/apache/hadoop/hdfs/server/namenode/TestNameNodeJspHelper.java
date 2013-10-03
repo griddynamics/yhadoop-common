@@ -18,6 +18,25 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.collect.ImmutableSet;
+
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.LOADING_EDITS;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.LOADING_FSIMAGE;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.SAFEMODE;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.SAVING_CHECKPOINT;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.jsp.JspWriter;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -39,6 +58,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.znerd.xmlenc.XMLOutputter;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -126,6 +146,80 @@ public class TestNameNodeJspHelper {
     Assert.assertTrue(containsMatch(contents,
       SAVING_CHECKPOINT.getDescription()));
     Assert.assertTrue(containsMatch(contents, SAFEMODE.getDescription()));
+  }
+
+  @Test
+  public void testGetRollingUpgradeText() {
+    Assert.assertEquals("", NamenodeJspHelper.getRollingUpgradeText(null));
+  }
+
+  /**
+   * Tests for non-null, non-empty NameNode label.
+   */
+  @Test
+  public void testGetNameNodeLabel() {
+    String nameNodeLabel = NamenodeJspHelper.getNameNodeLabel(
+      cluster.getNameNode());
+    Assert.assertNotNull(nameNodeLabel);
+    Assert.assertFalse(nameNodeLabel.isEmpty());
+  }
+
+  /**
+   * Tests for non-null, non-empty NameNode label when called before
+   * initialization of the NameNode RPC server.
+   */
+  @Test
+  public void testGetNameNodeLabelNullRpcServer() {
+    NameNode nn = mock(NameNode.class);
+    when(nn.getRpcServer()).thenReturn(null);
+    String nameNodeLabel = NamenodeJspHelper.getNameNodeLabel(
+      cluster.getNameNode());
+    Assert.assertNotNull(nameNodeLabel);
+    Assert.assertFalse(nameNodeLabel.isEmpty());
+  }
+
+  /**
+   * Tests that passing a null FSNamesystem to generateSnapshotReport does not
+   * throw NullPointerException.
+   */
+  @Test
+  public void testGenerateSnapshotReportNullNamesystem() throws Exception {
+    NamenodeJspHelper.generateSnapshotReport(mock(JspWriter.class), null);
+  }
+
+  /**
+   * Tests that redirectToRandomDataNode does not throw NullPointerException if
+   * it finds a null FSNamesystem.
+   */
+  @Test(expected=IOException.class)
+  public void testRedirectToRandomDataNodeNullNamesystem() throws Exception {
+    NameNode nn = mock(NameNode.class);
+    when(nn.getNamesystem()).thenReturn(null);
+    ServletContext context = mock(ServletContext.class);
+    when(context.getAttribute("name.node")).thenReturn(nn);
+    NamenodeJspHelper.redirectToRandomDataNode(context,
+      mock(HttpServletRequest.class), mock(HttpServletResponse.class));
+  }
+
+  /**
+   * Tests that XMLBlockInfo does not throw NullPointerException if it finds a
+   * null FSNamesystem.
+   */
+  @Test
+  public void testXMLBlockInfoNullNamesystem() throws IOException {
+    XMLOutputter doc = new XMLOutputter(mock(JspWriter.class), "UTF-8");
+    new NamenodeJspHelper.XMLBlockInfo(null, 1L).toXML(doc);
+  }
+
+  /**
+   * Tests that XMLCorruptBlockInfo does not throw NullPointerException if it
+   * finds a null FSNamesystem.
+   */
+  @Test
+  public void testXMLCorruptBlockInfoNullNamesystem() throws IOException {
+    XMLOutputter doc = new XMLOutputter(mock(JspWriter.class), "UTF-8");
+    new NamenodeJspHelper.XMLCorruptBlockInfo(null, mock(Configuration.class),
+      10, 1L).toXML(doc);
   }
 
   /**

@@ -289,6 +289,9 @@ Release 2.3.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-8545. Filesystem Implementation for OpenStack Swift
+    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
+
   IMPROVEMENTS
 
     HADOOP-9784. Add a builder for HttpServer. (Junping Du via llu)
@@ -312,9 +315,6 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9435.  Support building the JNI code against the IBM JVM.
     (Tian Hong Wang via Colin Patrick McCabe)
 
-    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
-    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
-
     HADOOP-9848. Create a MiniKDC for use with security testing. 
     (ywskycn via tucu)
 
@@ -333,17 +333,29 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9915.  o.a.h.fs.Stat support on Mac OS X  (Binglin Chang via Colin
     Patrick McCabe)
 
+    HADOOP-9998.  Provide methods to clear only part of the DNSToSwitchMapping.
+    (Junping Du via Colin Patrick McCabe)
+
+    HADOOP-10006. Compilation failure in trunk for
+    o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
+
+    HADOOP-9063. enhance unit-test coverage of class
+    org.apache.hadoop.fs.FileUtil (Ivan A. Veselovsky via jlowe)
+
+    HADOOP-9254. Cover packages org.apache.hadoop.util.bloom,
+    org.apache.hadoop.util.hash (Vadim Bondarev via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
 
   BUG FIXES
 
+    HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
+    ReflectionUtils.printThreadInfo. (Junping Du via llu)
+
     HADOOP-9582. Non-existent file to "hadoop fs -conf" doesn't throw error
     (Ashwin Shankar via jlowe)
-
-    HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
-    (Andrew Wang via Colin Patrick McCabe)
 
     HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
     with symlinks. (Colin Patrick McCabe via Andrew Wang)
@@ -372,6 +384,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9791. Add a test case covering long paths for new FileUtil access
     check methods (ivanmi)
 
+    HADOOP-9981. globStatus should minimize its listStatus and getFileStatus
+    calls.  (Contributed by Colin Patrick McCabe)
+
 Release 2.2.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -383,6 +398,39 @@ Release 2.2.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
+    (todd)
+
+Release 2.1.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-9948. Add a config value to CLITestHelper to skip tests on Windows.
+    (Chuan Liu via cnauroth)
+
+    HADOOP-9976. Different versions of avro and avro-maven-plugin (Karthik
+    Kambatla via Sandy Ryza)
+
+    HADOOP-9758.  Provide configuration option for FileSystem/FileContext
+    symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9776. HarFileSystem.listStatus() returns invalid authority if port
+    number is empty. (Shanyu Zhao via ivanmi)
+
+    HADOOP-9761.  ViewFileSystem#rename fails when using DistributedFileSystem.
+    (Andrew Wang via Colin Patrick McCabe)
+
+    HADOOP-10003. HarFileSystem.listLocatedStatus() fails.
+    (Jason Dere and suresh via suresh)
 
 Release 2.1.1-beta - 2013-09-23
 

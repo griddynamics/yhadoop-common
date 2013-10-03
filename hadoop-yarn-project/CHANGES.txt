@@ -24,6 +24,11 @@ Release 2.3.0 - UNRELEASED
     YARN-649. Added a new NM web-service to serve container logs in plain text
     over HTTP. (Sandy Ryza via vinodkv)
 
+    YARN-1021. Yarn Scheduler Load Simulator. (ywskycn via tucu)
+
+    YARN-1010. FairScheduler: decouple container scheduling from nodemanager
+    heartbeats. (Wei Yan via Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-905. Add state filters to nodes CLI (Wei Yan via Sandy Ryza)
@@ -35,6 +40,14 @@ Release 2.3.0 - UNRELEASED
 
     YARN-353. Add Zookeeper-based store implementation for RMStateStore.
     (Bikas Saha, Jian He and Karthik Kambatla via hitesh)
+
+    YARN-819. ResourceManager and NodeManager should check for a minimum allowed
+    version (Robert Parker via jeagles)
+
+    YARN-677. Increase coverage to FairScheduler (Vadim Bondarev and Dennis Y
+    via jeagles)
+
+    YARN-425. coverage fix for yarn api (Aleksey Gorshkov via jeagles)
 
   OPTIMIZATIONS
 
@@ -58,8 +71,69 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
+Release 2.1.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+  
+    YARN-1229. Define constraints on Auxiliary Service names. Change
+    ShuffleHandler service name from mapreduce.shuffle to
+    mapreduce_shuffle (Xuan Gong via sseth)
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    YARN-1246. Added application finish-status to ApplicationSummary for the sake
+    of testing given ApplicationHistoryServer is not yet ready. (Arpit Gupta via
+    vinodkv)
+
+    YARN-899. Added back queue level administrator-acls so that there is no
+    regression w.r.t 1.x. (Xuan Gong via vinodkv)
+
+    YARN-1228. Clean up Fair Scheduler configuration loading. (Sandy Ryza)
+
+    YARN-1213. Restore config to ban submitting to undeclared pools in the
+    Fair Scheduler. (Sandy Ryza)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
     YARN-1128. FifoPolicy.computeShares throws NPE on empty list of Schedulables
     (Karthik Kambatla via Sandy Ryza)
+
+    YARN-1214. Register ClientToken MasterKey in SecretManager after it is
+    saved (Jian He via bikas)
+
+    YARN-49. Improve distributed shell application to work on a secure cluster.
+    (Vinod Kumar Vavilapalli via hitesh)
+
+    YARN-1157. Fixed ResourceManager UI to behave correctly when apps like
+    distributed-shell do not set tracking urls. (Xuan Gong via vinodkv)
+
+    YARN-1221. With Fair Scheduler, reserved MB reported in RM web UI increases
+    indefinitely (Siqi Li via Sandy Ryza)
+
+    YARN-1247. test-container-executor has gotten out of sync with the changes to
+    container-executor. (rvs via tucu)
+
+    YARN-1070. Fixed race conditions in NodeManager during container-kill.
+    (Zhijie Shen via vinodkv)
+
+    YARN-1215. Yarn URL should include userinfo. (Chuan Liu via cnauroth)
+
+    YARN-1262. TestApplicationCleanup relies on all containers assigned in a
+    single heartbeat (Karthik Kambatla via Sandy Ryza)
+
+    YARN-1260. Added webapp.http.address to yarn-default.xml so that default
+    install with https enabled doesn't have broken link on NM UI. (Omkar Vinit
+    Joshi via vinodkv)
+
+    YARN-1141. Updating resource requests should be decoupled with updating
+    blacklist (Zhijie Shen via bikas)
+
+    YARN-876. Node resource is added twice when node comes back from unhealthy
+    to healthy. (Peng Zhang via Sandy Ryza)
 
 Release 2.1.1-beta - 2013-09-23
 
@@ -134,6 +208,10 @@ Release 2.1.1-beta - 2013-09-23
 
     YARN-1203. Changed YARN web-app proxy to handle http and https URLs from
     AM registration and finish correctly. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-1204. Added separate configuration properties for https for RM and NM
+    without which servers enabled with https will also start on http ports.
+    (Omkar Vinit Joshi via vinodkv)
 
   OPTIMIZATIONS
 

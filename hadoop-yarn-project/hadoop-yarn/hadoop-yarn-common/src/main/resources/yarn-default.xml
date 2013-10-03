@@ -100,9 +100,15 @@
   </property>
 
   <property>
-    <description>The address of the RM web application.</description>
+    <description>The http address of the RM web application.</description>
     <name>yarn.resourcemanager.webapp.address</name>
     <value>${yarn.resourcemanager.hostname}:8088</value>
+  </property>
+
+  <property>
+    <description>The https adddress of the RM web application.</description>
+    <name>yarn.resourcemanager.webapp.https.address</name>
+    <value>${yarn.resourcemanager.hostname}:8090</value>
   </property>
 
   <property>
@@ -356,6 +362,14 @@
     <description>The heart-beat interval in milliseconds for every NodeManager in the cluster.</description>
     <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <description>The minimum allowed version of a connecting nodemanager.  The valid values are
+      NONE (no version checking), EqualToRM (the nodemanager's version is equal to
+      or greater than the RM version), or a Version String.</description>
+    <name>yarn.resourcemanager.nodemanager.minimum.version</name>
+    <value>NONE</value>
   </property>
 
   <property>
@@ -705,9 +719,10 @@
   </property>
 
   <property>
+    <description>the valid service name should only contain a-zA-Z0-9_ and can not start with numbers</description>
     <name>yarn.nodemanager.aux-services</name>
     <value></value>
-    <!-- <value>mapreduce.shuffle</value> -->
+    <!--<value>mapreduce_shuffle</value>-->
   </property>
 
   <property>
@@ -737,6 +752,14 @@
   </property>
 
   <property>
+    <description>The minimum allowed version of a resourcemanager that a nodemanager will connect to.  
+      The valid values are NONE (no version checking), EqualToNM (the resourcemanager's version is 
+      equal to or greater than the NM version), or a Version String.</description>
+    <name>yarn.nodemanager.resourcemanager.minimum.version</name>
+    <value>NONE</value>
+  </property>
+
+  <property>
     <description>Max number of threads in NMClientAsync to process container
     management events</description>
     <name>yarn.client.nodemanager-client-async.thread-pool-max-size</name>
@@ -763,7 +786,7 @@
   
   <!--Map Reduce configuration-->
   <property>
-    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
     <value>org.apache.hadoop.mapred.ShuffleHandler</value>
   </property>
 

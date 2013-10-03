@@ -65,6 +65,9 @@
     <maven-surefire-plugin-version>2.12.3-GD-02</maven-surefire-plugin-version>
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
+    <!-- avro version -->
+    <avro.version>1.7.4</avro.version>
+
     <!-- jersey version -->
     <jersey.version>1.9</jersey.version>
 
@@ -348,6 +351,12 @@
       </dependency>
 
       <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-openstack</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>11.0.2</version>
@@ -376,6 +385,11 @@
         <groupId>commons-httpclient</groupId>
         <artifactId>commons-httpclient</artifactId>
         <version>3.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>4.2.5</version>
       </dependency>
       <dependency>
         <groupId>commons-codec</groupId>
@@ -674,7 +688,7 @@
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
-        <version>1.7.4</version>
+        <version>${avro.version}</version>
       </dependency>
       <dependency>
         <groupId>net.sf.kosmosfs</groupId>
@@ -715,7 +729,7 @@
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>3.4.2</version>
+        <version>3.4.5</version>
         <exclusions>
           <exclusion>
             <!-- otherwise seems to drag in junit 3.8.1 via jline -->
@@ -739,7 +753,7 @@
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>3.4.2</version>
+        <version>3.4.5</version>
         <type>test-jar</type>
         <scope>test</scope>
         <exclusions>
@@ -759,6 +773,16 @@
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
         <version>2.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.codahale.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>3.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-sls</artifactId>
+        <version>${project.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -842,7 +866,7 @@
         <plugin>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-maven-plugin</artifactId>
-          <version>1.5.3</version>
+          <version>${avro.version}</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo.jspc</groupId>
