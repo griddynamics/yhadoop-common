@@ -98,6 +98,10 @@ public class TestJobHistoryParsing {
     @Override
     public void reloadCachedMappings() {
     }
+
+    @Override
+    public void reloadCachedMappings(List<String> names) {	
+    }
   }
 
   @Test(timeout = 50000)
@@ -534,7 +538,10 @@ public class TestJobHistoryParsing {
       Assert.assertTrue("Timeout waiting for history move", msecToSleep > 0);
 
       fileInfo = hfm.getFileInfo(jobId);
+      hfm.stop();
       Assert.assertNotNull("Unable to locate old job history", fileInfo);
+      Assert.assertTrue("HistoryFileManager not shutdown properly",
+          hfm.moveToDoneExecutor.isTerminated());
     } finally {
       LOG.info("FINISHED testScanningOldDirs");
     }
@@ -637,6 +644,9 @@ public class TestJobHistoryParsing {
       // correct live time
       hfm.setMaxHistoryAge(-1);
       hfm.clean();
+      hfm.stop();
+      Assert.assertTrue("Thread pool shutdown",
+          hfm.moveToDoneExecutor.isTerminated());
       // should be deleted !
       Assert.assertTrue("file should be deleted ", fileInfo.isDeleted());
 

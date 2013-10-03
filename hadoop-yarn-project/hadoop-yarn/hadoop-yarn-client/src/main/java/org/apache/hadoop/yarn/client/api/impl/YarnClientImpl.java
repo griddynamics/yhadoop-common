@@ -33,10 +33,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -65,6 +65,8 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -195,18 +197,43 @@ public class YarnClientImpl extends YarnClient {
     return response.getApplicationReport();
   }
 
+  public org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
+      getAMRMToken(ApplicationId appId) throws YarnException, IOException {
+    Token token = getApplicationReport(appId).getAMRMToken();
+    org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken =
+        null;
+    if (token != null) {
+      amrmToken = ConverterUtils.convertFromYarn(token, null);
+    }
+    return amrmToken;
+  }
+
   @Override
   public List<ApplicationReport> getApplications() throws YarnException,
       IOException {
-    return getApplications(null);
+    return getApplications(null, null);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(Set<String> applicationTypes)
+      throws YarnException,
+      IOException {
+    return getApplications(applicationTypes, null);
   }
 
   @Override
   public List<ApplicationReport> getApplications(
-      Set<String> applicationTypes) throws YarnException, IOException {
+      EnumSet<YarnApplicationState> applicationStates)
+      throws YarnException, IOException {
+    return getApplications(null, applicationStates);
+  }
+
+  @Override
+  public List<ApplicationReport> getApplications(Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException {
     GetApplicationsRequest request =
-        applicationTypes == null ? GetApplicationsRequest.newInstance()
-            : GetApplicationsRequest.newInstance(applicationTypes);
+        GetApplicationsRequest.newInstance(applicationTypes, applicationStates);
     GetApplicationsResponse response = rmClient.getApplications(request);
     return response.getApplicationList();
   }

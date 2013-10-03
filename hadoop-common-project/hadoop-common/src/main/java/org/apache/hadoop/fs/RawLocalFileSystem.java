@@ -51,6 +51,7 @@ import org.apache.hadoop.util.StringUtils;
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
+  private static final boolean useDeprecatedFileStatus = !Stat.isAvailable();
   
   public RawLocalFileSystem() {
     workingDir = getInitialWorkingDirectory();
@@ -319,8 +320,34 @@ public class RawLocalFileSystem extends FileSystem {
 
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
-    if (pathToFile(src).renameTo(pathToFile(dst))) {
+    // Attempt rename using Java API.
+    File srcFile = pathToFile(src);
+    File dstFile = pathToFile(dst);
+    if (srcFile.renameTo(dstFile)) {
       return true;
+    }
+
+    // Enforce POSIX rename behavior that a source directory replaces an existing
+    // destination if the destination is an empty directory.  On most platforms,
+    // this is already handled by the Java API call above.  Some platforms
+    // (notably Windows) do not provide this behavior, so the Java API call above
+    // fails.  Delete destination and attempt rename again.
+    if (this.exists(dst)) {
+      FileStatus sdst = this.getFileStatus(dst);
+      if (sdst.isDirectory() && dstFile.list().length == 0) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Deleting empty destination and renaming " + src + " to " +
+            dst);
+        }
+        if (this.delete(dst, false) && srcFile.renameTo(dstFile)) {
+          return true;
+        }
+      }
+    }
+
+    // The fallback behavior accomplishes the rename by a full copy.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Falling through to a copy of " + src + " to " + dst);
     }
     return FileUtil.copy(this, src, this, dst, true, getConf());
   }
@@ -359,11 +386,14 @@ public class RawLocalFileSystem extends FileSystem {
       throw new FileNotFoundException("File " + f + " does not exist");
     }
     if (localf.isFile()) {
+      if (!useDeprecatedFileStatus) {
+        return new FileStatus[] { getFileStatus(f) };
+      }
       return new FileStatus[] {
-        new RawLocalFileStatus(localf, getDefaultBlockSize(f), this) };
+        new DeprecatedRawLocalFileStatus(localf, getDefaultBlockSize(f), this)};
     }
 
-    File[] names = localf.listFiles();
+    String[] names = localf.list();
     if (names == null) {
       return null;
     }
@@ -371,7 +401,9 @@ public class RawLocalFileSystem extends FileSystem {
     int j = 0;
     for (int i = 0; i < names.length; i++) {
       try {
-        results[j] = getFileStatus(new Path(names[i].getAbsolutePath()));
+        // Assemble the path using the Path 3 arg constructor to make sure
+        // paths with colon are properly resolved on Linux
+        results[j] = getFileStatus(new Path(f, new Path(null, null, names[i])));
         j++;
       } catch (FileNotFoundException e) {
         // ignore the files not found since the dir list may have have changed
@@ -490,15 +522,22 @@ public class RawLocalFileSystem extends FileSystem {
   
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
+    return getFileLinkStatusInternal(f, true);
+  }
+
+  @Deprecated
+  private FileStatus deprecatedGetFileStatus(Path f) throws IOException {
     File path = pathToFile(f);
     if (path.exists()) {
-      return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(f), this);
+      return new DeprecatedRawLocalFileStatus(pathToFile(f),
+          getDefaultBlockSize(f), this);
     } else {
       throw new FileNotFoundException("File " + f + " does not exist");
     }
   }
 
-  static class RawLocalFileStatus extends FileStatus {
+  @Deprecated
+  static class DeprecatedRawLocalFileStatus extends FileStatus {
     /* We can add extra fields here. It breaks at least CopyFiles.FilePair().
      * We recognize if the information is already loaded by check if
      * onwer.equals("").
@@ -507,7 +546,7 @@ public class RawLocalFileSystem extends FileSystem {
       return !super.getOwner().isEmpty(); 
     }
     
-    RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) { 
+    DeprecatedRawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
           f.lastModified(), new Path(f.getPath()).makeQualified(fs.getUri(),
             fs.getWorkingDirectory()));
@@ -656,31 +695,13 @@ public class RawLocalFileSystem extends FileSystem {
     if (createParent) {
       mkdirs(link.getParent());
     }
-    // NB: Use createSymbolicLink in java.nio.file.Path once available
-    try {
-      Shell.execCommand(Shell.getSymlinkCommand(
-        Path.getPathWithoutSchemeAndAuthority(target).toString(),
-        Path.getPathWithoutSchemeAndAuthority(makeAbsolute(link)).toString()));
-    } catch (IOException x) {
-      throw new IOException("Unable to create symlink: "+x.getMessage());
-    }
-  }
 
-  /**
-   * Returns the target of the given symlink. Returns the empty string if
-   * the given path does not refer to a symlink or there is an error
-   * accessing the symlink.
-   */
-  private String readLink(Path p) {
-    /* NB: Use readSymbolicLink in java.nio.file.Path once available. Could
-     * use getCanonicalPath in File to get the target of the symlink but that
-     * does not indicate if the given path refers to a symlink.
-     */
-    try {
-      final String path = p.toUri().getPath();
-      return Shell.execCommand(Shell.READ_LINK_COMMAND, path).trim();
-    } catch (IOException x) {
-      return "";
+    // NB: Use createSymbolicLink in java.nio.file.Path once available
+    int result = FileUtil.symLink(target.toString(),
+        makeAbsolute(link).toString());
+    if (result != 0) {
+      throw new IOException("Error " + result + " creating symlink " +
+          link + " to " + target);
     }
   }
 
@@ -691,7 +712,7 @@ public class RawLocalFileSystem extends FileSystem {
    */
   @Override
   public FileStatus getFileLinkStatus(final Path f) throws IOException {
-    FileStatus fi = getFileLinkStatusInternal(f);
+    FileStatus fi = getFileLinkStatusInternal(f, false);
     // getFileLinkStatus is supposed to return a symlink with a
     // qualified path
     if (fi.isSymlink()) {
@@ -702,8 +723,36 @@ public class RawLocalFileSystem extends FileSystem {
     return fi;
   }
 
-  private FileStatus getFileLinkStatusInternal(final Path f) throws IOException {
-    String target = readLink(f);
+  /**
+   * Public {@link FileStatus} methods delegate to this function, which in turn
+   * either call the new {@link Stat} based implementation or the deprecated
+   * methods based on platform support.
+   * 
+   * @param f Path to stat
+   * @param dereference whether to dereference the final path component if a
+   *          symlink
+   * @return FileStatus of f
+   * @throws IOException
+   */
+  private FileStatus getFileLinkStatusInternal(final Path f,
+      boolean dereference) throws IOException {
+    if (!useDeprecatedFileStatus) {
+      return getNativeFileLinkStatus(f, dereference);
+    } else if (dereference) {
+      return deprecatedGetFileStatus(f);
+    } else {
+      return deprecatedGetFileLinkStatusInternal(f);
+    }
+  }
+
+  /**
+   * Deprecated. Remains for legacy support. Should be removed when {@link Stat}
+   * gains support for Windows and other operating systems.
+   */
+  @Deprecated
+  private FileStatus deprecatedGetFileLinkStatusInternal(final Path f)
+      throws IOException {
+    String target = FileUtil.readLink(new File(f.toString()));
 
     try {
       FileStatus fs = getFileStatus(f);
@@ -738,10 +787,31 @@ public class RawLocalFileSystem extends FileSystem {
       throw e;
     }
   }
+  /**
+   * Calls out to platform's native stat(1) implementation to get file metadata
+   * (permissions, user, group, atime, mtime, etc). This works around the lack
+   * of lstat(2) in Java 6.
+   * 
+   *  Currently, the {@link Stat} class used to do this only supports Linux
+   *  and FreeBSD, so the old {@link #deprecatedGetFileLinkStatusInternal(Path)}
+   *  implementation (deprecated) remains further OS support is added.
+   *
+   * @param f File to stat
+   * @param dereference whether to dereference symlinks
+   * @return FileStatus of f
+   * @throws IOException
+   */
+  private FileStatus getNativeFileLinkStatus(final Path f,
+      boolean dereference) throws IOException {
+    checkPath(f);
+    Stat stat = new Stat(f, getDefaultBlockSize(f), dereference, this);
+    FileStatus status = stat.getFileStatus();
+    return status;
+  }
 
   @Override
   public Path getLinkTarget(Path f) throws IOException {
-    FileStatus fi = getFileLinkStatusInternal(f);
+    FileStatus fi = getFileLinkStatusInternal(f, false);
     // return an unqualified symlink target
     return fi.getSymlink();
   }

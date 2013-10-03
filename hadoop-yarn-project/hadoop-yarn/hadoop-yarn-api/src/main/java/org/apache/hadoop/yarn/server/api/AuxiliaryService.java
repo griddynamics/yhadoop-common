@@ -24,8 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
@@ -71,12 +71,35 @@ public abstract class AuxiliaryService extends AbstractService {
    * 
    * <p>
    * The information is passed along to applications via
-   * {@link StartContainerResponse#getAllServicesMetaData()} that is returned by
-   * {@link ContainerManagementProtocol#startContainer(StartContainerRequest)}
+   * {@link StartContainersResponse#getAllServicesMetaData()} that is returned by
+   * {@link ContainerManagementProtocol#startContainers(StartContainersRequest)}
    * </p>
    * 
    * @return meta-data for this service that should be made available to
    *         applications.
    */
   public abstract ByteBuffer getMetaData();
+
+  /**
+   * A new container is started on this NodeManager. This is a signal to
+   * this {@link AuxiliaryService} about the container initialization.
+   * This method is called when the NodeManager receives the container launch
+   * command from the ApplicationMaster and before the container process is 
+   * launched.
+   *
+   * @param initContainerContext context for the container's initialization
+   */
+  public void initializeContainer(ContainerInitializationContext
+      initContainerContext) {
+  }
+
+  /**
+   * A container is finishing on this NodeManager. This is a signal to this
+   * {@link AuxiliaryService} about the same.
+   *
+   * @param stopContainerContext context for the container termination
+   */
+  public void stopContainer(ContainerTerminationContext stopContainerContext) {
+  }
+
 }

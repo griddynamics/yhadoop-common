@@ -20,6 +20,7 @@ option java_package = "org.apache.hadoop.mapreduce.v2.hs.proto";
 option java_outer_classname = "HSAdminRefreshProtocolProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.mapreduce;
 
 /**
  *  refresh admin acls request.
@@ -34,6 +35,42 @@ message RefreshAdminAclsResponseProto {
 }
 
 /**
+ *  refresh loaded job cache request.
+ */
+message RefreshLoadedJobCacheRequestProto {
+}
+
+/**
+ * Response for refresh loaded job cache.
+ */
+message RefreshLoadedJobCacheResponseProto {
+}
+
+/**
+ *  refresh job retention settings request.
+ */
+message RefreshJobRetentionSettingsRequestProto {
+}
+
+/**
+ * Response for refresh job retention.
+ */
+message RefreshJobRetentionSettingsResponseProto {
+}
+
+/*
+ *  refresh log retention request.
+ */
+message RefreshLogRetentionSettingsRequestProto {
+}
+
+/**
+ * Response for refresh log retention.
+ */
+message RefreshLogRetentionSettingsResponseProto {
+}
+
+/**
  * Refresh Protocols implemented by the History server
  */
 service HSAdminRefreshProtocolService {
@@ -42,4 +79,22 @@ service HSAdminRefreshProtocolService {
    */
   rpc refreshAdminAcls(RefreshAdminAclsRequestProto)
       returns(RefreshAdminAclsResponseProto);
+  
+  /**
+   * Refresh loaded job cache
+   */
+  rpc refreshLoadedJobCache(RefreshLoadedJobCacheRequestProto)
+      returns(RefreshLoadedJobCacheResponseProto);
+      
+  /**
+   * Refresh job retention.
+   */
+  rpc refreshJobRetentionSettings(RefreshJobRetentionSettingsRequestProto)
+      returns(RefreshJobRetentionSettingsResponseProto);
+
+   /**
+   * Refresh log retention
+   */
+  rpc refreshLogRetentionSettings(RefreshLogRetentionSettingsRequestProto)
+      returns(RefreshLogRetentionSettingsResponseProto);
 }

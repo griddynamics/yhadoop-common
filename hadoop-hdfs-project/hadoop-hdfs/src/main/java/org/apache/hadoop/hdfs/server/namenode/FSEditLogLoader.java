@@ -22,7 +22,6 @@ import static org.apache.hadoop.util.Time.now;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
@@ -33,12 +32,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.BlockListUpdatingOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
@@ -55,6 +57,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
@@ -64,17 +68,14 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Holder;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Joiner;
 
@@ -276,7 +277,8 @@ public class FSEditLogLoader {
     if (LOG.isTraceEnabled()) {
       LOG.trace("replaying edit log: " + op);
     }
-
+    final boolean toAddRetryCache = fsNamesys.hasRetryCache() && op.hasRpcIds();
+    
     switch (op.opCode) {
     case OP_ADD: {
       AddCloseOp addCloseOp = (AddCloseOp)op;
@@ -299,8 +301,8 @@ public class FSEditLogLoader {
       if (oldFile == null) { // this is OP_ADD on a new file (case 1)
         // versions > 0 support per file replication
         // get name and replication
-        final short replication  = fsNamesys.getBlockManager(
-            ).adjustReplication(addCloseOp.replication);
+        final short replication = fsNamesys.getBlockManager()
+            .adjustReplication(addCloseOp.replication);
         assert addCloseOp.blocks.length == 0;
 
         // add to the file tree
@@ -312,6 +314,13 @@ public class FSEditLogLoader {
             addCloseOp.clientName, addCloseOp.clientMachine);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
 
+        // add the op into retry cache if necessary
+        if (toAddRetryCache) {
+          HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
+              HdfsFileStatus.EMPTY_NAME, newFile, null);
+          fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
+              addCloseOp.rpcCallId, stat);
+        }
       } else { // This is OP_ADD on an existing file
         if (!oldFile.isUnderConstruction()) {
           // This is case 3: a call to append() on an already-closed file.
@@ -319,11 +328,17 @@ public class FSEditLogLoader {
             FSNamesystem.LOG.debug("Reopening an already-closed file " +
                 "for append");
           }
-          fsNamesys.prepareFileForWrite(addCloseOp.path, oldFile,
-              addCloseOp.clientName, addCloseOp.clientMachine, null,
-              false, iip.getLatestSnapshot());
+          LocatedBlock lb = fsNamesys.prepareFileForWrite(addCloseOp.path,
+              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, null,
+              false, iip.getLatestSnapshot(), false);
           newFile = INodeFile.valueOf(fsDir.getINode(addCloseOp.path),
               addCloseOp.path, true);
+          
+          // add the op into retry cache is necessary
+          if (toAddRetryCache) {
+            fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
+                addCloseOp.rpcCallId, lb);
+          }
         }
       }
       // Fall-through for case 2.
@@ -383,6 +398,10 @@ public class FSEditLogLoader {
           updateOp.path);
       // Update in-memory data structures
       updateBlocks(fsDir, updateOp, oldFile);
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(updateOp.rpcClientId, updateOp.rpcCallId);
+      }
       break;
     }
       
@@ -398,17 +417,30 @@ public class FSEditLogLoader {
       ConcatDeleteOp concatDeleteOp = (ConcatDeleteOp)op;
       fsDir.unprotectedConcat(concatDeleteOp.trg, concatDeleteOp.srcs,
           concatDeleteOp.timestamp);
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(concatDeleteOp.rpcClientId,
+            concatDeleteOp.rpcCallId);
+      }
       break;
     }
     case OP_RENAME_OLD: {
       RenameOldOp renameOp = (RenameOldOp)op;
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp);
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(renameOp.rpcClientId, renameOp.rpcCallId);
+      }
       break;
     }
     case OP_DELETE: {
       DeleteOp deleteOp = (DeleteOp)op;
       fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp);
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(deleteOp.rpcClientId, deleteOp.rpcCallId);
+      }
       break;
     }
     case OP_MKDIR: {
@@ -473,12 +505,20 @@ public class FSEditLogLoader {
       fsDir.unprotectedAddSymlink(inodeId, symlinkOp.path,
                                   symlinkOp.value, symlinkOp.mtime, 
                                   symlinkOp.atime, symlinkOp.permissionStatus);
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(symlinkOp.rpcClientId, symlinkOp.rpcCallId);
+      }
       break;
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp, renameOp.options);
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(renameOp.rpcClientId, renameOp.rpcCallId);
+      }
       break;
     }
     case OP_GET_DELEGATION_TOKEN: {
@@ -531,14 +571,18 @@ public class FSEditLogLoader {
     }
     case OP_CREATE_SNAPSHOT: {
       CreateSnapshotOp createSnapshotOp = (CreateSnapshotOp) op;
-      fsNamesys.getSnapshotManager().createSnapshot(
+      String path = fsNamesys.getSnapshotManager().createSnapshot(
           createSnapshotOp.snapshotRoot, createSnapshotOp.snapshotName);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntryWithPayload(createSnapshotOp.rpcClientId,
+            createSnapshotOp.rpcCallId, path);
+      }
       break;
     }
     case OP_DELETE_SNAPSHOT: {
       DeleteSnapshotOp deleteSnapshotOp = (DeleteSnapshotOp) op;
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-      List<INode> removedINodes = new ArrayList<INode>();
+      List<INode> removedINodes = new ChunkedArrayList<INode>();
       fsNamesys.getSnapshotManager().deleteSnapshot(
           deleteSnapshotOp.snapshotRoot, deleteSnapshotOp.snapshotName,
           collectedBlocks, removedINodes);
@@ -546,6 +590,11 @@ public class FSEditLogLoader {
       collectedBlocks.clear();
       fsNamesys.dir.removeFromInodeMap(removedINodes);
       removedINodes.clear();
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(deleteSnapshotOp.rpcClientId,
+            deleteSnapshotOp.rpcCallId);
+      }
       break;
     }
     case OP_RENAME_SNAPSHOT: {
@@ -553,6 +602,11 @@ public class FSEditLogLoader {
       fsNamesys.getSnapshotManager().renameSnapshot(
           renameSnapshotOp.snapshotRoot, renameSnapshotOp.snapshotOldName,
           renameSnapshotOp.snapshotNewName);
+      
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(renameSnapshotOp.rpcClientId,
+            renameSnapshotOp.rpcCallId);
+      }
       break;
     }
     case OP_ALLOW_SNAPSHOT: {
@@ -659,8 +713,12 @@ public class FSEditLogLoader {
         throw new IOException("Trying to remove more than one block from file "
             + path);
       }
-      fsDir.unprotectedRemoveBlock(path,
-          (INodeFileUnderConstruction)file, oldBlocks[oldBlocks.length - 1]);
+      Block oldBlock = oldBlocks[oldBlocks.length - 1];
+      boolean removed = fsDir.unprotectedRemoveBlock(path,
+          (INodeFileUnderConstruction) file, oldBlock);
+      if (!removed && !(op instanceof UpdateBlocksOp)) {
+        throw new IOException("Trying to delete non-existant block " + oldBlock);
+      }
     } else if (newBlocks.length > oldBlocks.length) {
       // We're adding blocks
       for (int i = oldBlocks.length; i < newBlocks.length; i++) {

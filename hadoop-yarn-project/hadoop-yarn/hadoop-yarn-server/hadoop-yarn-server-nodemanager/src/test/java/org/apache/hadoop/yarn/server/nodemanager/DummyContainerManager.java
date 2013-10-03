@@ -145,7 +145,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
     return new ContainersLauncher(context, super.dispatcher, exec,
-                                  super.dirsHandler) {
+                                  super.dirsHandler, this) {
       @Override
       public void handle(ContainersLauncherEvent event) {
         Container container = event.getContainer();
@@ -195,14 +195,13 @@ public class DummyContainerManager extends ContainerManagerImpl {
   
   @Override
   protected void authorizeStartRequest(NMTokenIdentifier nmTokenIdentifier,
-      ContainerTokenIdentifier containerTokenIdentifier,
-      UserGroupInformation ugi) throws YarnException {
+      ContainerTokenIdentifier containerTokenIdentifier) throws YarnException {
     // do nothing
   }
   
   @Override
   protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
-      Container container, boolean stopRequest) throws YarnException {
+      Container container, boolean stopRequest, NMTokenIdentifier identifier) throws YarnException {
     // do nothing
   }
 

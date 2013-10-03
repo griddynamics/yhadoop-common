@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
@@ -139,7 +140,7 @@ public interface ClientProtocol {
    * <p>
    * Blocks have a maximum size.  Clients that intend to create
    * multi-block files must also use 
-   * {@link #addBlock(String, String, ExtendedBlock, DatanodeInfo[])}
+   * {@link #addBlock}
    *
    * @param src path of the file being created.
    * @param masked masked permission.
@@ -170,7 +171,10 @@ public interface ClientProtocol {
    *
    * RuntimeExceptions:
    * @throws InvalidPathException Path <code>src</code> is invalid
+   * <p>
+   * <em>Note that create with {@link CreateFlag#OVERWRITE} is idempotent.</em>
    */
+  @AtMostOnce
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize)
@@ -204,6 +208,7 @@ public interface ClientProtocol {
    * RuntimeExceptions:
    * @throws UnsupportedOperationException if append is not supported
    */
+  @AtMostOnce
   public LocatedBlock append(String src, String clientName)
       throws AccessControlException, DSQuotaExceededException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
@@ -274,8 +279,8 @@ public interface ClientProtocol {
 
   /**
    * The client can give up on a block by calling abandonBlock().
-   * The client can then
-   * either obtain a new block, or complete or abandon the file.
+   * The client can then either obtain a new block, or complete or abandon the 
+   * file.
    * Any partial writes to the block will be discarded.
    * 
    * @throws AccessControlException If access is denied
@@ -283,6 +288,7 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
+  @Idempotent
   public void abandonBlock(ExtendedBlock b, String src, String holder)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
@@ -408,6 +414,7 @@ public interface ClientProtocol {
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException an I/O error occurred 
    */
+  @AtMostOnce
   public boolean rename(String src, String dst) 
       throws UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
@@ -421,6 +428,7 @@ public interface ClientProtocol {
    *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
+  @AtMostOnce
   public void concat(String trg, String[] srcs) 
       throws IOException, UnresolvedLinkException, SnapshotAccessControlException;
 
@@ -459,6 +467,7 @@ public interface ClientProtocol {
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
+  @AtMostOnce
   public void rename2(String src, String dst, Options.Rename... options)
       throws AccessControlException, DSQuotaExceededException,
       FileAlreadyExistsException, FileNotFoundException,
@@ -483,6 +492,7 @@ public interface ClientProtocol {
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
+  @AtMostOnce
   public boolean delete(String src, boolean recursive)
       throws AccessControlException, FileNotFoundException, SafeModeException,
       UnresolvedLinkException, SnapshotAccessControlException, IOException;
@@ -703,6 +713,7 @@ public interface ClientProtocol {
    * @throws AccessControlException if the superuser privilege is violated.
    * @throws IOException if image creation failed.
    */
+  @AtMostOnce
   public void saveNamespace() throws AccessControlException, IOException;
 
   
@@ -724,6 +735,7 @@ public interface ClientProtocol {
    * 
    * @throws AccessControlException if the superuser privilege is violated.
    */
+  @Idempotent
   public boolean restoreFailedStorage(String arg) 
       throws AccessControlException, IOException;
 
@@ -731,6 +743,7 @@ public interface ClientProtocol {
    * Tells the namenode to reread the hosts and exclude files. 
    * @throws IOException
    */
+  @Idempotent
   public void refreshNodes() throws IOException;
 
   /**
@@ -740,6 +753,7 @@ public interface ClientProtocol {
    * 
    * @throws IOException
    */
+  @Idempotent
   public void finalizeUpgrade() throws IOException;
 
   /**
@@ -762,6 +776,7 @@ public interface ClientProtocol {
    *
    * @throws IOException
    */
+  @Idempotent
   public void metaSave(String filename) throws IOException;
 
   /**
@@ -917,6 +932,7 @@ public interface ClientProtocol {
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
+  @AtMostOnce
   public void createSymlink(String target, String link, FsPermission dirPerm,
       boolean createParent) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
@@ -964,6 +980,7 @@ public interface ClientProtocol {
    * @param newNodes datanodes in the pipeline
    * @throws IOException if any error occurs
    */
+  @AtMostOnce
   public void updatePipeline(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException;
@@ -996,6 +1013,7 @@ public interface ClientProtocol {
    * @param token delegation token
    * @throws IOException
    */
+  @Idempotent
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
   
@@ -1004,6 +1022,7 @@ public interface ClientProtocol {
    *         DataTransferProtocol to/from DataNodes.
    * @throws IOException
    */
+  @Idempotent
   public DataEncryptionKey getDataEncryptionKey() throws IOException;
   
   /**
@@ -1013,6 +1032,7 @@ public interface ClientProtocol {
    * @return the snapshot path.
    * @throws IOException
    */
+  @AtMostOnce
   public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException;
 
@@ -1022,6 +1042,7 @@ public interface ClientProtocol {
    * @param snapshotName Name of the snapshot for the snapshottable directory
    * @throws IOException
    */
+  @AtMostOnce
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException;
   
@@ -1032,6 +1053,7 @@ public interface ClientProtocol {
    * @param snapshotNewName new name of the snapshot
    * @throws IOException
    */
+  @AtMostOnce
   public void renameSnapshot(String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException;
   

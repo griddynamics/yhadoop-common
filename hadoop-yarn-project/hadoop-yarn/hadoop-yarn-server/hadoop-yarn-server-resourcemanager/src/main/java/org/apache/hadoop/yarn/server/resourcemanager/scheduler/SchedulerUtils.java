@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -62,7 +63,37 @@ public class SchedulerUtils {
   
   public static final String UNRESERVED_CONTAINER =
       "Container reservation no longer required.";
-  
+
+  /**
+   * Utility to create a {@link ContainerStatus} during exceptional
+   * circumstances.
+   *
+   * @param containerId {@link ContainerId} of returned/released/lost container.
+   * @param diagnostics diagnostic message
+   * @return <code>ContainerStatus</code> for an returned/released/lost 
+   *         container
+   */
+  public static ContainerStatus createAbnormalContainerStatus(
+      ContainerId containerId, String diagnostics) {
+    return createAbnormalContainerStatus(containerId, 
+        ContainerExitStatus.ABORTED, diagnostics);
+  }
+
+  /**
+   * Utility to create a {@link ContainerStatus} during exceptional
+   * circumstances.
+   *
+   * @param containerId {@link ContainerId} of returned/released/lost container.
+   * @param diagnostics diagnostic message
+   * @return <code>ContainerStatus</code> for an returned/released/lost
+   *         container
+   */
+  public static ContainerStatus createPreemptedContainerStatus(
+      ContainerId containerId, String diagnostics) {
+    return createAbnormalContainerStatus(containerId, 
+        ContainerExitStatus.PREEMPTED, diagnostics);
+  }
+
   /**
    * Utility to create a {@link ContainerStatus} during exceptional
    * circumstances.
@@ -72,14 +103,13 @@ public class SchedulerUtils {
    * @return <code>ContainerStatus</code> for an returned/released/lost 
    *         container
    */
-  public static ContainerStatus createAbnormalContainerStatus(
-      ContainerId containerId, String diagnostics) {
+  private static ContainerStatus createAbnormalContainerStatus(
+      ContainerId containerId, int exitStatus, String diagnostics) {
     ContainerStatus containerStatus = 
         recordFactory.newRecordInstance(ContainerStatus.class);
     containerStatus.setContainerId(containerId);
     containerStatus.setDiagnostics(diagnostics);
-    containerStatus.setExitStatus(
-        ContainerExitStatus.ABORTED);
+    containerStatus.setExitStatus(exitStatus);
     containerStatus.setState(ContainerState.COMPLETE);
     return containerStatus;
   }
@@ -180,32 +210,6 @@ public class SchedulerUtils {
           + ", requestedVirtualCores="
           + resReq.getCapability().getVirtualCores()
           + ", maxVirtualCores=" + maximumResource.getVirtualCores());
-    }
-  }
-
-  /**
-   * Utility method to validate a list resource requests, by insuring that the
-   * requested memory/vcore is non-negative and not greater than max
-   */
-  public static void validateResourceRequests(List<ResourceRequest> ask,
-      Resource maximumResource) throws InvalidResourceRequestException {
-    for (ResourceRequest resReq : ask) {
-      validateResourceRequest(resReq, maximumResource);
-    }
-  }
-
-  /*
-   * @throw <code>InvalidResourceBlacklistRequestException </code> if the
-   * resource is not able to be added to the blacklist.
-   */
-  public static void validateBlacklistRequest(ResourceBlacklistRequest blacklistRequest) 
-  throws InvalidResourceBlacklistRequestException {
-    if (blacklistRequest != null) {
-      List<String> plus = blacklistRequest.getBlacklistAdditions();
-      if (plus != null && plus.contains(ResourceRequest.ANY)) {
-        throw new InvalidResourceBlacklistRequestException(
-            "Cannot add " + ResourceRequest.ANY + " to the blacklist!");
-      }
     }
   }
 }

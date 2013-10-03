@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,11 +31,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -43,6 +48,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -77,11 +84,12 @@ public class TestAMRMTokens {
    * 
    * @throws Exception
    */
+  @SuppressWarnings("unchecked")
   @Test
   public void testTokenExpiry() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
+    final MockRMWithAMS rm =
         new MockRMWithAMS(conf, containerManager);
     rm.start();
 
@@ -111,8 +119,12 @@ public class TestAMRMTokens {
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
       Credentials credentials = containerManager.getContainerCredentials();
-      currentUser.addCredentials(credentials);
-
+      final InetSocketAddress rmBindAddress =
+          rm.getApplicationMasterService().getBindAddress();
+      Token<? extends TokenIdentifier> amRMToken =
+          MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+            credentials.getAllTokens());
+      currentUser.addToken(amRMToken);
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =
@@ -126,6 +138,20 @@ public class TestAMRMTokens {
       finishAMRequest.setDiagnostics("diagnostics");
       finishAMRequest.setTrackingUrl("url");
       rmClient.finishApplicationMaster(finishAMRequest);
+
+      // Send RMAppAttemptEventType.CONTAINER_FINISHED to transit RMAppAttempt
+      // from Finishing state to Finished State. Both AMRMToken and
+      // ClientToAMToken will be removed.
+      ContainerStatus containerStatus =
+          BuilderUtils.newContainerStatus(attempt.getMasterContainer().getId(),
+              ContainerState.COMPLETE,
+              "AM Container Finished", 0);
+      rm.getRMContext()
+          .getDispatcher()
+          .getEventHandler()
+          .handle(
+              new RMAppAttemptContainerFinishedEvent(applicationAttemptId,
+                  containerStatus));
 
       // Now simulate trying to allocate. RPC call itself should throw auth
       // exception.
@@ -164,7 +190,7 @@ public class TestAMRMTokens {
   public void testMasterKeyRollOver() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
+    final MockRMWithAMS rm =
         new MockRMWithAMS(conf, containerManager);
     rm.start();
 
@@ -194,8 +220,12 @@ public class TestAMRMTokens {
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
       Credentials credentials = containerManager.getContainerCredentials();
-      currentUser.addCredentials(credentials);
-
+      final InetSocketAddress rmBindAddress =
+          rm.getApplicationMasterService().getBindAddress();
+      Token<? extends TokenIdentifier> amRMToken =
+          MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+            credentials.getAllTokens());
+      currentUser.addToken(amRMToken);
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =

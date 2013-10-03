@@ -216,15 +216,15 @@ public class TestIPC {
     }
   }
   
-  @Test
-  public void testSerial() throws Exception {
-    testSerial(3, false, 2, 5, 100);
-    testSerial(3, true, 2, 5, 10);
+  @Test(timeout=60000)
+  public void testSerial() throws IOException, InterruptedException {
+    internalTestSerial(3, false, 2, 5, 100);
+    internalTestSerial(3, true, 2, 5, 10);
   }
 
-  public void testSerial(int handlerCount, boolean handlerSleep, 
+  public void internalTestSerial(int handlerCount, boolean handlerSleep,
                          int clientCount, int callerCount, int callCount)
-    throws Exception {
+    throws IOException, InterruptedException {
     Server server = new TestServer(handlerCount, handlerSleep);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();
@@ -249,8 +249,8 @@ public class TestIPC {
     server.stop();
   }
 	
-  @Test
-  public void testStandAloneClient() throws Exception {
+  @Test(timeout=60000)
+  public void testStandAloneClient() throws IOException {
     Client client = new Client(LongWritable.class, conf);
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
@@ -350,7 +350,8 @@ public class TestIPC {
       Class<? extends LongWritable> clientParamClass,
       Class<? extends LongWritable> serverParamClass,
       Class<? extends LongWritable> serverResponseClass,
-      Class<? extends LongWritable> clientResponseClass) throws Exception {
+      Class<? extends LongWritable> clientResponseClass) 
+      throws IOException, InstantiationException, IllegalAccessException {
     
     // start server
     Server server = new TestServer(1, false,
@@ -382,7 +383,7 @@ public class TestIPC {
     }
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testIOEOnClientWriteParam() throws Exception {
     doErrorTest(IOEOnWriteWritable.class,
         LongWritable.class,
@@ -390,7 +391,7 @@ public class TestIPC {
         LongWritable.class);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testRTEOnClientWriteParam() throws Exception {
     doErrorTest(RTEOnWriteWritable.class,
         LongWritable.class,
@@ -398,7 +399,7 @@ public class TestIPC {
         LongWritable.class);
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testIOEOnServerReadParam() throws Exception {
     doErrorTest(LongWritable.class,
         IOEOnReadWritable.class,
@@ -406,7 +407,7 @@ public class TestIPC {
         LongWritable.class);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testRTEOnServerReadParam() throws Exception {
     doErrorTest(LongWritable.class,
         RTEOnReadWritable.class,
@@ -415,7 +416,7 @@ public class TestIPC {
   }
 
   
-  @Test
+  @Test(timeout=60000)
   public void testIOEOnServerWriteResponse() throws Exception {
     doErrorTest(LongWritable.class,
         LongWritable.class,
@@ -423,7 +424,7 @@ public class TestIPC {
         LongWritable.class);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testRTEOnServerWriteResponse() throws Exception {
     doErrorTest(LongWritable.class,
         LongWritable.class,
@@ -431,7 +432,7 @@ public class TestIPC {
         LongWritable.class);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testIOEOnClientReadResponse() throws Exception {
     doErrorTest(LongWritable.class,
         LongWritable.class,
@@ -439,7 +440,7 @@ public class TestIPC {
         IOEOnReadWritable.class);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testRTEOnClientReadResponse() throws Exception {
     doErrorTest(LongWritable.class,
         LongWritable.class,
@@ -452,7 +453,7 @@ public class TestIPC {
    * that a ping should have been sent. This is a reproducer for a
    * deadlock seen in one iteration of HADOOP-6762.
    */
-  @Test
+  @Test(timeout=60000)
   public void testIOEOnWriteAfterPingClient() throws Exception {
     // start server
     Client.setPingInterval(conf, 100);
@@ -480,8 +481,8 @@ public class TestIPC {
    * Test that, if the socket factory throws an IOE, it properly propagates
    * to the client.
    */
-  @Test
-  public void testSocketFactoryException() throws Exception {
+  @Test(timeout=60000)
+  public void testSocketFactoryException() throws IOException {
     SocketFactory mockFactory = mock(SocketFactory.class);
     doThrow(new IOException("Injected fault")).when(mockFactory).createSocket();
     Client client = new Client(LongWritable.class, conf, mockFactory);
@@ -502,8 +503,8 @@ public class TestIPC {
    * failure is handled properly. This is a regression test for
    * HADOOP-7428.
    */
-  @Test
-  public void testRTEDuringConnectionSetup() throws Exception {
+  @Test(timeout=60000)
+  public void testRTEDuringConnectionSetup() throws IOException {
     // Set up a socket factory which returns sockets which
     // throw an RTE when setSoTimeout is called.
     SocketFactory spyFactory = spy(NetUtils.getDefaultSocketFactory(conf));
@@ -543,8 +544,8 @@ public class TestIPC {
     }
   }
   
-  @Test
-  public void testIpcTimeout() throws Exception {
+  @Test(timeout=60000)
+  public void testIpcTimeout() throws IOException {
     // start server
     Server server = new TestServer(1, true);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -565,8 +566,8 @@ public class TestIPC {
         addr, null, null, 3*PING_INTERVAL+MIN_SLEEP_TIME, conf);
   }
 
-  @Test
-  public void testIpcConnectTimeout() throws Exception {
+  @Test(timeout=60000)
+  public void testIpcConnectTimeout() throws IOException {
     // start server
     Server server = new TestServer(1, true);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -589,7 +590,7 @@ public class TestIPC {
    * Check service class byte in IPC header is correct on wire.
    */
   @Test(timeout=60000)
-  public void testIpcWithServiceClass() throws Exception {
+  public void testIpcWithServiceClass() throws IOException {
     // start server
     Server server = new TestServer(5, false);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -616,7 +617,7 @@ public class TestIPC {
    * Make a call from a client and verify if header info is changed in server side
    */
   private void callAndVerify(Server server, InetSocketAddress addr,
-      int serviceClass, boolean noChanged) throws Exception{
+      int serviceClass, boolean noChanged) throws IOException{
     Client client = new Client(LongWritable.class, conf);
 
     client.call(new LongWritable(RANDOM.nextLong()),
@@ -650,7 +651,7 @@ public class TestIPC {
    * and stopping IPC servers.
    */
   @Test(timeout=60000)
-  public void testSocketLeak() throws Exception {
+  public void testSocketLeak() throws IOException {
     Assume.assumeTrue(FD_DIR.exists()); // only run on Linux
 
     long startFds = countOpenFileDescriptors();
@@ -669,32 +670,32 @@ public class TestIPC {
     return FD_DIR.list().length;
   }
 
-  @Test
-  public void testIpcFromHadoop_0_18_13() throws Exception {
+  @Test(timeout=60000)
+  public void testIpcFromHadoop_0_18_13() throws IOException {
     doIpcVersionTest(NetworkTraces.HADOOP_0_18_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_18_3_RPC);
   }
   
-  @Test
-  public void testIpcFromHadoop0_20_3() throws Exception {
+  @Test(timeout=60000)
+  public void testIpcFromHadoop0_20_3() throws IOException {
     doIpcVersionTest(NetworkTraces.HADOOP_0_20_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_20_3_RPC);
   }
   
-  @Test
-  public void testIpcFromHadoop0_21_0() throws Exception {
+  @Test(timeout=60000)
+  public void testIpcFromHadoop0_21_0() throws IOException {
     doIpcVersionTest(NetworkTraces.HADOOP_0_21_0_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_21_0_RPC);
   }
   
-  @Test
-  public void testHttpGetResponse() throws Exception {
+  @Test(timeout=60000)
+  public void testHttpGetResponse() throws IOException {
     doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(),
         Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes());
   }
   
-  @Test
-  public void testConnectionRetriesOnSocketTimeoutExceptions() throws Exception {
+  @Test(timeout=60000)
+  public void testConnectionRetriesOnSocketTimeoutExceptions() throws IOException {
     Configuration conf = new Configuration();
     // set max retries to 0
     conf.setInt(
@@ -719,8 +720,8 @@ public class TestIPC {
    * (1) the rpc server uses the call id/retry provided by the rpc client, and
    * (2) the rpc client receives the same call id/retry from the rpc server.
    */
-  @Test
-  public void testCallIdAndRetry() throws Exception {
+  @Test(timeout=60000)
+  public void testCallIdAndRetry() throws IOException {
     final CallInfo info = new CallInfo();
 
     // Override client to store the call info and check response
@@ -771,8 +772,8 @@ public class TestIPC {
   /**
    * Test the retry count while used in a retry proxy.
    */
-  @Test
-  public void testRetryProxy() throws Exception {
+  @Test(timeout=60000)
+  public void testRetryProxy() throws IOException {
     final Client client = new Client(LongWritable.class, conf);
     
     final TestServer server = new TestServer(1, false);
@@ -784,7 +785,9 @@ public class TestIPC {
       }
     };
 
-    final int totalRetry = 256;
+    // try more times, so it is easier to find race condition bug
+    // 10000 times runs about 6s on a core i7 machine
+    final int totalRetry = 10000;
     DummyProtocol proxy = (DummyProtocol) Proxy.newProxyInstance(
         DummyProtocol.class.getClassLoader(),
         new Class[] { DummyProtocol.class }, new TestInvocationHandler(client,
@@ -806,8 +809,8 @@ public class TestIPC {
   /**
    * Test if the rpc server gets the default retry count (0) from client.
    */
-  @Test
-  public void testInitialCallRetryCount() throws Exception {
+  @Test(timeout=60000)
+  public void testInitialCallRetryCount() throws IOException {
     // Override client to store the call id
     final Client client = new Client(LongWritable.class, conf);
 
@@ -837,8 +840,8 @@ public class TestIPC {
   /**
    * Test if the rpc server gets the retry count from client.
    */
-  @Test
-  public void testCallRetryCount() throws Exception {
+  @Test(timeout=60000)
+  public void testCallRetryCount() throws IOException {
     final int retryCount = 255;
     // Override client to store the call id
     final Client client = new Client(LongWritable.class, conf);
@@ -870,9 +873,11 @@ public class TestIPC {
   /**
    * Tests that client generates a unique sequential call ID for each RPC call,
    * even if multiple threads are using the same client.
+ * @throws InterruptedException 
    */
-  @Test
-  public void testUniqueSequentialCallIds() throws Exception {
+  @Test(timeout=60000)
+  public void testUniqueSequentialCallIds() 
+      throws IOException, InterruptedException {
     int serverThreads = 10, callerCount = 100, perCallerCallCount = 100;
     TestServer server = new TestServer(serverThreads, false);
 
@@ -937,7 +942,7 @@ public class TestIPC {
   
   private void doIpcVersionTest(
       byte[] requestData,
-      byte[] expectedResponse) throws Exception {
+      byte[] expectedResponse) throws IOException {
     Server server = new TestServer(1, true);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();

@@ -33,22 +33,26 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -98,23 +102,23 @@ public class TestAMAuthorization {
     }
 
     @Override
-    public StartContainerResponse
-        startContainer(StartContainerRequest request)
+    public StartContainersResponse
+        startContainers(StartContainersRequest request)
             throws YarnException {
-      containerTokens = request.getContainerLaunchContext().getTokens();
-      return null;
+      containerTokens = request.getStartContainerRequests().get(0).getContainerLaunchContext().getTokens();
+      return StartContainersResponse.newInstance(null, null, null);
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request)
+    public StopContainersResponse stopContainers(StopContainersRequest request)
         throws YarnException {
-      return null;
+      return StopContainersResponse.newInstance(null, null);
     }
 
     @Override
-    public GetContainerStatusResponse getContainerStatus(
-        GetContainerStatusRequest request) throws YarnException {
-      return null;
+    public GetContainerStatusesResponse getContainerStatuses(
+        GetContainerStatusesRequest request) throws YarnException {
+      return GetContainerStatusesResponse.newInstance(null, null);
     }
 
     public Credentials getContainerCredentials() throws IOException {
@@ -141,6 +145,19 @@ public class TestAMAuthorization {
     @Override
     protected ApplicationMasterService createApplicationMasterService() {
       return new ApplicationMasterService(getRMContext(), this.scheduler);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Token<? extends TokenIdentifier> setupAndReturnAMRMToken(
+        InetSocketAddress rmBindAddress,
+        Collection<Token<? extends TokenIdentifier>> allTokens) {
+      for (Token<? extends TokenIdentifier> token : allTokens) {
+        if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+          SecurityUtil.setTokenService(token, rmBindAddress);
+          return (Token<AMRMTokenIdentifier>) token;
+        }
+      }
+      return null;
     }
   }
 
@@ -178,8 +195,12 @@ public class TestAMAuthorization {
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
     Credentials credentials = containerManager.getContainerCredentials();
-    currentUser.addCredentials(credentials);
-
+    final InetSocketAddress rmBindAddress =
+        rm.getApplicationMasterService().getBindAddress();
+    Token<? extends TokenIdentifier> amRMToken =
+        MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+          credentials.getAllTokens());
+    currentUser.addToken(amRMToken);
     ApplicationMasterProtocol client = currentUser
         .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
@@ -253,15 +274,14 @@ public class TestAMAuthorization {
     } catch (Exception e) {
       // Because there are no tokens, the request should be rejected as the
       // server side will assume we are trying simple auth.
-      String availableAuthMethods;
+      String expectedMessage = "";
       if (UserGroupInformation.isSecurityEnabled()) {
-        availableAuthMethods = "[TOKEN, KERBEROS]";
+        expectedMessage = "Client cannot authenticate via:[TOKEN]";
       } else {
-        availableAuthMethods = "[TOKEN]";
+        expectedMessage =
+            "SIMPLE authentication is not enabled.  Available:[TOKEN]";
       }
-      Assert.assertTrue(e.getCause().getMessage().contains(
-        "SIMPLE authentication is not enabled.  "
-            + "Available:" + availableAuthMethods));
+      Assert.assertTrue(e.getCause().getMessage().contains(expectedMessage));
     }
 
     // TODO: Add validation of invalid authorization when there's more data in

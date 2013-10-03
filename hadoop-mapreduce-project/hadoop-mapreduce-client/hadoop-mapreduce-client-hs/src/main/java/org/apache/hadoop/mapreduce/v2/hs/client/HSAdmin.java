@@ -60,6 +60,14 @@ public class HSAdmin extends Configured implements Tool {
           .println("Usage: mapred hsadmin [-refreshSuperUserGroupsConfiguration]");
     } else if ("-refreshAdminAcls".equals(cmd)) {
       System.err.println("Usage: mapred hsadmin [-refreshAdminAcls]");
+    } else if ("-refreshLoadedJobCache".equals(cmd)) {
+      System.err.println("Usage: mapred hsadmin [-refreshLoadedJobCache]");
+    } else if ("-refreshJobRetentionSettings".equals(cmd)) {
+      System.err
+          .println("Usage: mapred hsadmin [-refreshJobRetentionSettings]");
+    } else if ("-refreshLogRetentionSettings".equals(cmd)) {
+      System.err
+          .println("Usage: mapred hsadmin [-refreshLogRetentionSettings]");
     } else if ("-getGroups".equals(cmd)) {
       System.err.println("Usage: mapred hsadmin" + " [-getGroups [username]]");
     } else {
@@ -67,6 +75,9 @@ public class HSAdmin extends Configured implements Tool {
       System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
       System.err.println("           [-refreshAdminAcls]");
+      System.err.println("           [-refreshLoadedJobCache]");
+      System.err.println("           [-refreshJobRetentionSettings]");
+      System.err.println("           [-refreshLogRetentionSettings]");
       System.err.println("           [-getGroups [username]]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
@@ -81,6 +92,9 @@ public class HSAdmin extends Configured implements Tool {
         + " [-refreshUserToGroupsMappings]"
         + " [-refreshSuperUserGroupsConfiguration]"
         + " [-refreshAdminAcls]"
+        + " [-refreshLoadedJobCache]"
+        + " [-refreshLogRetentionSettings]"
+        + " [-refreshJobRetentionSettings]"
         + " [-getGroups [username]]" + " [-help [cmd]]\n";
 
     String refreshUserToGroupsMappings = "-refreshUserToGroupsMappings: Refresh user-to-groups mappings\n";
@@ -89,6 +103,14 @@ public class HSAdmin extends Configured implements Tool {
 
     String refreshAdminAcls = "-refreshAdminAcls: Refresh acls for administration of Job history server\n";
 
+    String refreshLoadedJobCache = "-refreshLoadedJobCache: Refresh loaded job cache of Job history server\n";
+
+    String refreshJobRetentionSettings = "-refreshJobRetentionSettings:" + 
+        "Refresh job history period,job cleaner settings\n";
+
+    String refreshLogRetentionSettings = "-refreshLogRetentionSettings:" + 
+        "Refresh log retention period and log retention check interval\n";
+    
     String getGroups = "-getGroups [username]: Get the groups which given user belongs to\n";
 
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n"
@@ -102,6 +124,12 @@ public class HSAdmin extends Configured implements Tool {
       System.out.println(refreshSuperUserGroupsConfiguration);
     } else if ("refreshAdminAcls".equals(cmd)) {
       System.out.println(refreshAdminAcls);
+    } else if ("refreshLoadedJobCache".equals(cmd)) {
+      System.out.println(refreshLoadedJobCache);
+    } else if ("refreshJobRetentionSettings".equals(cmd)) {
+      System.out.println(refreshJobRetentionSettings);
+    } else if ("refreshLogRetentionSettings".equals(cmd)) {
+      System.out.println(refreshLogRetentionSettings);
     } else if ("getGroups".equals(cmd)) {
       System.out.println(getGroups);
     } else {
@@ -109,6 +137,9 @@ public class HSAdmin extends Configured implements Tool {
       System.out.println(refreshUserToGroupsMappings);
       System.out.println(refreshSuperUserGroupsConfiguration);
       System.out.println(refreshAdminAcls);
+      System.out.println(refreshLoadedJobCache);
+      System.out.println(refreshJobRetentionSettings);
+      System.out.println(refreshLogRetentionSettings);
       System.out.println(getGroups);
       System.out.println(help);
       System.out.println();
@@ -193,8 +224,56 @@ public class HSAdmin extends Configured implements Tool {
     HSAdminRefreshProtocol refreshProtocol = HSProxies.createProxy(conf,
         address, HSAdminRefreshProtocol.class,
         UserGroupInformation.getCurrentUser());
-    // Refresh the user-to-groups mappings
+
     refreshProtocol.refreshAdminAcls();
+    return 0;
+  }
+
+  private int refreshLoadedJobCache() throws IOException {
+    // Refresh the loaded job cache
+    Configuration conf = getConf();
+    InetSocketAddress address = conf.getSocketAddr(
+        JHAdminConfig.JHS_ADMIN_ADDRESS,
+        JHAdminConfig.DEFAULT_JHS_ADMIN_ADDRESS,
+        JHAdminConfig.DEFAULT_JHS_ADMIN_PORT);
+
+    HSAdminRefreshProtocol refreshProtocol = HSProxies.createProxy(conf,
+        address, HSAdminRefreshProtocol.class,
+        UserGroupInformation.getCurrentUser());
+
+    refreshProtocol.refreshLoadedJobCache();
+    return 0;
+  }
+    
+  private int refreshJobRetentionSettings() throws IOException {
+    // Refresh job retention settings
+    Configuration conf = getConf();
+    InetSocketAddress address = conf.getSocketAddr(
+        JHAdminConfig.JHS_ADMIN_ADDRESS,
+        JHAdminConfig.DEFAULT_JHS_ADMIN_ADDRESS,
+        JHAdminConfig.DEFAULT_JHS_ADMIN_PORT);
+
+    HSAdminRefreshProtocol refreshProtocol = HSProxies.createProxy(conf,
+        address, HSAdminRefreshProtocol.class,
+        UserGroupInformation.getCurrentUser());
+
+    refreshProtocol.refreshJobRetentionSettings();
+    return 0;
+  }
+
+  private int refreshLogRetentionSettings() throws IOException {
+    // Refresh log retention settings
+    Configuration conf = getConf();
+    InetSocketAddress address = conf.getSocketAddr(
+        JHAdminConfig.JHS_ADMIN_ADDRESS,
+        JHAdminConfig.DEFAULT_JHS_ADMIN_ADDRESS,
+        JHAdminConfig.DEFAULT_JHS_ADMIN_PORT);
+
+    HSAdminRefreshProtocol refreshProtocol = HSProxies.createProxy(conf,
+        address, HSAdminRefreshProtocol.class,
+        UserGroupInformation.getCurrentUser());
+
+    refreshProtocol.refreshLogRetentionSettings();
     return 0;
   }
 
@@ -211,7 +290,10 @@ public class HSAdmin extends Configured implements Tool {
 
     if ("-refreshUserToGroupsMappings".equals(cmd)
         || "-refreshSuperUserGroupsConfiguration".equals(cmd)
-        || "-refreshAdminAcls".equals(cmd)) {
+        || "-refreshAdminAcls".equals(cmd)
+        || "-refreshLoadedJobCache".equals(cmd)
+        || "-refreshJobRetentionSettings".equals(cmd)
+        || "-refreshLogRetentionSettings".equals(cmd)) {
       if (args.length != 1) {
         printUsage(cmd);
         return exitCode;
@@ -225,6 +307,12 @@ public class HSAdmin extends Configured implements Tool {
       exitCode = refreshSuperUserGroupsConfiguration();
     } else if ("-refreshAdminAcls".equals(cmd)) {
       exitCode = refreshAdminAcls();
+    } else if ("-refreshLoadedJobCache".equals(cmd)) {
+      exitCode = refreshLoadedJobCache();
+    } else if ("-refreshJobRetentionSettings".equals(cmd)) {
+      exitCode = refreshJobRetentionSettings();
+    } else if ("-refreshLogRetentionSettings".equals(cmd)) {
+      exitCode = refreshLogRetentionSettings();
     } else if ("-getGroups".equals(cmd)) {
       String[] usernames = Arrays.copyOfRange(args, i, args.length);
       exitCode = getGroups(usernames);

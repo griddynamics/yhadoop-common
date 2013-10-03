@@ -26,6 +26,7 @@ option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "YarnServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
 import "Security.proto";
 import "yarn_protos.proto";
@@ -52,6 +53,7 @@ message FinishApplicationMasterRequestProto {
 }
 
 message FinishApplicationMasterResponseProto {
+  optional bool isUnregistered = 1 [default = false];
 }
 
 message AllocateRequestProto {
@@ -122,6 +124,7 @@ message GetClusterMetricsResponseProto {
 
 message GetApplicationsRequestProto {
   repeated string application_types = 1;
+  repeated YarnApplicationStateProto application_states = 2;
 }
 
 message GetApplicationsResponseProto {
@@ -181,4 +184,38 @@ message GetContainerStatusRequestProto {
 
 message GetContainerStatusResponseProto {
   optional ContainerStatusProto status = 1;
+}
+
+//// bulk API records
+message StartContainersRequestProto {
+  repeated StartContainerRequestProto start_container_request = 1;
+}
+
+message ContainerExceptionMapProto {
+  optional ContainerIdProto container_id = 1;
+  optional SerializedExceptionProto exception = 2;
+}
+
+message StartContainersResponseProto {
+  repeated StringBytesMapProto services_meta_data = 1;
+  repeated ContainerIdProto succeeded_requests = 2;
+  repeated ContainerExceptionMapProto failed_requests = 3;
+}
+
+message StopContainersRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message StopContainersResponseProto {
+  repeated ContainerIdProto succeeded_requests = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+message GetContainerStatusesRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message GetContainerStatusesResponseProto {
+  repeated ContainerStatusProto status = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
 }

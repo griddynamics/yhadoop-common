@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 import org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
@@ -39,14 +40,18 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 
 public class TestHSAdminServer {
   private HSAdminServer hsAdminServer = null;
   private HSAdmin hsAdminClient = null;
   Configuration conf = null;
   private static long groupRefreshTimeoutSec = 1;
+  JobHistory jobHistoryService = null;
+  AggregatedLogDeletionService alds = null;
 
   public static class MockUnixGroupsMapping implements
       GroupMappingServiceProvider {
@@ -82,7 +87,11 @@ public class TestHSAdminServer {
         GroupMappingServiceProvider.class);
     conf.setLong("hadoop.security.groups.cache.secs", groupRefreshTimeoutSec);
     Groups.getUserToGroupsMappingService(conf);
-    hsAdminServer = new HSAdminServer() {
+    jobHistoryService = mock(JobHistory.class);
+    alds = mock(AggregatedLogDeletionService.class);
+
+    hsAdminServer = new HSAdminServer(alds, jobHistoryService) {
+
       @Override
       protected Configuration createConf() {
         return conf;
@@ -230,6 +239,30 @@ public class TestHSAdminServer {
       th = e;
     }
     assertTrue(th instanceof RemoteException);
+  }
+
+  @Test
+  public void testRefreshLoadedJobCache() throws Exception {
+    String[] args = new String[1];
+    args[0] = "-refreshLoadedJobCache";
+    hsAdminClient.run(args);
+    verify(jobHistoryService).refreshLoadedJobCache();
+  }
+  
+  @Test
+  public void testRefreshLogRetentionSettings() throws Exception {
+    String[] args = new String[1];
+    args[0] = "-refreshLogRetentionSettings";
+    hsAdminClient.run(args);
+    verify(alds).refreshLogRetentionSettings();
+  }
+
+  @Test
+  public void testRefreshJobRetentionSettings() throws Exception {
+    String[] args = new String[1];
+    args[0] = "-refreshJobRetentionSettings";
+    hsAdminClient.run(args);
+    verify(jobHistoryService).refreshJobRetentionSettings();
   }
 
   @After

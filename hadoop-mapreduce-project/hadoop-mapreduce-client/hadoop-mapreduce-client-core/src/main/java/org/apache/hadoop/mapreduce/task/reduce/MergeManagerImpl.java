@@ -355,8 +355,11 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     
     List<InMemoryMapOutput<K, V>> memory = 
       new ArrayList<InMemoryMapOutput<K, V>>(inMemoryMergedMapOutputs);
+    inMemoryMergedMapOutputs.clear();
     memory.addAll(inMemoryMapOutputs);
+    inMemoryMapOutputs.clear();
     List<CompressAwarePath> disk = new ArrayList<CompressAwarePath>(onDiskMapOutputs);
+    onDiskMapOutputs.clear();
     return finalMerge(jobConf, rfs, memory, disk);
   }
    
@@ -613,7 +616,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       fullSize -= size;
       Reader<K,V> reader = new InMemoryReader<K,V>(MergeManagerImpl.this, 
                                                    mo.getMapId(),
-                                                   data, 0, (int)size);
+                                                   data, 0, (int)size, jobConf);
       inMemorySegments.add(new Segment<K,V>(reader, true, 
                                             (mo.isPrimaryMapOutput() ? 
                                             mergedMapOutputsCounter : null)));

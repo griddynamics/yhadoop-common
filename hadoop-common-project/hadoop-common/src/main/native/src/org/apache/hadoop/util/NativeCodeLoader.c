@@ -23,6 +23,10 @@
 #include "config.h"
 #endif // UNIX
 
+#ifdef WINDOWS
+#include "winutils.h"
+#endif
+
 #include <jni.h>
 
 JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_util_NativeCodeLoader_buildSupportsSnappy
@@ -38,9 +42,25 @@ JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_util_NativeCodeLoader_buildSup
 JNIEXPORT jstring JNICALL Java_org_apache_hadoop_util_NativeCodeLoader_getLibraryName
   (JNIEnv *env, jclass clazz)
 {
+#ifdef UNIX
   Dl_info dl_info;
   int ret = dladdr(
       Java_org_apache_hadoop_util_NativeCodeLoader_getLibraryName,
       &dl_info);
   return (*env)->NewStringUTF(env, ret==0 ? "Unavailable" : dl_info.dli_fname);
+#endif
+
+#ifdef WINDOWS
+  LPWSTR filename = NULL;
+  GetLibraryName(Java_org_apache_hadoop_util_NativeCodeLoader_getLibraryName,
+    &filename);
+  if (filename != NULL)
+  {
+    return (*env)->NewString(env, filename, (jsize) wcslen(filename));
+  }
+  else
+  {
+    return (*env)->NewStringUTF(env, "Unavailable");
+  }
+#endif
 }

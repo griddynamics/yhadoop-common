@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -392,9 +393,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  private void updateMetricsForDeactivatedNode(NodeState finalState) {
+  private void updateMetricsForDeactivatedNode(NodeState initialState,
+                                               NodeState finalState) {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
-    metrics.decrNumActiveNodes();
+
+    switch (initialState) {
+      case RUNNING:
+        metrics.decrNumActiveNodes();
+        break;
+      case UNHEALTHY:
+        metrics.decrNumUnhealthyNMs();
+        break;
+    }
 
     switch (finalState) {
     case DECOMMISSIONED:
@@ -450,8 +460,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           && rmNode.getHttpPort() == newNode.getHttpPort()) {
         // Reset heartbeat ID since node just restarted.
         rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
-        rmNode.context.getDispatcher().getEventHandler().handle(
-            new NodeAddedSchedulerEvent(rmNode));
+        if (rmNode.getState() != NodeState.UNHEALTHY) {
+          // Only add new node if old state is not UNHEALTHY
+          rmNode.context.getDispatcher().getEventHandler().handle(
+              new NodeAddedSchedulerEvent(rmNode));
+         }
       } else {
         // Reconnected node differs, so replace old node and start new node
         switch (rmNode.getState()) {
@@ -501,8 +514,14 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       // Inform the scheduler
       rmNode.nodeUpdateQueue.clear();
-      rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodeRemovedSchedulerEvent(rmNode));
+      // If the current state is NodeState.UNHEALTHY
+      // Then node is already been removed from the
+      // Scheduler
+      NodeState initialState = rmNode.getState();
+      if (!initialState.equals(NodeState.UNHEALTHY)) {
+        rmNode.context.getDispatcher().getEventHandler()
+          .handle(new NodeRemovedSchedulerEvent(rmNode));
+      }
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
               NodesListManagerEventType.NODE_UNUSABLE, rmNode));
@@ -514,7 +533,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getInactiveRMNodes().put(rmNode.nodeId.getHost(), rmNode);
 
       //Update the metrics
-      rmNode.updateMetricsForDeactivatedNode(finalState);
+      rmNode.updateMetricsForDeactivatedNode(initialState, finalState);
     }
   }
 
@@ -544,7 +563,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             new NodesListManagerEvent(
                 NodesListManagerEventType.NODE_UNUSABLE, rmNode));
         // Update metrics
-        rmNode.updateMetricsForDeactivatedNode(NodeState.UNHEALTHY);
+        rmNode.updateMetricsForDeactivatedNode(rmNode.getState(),
+            NodeState.UNHEALTHY);
         return NodeState.UNHEALTHY;
       }
 
@@ -596,9 +616,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeUpdateSchedulerEvent(rmNode));
       }
-      
-      rmNode.context.getDelegationTokenRenewer().updateKeepAliveApplications(
+
+      // Update DTRenewer in secure mode to keep these apps alive. Today this is
+      // needed for log-aggregation to finish long after the apps are gone.
+      if (UserGroupInformation.isSecurityEnabled()) {
+        rmNode.context.getDelegationTokenRenewer().updateKeepAliveApplications(
           statusEvent.getKeepAliveAppIds());
+      }
 
       return NodeState.RUNNING;
     }
