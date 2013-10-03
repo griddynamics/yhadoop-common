@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.mapred.lib.db;
 
-import java.lang.reflect.Field;
-import java.sql.Connection;
+import java.sql.DriverManager;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapred.JobConf;
@@ -30,8 +29,10 @@ import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBRecordReader;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.apache.hadoop.mapreduce.lib.db.DriverForTest;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -43,9 +44,11 @@ public class TestDBInputFormat {
    */
   @Test(timeout = 10000)
   public void testDBInputFormat() throws Exception {
-
     JobConf configuration = new JobConf();
-    DBInputFormat<NullDBWritable> format = new DBInputFormatForTest();
+    setupDriver(configuration);
+    
+    DBInputFormat<NullDBWritable> format = new DBInputFormat<NullDBWritable>();
+    format.setConf(configuration);
     format.setConf(configuration);
     DBInputFormat.DBInputSplit splitter = new DBInputFormat.DBInputSplit(1, 10);
     Reporter reporter = mock(Reporter.class);
@@ -78,7 +81,7 @@ public class TestDBInputFormat {
     JobConf configuration = new JobConf();
 
     String[] fieldNames = { "field1", "field2" };
-    DBInputFormatForTest.setInput(configuration, NullDBWritable.class, "table",
+    DBInputFormat.setInput(configuration, NullDBWritable.class, "table",
         "conditions", "orderBy", fieldNames);
     assertEquals(
         "org.apache.hadoop.mapred.lib.db.DBInputFormat$NullDBWritable",
@@ -99,7 +102,7 @@ public class TestDBInputFormat {
 
     configuration = new JobConf();
 
-    DBInputFormatForTest.setInput(configuration, NullDBWritable.class, "query",
+    DBInputFormat.setInput(configuration, NullDBWritable.class, "query",
         "countQuery");
     assertEquals("query", configuration.get(DBConfiguration.INPUT_QUERY, null));
     assertEquals("countQuery",
@@ -150,29 +153,11 @@ public class TestDBInputFormat {
 
   }
 
-  private class DBInputFormatForTest extends DBInputFormat<NullDBWritable> {
-
-    @Override
-    public Connection getConnection() {
-      Connection result = DriverForTest.getConnection();
-      try {
-        Field field = org.apache.hadoop.mapreduce.lib.db.DBInputFormat.class
-            .getDeclaredField("connection");
-        field.setAccessible(true);
-        field.set(this, result);
-      } catch (SecurityException e) {
-        e.printStackTrace();
-      } catch (NoSuchFieldException e) {
-        e.printStackTrace();
-      } catch (IllegalArgumentException e) {
-        e.printStackTrace();
-      } catch (IllegalAccessException e) {
-        e.printStackTrace();
-      }
-
-      return result;
-    }
-
+  private void setupDriver(JobConf configuration) throws Exception {
+    configuration.set(DBConfiguration.URL_PROPERTY, "testUrl");
+    DriverManager.registerDriver(new DriverForTest());
+    configuration.set(DBConfiguration.DRIVER_CLASS_PROPERTY,
+        DriverForTest.class.getCanonicalName());
   }
- 
+
 }

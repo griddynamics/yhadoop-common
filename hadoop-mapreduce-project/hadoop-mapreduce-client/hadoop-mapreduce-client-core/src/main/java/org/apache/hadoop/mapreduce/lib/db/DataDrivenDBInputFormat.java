@@ -167,7 +167,6 @@ public class DataDrivenDBInputFormat<T extends DBWritable>
   public List<InputSplit> getSplits(JobContext job) throws IOException {
 
     int targetNumTasks = job.getConfiguration().getInt(MRJobConfig.NUM_MAPS, 1);
-    System.out.println("num_maps=" + targetNumTasks);
     if (1 == targetNumTasks) {
       // There's no need to run a bounding vals query; just return a split
       // that separates nothing. This can be considerably more optimal for a
