@@ -44,6 +44,11 @@ Release 2.3.0 - UNRELEASED
     YARN-819. ResourceManager and NodeManager should check for a minimum allowed
     version (Robert Parker via jeagles)
 
+    YARN-677. Increase coverage to FairScheduler (Vadim Bondarev and Dennis Y
+    via jeagles)
+
+    YARN-425. coverage fix for yarn api (Aleksey Gorshkov via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -87,6 +92,9 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1228. Clean up Fair Scheduler configuration loading. (Sandy Ryza)
 
+    YARN-1213. Restore config to ban submitting to undeclared pools in the
+    Fair Scheduler. (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -116,6 +124,16 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1262. TestApplicationCleanup relies on all containers assigned in a
     single heartbeat (Karthik Kambatla via Sandy Ryza)
+
+    YARN-1260. Added webapp.http.address to yarn-default.xml so that default
+    install with https enabled doesn't have broken link on NM UI. (Omkar Vinit
+    Joshi via vinodkv)
+
+    YARN-1141. Updating resource requests should be decoupled with updating
+    blacklist (Zhijie Shen via bikas)
+
+    YARN-876. Node resource is added twice when node comes back from unhealthy
+    to healthy. (Peng Zhang via Sandy Ryza)
 
 Release 2.1.1-beta - 2013-09-23
 

@@ -260,6 +260,18 @@ Release 2.1.2 - UNRELEASED
     MAPREDUCE-5536. Fixed MR AM and JHS to respect
     mapreduce.jobhistory.webapp.https.address. (Omkar Vinit Joshi via vinodkv)
 
+    MAPREDUCE-5530. Fix compat with hadoop-1 in
+    mapred.lib.CombinFileInputFormat by re-introducing
+    isSplittable(FileSystem, Path) api and ensuring semantic compatibility.
+    (Robert Kanter via acmurthy)
+
+    MAPREDUCE-5459. Update documentation on how to run MRv1 examples on YARN.
+    (Zhijie Shen via acmurthy)
+
+    MAPREDUCE-5554. hdfs-site.xml included in hadoop-mapreduce-client-jobclient
+    tests jar is breaking tests for downstream components (Robert Kanter via
+    Sandy Ryza)
+
 Release 2.1.1-beta - 2013-09-23
 
   INCOMPATIBLE CHANGES
