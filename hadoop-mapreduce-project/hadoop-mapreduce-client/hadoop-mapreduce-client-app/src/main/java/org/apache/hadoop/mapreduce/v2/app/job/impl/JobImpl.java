@@ -128,6 +128,8 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /** Implementation of Job interface. Maintains the state machines of Job.
  * The read and write calls use ReadWriteLock for concurrency.
  */
@@ -641,6 +643,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
   private ScheduledFuture failWaitTriggerScheduledFuture;
 
+  private JobState lastNonFinalState = JobState.NEW;
+
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener,
@@ -928,7 +932,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobState getState() {
     readLock.lock();
     try {
-      return getExternalState(getInternalState());
+      JobState state = getExternalState(getInternalState());
+      if (!appContext.safeToReportTerminationToUser()
+          && (state == JobState.SUCCEEDED || state == JobState.FAILED
+          || state == JobState.KILLED || state == JobState.ERROR)) {
+        return lastNonFinalState;
+      } else {
+        return state;
+      }
     } finally {
       readLock.unlock();
     }
@@ -972,11 +983,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (oldState != getInternalState()) {
         LOG.info(jobId + "Job Transitioned from " + oldState + " to "
                  + getInternalState());
+        rememberLastNonFinalState(oldState);
       }
     }
     
     finally {
       writeLock.unlock();
+    }
+  }
+
+  private void rememberLastNonFinalState(JobStateInternal stateInternal) {
+    JobState state = getExternalState(stateInternal);
+    // if state is not the final state, set lastNonFinalState
+    if (state != JobState.SUCCEEDED && state != JobState.FAILED
+        && state != JobState.KILLED && state != JobState.ERROR) {
+      lastNonFinalState = state;
     }
   }
 
@@ -993,7 +1014,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
   
-  private static JobState getExternalState(JobStateInternal smState) {
+  private JobState getExternalState(JobStateInternal smState) {
     switch (smState) {
     case KILL_WAIT:
     case KILL_ABORT:
@@ -1005,7 +1026,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     case FAIL_ABORT:
       return JobState.FAILED;
     case REBOOT:
-      return JobState.ERROR;
+      if (appContext.isLastAMRetry()) {
+        return JobState.ERROR;
+      } else {
+        // In case of not last retry, return the external state as RUNNING since
+        // otherwise JobClient will exit when it polls the AM for job state
+        return JobState.RUNNING;
+      }
     default:
       return JobState.valueOf(smState.name());
     }
