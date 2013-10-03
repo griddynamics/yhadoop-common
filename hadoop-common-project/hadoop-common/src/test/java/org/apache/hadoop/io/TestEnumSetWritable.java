@@ -33,8 +33,8 @@ public class TestEnumSetWritable extends TestCase {
   }
 
   EnumSet<TestEnumSet> nonEmptyFlag = EnumSet.of(TestEnumSet.APPEND);
-  EnumSetWritable<TestEnumSet> nonEmptyFlagWritable = new EnumSetWritable<TestEnumSet>(
-      nonEmptyFlag);
+  EnumSetWritable<TestEnumSet> nonEmptyFlagWritable = 
+      new EnumSetWritable<TestEnumSet>(nonEmptyFlag);
 
   @SuppressWarnings("unchecked")
   public void testSerializeAndDeserializeNonEmpty() throws IOException {
@@ -61,11 +61,12 @@ public class TestEnumSetWritable extends TestCase {
     }
 
     assertTrue(
-        "Instantiate empty EnumSetWritable with no element type class providesd should throw exception.",
+        "Instantiation of empty EnumSetWritable with no element type class "
+        + "provided should throw exception.",
         gotException);
 
-    EnumSetWritable<TestEnumSet> emptyFlagWritable = new EnumSetWritable<TestEnumSet>(
-        emptyFlag, TestEnumSet.class);
+    EnumSetWritable<TestEnumSet> emptyFlagWritable = 
+        new EnumSetWritable<TestEnumSet>(emptyFlag, TestEnumSet.class);
     DataOutputBuffer out = new DataOutputBuffer();
     ObjectWritable.writeObject(out, emptyFlagWritable, emptyFlagWritable
         .getClass(), null);
@@ -87,11 +88,12 @@ public class TestEnumSetWritable extends TestCase {
     }
 
     assertTrue(
-        "Instantiate empty EnumSetWritable with no element type class providesd should throw exception.",
+        "Instantiation of empty EnumSetWritable with no element type class "
+        + "provided should throw exception",
         gotException);
 
-    EnumSetWritable<TestEnumSet> nullFlagWritable = new EnumSetWritable<TestEnumSet>(
-        null, TestEnumSet.class);
+    EnumSetWritable<TestEnumSet> nullFlagWritable = 
+        new EnumSetWritable<TestEnumSet>(null, TestEnumSet.class);
 
     DataOutputBuffer out = new DataOutputBuffer();
     ObjectWritable.writeObject(out, nullFlagWritable, nullFlagWritable
@@ -106,7 +108,11 @@ public class TestEnumSetWritable extends TestCase {
   public EnumSetWritable<TestEnumSet> testField;
 
   public void testAvroReflect() throws Exception {
-    String schema = "{\"type\":\"array\",\"items\":{\"type\":\"enum\",\"name\":\"TestEnumSet\",\"namespace\":\"org.apache.hadoop.io.TestEnumSetWritable$\",\"symbols\":[\"CREATE\",\"OVERWRITE\",\"APPEND\"]},\"java-class\":\"org.apache.hadoop.io.EnumSetWritable\"}";
+    String schema = "{\"type\":\"array\",\"items\":{\"type\":\"enum\","
+        + "\"name\":\"TestEnumSet\","
+        + "\"namespace\":\"org.apache.hadoop.io.TestEnumSetWritable$\","
+        + "\"symbols\":[\"CREATE\",\"OVERWRITE\",\"APPEND\"]},"
+        + "\"java-class\":\"org.apache.hadoop.io.EnumSetWritable\"}";
     Type type =
       TestEnumSetWritable.class.getField("testField").getGenericType();
     AvroTestUtil.testReflect(nonEmptyFlagWritable, type, schema);
@@ -116,35 +122,40 @@ public class TestEnumSetWritable extends TestCase {
    * test {@link EnumSetWritable} equals() method
    */
   public void testEnumSetWritableEquals() {
-    EnumSetWritable<TestEnumSet> eset1 = new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
-	  EnumSetWritable<TestEnumSet> eset2 = new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
+    EnumSetWritable<TestEnumSet> eset1 = new EnumSetWritable<TestEnumSet>(
+        EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
+	  EnumSetWritable<TestEnumSet> eset2 = new EnumSetWritable<TestEnumSet>(
+	      EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
 	  assertTrue("testEnumSetWritableEquals error !!!", eset1.equals(eset2));
 	  assertFalse("testEnumSetWritableEquals error !!!", 
-			eset1.equals(new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE, TestEnumSet.OVERWRITE), TestEnumSet.class)));	
-	  assertTrue("testEnumSetWritableEquals getElementType error !!!", eset1.getElementType().equals(TestEnumSet.class)); 	 
+			  eset1.equals(new EnumSetWritable<TestEnumSet>(EnumSet.of(
+			      TestEnumSet.APPEND, TestEnumSet.CREATE, TestEnumSet.OVERWRITE), 
+			      TestEnumSet.class)));	
+	  assertTrue("testEnumSetWritableEquals getElementType error !!!", 
+	      eset1.getElementType().equals(TestEnumSet.class)); 	 
   }
   
   /** 
    * test {@code EnumSetWritable.write(DataOutputBuffer out)} 
    *  and iteration by TestEnumSet through iterator().
    */
-  public void testEnumSetWritableWriteRead() {
-    try {
-      DataOutputBuffer out = new DataOutputBuffer();
-      DataInputBuffer in = new DataInputBuffer();
-      EnumSetWritable<TestEnumSet> eset = 
-          new EnumSetWritable<TestEnumSet>(EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
-      eset.write(out);
-      in.reset(out.getData(), out.getLength());
-      eset.readFields(in);
-      
-      EnumSet<TestEnumSet> result = eset.get();
-      Iterator<TestEnumSet> diter = result.iterator();
-      Iterator<TestEnumSet> siter = eset.iterator();
-      while(diter.hasNext() && siter.hasNext()) 
-        assertEquals("testEnumSetWritableWriteRead error !!!", diter.next(), siter.next());       
-    } catch(Exception ex) {
-      fail("testEnumSetWritableWriteRead error !!!");
+  public void testEnumSetWritableWriteRead() throws Exception {
+    EnumSetWritable<TestEnumSet> srcSet = new EnumSetWritable<TestEnumSet>(
+        EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
+    DataOutputBuffer out = new DataOutputBuffer();
+    srcSet.write(out);
+
+    EnumSetWritable<TestEnumSet> dstSet = new EnumSetWritable<TestEnumSet>();
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(out.getData(), out.getLength());
+    dstSet.readFields(in);
+
+    EnumSet<TestEnumSet> result = dstSet.get();
+    Iterator<TestEnumSet> dstIter = result.iterator();
+    Iterator<TestEnumSet> srcIter = srcSet.iterator();
+    while (dstIter.hasNext() && srcIter.hasNext()) {
+      assertEquals("testEnumSetWritableWriteRead error !!!", dstIter.next(),
+          srcIter.next());
     }
   }
 }
