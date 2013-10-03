@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -450,7 +451,6 @@ public class UserGroupInformation {
       } else {
         USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
         USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
-        USER_KERBEROS_OPTIONS.put("renewTGT", "true");
       }
       String ticketCache = System.getenv("KRB5CCNAME");
       if (ticketCache != null) {
@@ -461,6 +461,7 @@ public class UserGroupInformation {
           USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
         }
       }
+      USER_KERBEROS_OPTIONS.put("renewTGT", "true");
       USER_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);
     }
     private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
@@ -476,8 +477,8 @@ public class UserGroupInformation {
         KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
         KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
         KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
-        KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
       }
+      KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
       KEYTAB_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);      
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
@@ -638,11 +639,17 @@ public class UserGroupInformation {
     }
     try {
       Map<String,String> krbOptions = new HashMap<String,String>();
-      krbOptions.put("doNotPrompt", "true");
-      krbOptions.put("useTicketCache", "true");
-      krbOptions.put("useKeyTab", "false");
+      if (IBM_JAVA) {
+        krbOptions.put("useDefaultCcache", "true");
+        // The first value searched when "useDefaultCcache" is used.
+        System.setProperty("KRB5CCNAME", ticketCache);
+      } else {
+        krbOptions.put("doNotPrompt", "true");
+        krbOptions.put("useTicketCache", "true");
+        krbOptions.put("useKeyTab", "false");
+        krbOptions.put("ticketCache", ticketCache);
+      }
       krbOptions.put("renewTGT", "false");
-      krbOptions.put("ticketCache", ticketCache);
       krbOptions.putAll(HadoopConfiguration.BASIC_JAAS_OPTIONS);
       AppConfigurationEntry ace = new AppConfigurationEntry(
           KerberosUtil.getKrb5LoginModuleName(),
@@ -1085,7 +1092,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     Subject subject = new Subject();
@@ -1157,7 +1164,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public static UserGroupInformation createProxyUser(String user,
       UserGroupInformation realUser) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     if (realUser == null) {
@@ -1346,7 +1353,14 @@ public class UserGroupInformation {
    * @return Credentials of tokens associated with this user
    */
   public synchronized Credentials getCredentials() {
-    return new Credentials(getCredentialsInternal());
+    Credentials creds = new Credentials(getCredentialsInternal());
+    Iterator<Token<?>> iter = creds.getAllTokens().iterator();
+    while (iter.hasNext()) {
+      if (iter.next() instanceof Token.PrivateToken) {
+        iter.remove();
+      }
+    }
+    return creds;
   }
   
   /**
