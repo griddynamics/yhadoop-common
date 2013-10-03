@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -31,29 +34,27 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.service.CompositeService;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
 
 /**
  * Test the WebAppProxyServlet and WebAppProxy. For back end use simple web
@@ -168,7 +169,7 @@ public class TestWebAppProxyServlet {
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
      
     } finally {
-      proxy.stop();
+      proxy.close();
     }
   }
 
@@ -195,7 +196,7 @@ public class TestWebAppProxyServlet {
       assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
           proxyConn.getResponseCode());
     } finally {
-      proxy.stop();
+      proxy.close();
     }
 
   }
@@ -291,40 +292,39 @@ public class TestWebAppProxyServlet {
   }
 
   private class WebAppProxyForTest extends WebAppProxy {
-
+    
     @Override
     public void start() {
       try {
-        String bindAddress = (String) getVolumeOfField("bindAddress");
-        AccessControlList acl = (AccessControlList) getVolumeOfField("acl");
+        Configuration conf = getConfig();
+        String bindAddress = conf.get(YarnConfiguration.PROXY_ADDRESS);
+        bindAddress = StringUtils.split(bindAddress, ':')[0];
+        AccessControlList acl = new AccessControlList(
+            conf.get(YarnConfiguration.YARN_ADMIN_ACL, 
+            YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
         HttpServer proxyServer = new HttpServer("proxy", bindAddress, port,
-            port == 0, getConfig(), acl);
+            port == 0, conf, acl);
         proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
             ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
 
         proxyServer.setAttribute(FETCHER_ATTRIBUTE,
-            new AppReportFetcherForTest(getConfig()));
-        Boolean isSecurityEnabled = (Boolean) getVolumeOfField("isSecurityEnabled");
-        proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE,
-            isSecurityEnabled);
+            new AppReportFetcherForTest(conf));
         proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE, Boolean.TRUE);
-        String proxyHost = (String) getVolumeOfField("proxyHost");
+        
+        String proxy = YarnConfiguration.getProxyHostAndPort(conf);
+        String[] proxyParts = proxy.split(":");
+        String proxyHost = proxyParts[0];
+        
         proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
         proxyServer.start();
         port = proxyServer.getPort();
         System.out.println("port:" + port);
       } catch (Exception e) {
         LOG.fatal("Could not start proxy web server", e);
-        throw new YarnException("Could not start proxy web server", e);
+        throw new YarnRuntimeException("Could not start proxy web server", e);
       }
     }
 
-    private Object getVolumeOfField(String fieldName) throws Exception {
-
-      Field field = this.getClass().getSuperclass().getDeclaredField(fieldName);
-      field.setAccessible(true);
-      return field.get(this);
-    }
   }
 
   private class AppReportFetcherForTest extends AppReportFetcher {
@@ -334,7 +334,7 @@ public class TestWebAppProxyServlet {
     }
 
     public ApplicationReport getApplicationReport(ApplicationId appId)
-        throws YarnRemoteException {
+        throws YarnException {
       ApplicationReport result=null;
       if (answer == 0) {
         return getDefaultApplicationReport(appId);
