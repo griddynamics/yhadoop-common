@@ -70,18 +70,16 @@ public class RetryCache {
           "Invalid clientId - length is " + clientId.length
               + " expected length " + ClientId.BYTE_LENGTH);
       // Convert UUID bytes to two longs
-      long tmp = 0;
-      for (int i=0; i<8; i++) {
-        tmp = (tmp << 8) | (clientId[i] & 0xff);
-      }
-      clientIdMsb = tmp;
-      tmp = 0;
-      for (int i=8; i<16; i++) {
-        tmp = (tmp << 8) | (clientId[i] & 0xff);
-      }
-      clientIdLsb = tmp;
+      clientIdMsb = ClientId.getMsb(clientId);
+      clientIdLsb = ClientId.getLsb(clientId);
       this.callId = callId;
       this.expirationTime = expirationTime;
+    }
+
+    CacheEntry(byte[] clientId, int callId, long expirationTime,
+        boolean success) {
+      this(clientId, callId, expirationTime);
+      this.state = success ? SUCCESS : FAILED;
     }
 
     private static int hashCode(long value) {
@@ -154,6 +152,12 @@ public class RetryCache {
       super(clientId, callId, expirationTime);
       this.payload = payload;
     }
+
+    CacheEntryWithPayload(byte[] clientId, int callId, Object payload,
+        long expirationTime, boolean success) {
+     super(clientId, callId, expirationTime, success);
+     this.payload = payload;
+   }
 
     /** Override equals to avoid findbugs warnings */
     @Override
@@ -261,18 +265,20 @@ public class RetryCache {
    */
   public void addCacheEntry(byte[] clientId, int callId) {
     CacheEntry newEntry = new CacheEntry(clientId, callId, System.nanoTime()
-        + expirationTime);
-    newEntry.completed(true);
-    set.put(newEntry);
+        + expirationTime, true);
+    synchronized(this) {
+      set.put(newEntry);
+    }
   }
   
   public void addCacheEntryWithPayload(byte[] clientId, int callId,
       Object payload) {
-    CacheEntry newEntry = new CacheEntryWithPayload(clientId, callId, payload,
-        System.nanoTime() + expirationTime);
     // since the entry is loaded from editlog, we can assume it succeeded.    
-    newEntry.completed(true);
-    set.put(newEntry);
+    CacheEntry newEntry = new CacheEntryWithPayload(clientId, callId, payload,
+        System.nanoTime() + expirationTime, true);
+    synchronized(this) {
+      set.put(newEntry);
+    }
   }
 
   private static CacheEntry newEntry(long expirationTime) {

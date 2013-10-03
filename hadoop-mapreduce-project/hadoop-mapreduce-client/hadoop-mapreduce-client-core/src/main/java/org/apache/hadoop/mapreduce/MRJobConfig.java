@@ -313,6 +313,13 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_JOB_CREDENTIALS_BINARY = 
       "mapreduce.job.credentials.binary";
 
+  /* Configs for tracking ids of tokens used by a job */
+  public static final String JOB_TOKEN_TRACKING_IDS_ENABLED =
+      "mapreduce.job.token.tracking.ids.enabled";
+  public static final boolean DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED = false;
+  public static final String JOB_TOKEN_TRACKING_IDS =
+      "mapreduce.job.token.tracking.ids";
+
   public static final String JOB_SUBMITHOST =
     "mapreduce.job.submithostname";
   public static final String JOB_SUBMITHOSTADDR =
@@ -350,7 +357,7 @@ public interface MRJobConfig {
   public static final int DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 3;
   
   /**
-   * The number of client retries to the RM/HS/AM before throwing exception.
+   * The number of client retries to the RM/HS before throwing exception.
    */
   public static final String MR_CLIENT_MAX_RETRIES = 
     MR_PREFIX + "client.max-retries";
@@ -641,6 +648,12 @@ public interface MRJobConfig {
    */
   public static final String MAPREDUCE_APPLICATION_CLASSPATH = 
       "mapreduce.application.classpath";
+
+  /**
+   * Path to MapReduce framework archive
+   */
+  public static final String MAPREDUCE_APPLICATION_FRAMEWORK_PATH =
+      "mapreduce.application.framework.path";
 
   /**
    * Default CLASSPATH for all YARN MapReduce applications.

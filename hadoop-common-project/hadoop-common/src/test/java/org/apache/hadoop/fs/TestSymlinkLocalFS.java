@@ -30,6 +30,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 
 /**
@@ -59,6 +61,16 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     } catch (URISyntaxException e) {
       return null;
     }
+  }
+
+  @Override
+  protected boolean emulatingSymlinksOnWindows() {
+    // Java 6 on Windows has very poor symlink support. Specifically
+    // Specifically File#length and File#renameTo do not work as expected.
+    // (see HADOOP-9061 for additional details)
+    // Hence some symlink tests will be skipped.
+    //
+    return (Shell.WINDOWS && !Shell.isJava7OrAbove());
   }
 
   @Override
@@ -123,6 +135,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     Path fileAbs  = new Path(testBaseDir1()+"/file");
     Path fileQual = new Path(testURI().toString(), fileAbs);
     Path link     = new Path(testBaseDir1()+"/linkToFile");
+    Path linkQual = new Path(testURI().toString(), link.toString());
     wrapper.createSymlink(fileAbs, link, false);
     // Deleting the link using FileContext currently fails because
     // resolve looks up LocalFs rather than RawLocalFs for the path 
@@ -140,18 +153,15 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
       // Expected. File's exists method returns false for dangling links
     }
     // We can stat a dangling link
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
     FileStatus fsd = wrapper.getFileLinkStatus(link);
     assertEquals(fileQual, fsd.getSymlink());
     assertTrue(fsd.isSymlink());
     assertFalse(fsd.isDirectory());
-    assertEquals("", fsd.getOwner());
-    assertEquals("", fsd.getGroup());
-    assertEquals(link, fsd.getPath());
-    assertEquals(0, fsd.getLen());
-    assertEquals(0, fsd.getBlockSize());
-    assertEquals(0, fsd.getReplication());
-    assertEquals(0, fsd.getAccessTime());
-    assertEquals(FsPermission.getDefault(), fsd.getPermission());
+    assertEquals(user.getUserName(), fsd.getOwner());
+    // Compare against user's primary group
+    assertEquals(user.getGroupNames()[0], fsd.getGroup());
+    assertEquals(linkQual, fsd.getPath());
     // Accessing the link 
     try {
       readFile(link);
@@ -171,6 +181,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
    * file scheme (eg file://host/tmp/test).
    */  
   public void testGetLinkStatusPartQualTarget() throws IOException {
+    assumeTrue(!emulatingSymlinksOnWindows());
     Path fileAbs  = new Path(testBaseDir1()+"/file");
     Path fileQual = new Path(testURI().toString(), fileAbs);
     Path dir      = new Path(testBaseDir1());
@@ -203,6 +214,16 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
       fail("Created a local fs link to a non-local fs");
     } catch (IOException x) {
       // Excpected.
+    }
+  }
+
+  /** Test create symlink to . */
+  @Override
+  public void testCreateLinkToDot() throws IOException {
+    try {
+      super.testCreateLinkToDot();
+    } catch (IllegalArgumentException iae) {
+      // Expected.
     }
   }
 }
