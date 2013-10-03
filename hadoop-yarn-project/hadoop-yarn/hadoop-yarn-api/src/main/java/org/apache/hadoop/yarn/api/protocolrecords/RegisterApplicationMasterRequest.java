@@ -103,6 +103,8 @@ public abstract class RegisterApplicationMasterRequest {
 
   /**
    * Get the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
+   * This url if contains scheme then that will be used by resource manager
+   * web application proxy otherwise it will default to http.
    * @return <em>tracking URL</em> for the <code>ApplicationMaster</code>
    */
   @Public
@@ -110,9 +112,22 @@ public abstract class RegisterApplicationMasterRequest {
   public abstract String getTrackingUrl();
   
   /**
-   * Set the <em>tracking URL</em> for the <code>ApplicationMaster</code>.
-   * @param trackingUrl <em>tracking URL</em> for the 
-   *                    <code>ApplicationMaster</code>
+   * Set the <em>tracking URL</em>for the <code>ApplicationMaster</code> while
+   * it is running. This is the web-URL to which ResourceManager or
+   * web-application proxy will redirect client/users while the application and
+   * the <code>ApplicationMaster</code> are still running.
+   * <p>
+   * If the passed url has a scheme then that will be used by the
+   * ResourceManager and web-application proxy, otherwise the scheme will
+   * default to http.
+   * </p>
+   * <p>
+   * Empty, null, "N/A" strings are all valid besides a real URL. In case an url
+   * isn't explicitly passed, it defaults to "N/A" on the ResourceManager.
+   * <p>
+   *
+   * @param trackingUrl
+   *          <em>tracking URL</em>for the <code>ApplicationMaster</code>
    */
   @Public
   @Stable
