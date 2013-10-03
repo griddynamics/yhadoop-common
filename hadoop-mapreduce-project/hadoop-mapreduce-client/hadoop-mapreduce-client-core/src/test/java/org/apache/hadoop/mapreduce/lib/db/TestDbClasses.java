@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapreduce.lib.db.DataDrivenDBInputFormat.DataDrivenDBInputSplit;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -82,12 +83,14 @@ public class TestDbClasses {
    * test DataDrivenDBInputFormat and his splitters.
    */
 
-  @Test(timeout = 1000)
+  //@Test(timeout = 1000)
+  @Test
   public void testDataDrivenDBInputFormat() throws Exception {
     ByteArrayOutputStream data = new ByteArrayOutputStream();
 
     JobContext jobContext = mock(JobContext.class);
     Configuration configuration = new Configuration();
+    configuration.setInt(MRJobConfig.NUM_MAPS, 1);
 
     when(jobContext.getConfiguration()).thenReturn(configuration);
     DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<NullDBWritable>();
