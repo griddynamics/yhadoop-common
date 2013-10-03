@@ -36,12 +36,12 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class TestDBInputFormat {
-  
+
   /**
    * test DBInputFormat class. Class should split result for chunks
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 10000)
   public void testDBInputFormat() throws Exception {
 
     JobConf configuration = new JobConf();
@@ -73,7 +73,7 @@ public class TestDBInputFormat {
   /** 
    * test configuration for db. should works DBConfiguration.* parameters. 
    */
-  @Test
+  @Test (timeout = 5000)
   public void testSetInput() {
     JobConf configuration = new JobConf();
 
@@ -128,7 +128,7 @@ public class TestDBInputFormat {
    * test DBRecordReader. This reader should creates keys, values, know about position.. 
    */
   @SuppressWarnings("unchecked")
-  @Test
+  @Test (timeout = 5000)
   public void testDBRecordReader() throws Exception {
 
     JobConf job = mock(JobConf.class);
@@ -147,6 +147,7 @@ public class TestDBInputFormat {
             .getClass().getName());
     assertEquals(0, reader.getPos());
     assertFalse(reader.next(key, value));
+
   }
 
   private class DBInputFormatForTest extends DBInputFormat<NullDBWritable> {

@@ -43,9 +43,9 @@ import static org.junit.Assert.*;
 public class TestSplitters {
   
   /**
-   * test BooleanSplitter 
+   * test BooleanSplitter. 
    */
-  @Test
+  @Test (timeout=2000)
   public void testBooleanSplitter() throws Exception{
     BooleanSplitter splitter = new BooleanSplitter();
     Configuration configuration= new Configuration();
@@ -88,13 +88,12 @@ public class TestSplitters {
     split=(DBInputSplit)splits.get(1);
     split.write(new DataOutputStream(data));
     assertTrue(data.toString().contains("column = TRUE"));
-
   }
   
   /**
    * test FloatSplitter. 
    */
-  @Test
+  @Test  (timeout=2000)
   public void testFloatSplitter() throws Exception{
     Configuration configuration= new Configuration();
     ResultSet result= mock(ResultSet.class);
@@ -106,7 +105,7 @@ public class TestSplitters {
     DBInputSplit split=(DBInputSplit)splits.get(0);
     split.write(new DataOutputStream(data));
     assertTrue(data.toString().contains("column IS NULL"));
-
+    
     when(result.getString(1)).thenReturn("result1");
     when(result.getString(2)).thenReturn("result2");
     when(result.getDouble(1)).thenReturn(5.0);
@@ -123,7 +122,7 @@ public class TestSplitters {
   /**
    * test BigDecimalSplitter. 
    */
-  @Test
+  @Test (timeout=2000)
   public void testBigDecimalSplitter() throws Exception{
     
     BigDecimalSplitter  splitter=new BigDecimalSplitter ();
@@ -150,11 +149,11 @@ public class TestSplitters {
     assertTrue(data.toString().contains("column1 >= 10"));
     assertTrue(data.toString().contains("column1 <= 11"));
   }
-  
+
   /**
    * test IntegerSplitter
    */
-  @Test
+  @Test  (timeout=2000)
   public void testIntegerSplitter() throws Exception{
     IntegerSplitter  splitter=new IntegerSplitter ();
     Configuration configuration= new Configuration();
@@ -180,10 +179,11 @@ public class TestSplitters {
     assertTrue(data.toString().contains("column1 >= 8"));
     assertTrue(data.toString().contains("column1 <= 9"));
   }
+
   /**
    * test TextSplitter
    */
-  @Test
+  @Test (timeout=2000)
   public void testTextSplitter() throws Exception{
     TextSplitter  splitter=new TextSplitter ();
     Configuration configuration= new Configuration();
@@ -210,7 +210,7 @@ public class TestSplitters {
   /**
    * test OracleDateSplitter. 
    */
-  @Test
+  @Test (timeout=2000)
   public void testDBSplitter() throws Exception{
     OracleDataDrivenDBInputFormat<NullDBWritable> format = new OracleDataDrivenDBInputFormatForTest();
     assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP).getClass()); 
@@ -234,7 +234,7 @@ public class TestSplitters {
 
     @Override
     public Connection getConnection() {
-      return  DriverForTest.getConnection();
+      return DriverForTest.getConnection();
     }
 
   }
