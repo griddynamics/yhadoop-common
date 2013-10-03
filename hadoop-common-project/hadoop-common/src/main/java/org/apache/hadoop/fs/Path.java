@@ -104,7 +104,7 @@ public class Path implements Comparable {
     // Add a slash to parent's path so resolution is compatible with URI's
     URI parentUri = parent.uri;
     String parentPath = parentUri.getPath();
-    if (!(parentPath.equals("/") || parentPath.equals(""))) {
+    if (!(parentPath.equals("/") || parentPath.isEmpty())) {
       try {
         parentUri = new URI(parentUri.getScheme(), parentUri.getAuthority(),
                       parentUri.getPath()+"/", null, parentUri.getFragment());
@@ -182,6 +182,18 @@ public class Path implements Comparable {
   /** Construct a Path from components. */
   public Path(String scheme, String authority, String path) {
     checkPathArg( path );
+
+    // add a slash in front of paths with Windows drive letters
+    if (hasWindowsDrive(path) && path.charAt(0) != '/') {
+      path = "/" + path;
+    }
+
+    // add "./" in front of Linux relative paths so that a path containing
+    // a colon e.q. "a:b" will not be interpreted as scheme "a".
+    if (!WINDOWS && path.charAt(0) != '/') {
+      path = "./" + path;
+    }
+
     initialize(scheme, authority, path, null);
   }
 

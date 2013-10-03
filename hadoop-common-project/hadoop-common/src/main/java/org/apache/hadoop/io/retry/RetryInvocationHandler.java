@@ -64,7 +64,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     this(proxyProvider, retryPolicy, Collections.<String, RetryPolicy>emptyMap());
   }
 
-  RetryInvocationHandler(FailoverProxyProvider<T> proxyProvider,
+  protected RetryInvocationHandler(FailoverProxyProvider<T> proxyProvider,
       RetryPolicy defaultPolicy,
       Map<String, RetryPolicy> methodNameToPolicyMap) {
     this.proxyProvider = proxyProvider;
@@ -137,8 +137,6 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
             msg += ". Trying to fail over " + formatSleepMessage(action.delayMillis);
             if (LOG.isDebugEnabled()) {
               LOG.debug(msg, e);
-            } else {
-              LOG.warn(msg);
             }
           } else {
             if(LOG.isDebugEnabled()) {
