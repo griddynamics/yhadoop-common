@@ -29,6 +29,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.NullDBWritable;
@@ -96,6 +97,7 @@ public class TestSplitters {
   @Test  (timeout=2000)
   public void testFloatSplitter() throws Exception{
     Configuration configuration= new Configuration();
+    configuration.setInt(MRJobConfig.NUM_MAPS, 1);
     ResultSet result= mock(ResultSet.class);
     ByteArrayOutputStream data= new ByteArrayOutputStream();
 
@@ -127,6 +129,7 @@ public class TestSplitters {
     
     BigDecimalSplitter  splitter=new BigDecimalSplitter ();
     Configuration configuration= new Configuration();
+    configuration.setInt(MRJobConfig.NUM_MAPS, 1);
     ResultSet result= mock(ResultSet.class);
     ByteArrayOutputStream data= new ByteArrayOutputStream();
     
@@ -187,6 +190,7 @@ public class TestSplitters {
   public void testTextSplitter() throws Exception{
     TextSplitter  splitter=new TextSplitter ();
     Configuration configuration= new Configuration();
+    configuration.setInt(MRJobConfig.NUM_MAPS, 1);
     ResultSet result= mock(ResultSet.class);
     ByteArrayOutputStream data= new ByteArrayOutputStream();
     
