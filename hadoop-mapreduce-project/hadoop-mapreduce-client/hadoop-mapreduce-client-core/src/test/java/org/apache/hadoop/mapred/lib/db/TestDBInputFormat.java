@@ -30,16 +30,17 @@ import org.apache.hadoop.mapred.lib.db.DBInputFormat.DBRecordReader;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.lib.db.ConnectionForTest;
+import org.apache.hadoop.mapreduce.lib.db.DriverForTest;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class TestDBInputFormat {
-/**
- * test DBInputFormat class. Class should split result for chunks
- * @throws Exception
- */
+
+  /**
+   * test DBInputFormat class. Class should split result for chunks
+   * @throws Exception
+   */
   @Test(timeout = 10000)
   public void testDBInputFormat() throws Exception {
 
@@ -68,9 +69,10 @@ public class TestDBInputFormat {
     assertEquals(0, reader.getProgress(), 0.001);
     reader.close();
   }
-/** 
- * test configuration for db. should works DBConfiguration.* parameters. 
- */
+  
+  /** 
+   * test configuration for db. should works DBConfiguration.* parameters. 
+   */
   @Test (timeout = 5000)
   public void testSetInput() {
     JobConf configuration = new JobConf();
@@ -119,7 +121,6 @@ public class TestDBInputFormat {
     assertEquals("dbUrl", jConfiguration.get(DBConfiguration.URL_PROPERTY));
     assertNull(jConfiguration.get(DBConfiguration.USERNAME_PROPERTY));
     assertNull(jConfiguration.get(DBConfiguration.PASSWORD_PROPERTY));
-
   }
 
   /**
@@ -137,7 +138,7 @@ public class TestDBInputFormat {
     @SuppressWarnings("rawtypes")
     DBRecordReader reader = new DBInputFormat<NullDBWritable>().new DBRecordReader(
         new DBInputSplit(),  NullDBWritable.class, job,
-        new ConnectionForTest(), dbConfig, "condition", fields, "table");
+        DriverForTest.getConnection(), dbConfig, "condition", fields, "table");
     LongWritable key = reader.createKey();
     assertEquals(0, key.get());
     DBWritable value = reader.createValue();
@@ -149,12 +150,11 @@ public class TestDBInputFormat {
 
   }
 
-
   private class DBInputFormatForTest extends DBInputFormat<NullDBWritable> {
 
     @Override
     public Connection getConnection() {
-      Connection result = new ConnectionForTest();
+      Connection result = DriverForTest.getConnection();
       try {
         Field field = org.apache.hadoop.mapreduce.lib.db.DBInputFormat.class
             .getDeclaredField("connection");
@@ -174,6 +174,5 @@ public class TestDBInputFormat {
     }
 
   }
-
  
 }

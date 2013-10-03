@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.lib.db;
+package org.apache.hadoop.mapreduce.lib.db;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -101,14 +101,15 @@ public class DriverForTest implements Driver {
     return true;
   }
   
-  private interface FakeConnection extends Connection{
-    public void setSessionTimeZone(String arg);
-  }
-  
   @Override
   public Logger getParentLogger() throws SQLFeatureNotSupportedException {
     throw new SQLFeatureNotSupportedException();
   }
+
+  private interface FakeConnection extends Connection{
+    public void setSessionTimeZone(String arg);
+  }
+  
 }
 
 
