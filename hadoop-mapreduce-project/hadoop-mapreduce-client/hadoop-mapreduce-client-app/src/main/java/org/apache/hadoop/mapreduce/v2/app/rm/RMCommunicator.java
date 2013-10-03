@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -37,11 +38,12 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -142,7 +144,9 @@ public abstract class RMCommunicator extends AbstractService
       if (serviceAddr != null) {
         request.setHost(serviceAddr.getHostName());
         request.setRpcPort(serviceAddr.getPort());
-        request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+        request.setTrackingUrl(MRWebAppUtil
+            .getAMWebappScheme(getConfig())
+            + serviceAddr.getHostName() + ":" + clientService.getHttpPort());
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
@@ -184,14 +188,22 @@ public abstract class RMCommunicator extends AbstractService
       }
       LOG.info("Setting job diagnostics to " + sb.toString());
 
-      String historyUrl = JobHistoryUtils.getHistoryUrl(getConfig(),
-          context.getApplicationID());
+      String historyUrl =
+          MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(getConfig(),
+              context.getApplicationID());
       LOG.info("History url is " + historyUrl);
-
       FinishApplicationMasterRequest request =
           FinishApplicationMasterRequest.newInstance(finishState,
             sb.toString(), historyUrl);
-      scheduler.finishApplicationMaster(request);
+      while (true) {
+        FinishApplicationMasterResponse response =
+            scheduler.finishApplicationMaster(request);
+        if (response.getIsUnregistered()) {
+          break;
+        }
+        LOG.info("Waiting for application to be successfully unregistered.");
+        Thread.sleep(rmPollInterval);
+      }
     } catch(Exception are) {
       LOG.error("Exception while unregistering ", are);
     }
@@ -223,6 +235,7 @@ public abstract class RMCommunicator extends AbstractService
 
   protected void startAllocatorThread() {
     allocatorThread = new Thread(new Runnable() {
+      @SuppressWarnings("unchecked")
       @Override
       public void run() {
         while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
