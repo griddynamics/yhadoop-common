@@ -24,8 +24,10 @@ import java.sql.DriverPropertyInfo;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
@@ -98,8 +100,14 @@ public class DriverForTest implements Driver {
   public boolean jdbcCompliant() {
     return true;
   }
+  
   private interface FakeConnection extends Connection{
     public void setSessionTimeZone(String arg);
+  }
+  
+  @Override
+  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    throw new SQLFeatureNotSupportedException();
   }
 }
 

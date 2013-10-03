@@ -36,10 +36,11 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class TestDBInputFormat {
-/**
- * test DBInputFormat class. Class should split result for chunks
- * @throws Exception
- */
+  
+  /**
+   * test DBInputFormat class. Class should split result for chunks
+   * @throws Exception
+   */
   @Test
   public void testDBInputFormat() throws Exception {
 
@@ -68,9 +69,10 @@ public class TestDBInputFormat {
     assertEquals(0, reader.getProgress(), 0.001);
     reader.close();
   }
-/** 
- * test configuration for db. should works DBConfiguration.* parameters. 
- */
+  
+  /** 
+   * test configuration for db. should works DBConfiguration.* parameters. 
+   */
   @Test
   public void testSetInput() {
     JobConf configuration = new JobConf();
@@ -119,7 +121,6 @@ public class TestDBInputFormat {
     assertEquals("dbUrl", jConfiguration.get(DBConfiguration.URL_PROPERTY));
     assertNull(jConfiguration.get(DBConfiguration.USERNAME_PROPERTY));
     assertNull(jConfiguration.get(DBConfiguration.PASSWORD_PROPERTY));
-
   }
 
   /**
@@ -146,9 +147,7 @@ public class TestDBInputFormat {
             .getClass().getName());
     assertEquals(0, reader.getPos());
     assertFalse(reader.next(key, value));
-
   }
-
 
   private class DBInputFormatForTest extends DBInputFormat<NullDBWritable> {
 
@@ -174,6 +173,5 @@ public class TestDBInputFormat {
     }
 
   }
-
  
 }

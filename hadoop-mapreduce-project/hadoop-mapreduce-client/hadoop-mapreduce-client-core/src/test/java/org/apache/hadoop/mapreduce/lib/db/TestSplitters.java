@@ -39,12 +39,12 @@ import static org.junit.Assert.*;
 
 /**
  * Test Splitters. Splitters should build parts of sql sentences for split result. 
- *
  */
 public class TestSplitters {
-/**
- * test  BooleanSplitter . 
- */
+  
+  /**
+   * test BooleanSplitter 
+   */
   @Test
   public void testBooleanSplitter() throws Exception{
     BooleanSplitter splitter = new BooleanSplitter();
@@ -69,7 +69,7 @@ public class TestSplitters {
     when(result.getBoolean(1)).thenReturn(true);
     when(result.getBoolean(2)).thenReturn(false);
 
-     splits=splitter.split(configuration, result, "column");
+    splits=splitter.split(configuration, result, "column");
 
     assertEquals(0, splits.size());
 
@@ -78,10 +78,10 @@ public class TestSplitters {
     when(result.getBoolean(1)).thenReturn(false);
     when(result.getBoolean(2)).thenReturn(true);
 
-     splits=splitter.split(configuration, result, "column");
-     assertEquals(2, splits.size());
+    splits=splitter.split(configuration, result, "column");
+    assertEquals(2, splits.size());
 
-     split=(DBInputSplit)splits.get(0);
+    split=(DBInputSplit)splits.get(0);
     split.write(new DataOutputStream(data));
     assertEquals("column = FALSEcolumn = FALSE", data.toString());
     data.reset();
@@ -107,12 +107,10 @@ public class TestSplitters {
     split.write(new DataOutputStream(data));
     assertTrue(data.toString().contains("column IS NULL"));
 
-    
     when(result.getString(1)).thenReturn("result1");
     when(result.getString(2)).thenReturn("result2");
     when(result.getDouble(1)).thenReturn(5.0);
     when(result.getDouble(2)).thenReturn(7.0);
-
     
     splits=  splitter.split(configuration, result, "column1");
     assertEquals(1, splits.size());
@@ -120,7 +118,6 @@ public class TestSplitters {
     data.reset();
     split.write(new DataOutputStream(data));
     assertEquals("column1 >= 7.0column1 <= 7.0", data.toString());
-
   }
 
   /**
@@ -152,9 +149,8 @@ public class TestSplitters {
     split.write(new DataOutputStream(data));
     assertTrue(data.toString().contains("column1 >= 10"));
     assertTrue(data.toString().contains("column1 <= 11"));
-
-
-  } 
+  }
+  
   /**
    * test IntegerSplitter
    */
@@ -224,8 +220,8 @@ public class TestSplitters {
     DBInputSplit inputSplit= new DBInputSplit(1,10);
     RecordReader<LongWritable, NullDBWritable> recorder= format.createDBRecordReader(inputSplit, configuration);
     assertEquals(OracleDataDrivenDBRecordReader.class, recorder.getClass());
-    
   }
+  
   private class OracleDataDrivenDBInputFormatForTest extends OracleDataDrivenDBInputFormat<NullDBWritable>{
 
     @Override
@@ -238,10 +234,9 @@ public class TestSplitters {
 
     @Override
     public Connection getConnection() {
-      
       return  DriverForTest.getConnection();
     }
 
-
   }
+  
 }
