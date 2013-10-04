@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -26,8 +27,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -49,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -118,7 +123,7 @@ public class TestWebAppProxyServlet {
    * 
    * @throws Exception
    */
-  @Test (timeout=10000000)
+  @Test (timeout=5000)
   public void testWebAppProxyServlet() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -145,6 +150,8 @@ public class TestWebAppProxyServlet {
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      assertTrue(isResponseCookiePresent(
+          proxyConn, "checked_application_0_0000", "true"));
       // cannot found application
       answer = 1;
       proxyConn = (HttpURLConnection) url.openConnection();
@@ -152,6 +159,8 @@ public class TestWebAppProxyServlet {
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
           proxyConn.getResponseCode());
+      assertFalse(isResponseCookiePresent(
+          proxyConn, "checked_application_0_0000", "true"));
       // wrong user
       answer = 2;
       proxyConn = (HttpURLConnection) url.openConnection();
@@ -171,34 +180,6 @@ public class TestWebAppProxyServlet {
     } finally {
       proxy.close();
     }
-  }
-
-  /**
-   * Test simple start/ stop WebAppProxyServer. server should listen the 9098
-   * port
-   */
-  @Test (timeout=1000)
-  public void testWebAppProxyServer() throws Exception {
-
-    Configuration configuration = new Configuration();
-    configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9098");
-    configuration.setInt("hadoop.http.max.threads", 5);
-    WebAppProxyServer proxy = new WebAppProxyServer();
-    proxy.init(configuration);
-    proxy.start();
-
-    // wrong url
-    try {
-      URL wrongUrl = new URL("http://localhost:9098/proxy/app");
-      HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
-          .openConnection();
-      proxyConn.connect();
-      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
-          proxyConn.getResponseCode());
-    } finally {
-      proxy.close();
-    }
-
   }
 
   /**
@@ -260,6 +241,22 @@ public class TestWebAppProxyServlet {
     return new String(data.toByteArray(), "UTF-8");
   }
 
+  private boolean isResponseCookiePresent(HttpURLConnection proxyConn, 
+      String expectedName, String expectedValue) {
+    Map<String, List<String>> headerFields = proxyConn.getHeaderFields();
+    List<String> cookiesHeader = headerFields.get("Set-Cookie");
+    if (cookiesHeader != null) {
+      for (String cookie : cookiesHeader) {
+        HttpCookie c = HttpCookie.parse(cookie).get(0);
+        if (c.getName().equals(expectedName) 
+            && c.getValue().equals(expectedValue)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   @AfterClass
   public static void stop() throws Exception {
     try {
@@ -302,8 +299,9 @@ public class TestWebAppProxyServlet {
         AccessControlList acl = new AccessControlList(
             conf.get(YarnConfiguration.YARN_ADMIN_ACL, 
             YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
-        HttpServer proxyServer = new HttpServer("proxy", bindAddress, port,
-            port == 0, conf, acl);
+        HttpServer proxyServer = new HttpServer.Builder()
+            .setName("proxy").setBindAddress(bindAddress).setPort(port)
+            .setFindPort(port == 0).setConf(conf).setACL(acl).build();
         proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
             ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
 
@@ -311,14 +309,14 @@ public class TestWebAppProxyServlet {
             new AppReportFetcherForTest(conf));
         proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE, Boolean.TRUE);
         
-        String proxy = YarnConfiguration.getProxyHostAndPort(conf);
+        String proxy = WebAppUtils.getProxyHostAndPort(conf);
         String[] proxyParts = proxy.split(":");
         String proxyHost = proxyParts[0];
         
         proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
         proxyServer.start();
         port = proxyServer.getPort();
-        System.out.println("port:" + port);
+        System.out.println("Proxy server is started at port " + port);
       } catch (Exception e) {
         LOG.fatal("Could not start proxy web server", e);
         throw new YarnRuntimeException("Could not start proxy web server", e);
