@@ -92,6 +92,7 @@ public class WebAppProxyServer extends CompositeService {
     ShutdownHookManager.get().addShutdownHook(
         new CompositeServiceShutdownHook(proxy), SHUTDOWN_HOOK_PRIORITY);
     YarnConfiguration configuration = new YarnConfiguration();
+    configuration.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9099");
     proxy.init(configuration);
     proxy.start();
     return proxy;

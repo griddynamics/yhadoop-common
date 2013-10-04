@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -26,8 +27,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -145,6 +149,8 @@ public class TestWebAppProxyServlet {
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+      assertTrue(isResponseCookiePresent(
+          proxyConn, "checked_application_0_0000", "true"));
       // cannot found application
       answer = 1;
       proxyConn = (HttpURLConnection) url.openConnection();
@@ -152,6 +158,8 @@ public class TestWebAppProxyServlet {
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
           proxyConn.getResponseCode());
+      assertFalse(isResponseCookiePresent(
+          proxyConn, "checked_application_0_0000", "true"));
       // wrong user
       answer = 2;
       proxyConn = (HttpURLConnection) url.openConnection();
@@ -164,34 +172,6 @@ public class TestWebAppProxyServlet {
     } finally {
       proxy.close();
     }
-  }
-
-  /**
-   * Test simple start/ stop WebAppProxyServer. server should listen the 9098
-   * port
-   */
-  @Test
-  public void testWebAppProxyServer() throws Exception {
-
-    Configuration configuration = new Configuration();
-    configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9098");
-    configuration.setInt("hadoop.http.max.threads", 5);
-    WebAppProxyServer proxy = new WebAppProxyServer();
-    proxy.init(configuration);
-    proxy.start();
-
-    // wrong url
-    try {
-      URL wrongUrl = new URL("http://localhost:9098/proxy/app");
-      HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
-          .openConnection();
-      proxyConn.connect();
-      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
-          proxyConn.getResponseCode());
-    } finally {
-      proxy.close();
-    }
-
   }
 
   /**
@@ -251,6 +231,22 @@ public class TestWebAppProxyServlet {
       data.write(buffer, 0, read);
     }
     return new String(data.toByteArray(), "UTF-8");
+  }
+
+  private boolean isResponseCookiePresent(HttpURLConnection proxyConn, 
+      String expectedName, String expectedValue) {
+    Map<String, List<String>> headerFields = proxyConn.getHeaderFields();
+    List<String> cookiesHeader = headerFields.get("Set-Cookie");
+    if (cookiesHeader != null) {
+      for (String cookie : cookiesHeader) {
+        HttpCookie c = HttpCookie.parse(cookie).get(0);
+        if (c.getName().equals(expectedName) 
+            && c.getValue().equals(expectedValue)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @AfterClass
@@ -317,7 +313,7 @@ public class TestWebAppProxyServlet {
         proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
         proxyServer.start();
         port = proxyServer.getPort();
-        System.out.println("port:" + port);
+        System.out.println("Proxy server is started at port " + port);
       } catch (Exception e) {
         LOG.fatal("Could not start proxy web server", e);
         throw new YarnRuntimeException("Could not start proxy web server", e);
