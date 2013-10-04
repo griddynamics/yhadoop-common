@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.ClusterJspHelper.ClusterStatus;
 import org.apache.hadoop.hdfs.server.namenode.ClusterJspHelper.DecommissionStatus;
 import org.junit.After;
@@ -31,22 +30,11 @@ public class TestClusterJspHelper {
 
   private MiniDFSCluster cluster;
   private Configuration conf;
-  private final int dataNodeNumber = 2;
-  private final int nameNodePort = 45541;
-  private final int nameNodeHttpPort = 50070;    
     
-  static {
-    Configuration.addDefaultResource("testClusterJspHelperProp.xml");
-  }
-  
-  
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();  
-    cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(
-            MiniDFSNNTopology.simpleSingleNN(nameNodePort, nameNodeHttpPort))
-        .numDataNodes(dataNodeNumber).build();
+    cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitClusterUp();
   }
 

@@ -17,19 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.collect.ImmutableSet;
-
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.LOADING_EDITS;
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.LOADING_FSIMAGE;
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.SAFEMODE;
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.SAVING_CHECKPOINT;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletContext;
@@ -41,7 +44,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -60,37 +62,21 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.znerd.xmlenc.XMLOutputter;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.jsp.JspWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.*;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.*;
+import com.google.common.collect.ImmutableSet;
 
 public class TestNameNodeJspHelper {
 
+  private static final int DATA_NODES_AMOUNT = 2;
+  
   private static MiniDFSCluster cluster;
   private static Configuration conf;
-  private static final int dataNodeNumber = 2;
-  private static final int nameNodePort = 45542;
-  private static final int nameNodeHttpPort = 50071;
   private static final String NAMENODE_ATTRIBUTE_KEY = "name.node";  
   
   @BeforeClass
   public static void setUp() throws Exception {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(
-            MiniDFSNNTopology.simpleSingleNN(nameNodePort, nameNodeHttpPort))
-        .numDataNodes(dataNodeNumber).build();
+        .numDataNodes(DATA_NODES_AMOUNT).build();
     cluster.waitClusterUp();
   }
 
@@ -315,9 +301,9 @@ public class TestNameNodeJspHelper {
     when(context.getAttribute("name.node")).thenReturn(nameNode);
     when(context.getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
         .thenReturn(cluster.getNameNode().getHttpAddress());    
-    checkDeadLiveNodes(nameNode, 0, dataNodeNumber);
+    checkDeadLiveNodes(nameNode, 0, DATA_NODES_AMOUNT);
     output = getOutputFromGeneratedNodesList(context, DataNodeStatus.LIVE);
-    assertCounts(DataNodeStatus.LIVE, output, dataNodeNumber);
+    assertCounts(DataNodeStatus.LIVE, output, DATA_NODES_AMOUNT);
     output = getOutputFromGeneratedNodesList(context, DataNodeStatus.DEAD);
     assertCounts(DataNodeStatus.DEAD, output, 0);    
   }
