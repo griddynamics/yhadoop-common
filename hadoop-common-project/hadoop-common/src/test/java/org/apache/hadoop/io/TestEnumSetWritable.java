@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -124,15 +124,15 @@ public class TestEnumSetWritable extends TestCase {
   public void testEnumSetWritableEquals() {
     EnumSetWritable<TestEnumSet> eset1 = new EnumSetWritable<TestEnumSet>(
         EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
-	  EnumSetWritable<TestEnumSet> eset2 = new EnumSetWritable<TestEnumSet>(
-	      EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
-	  assertTrue("testEnumSetWritableEquals error !!!", eset1.equals(eset2));
-	  assertFalse("testEnumSetWritableEquals error !!!", 
-			  eset1.equals(new EnumSetWritable<TestEnumSet>(EnumSet.of(
-			      TestEnumSet.APPEND, TestEnumSet.CREATE, TestEnumSet.OVERWRITE), 
-			      TestEnumSet.class)));	
-	  assertTrue("testEnumSetWritableEquals getElementType error !!!", 
-	      eset1.getElementType().equals(TestEnumSet.class)); 	 
+    EnumSetWritable<TestEnumSet> eset2 = new EnumSetWritable<TestEnumSet>(
+        EnumSet.of(TestEnumSet.APPEND, TestEnumSet.CREATE), TestEnumSet.class);
+    assertTrue("testEnumSetWritableEquals error !!!", eset1.equals(eset2));
+    assertFalse("testEnumSetWritableEquals error !!!",
+        eset1.equals(new EnumSetWritable<TestEnumSet>(EnumSet.of(
+            TestEnumSet.APPEND, TestEnumSet.CREATE, TestEnumSet.OVERWRITE),
+            TestEnumSet.class)));
+    assertTrue("testEnumSetWritableEquals getElementType error !!!", eset1
+        .getElementType().equals(TestEnumSet.class));
   }
   
   /** 

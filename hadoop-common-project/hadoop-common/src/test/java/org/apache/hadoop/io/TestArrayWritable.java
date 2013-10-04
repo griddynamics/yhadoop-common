@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,8 +76,8 @@ public class TestArrayWritable extends TestCase {
     assertTrue("TestArrayWritable testArrayWritableToArray error!!! ", array instanceof Text[]);
     Text[] destElements = (Text[]) array;
   
-    for (int i = 0; i < elements.length; i++) {	    
-      assertEquals(destElements[i], elements[i]);		
+    for (int i = 0; i < elements.length; i++) {
+      assertEquals(destElements[i], elements[i]);
     }
   }
   
@@ -86,19 +86,20 @@ public class TestArrayWritable extends TestCase {
    */
   public void testNullArgument() {
     try {
-	    Class<? extends Writable> valueClass = null;
-	    ArrayWritable arrayWritable = new ArrayWritable(valueClass);
-	    fail("testNullArgument error !!!");
+      Class<? extends Writable> valueClass = null;
+      new ArrayWritable(valueClass);
+      fail("testNullArgument error !!!");
     } catch (IllegalArgumentException exp) {
-      //should be for test pass	
+      //should be for test pass
     } catch (Exception e) {
-      fail("testNullArgument error !!!");	
-    } 	  
+      fail("testNullArgument error !!!");
+    }
   }
-  
+
   /**
    * test {@link ArrayWritable} constructor with {@code String[]} as a parameter
    */
+  @SuppressWarnings("deprecation")
   public void testArrayWritableStringConstructor() {
     String[] original = { "test1", "test2", "test3" };
     ArrayWritable arrayWritable = new ArrayWritable(original);

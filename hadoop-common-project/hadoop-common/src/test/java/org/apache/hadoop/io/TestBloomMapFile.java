@@ -25,8 +25,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -35,19 +38,30 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.util.Progressable;
-
-import junit.framework.TestCase;
+import org.junit.Assert;
 
 public class TestBloomMapFile extends TestCase {
   private static Configuration conf = new Configuration();
+  private static final Path TEST_ROOT = new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      TestMapFile.class.getSimpleName());
+  private static final Path TEST_DIR = new Path(TEST_ROOT, "testfile");
+  private static final Path TEST_FILE = new Path(TEST_ROOT, "testfile");
 
+  @Override
+  public void setUp() throws Exception {
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    if (fs.exists(TEST_ROOT) && !fs.delete(TEST_ROOT, true)) {
+      Assert.fail("Can't clean up test root dir");
+    }
+    fs.mkdirs(TEST_ROOT);
+  }
+  
   @SuppressWarnings("deprecation")
   public void testMembershipTest() throws Exception {
     // write the file
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + getName() + ".bloommapfile");
     FileSystem fs = FileSystem.getLocal(conf);
-    Path qualifiedDirName = fs.makeQualified(dirName);
+    Path qualifiedDirName = fs.makeQualified(TEST_DIR);
     conf.setInt("io.mapfile.bloom.size", 2048);
     BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, fs,
         qualifiedDirName.toString(), IntWritable.class, Text.class);
@@ -87,10 +101,8 @@ public class TestBloomMapFile extends TestCase {
   @SuppressWarnings("deprecation")
   private void checkMembershipVaryingSizedKeys(String name, List<Text> keys)
       throws Exception {
-    Path dirName = new Path(System.getProperty("test.build.data", ".") + name
-        + ".bloommapfile");
     FileSystem fs = FileSystem.getLocal(conf);
-    Path qualifiedDirName = fs.makeQualified(dirName);
+    Path qualifiedDirName = fs.makeQualified(TEST_DIR);
     BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, fs,
         qualifiedDirName.toString(), Text.class, NullWritable.class);
     for (Text key : keys) {
@@ -129,15 +141,12 @@ public class TestBloomMapFile extends TestCase {
    */
   public void testDeleteFile() {
     try {
-      String DELETABLE_FILE_NAME = "deletableFile.bloommapfile";
       FileSystem fs = FileSystem.getLocal(conf);
-      Path dirName = new Path(System.getProperty("test.build.data", ".")
-          + DELETABLE_FILE_NAME);
-      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, dirName,
+      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, TEST_FILE,
           MapFile.Writer.keyClass(IntWritable.class),
           MapFile.Writer.valueClass(Text.class));
       assertNotNull("testDeleteFile error !!!", writer);
-      BloomMapFile.delete(fs, "." + DELETABLE_FILE_NAME);
+      BloomMapFile.delete(fs, "." + TEST_FILE);
     } catch (Exception ex) {
       fail("unexpect ex in testDeleteFile !!!");
     }
@@ -148,12 +157,9 @@ public class TestBloomMapFile extends TestCase {
    * IOException
    */
   public void testIOExceptionInWriterConstructor() {
-    String TEST_FILE_NAME = "testFile.bloommapfile";
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + TEST_FILE_NAME);
-    Path dirNameSpy = org.mockito.Mockito.spy(dirName);
+    Path dirNameSpy = org.mockito.Mockito.spy(TEST_FILE);
     try {
-      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, dirName,
+      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, TEST_FILE,
           MapFile.Writer.keyClass(IntWritable.class),
           MapFile.Writer.valueClass(Text.class));
       writer.append(new IntWritable(1), new Text("123124142"));
@@ -176,12 +182,9 @@ public class TestBloomMapFile extends TestCase {
    *  test {@link BloomMapFile.Reader.get()} method 
    */
   public void testGetBloomMapFile() {
-    String TEST_FILE_NAME = "getTestFile.bloommapfile";
     int SIZE = 10;
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + TEST_FILE_NAME);
     try {
-      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, dirName,
+      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, TEST_FILE,
           MapFile.Writer.keyClass(IntWritable.class),
           MapFile.Writer.valueClass(Text.class));
 
@@ -190,7 +193,7 @@ public class TestBloomMapFile extends TestCase {
       }
       writer.close();
 
-      BloomMapFile.Reader reader = new BloomMapFile.Reader(dirName, conf,
+      BloomMapFile.Reader reader = new BloomMapFile.Reader(TEST_FILE, conf,
           MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));
 
       for (int i = 0; i < SIZE; i++) {
@@ -211,34 +214,33 @@ public class TestBloomMapFile extends TestCase {
    */
   @SuppressWarnings("deprecation")
   public void testBloomMapFileConstructors() {
-    final String TEST_PATH = System.getProperty("test.build.data", ".")
-        + ".bloommapfile";
     try {
       FileSystem ts = FileSystem.get(conf);
+      String testFileName = TEST_FILE.toString();
       BloomMapFile.Writer writer1 = new BloomMapFile.Writer(conf, ts,
-          TEST_PATH, IntWritable.class, Text.class, CompressionType.BLOCK,
+          testFileName, IntWritable.class, Text.class, CompressionType.BLOCK,
           defaultCodec, defaultProgress);
       assertNotNull("testBloomMapFileConstructors error !!!", writer1);
       BloomMapFile.Writer writer2 = new BloomMapFile.Writer(conf, ts,
-          TEST_PATH, IntWritable.class, Text.class, CompressionType.BLOCK,
+          testFileName, IntWritable.class, Text.class, CompressionType.BLOCK,
           defaultProgress);
       assertNotNull("testBloomMapFileConstructors error !!!", writer2);
       BloomMapFile.Writer writer3 = new BloomMapFile.Writer(conf, ts,
-          TEST_PATH, IntWritable.class, Text.class, CompressionType.BLOCK);
+          testFileName, IntWritable.class, Text.class, CompressionType.BLOCK);
       assertNotNull("testBloomMapFileConstructors error !!!", writer3);
       BloomMapFile.Writer writer4 = new BloomMapFile.Writer(conf, ts,
-          TEST_PATH, IntWritable.class, Text.class, CompressionType.RECORD,
+          testFileName, IntWritable.class, Text.class, CompressionType.RECORD,
           defaultCodec, defaultProgress);
       assertNotNull("testBloomMapFileConstructors error !!!", writer4);
       BloomMapFile.Writer writer5 = new BloomMapFile.Writer(conf, ts,
-          TEST_PATH, IntWritable.class, Text.class, CompressionType.RECORD,
+          testFileName, IntWritable.class, Text.class, CompressionType.RECORD,
           defaultProgress);
       assertNotNull("testBloomMapFileConstructors error !!!", writer5);
       BloomMapFile.Writer writer6 = new BloomMapFile.Writer(conf, ts,
-          TEST_PATH, IntWritable.class, Text.class, CompressionType.RECORD);
+          testFileName, IntWritable.class, Text.class, CompressionType.RECORD);
       assertNotNull("testBloomMapFileConstructors error !!!", writer6);
       BloomMapFile.Writer writer7 = new BloomMapFile.Writer(conf, ts,
-          TEST_PATH, WritableComparator.get(Text.class), Text.class);
+          testFileName, WritableComparator.get(Text.class), Text.class);
       assertNotNull("testBloomMapFileConstructors error !!!", writer7);
     } catch (Exception ex) {
       fail("testBloomMapFileConstructors error !!!");

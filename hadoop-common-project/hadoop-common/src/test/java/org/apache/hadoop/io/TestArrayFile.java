@@ -19,10 +19,10 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.*;
-
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.util.Progressable;
@@ -31,8 +31,11 @@ import org.apache.hadoop.conf.*;
 /** Support for flat files of binary key/value pairs. */
 public class TestArrayFile extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestArrayFile.class);
-  private static String FILE =
-    System.getProperty("test.build.data",".") + "/test.array";
+  
+  private static final Path TEST_DIR = new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      TestMapFile.class.getSimpleName());
+  private static String TEST_FILE = new Path(TEST_DIR, "test.array").toString();
 
   public TestArrayFile(String name) { 
     super(name); 
@@ -42,15 +45,15 @@ public class TestArrayFile extends TestCase {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     RandomDatum[] data = generate(10000);
-    writeTest(fs, data, FILE);
-    readTest(fs, data, FILE, conf);
+    writeTest(fs, data, TEST_FILE);
+    readTest(fs, data, TEST_FILE, conf);
   }
 
   public void testEmptyFile() throws Exception {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
-    writeTest(fs, new RandomDatum[0], FILE);
-    ArrayFile.Reader reader = new ArrayFile.Reader(fs, FILE, conf);
+    writeTest(fs, new RandomDatum[0], TEST_FILE);
+    ArrayFile.Reader reader = new ArrayFile.Reader(fs, TEST_FILE, conf);
     assertNull(reader.get(0, new RandomDatum()));
     reader.close();
   }
@@ -89,21 +92,24 @@ public class TestArrayFile extends TestCase {
       LOG.debug("reading " + data.length + " debug");
     }
     ArrayFile.Reader reader = new ArrayFile.Reader(fs, file, conf);
-    for (int i = 0; i < data.length; i++) {       // try forwards
-      reader.get(i, v);
-      if (!v.equals(data[i])) {
-        throw new RuntimeException("wrong value at " + i);
+    try {
+      for (int i = 0; i < data.length; i++) {       // try forwards
+        reader.get(i, v);
+        if (!v.equals(data[i])) {
+          throw new RuntimeException("wrong value at " + i);
+        }
       }
-    }
-    for (int i = data.length-1; i >= 0; i--) {    // then backwards
-      reader.get(i, v);
-      if (!v.equals(data[i])) {
-        throw new RuntimeException("wrong value at " + i);
+      for (int i = data.length-1; i >= 0; i--) {    // then backwards
+        reader.get(i, v);
+        if (!v.equals(data[i])) {
+          throw new RuntimeException("wrong value at " + i);
+        }
       }
-    }
-    reader.close();
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("done reading " + data.length + " debug");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("done reading " + data.length + " debug");
+      }
+    } finally {
+      reader.close();
     }
   }
 
@@ -115,11 +121,11 @@ public class TestArrayFile extends TestCase {
    */
   public void testArrayFileIteration() {
     int SIZE = 10;
-    String path = System.getProperty("test.build.data",".") + "arrayFile.array";
     Configuration conf = new Configuration();    
     try {
       FileSystem fs = FileSystem.get(conf);
-      ArrayFile.Writer writer = new ArrayFile.Writer(conf, fs, path, LongWritable.class, CompressionType.RECORD, defaultProgressable);
+      ArrayFile.Writer writer = new ArrayFile.Writer(conf, fs, TEST_FILE, 
+          LongWritable.class, CompressionType.RECORD, defaultProgressable);
       assertNotNull("testArrayFileIteration error !!!", writer);
       
       for (int i = 0; i < SIZE; i++)
@@ -127,7 +133,7 @@ public class TestArrayFile extends TestCase {
       
       writer.close();
       
-      ArrayFile.Reader reader = new ArrayFile.Reader(fs, path, conf);
+      ArrayFile.Reader reader = new ArrayFile.Reader(fs, TEST_FILE, conf);
       LongWritable nextWritable = new LongWritable(0);
       
       for (int i = 0; i < SIZE; i++) {
@@ -135,11 +141,14 @@ public class TestArrayFile extends TestCase {
         assertEquals(nextWritable.get(), i);
       }
         
-      assertTrue("testArrayFileIteration seek error !!!", reader.seek(new LongWritable(6)));
-      nextWritable = (LongWritable)reader.next(nextWritable);
+      assertTrue("testArrayFileIteration seek error !!!",
+          reader.seek(new LongWritable(6)));
+      nextWritable = (LongWritable) reader.next(nextWritable);
       assertTrue("testArrayFileIteration error !!!", reader.key() == 7);
-      assertTrue("testArrayFileIteration error !!!", nextWritable.equals(new LongWritable(7)));
-      assertFalse("testArrayFileIteration error !!!", reader.seek(new LongWritable(SIZE + 5)));
+      assertTrue("testArrayFileIteration error !!!",
+          nextWritable.equals(new LongWritable(7)));
+      assertFalse("testArrayFileIteration error !!!",
+          reader.seek(new LongWritable(SIZE + 5)));
       reader.close();
     } catch (Exception ex) {
       fail("testArrayFileWriterConstruction error !!!");
@@ -151,7 +160,7 @@ public class TestArrayFile extends TestCase {
     int count = 1024 * 1024;
     boolean create = true;
     boolean check = true;
-    String file = FILE;
+    String file = TEST_FILE;
     String usage = "Usage: TestArrayFile [-count N] [-nocreate] [-nocheck] file";
       
     if (args.length == 0) {

@@ -24,6 +24,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -32,12 +33,31 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.util.Progressable;
-import junit.framework.TestCase;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
 import static org.mockito.Mockito.*;
 
-public class TestMapFile extends TestCase {
+public class TestMapFile {
+  
+  private static final Path TEST_DIR = new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      TestMapFile.class.getSimpleName());
+  
   private static Configuration conf = new Configuration();
 
+  @Before
+  public void setup() throws Exception {
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    if (fs.exists(TEST_DIR) && !fs.delete(TEST_DIR, true)) {
+      Assert.fail("Can't clean up test root dir");
+    }
+    fs.mkdirs(TEST_DIR);
+  }
+  
   private static final Progressable defaultProgressable = new Progressable() {
     @Override
     public void progress() {
@@ -98,8 +118,7 @@ public class TestMapFile extends TestCase {
   private MapFile.Writer createWriter(String fileName,
       Class<? extends WritableComparable<?>> keyClass,
       Class<? extends Writable> valueClass) throws IOException {
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + fileName);
+    Path dirName = new Path(TEST_DIR, fileName);
     MapFile.Writer.setIndexInterval(conf, 4);
     return new MapFile.Writer(conf, dirName, MapFile.Writer.keyClass(keyClass),
         MapFile.Writer.valueClass(valueClass));
@@ -107,8 +126,7 @@ public class TestMapFile extends TestCase {
 
   private MapFile.Reader createReader(String fileName,
       Class<? extends WritableComparable<?>> keyClass) throws IOException {
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + fileName);
+    Path dirName = new Path(TEST_DIR, fileName);
     return new MapFile.Reader(dirName, conf,
         MapFile.Reader.comparator(new WritableComparator(keyClass)));
   }
@@ -117,9 +135,9 @@ public class TestMapFile extends TestCase {
    * test {@code MapFile.Reader.getClosest()} method 
    *
    */
+  @Test
   public void testGetClosestOnCurrentApi() throws Exception {
     final String TEST_PREFIX = "testGetClosestOnCurrentApi.mapfile";
-    deleteFileIfExists(TEST_PREFIX);
     MapFile.Writer writer = createWriter(TEST_PREFIX, Text.class, Text.class);
     int FIRST_KEY = 1;
     // Test keys: 11,21,31,...,91
@@ -165,6 +183,7 @@ public class TestMapFile extends TestCase {
   /**
    * test {@code MapFile.Reader.midKey() } method 
    */
+  @Test
   public void testMidKeyOnCurrentApi() throws Exception {
     // Write a mapfile of simple data: keys are
     final String TEST_PREFIX = "testMidKeyOnCurrentApi.mapfile";
@@ -183,18 +202,18 @@ public class TestMapFile extends TestCase {
   /**
    * test  {@code MapFile.Writer.rename()} method 
    */
+  @Test
   public void testRename() {
     final String NEW_FILE_NAME = "test-new.mapfile";
     final String OLD_FILE_NAME = "test-old.mapfile";
-    final String PATH_PREFIX = System.getProperty("test.build.data", ".");
     try {
       FileSystem fs = FileSystem.getLocal(conf);
       MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class,
           IntWritable.class);
       writer.close();
-      MapFile.rename(fs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX
-          + NEW_FILE_NAME);
-      MapFile.delete(fs, PATH_PREFIX + NEW_FILE_NAME);
+      MapFile.rename(fs, new Path(TEST_DIR, OLD_FILE_NAME).toString(), 
+          new Path(TEST_DIR, NEW_FILE_NAME).toString());
+      MapFile.delete(fs, new Path(TEST_DIR, NEW_FILE_NAME).toString());
     } catch (IOException ex) {
       fail("testRename error " + ex);
     }
@@ -204,11 +223,11 @@ public class TestMapFile extends TestCase {
    * test {@code MapFile.rename()} 
    *  method with throwing {@code IOException}  
    */
+  @Test
   public void testRenameWithException() {
     final String ERROR_MESSAGE = "Can't rename file";
     final String NEW_FILE_NAME = "test-new.mapfile";
     final String OLD_FILE_NAME = "test-old.mapfile";
-    final String PATH_PREFIX = System.getProperty("test.build.data", ".");
     try {
       FileSystem fs = FileSystem.getLocal(conf);
       FileSystem spyFs = spy(fs);
@@ -217,13 +236,12 @@ public class TestMapFile extends TestCase {
           IntWritable.class);
       writer.close();
 
-      Path oldDir = new Path(PATH_PREFIX + OLD_FILE_NAME);
-      Path newDir = new Path(PATH_PREFIX + NEW_FILE_NAME);
+      Path oldDir = new Path(TEST_DIR, OLD_FILE_NAME);
+      Path newDir = new Path(TEST_DIR, NEW_FILE_NAME);
       when(spyFs.rename(oldDir, newDir)).thenThrow(
           new IOException(ERROR_MESSAGE));
 
-      MapFile.rename(spyFs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX
-          + NEW_FILE_NAME);
+      MapFile.rename(spyFs, oldDir.toString(), newDir.toString());
       fail("testRenameWithException no exception error !!!");
     } catch (IOException ex) {
       assertEquals("testRenameWithException invalid IOExceptionMessage !!!",
@@ -231,11 +249,11 @@ public class TestMapFile extends TestCase {
     }
   }
 
+  @Test
   public void testRenameWithFalse() {
     final String ERROR_MESSAGE = "Could not rename";
     final String NEW_FILE_NAME = "test-new.mapfile";
     final String OLD_FILE_NAME = "test-old.mapfile";
-    final String PATH_PREFIX = System.getProperty("test.build.data", ".");
     try {
       FileSystem fs = FileSystem.getLocal(conf);
       FileSystem spyFs = spy(fs);
@@ -244,12 +262,11 @@ public class TestMapFile extends TestCase {
           IntWritable.class);
       writer.close();
 
-      Path oldDir = new Path(PATH_PREFIX + OLD_FILE_NAME);
-      Path newDir = new Path(PATH_PREFIX + NEW_FILE_NAME);
+      Path oldDir = new Path(TEST_DIR, OLD_FILE_NAME);
+      Path newDir = new Path(TEST_DIR, NEW_FILE_NAME);
       when(spyFs.rename(oldDir, newDir)).thenReturn(false);
 
-      MapFile.rename(spyFs, PATH_PREFIX + OLD_FILE_NAME, PATH_PREFIX
-          + NEW_FILE_NAME);
+      MapFile.rename(spyFs, oldDir.toString(), newDir.toString());
       fail("testRenameWithException no exception error !!!");
     } catch (IOException ex) {
       assertTrue("testRenameWithFalse invalid IOExceptionMessage error !!!", ex
@@ -260,10 +277,10 @@ public class TestMapFile extends TestCase {
   /**
    * test throwing {@code IOException} in {@code MapFile.Writer} constructor    
    */
+  @Test
   public void testWriteWithFailDirCreation() {
     String ERROR_MESSAGE = "Mkdirs failed to create directory";
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + "fail.mapfile");
+    Path dirName = new Path(TEST_DIR, "fail.mapfile");
     MapFile.Writer writer = null;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
@@ -291,6 +308,7 @@ public class TestMapFile extends TestCase {
   /**
    * test {@code MapFile.Reader.finalKey()} method
    */
+  @Test
   public void testOnFinalKey() {
     final String TEST_METHOD_KEY = "testOnFinalKey.mapfile";
     int SIZE = 10;
@@ -315,6 +333,7 @@ public class TestMapFile extends TestCase {
    * test {@code MapFile.Writer} constructor with key, value
    * and validate it with {@code keyClass(), valueClass()} methods 
    */
+  @Test
   public void testKeyValueClasses() {
     Class<? extends WritableComparable<?>> keyClass = IntWritable.class;
     Class<?> valueClass = Text.class;
@@ -332,10 +351,10 @@ public class TestMapFile extends TestCase {
   /**
    * test {@code MapFile.Reader.getClosest() } with wrong class key
    */
+  @Test
   public void testReaderGetClosest() throws Exception {
     final String TEST_METHOD_KEY = "testReaderWithWrongKeyClass.mapfile";
     try {
-      deleteFileIfExists(TEST_METHOD_KEY);
       MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
           Text.class);
 
@@ -354,10 +373,10 @@ public class TestMapFile extends TestCase {
   /**
    * test {@code MapFile.Writer.append() } with wrong key class
    */
+  @Test
   public void testReaderWithWrongValueClass() {
     final String TEST_METHOD_KEY = "testReaderWithWrongValueClass.mapfile";
     try {
-      deleteFileIfExists(TEST_METHOD_KEY);
       MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
           Text.class);
       writer.append(new IntWritable(0), new IntWritable(0));
@@ -370,12 +389,12 @@ public class TestMapFile extends TestCase {
   /**
    * test {@code MapFile.Reader.next(key, value)} for iteration.
    */
+  @Test
   public void testReaderKeyIteration() {
     final String TEST_METHOD_KEY = "testReaderKeyIteration.mapfile";
     int SIZE = 10;
     int ITERATIONS = 5;
     try {
-      deleteFileIfExists(TEST_METHOD_KEY);
       MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
           Text.class);
       int start = 0;
@@ -405,23 +424,16 @@ public class TestMapFile extends TestCase {
     }
   }
 
-  private boolean deleteFileIfExists(String fileName) {
-    File file = new File(".", "." + fileName);
-    if (file.exists())
-      return file.delete();
-    return false;
-  }
-
   /**
    * test {@code MapFile.Writer.testFix} method
    */
+  @Test
   public void testFix() {
     final String INDEX_LESS_MAP_FILE = "testFix.mapfile";
     int PAIR_SIZE = 20;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
-      Path dir = new Path(System.getProperty("test.build.data", ".")
-          + INDEX_LESS_MAP_FILE);
+      Path dir = new Path(TEST_DIR, INDEX_LESS_MAP_FILE);
       MapFile.Writer writer = createWriter(INDEX_LESS_MAP_FILE,
           IntWritable.class, Text.class);
       for (int i = 0; i < PAIR_SIZE; i++)
@@ -443,10 +455,10 @@ public class TestMapFile extends TestCase {
   /**
    * test all available constructor for {@code MapFile.Writer}
    */
+  @Test
   @SuppressWarnings("deprecation")
   public void testDeprecatedConstructors() {
-    String path = System.getProperty("test.build.data", ".") + "writes"
-        + ".mapfile";
+    String path = new Path(TEST_DIR, "writes.mapfile").toString();
     try {
       FileSystem fs = FileSystem.getLocal(conf);
       MapFile.Writer writer = new MapFile.Writer(conf, fs, path,
@@ -487,11 +499,11 @@ public class TestMapFile extends TestCase {
    * with IllegalArgumentException  
    *  
    */
+  @Test
   public void testKeyLessWriterCreation() {
     MapFile.Writer writer = null;
     try {
-      writer = new MapFile.Writer(conf, new Path(
-          System.getProperty("test.build.data", ".") + ""));
+      writer = new MapFile.Writer(conf, TEST_DIR);
       fail("fail in testKeyLessWriterCreation !!!");
     } catch (IllegalArgumentException ex) {
     } catch (Exception e) {
@@ -507,9 +519,9 @@ public class TestMapFile extends TestCase {
   /**
    * test {@code MapFile.Writer} constructor with IOException
    */
+  @Test
   public void testPathExplosionWriterCreation() {
-    Path path = new Path(System.getProperty("test.build.data", ".")
-        + ".mapfile");
+    Path path = new Path(TEST_DIR, "testPathExplosionWriterCreation.mapfile");
     String TEST_ERROR_MESSAGE = "Mkdirs failed to create directory "
         + path.getName();
     MapFile.Writer writer = null;
@@ -541,6 +553,7 @@ public class TestMapFile extends TestCase {
   /**
    * test {@code MapFile.Writer.append} method with desc order  
    */
+  @Test
   public void testDescOrderWithThrowExceptionWriterAppend() {
     try {
       MapFile.Writer writer = createWriter(".mapfile", IntWritable.class,
@@ -556,9 +569,9 @@ public class TestMapFile extends TestCase {
     }
   }
 
+  @Test
   public void testMainMethodMapFile() {
-    String path = System.getProperty("test.build.data", ".")
-        + "mainMethodMapFile.mapfile";
+    String path = new Path(TEST_DIR, "mainMethodMapFile.mapfile").toString();
     String inFile = "mainMethodMapFile.mapfile";
     String outFile = "mainMethodMapFile.mapfile";
     String[] args = { path, outFile };
@@ -579,11 +592,11 @@ public class TestMapFile extends TestCase {
    * 
    * @throws Exception
    */
+  @Test
   @SuppressWarnings("deprecation")
   public void testGetClosest() throws Exception {
     // Write a mapfile of simple data: keys are
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + getName() + ".mapfile");
+    Path dirName = new Path(TEST_DIR, "testGetClosest.mapfile");
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
     // Make an index entry for every third insertion.
@@ -601,8 +614,8 @@ public class TestMapFile extends TestCase {
     }
     writer.close();
     // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
-        conf);
+    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
+    try {
     Text key = new Text("55");
     Text value = new Text();
     Text closest = (Text) reader.getClosest(key, value);
@@ -636,13 +649,16 @@ public class TestMapFile extends TestCase {
     // If we were looking for the key before, we should get the last key
     closest = (Text) reader.getClosest(key, value, true);
     assertEquals(new Text("90"), closest);
+    } finally {
+      reader.close();
+    }
   }
 
+  @Test
   @SuppressWarnings("deprecation")
   public void testMidKey() throws Exception {
     // Write a mapfile of simple data: keys are
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + getName() + ".mapfile");
+    Path dirName = new Path(TEST_DIR, "testMidKey.mapfile");
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
 
@@ -651,16 +667,19 @@ public class TestMapFile extends TestCase {
     writer.append(new IntWritable(1), new IntWritable(1));
     writer.close();
     // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
-        conf);
-    assertEquals(new IntWritable(1), reader.midKey());
+    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
+    try {
+      assertEquals(new IntWritable(1), reader.midKey());
+    } finally {
+      reader.close();
+    }
   }
 
+  @Test
   @SuppressWarnings("deprecation")
   public void testMidKeyEmpty() throws Exception {
     // Write a mapfile of simple data: keys are
-    Path dirName = new Path(System.getProperty("test.build.data", ".")
-        + getName() + ".mapfile");
+    Path dirName = new Path(TEST_DIR, "testMidKeyEmpty.mapfile");
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
 
@@ -668,8 +687,11 @@ public class TestMapFile extends TestCase {
         qualifiedDirName.toString(), IntWritable.class, IntWritable.class);
     writer.close();
     // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
-        conf);
-    assertEquals(null, reader.midKey());
+    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
+    try {
+      assertEquals(null, reader.midKey()); 
+    } finally {
+      reader.close();
+    }
   }
 }
