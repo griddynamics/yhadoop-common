@@ -115,12 +115,7 @@ public class TestWebAppProxyServlet {
     }
   }
 
-  /**
-   * Test proxy servlet. Test answer in different situations.
-   * 
-   * @throws Exception
-   */
-  @Test (timeout=5000)
+  @Test(timeout=5000)
   public void testWebAppProxyServlet() throws Exception {
 
     Configuration configuration = new Configuration();
@@ -177,7 +172,6 @@ public class TestWebAppProxyServlet {
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
-     
     } finally {
       proxy.close();
     }
@@ -186,7 +180,7 @@ public class TestWebAppProxyServlet {
   /**
    * Test main method of WebAppProxyServer
    */
-  @Test (timeout=10000)
+  @Test(timeout=5000)
   public void testWebAppProxyServerMainMethod() throws Exception {
     WebAppProxyServer mainServer = null;
     try {
@@ -326,19 +320,18 @@ public class TestWebAppProxyServlet {
 
     public ApplicationReport getApplicationReport(ApplicationId appId)
         throws YarnException {
-      ApplicationReport result=null;
       if (answer == 0) {
         return getDefaultApplicationReport(appId);
       } else if (answer == 1) {
         return null;
       } else if (answer == 2) {
-         result = getDefaultApplicationReport(appId);
+        ApplicationReport result = getDefaultApplicationReport(appId);
         result.setUser("user");
         return result;
-      }else if (answer == 3) {
-        result=  getDefaultApplicationReport(appId);
+      } else if (answer == 3) {
+        ApplicationReport result =  getDefaultApplicationReport(appId);
         result.setYarnApplicationState(YarnApplicationState.KILLED);
-          return result;
+        return result;
       }
       return null;
     }
