@@ -128,7 +128,8 @@ public class TestWebAppProxyServlet {
 
     Configuration configuration = new Configuration();
     configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9090");
-    configuration.setInt("hadoop.http.max.threads", 5);// HTTP_MAX_THREADS//"hadoop.http.max.threads"
+    // overriding num of web server threads, see HttpServer.HTTP_MAXTHREADS 
+    configuration.setInt("hadoop.http.max.threads", 5);
     WebAppProxyServerForTest proxy = new WebAppProxyServerForTest();
     proxy.init(configuration);
     proxy.start();
@@ -188,37 +189,22 @@ public class TestWebAppProxyServlet {
   @Test (timeout=10000)
   public void testWebAppProxyServerMainMethod() throws Exception {
     try {
-      Thread thread = new Thread(new Runnable() {
-
-        @Override
-        public void run() {
-
-          try {
-            mainServer = WebAppProxyServer.startServer(new String[0]);
-          } catch (Exception ignored) {
-
-          }
-
-        }
-      });
-      thread.start();
-      int counter = 10;
+      mainServer = WebAppProxyServer.startServer();
+      int counter = 20;
 
       URL wrongUrl = new URL("http://localhost:9099/proxy/app");
       HttpURLConnection proxyConn = null;
       while (counter > 0) {
         counter--;
         try {
-
           proxyConn = (HttpURLConnection) wrongUrl.openConnection();
           proxyConn.connect();
           proxyConn.getResponseCode();
           // server started ok
           counter = 0;
-        } catch (Throwable e) {
-
+        } catch (Exception e) {
+          Thread.sleep(100);
         }
-        Thread.sleep(500);
       }
       assertNotNull(proxyConn);
       // wrong application Id
