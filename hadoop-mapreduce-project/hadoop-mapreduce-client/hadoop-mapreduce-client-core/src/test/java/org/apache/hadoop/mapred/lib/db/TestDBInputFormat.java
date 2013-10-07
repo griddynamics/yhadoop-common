@@ -61,7 +61,6 @@ public class TestDBInputFormat {
 
     //
     configuration.setInt(MRJobConfig.NUM_MAPS, 3);
-    // there  is  issue: second parameter does not work.
     InputSplit[] lSplits = format.getSplits(configuration, 3);
     assertEquals(5, lSplits[0].getLength());
     assertEquals(3, lSplits.length);
