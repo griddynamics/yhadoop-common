@@ -77,7 +77,8 @@ public class WebAppProxyServer extends CompositeService {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(WebAppProxyServer.class, args, LOG);
     try {
-      startServer(args);
+      WebAppProxyServer proxyServer = startServer();
+      proxyServer.proxy.join();
     } catch (Throwable t) {
       LOG.fatal("Error starting Proxy server", t);
       System.exit(-1);
@@ -85,9 +86,11 @@ public class WebAppProxyServer extends CompositeService {
   }
 
   /**
-   * for test this method
+   * Start proxy server.
+   * 
+   * @return proxy server instance.
    */
-  protected static WebAppProxyServer startServer(String[] args) throws Exception {
+  protected static WebAppProxyServer startServer() throws Exception {
     WebAppProxyServer proxy = new WebAppProxyServer();
     ShutdownHookManager.get().addShutdownHook(
         new CompositeServiceShutdownHook(proxy), SHUTDOWN_HOOK_PRIORITY);
