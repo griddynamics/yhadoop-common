@@ -28,11 +28,38 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.AvroTestUtil;
 import org.apache.hadoop.util.Shell;
 
+import com.google.common.base.Joiner;
+
 import junit.framework.TestCase;
 
-import static org.junit.Assert.fail;
-
 public class TestPath extends TestCase {
+  /**
+   * Merge a bunch of Path objects into a sorted semicolon-separated
+   * path string.
+   */
+  public static String mergeStatuses(Path paths[]) {
+    String pathStrings[] = new String[paths.length];
+    int i = 0;
+    for (Path path : paths) {
+      pathStrings[i++] = path.toUri().getPath();
+    }
+    Arrays.sort(pathStrings);
+    return Joiner.on(";").join(pathStrings);
+  }
+
+  /**
+   * Merge a bunch of FileStatus objects into a sorted semicolon-separated
+   * path string.
+   */
+  public static String mergeStatuses(FileStatus statuses[]) {
+    Path paths[] = new Path[statuses.length];
+    int i = 0;
+    for (FileStatus status : statuses) {
+      paths[i++] = status.getPath();
+    }
+    return mergeStatuses(paths);
+  }
+
   @Test (timeout = 30000)
   public void testToString() {
     toStringTest("/");
@@ -131,7 +158,43 @@ public class TestPath extends TestCase {
       assertEquals(new Path("c:/foo"), new Path("d:/bar", "c:/foo"));
     }
   }
-  
+
+  @Test (timeout = 30000)
+  public void testPathThreeArgContructor() {
+    assertEquals(new Path("foo"), new Path(null, null, "foo"));
+    assertEquals(new Path("scheme:///foo"), new Path("scheme", null, "/foo"));
+    assertEquals(
+        new Path("scheme://authority/foo"),
+        new Path("scheme", "authority", "/foo"));
+
+    if (Path.WINDOWS) {
+      assertEquals(new Path("c:/foo/bar"), new Path(null, null, "c:/foo/bar"));
+      assertEquals(new Path("c:/foo/bar"), new Path(null, null, "/c:/foo/bar"));
+    } else {
+      assertEquals(new Path("./a:b"), new Path(null, null, "a:b"));
+    }
+
+    // Resolution tests
+    if (Path.WINDOWS) {
+      assertEquals(
+          new Path("c:/foo/bar"),
+          new Path("/fou", new Path(null, null, "c:/foo/bar")));
+      assertEquals(
+          new Path("c:/foo/bar"),
+          new Path("/fou", new Path(null, null, "/c:/foo/bar")));
+      assertEquals(
+          new Path("/foo/bar"),
+          new Path("/foo", new Path(null, null, "bar")));
+    } else {
+      assertEquals(
+          new Path("/foo/bar/a:b"),
+          new Path("/foo/bar", new Path(null, null, "a:b")));
+      assertEquals(
+          new Path("/a:b"),
+          new Path("/foo/bar", new Path(null, null, "/a:b")));
+    }
+  }
+
   @Test (timeout = 30000)
   public void testEquals() {
     assertFalse(new Path("/").equals(new Path("/foo")));
@@ -352,10 +415,11 @@ public class TestPath extends TestCase {
     // ensure globStatus with "*" finds all dir contents
     stats = lfs.globStatus(new Path(testRoot, "*"));
     Arrays.sort(stats);
-    assertEquals(paths.length, stats.length);
-    for (int i=0; i < paths.length; i++) {
-      assertEquals(paths[i].getParent(), stats[i].getPath());
+    Path parentPaths[] = new Path[paths.length];
+    for (int i = 0; i < paths.length; i++) {
+      parentPaths[i] = paths[i].getParent();
     }
+    assertEquals(mergeStatuses(parentPaths), mergeStatuses(stats));
 
     // ensure that globStatus with an escaped "\*" only finds "*"
     stats = lfs.globStatus(new Path(testRoot, "\\*"));
@@ -365,9 +429,7 @@ public class TestPath extends TestCase {
     // try to glob the inner file for all dirs
     stats = lfs.globStatus(new Path(testRoot, "*/f"));
     assertEquals(paths.length, stats.length);
-    for (int i=0; i < paths.length; i++) {
-      assertEquals(paths[i], stats[i].getPath());
-    }
+    assertEquals(mergeStatuses(paths), mergeStatuses(stats));
 
     // try to get the inner file for only the "*" dir
     stats = lfs.globStatus(new Path(testRoot, "\\*/f"));

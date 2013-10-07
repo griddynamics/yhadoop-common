@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,11 +34,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -47,7 +55,6 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestExceptio
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -274,7 +281,7 @@ public class TestSchedulerUtils {
   public void testValidateResourceBlacklistRequest() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm =
+    final MockRMWithAMS rm =
         new MockRMWithAMS(new YarnConfiguration(), containerManager);
     rm.start();
 
@@ -298,13 +305,18 @@ public class TestSchedulerUtils {
     UserGroupInformation currentUser = 
         UserGroupInformation.createRemoteUser(applicationAttemptId.toString());
     Credentials credentials = containerManager.getContainerCredentials();
-    currentUser.addCredentials(credentials);
-    ApplicationMasterProtocol client = currentUser
-        .doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
+    final InetSocketAddress rmBindAddress =
+        rm.getApplicationMasterService().getBindAddress();
+    Token<? extends TokenIdentifier> amRMToken =
+        MockRMWithAMS.setupAndReturnAMRMToken(rmBindAddress,
+          credentials.getAllTokens());
+    currentUser.addToken(amRMToken);
+    ApplicationMasterProtocol client =
+        currentUser.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
           @Override
           public ApplicationMasterProtocol run() {
-            return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rm
-                .getApplicationMasterService().getBindAddress(), conf);
+            return (ApplicationMasterProtocol) rpc.getProxy(
+              ApplicationMasterProtocol.class, rmBindAddress, conf);
           }
         });
 
@@ -344,4 +356,26 @@ public class TestSchedulerUtils {
         RMAppAttemptState.LAUNCHED);
   }
 
+  @Test
+  public void testComparePriorities(){
+    Priority high = Priority.newInstance(1);
+    Priority low = Priority.newInstance(2);
+    assertTrue(high.compareTo(low) > 0);
+  }
+
+  @Test
+  public void testCreateAbnormalContainerStatus() {
+    ContainerStatus cd = SchedulerUtils.createAbnormalContainerStatus(
+        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
+    Assert.assertEquals(ContainerExitStatus.ABORTED, cd.getExitStatus());
+  }
+
+  @Test
+  public void testCreatePreemptedContainerStatus() {
+    ContainerStatus cd = SchedulerUtils.createPreemptedContainerStatus(
+        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
+    Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
+  }
 }

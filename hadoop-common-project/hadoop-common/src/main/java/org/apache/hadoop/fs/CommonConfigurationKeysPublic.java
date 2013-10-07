@@ -58,6 +58,11 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_DU_INTERVAL_KEY = "fs.du.interval";
   /** Default value for FS_DU_INTERVAL_KEY */
   public static final long    FS_DU_INTERVAL_DEFAULT = 600000;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY =
+    "fs.client.resolve.remote.symlinks";
+  /** Default value for FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY */
+  public static final boolean FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_DEFAULT = true;
 
 
   //Defaults are not specified for following keys
@@ -259,5 +264,9 @@ public class CommonConfigurationKeysPublic {
   /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
   public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
           60;
+
+  // HTTP policies to be used in configuration
+  public static final String HTTP_POLICY_HTTP_ONLY = "HTTP_ONLY";
+  public static final String HTTP_POLICY_HTTPS_ONLY = "HTTPS_ONLY";
 }
 

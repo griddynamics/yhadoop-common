@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -1208,7 +1209,6 @@ public class BlockManager {
             // abandoned block or block reopened for append
             if(bc == null || bc instanceof MutableBlockCollection) {
               neededReplications.remove(block, priority); // remove from neededReplications
-              neededReplications.decrementReplicationIndex(priority);
               continue;
             }
 
@@ -1235,7 +1235,6 @@ public class BlockManager {
               if ( (pendingReplications.getNumReplicas(block) > 0) ||
                    (blockHasEnoughRacks(block)) ) {
                 neededReplications.remove(block, priority); // remove from neededReplications
-                neededReplications.decrementReplicationIndex(priority);
                 blockLog.info("BLOCK* Removing " + block
                     + " from neededReplications as it has enough replicas");
                 continue;
@@ -1258,22 +1257,19 @@ public class BlockManager {
       namesystem.writeUnlock();
     }
 
-    HashMap<Node, Node> excludedNodes
-        = new HashMap<Node, Node>();
+    final Set<Node> excludedNodes = new HashSet<Node>();
     for(ReplicationWork rw : work){
       // Exclude all of the containing nodes from being targets.
       // This list includes decommissioning or corrupt nodes.
       excludedNodes.clear();
       for (DatanodeDescriptor dn : rw.containingNodes) {
-        excludedNodes.put(dn, dn);
+        excludedNodes.add(dn);
       }
 
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
       // It is costly to extract the filename for which chooseTargets is called,
       // so for now we pass in the block collection itself.
-      rw.targets = blockplacement.chooseTarget(rw.bc,
-          rw.additionalReplRequired, rw.srcNode, rw.liveReplicaNodes,
-          excludedNodes, rw.block.getNumBytes());
+      rw.chooseTargets(blockplacement, excludedNodes);
     }
 
     namesystem.writeLock();
@@ -1295,7 +1291,6 @@ public class BlockManager {
           if(bc == null || bc instanceof MutableBlockCollection) {
             neededReplications.remove(block, priority); // remove from neededReplications
             rw.targets = null;
-            neededReplications.decrementReplicationIndex(priority);
             continue;
           }
           requiredReplication = bc.getBlockReplication();
@@ -1309,7 +1304,6 @@ public class BlockManager {
             if ( (pendingReplications.getNumReplicas(block) > 0) ||
                  (blockHasEnoughRacks(block)) ) {
               neededReplications.remove(block, priority); // remove from neededReplications
-              neededReplications.decrementReplicationIndex(priority);
               rw.targets = null;
               blockLog.info("BLOCK* Removing " + block
                   + " from neededReplications as it has enough replicas");
@@ -1346,7 +1340,6 @@ public class BlockManager {
           // remove from neededReplications
           if(numEffectiveReplicas + targets.length >= requiredReplication) {
             neededReplications.remove(block, priority); // remove from neededReplications
-            neededReplications.decrementReplicationIndex(priority);
           }
         }
       }
@@ -1383,12 +1376,12 @@ public class BlockManager {
    * 
    * @throws IOException
    *           if the number of targets < minimum replication.
-   * @see BlockPlacementPolicy#chooseTarget(String, int, DatanodeDescriptor,
-   *      List, boolean, HashMap, long)
+   * @see BlockPlacementPolicy#chooseTarget(String, int, Node,
+   *      List, boolean, Set, long)
    */
   public DatanodeDescriptor[] chooseTarget(final String src,
       final int numOfReplicas, final DatanodeDescriptor client,
-      final HashMap<Node, Node> excludedNodes,
+      final Set<Node> excludedNodes,
       final long blocksize, List<String> favoredNodes) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 
         getDatanodeDescriptors(favoredNodes);
@@ -3253,6 +3246,13 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       this.additionalReplRequired = additionalReplRequired;
       this.priority = priority;
       this.targets = null;
+    }
+    
+    private void chooseTargets(BlockPlacementPolicy blockplacement,
+        Set<Node> excludedNodes) {
+      targets = blockplacement.chooseTarget(bc.getName(),
+          additionalReplRequired, srcNode, liveReplicaNodes, false,
+          excludedNodes, block.getNumBytes());
     }
   }
 

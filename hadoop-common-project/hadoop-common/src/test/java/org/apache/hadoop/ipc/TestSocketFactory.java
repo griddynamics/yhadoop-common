@@ -72,8 +72,8 @@ public class TestSocketFactory {
     serverThread.stop();
   }
 
-  @Test (timeout=5000)
-  public void testSocketFactoryAsKeyInMap() throws Exception {
+  @Test
+  public void testSocketFactoryAsKeyInMap() {
     Map<SocketFactory, Integer> dummyCache = new HashMap<SocketFactory, Integer>();
     int toBeCached1 = 1;
     int toBeCached2 = 2;

@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
@@ -123,7 +124,7 @@ import com.google.common.collect.Lists;
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
-public class NameNode {
+public class NameNode implements NameNodeStatusMXBean {
   static{
     HdfsConfiguration.init();
   }
@@ -165,12 +166,14 @@ public class NameNode {
    */
   public static final String[] NAMENODE_SPECIFIC_KEYS = {
     DFS_NAMENODE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_RPC_BIND_HOST_KEY,
     DFS_NAMENODE_NAME_DIR_KEY,
     DFS_NAMENODE_EDITS_DIR_KEY,
     DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
     DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY,
     DFS_NAMENODE_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_KEYTAB_FILE_KEY,
     DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
@@ -179,6 +182,7 @@ public class NameNode {
     DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_USER_NAME_KEY,
+    DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
     DFS_HA_FENCE_METHODS_KEY,
     DFS_HA_ZKFC_PORT_KEY,
     DFS_HA_FENCE_METHODS_KEY
@@ -386,6 +390,28 @@ public class NameNode {
     return getAddress(conf);
   }
   
+  /** Given a configuration get the bind host of the service rpc server
+   *  If the bind host is not configured returns null.
+   */
+  protected String getServiceRpcServerBindHost(Configuration conf) {
+    String addr = conf.getTrimmed(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
+    if (addr == null || addr.isEmpty()) {
+      return null;
+    }
+    return addr;
+  }
+
+  /** Given a configuration get the bind host of the client rpc server
+   *  If the bind host is not configured returns null.
+   */
+  protected String getRpcServerBindHost(Configuration conf) {
+    String addr = conf.getTrimmed(DFS_NAMENODE_RPC_BIND_HOST_KEY);
+    if (addr == null || addr.isEmpty()) {
+      return null;
+    }
+    return addr;
+  }
+   
   /**
    * Modifies the configuration passed to contain the service rpc address setting
    */
@@ -531,6 +557,7 @@ public class NameNode {
   /** Start the services common to active and standby states */
   private void startCommonServices(Configuration conf) throws IOException {
     namesystem.startCommonServices(conf, haContext);
+    registerNNSMXBean();
     if (NamenodeRole.NAMENODE != role) {
       startHttpServer(conf);
       httpServer.setNameNodeAddress(getNameNodeAddress());
@@ -731,7 +758,8 @@ public class NameNode {
   }
 
   /** get FSImage */
-  FSImage getFSImage() {
+  @VisibleForTesting
+  public FSImage getFSImage() {
     return namesystem.dir.fsImage;
   }
 
@@ -953,41 +981,49 @@ public class NameNode {
     FSEditLog sourceEditLog = fsns.getFSImage().editLog;
     
     long fromTxId = fsns.getFSImage().getMostRecentCheckpointTxId();
-    Collection<EditLogInputStream> streams = sourceEditLog.selectInputStreams(
-        fromTxId+1, 0);
-
-    // Set the nextTxid to the CheckpointTxId+1
-    newSharedEditLog.setNextTxId(fromTxId + 1);
     
-    // Copy all edits after last CheckpointTxId to shared edits dir
-    for (EditLogInputStream stream : streams) {
-      LOG.debug("Beginning to copy stream " + stream + " to shared edits");
-      FSEditLogOp op;
-      boolean segmentOpen = false;
-      while ((op = stream.readOp()) != null) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("copying op: " + op);
-        }
-        if (!segmentOpen) {
-          newSharedEditLog.startLogSegment(op.txid, false);
-          segmentOpen = true;
-        }
-        
-        newSharedEditLog.logEdit(op);
+    Collection<EditLogInputStream> streams = null;
+    try {
+      streams = sourceEditLog.selectInputStreams(fromTxId + 1, 0);
 
-        if (op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT) {
+      // Set the nextTxid to the CheckpointTxId+1
+      newSharedEditLog.setNextTxId(fromTxId + 1);
+
+      // Copy all edits after last CheckpointTxId to shared edits dir
+      for (EditLogInputStream stream : streams) {
+        LOG.debug("Beginning to copy stream " + stream + " to shared edits");
+        FSEditLogOp op;
+        boolean segmentOpen = false;
+        while ((op = stream.readOp()) != null) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("copying op: " + op);
+          }
+          if (!segmentOpen) {
+            newSharedEditLog.startLogSegment(op.txid, false);
+            segmentOpen = true;
+          }
+
+          newSharedEditLog.logEdit(op);
+
+          if (op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT) {
+            newSharedEditLog.logSync();
+            newSharedEditLog.endCurrentLogSegment(false);
+            LOG.debug("ending log segment because of END_LOG_SEGMENT op in "
+                + stream);
+            segmentOpen = false;
+          }
+        }
+
+        if (segmentOpen) {
+          LOG.debug("ending log segment because of end of stream in " + stream);
           newSharedEditLog.logSync();
           newSharedEditLog.endCurrentLogSegment(false);
-          LOG.debug("ending log segment because of END_LOG_SEGMENT op in " + stream);
           segmentOpen = false;
         }
       }
-      
-      if (segmentOpen) {
-        LOG.debug("ending log segment because of end of stream in " + stream);
-        newSharedEditLog.logSync();
-        newSharedEditLog.endCurrentLogSegment(false);
-        segmentOpen = false;
+    } finally {
+      if (streams != null) {
+        FSEditLog.closeAllStreams(streams);
       }
     }
   }
@@ -1366,6 +1402,43 @@ public class NameNode {
       return HAServiceState.INITIALIZING;
     }
     return state.getServiceState();
+  }
+
+  /**
+   * Register NameNodeStatusMXBean
+   */
+  private void registerNNSMXBean() {
+    MBeans.register("NameNode", "NameNodeStatus", this);
+  }
+
+  @Override // NameNodeStatusMXBean
+  public String getNNRole() {
+    String roleStr = "";
+    NamenodeRole role = getRole();
+    if (null != role) {
+      roleStr = role.toString();
+    }
+    return roleStr;
+  }
+
+  @Override // NameNodeStatusMXBean
+  public String getState() {
+    String servStateStr = "";
+    HAServiceState servState = getServiceState();
+    if (null != servState) {
+      servStateStr = servState.toString();
+    }
+    return servStateStr;
+  }
+
+  @Override // NameNodeStatusMXBean
+  public String getHostAndPort() {
+    return getNameNodeAddressHostPortString();
+  }
+
+  @Override // NameNodeStatusMXBean
+  public boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
   }
 
   /**

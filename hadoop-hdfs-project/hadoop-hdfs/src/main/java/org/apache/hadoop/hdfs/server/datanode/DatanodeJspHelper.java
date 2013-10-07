@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
@@ -50,6 +51,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 
 @InterfaceAudience.Private
 public class DatanodeJspHelper {
@@ -217,7 +219,7 @@ public class DatanodeJspHelper {
         JspHelper.addTableFooter(out);
       }
     }
-    out.print("<br><a href=\"" + HttpConfig.getSchemePrefix()
+    out.print("<br><a href=\"///"
         + canonicalize(nnAddr) + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
     dfs.close();
@@ -294,8 +296,7 @@ public class DatanodeJspHelper {
         Long.MAX_VALUE).getLocatedBlocks();
     // Add the various links for looking at the file contents
     // URL for downloading the full file
-    String downloadUrl = HttpConfig.getSchemePrefix() + req.getServerName() + ":"
-        + req.getServerPort() + "/streamFile" + ServletUtil.encodePath(filename)
+    String downloadUrl = "/streamFile" + ServletUtil.encodePath(filename)
         + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr, true)
         + JspHelper.getDelegationTokenUrlParam(tokenString);
     out.print("<a name=\"viewOptions\"></a>");
@@ -312,7 +313,7 @@ public class DatanodeJspHelper {
       return;
     }
     String fqdn = canonicalize(chosenNode.getIpAddr());
-    String tailUrl = HttpConfig.getSchemePrefix() + fqdn + ":" + chosenNode.getInfoPort()
+    String tailUrl = "///" + fqdn + ":" + chosenNode.getInfoPort()
         + "/tail.jsp?filename=" + URLEncoder.encode(filename, "UTF-8")
         + "&namenodeInfoPort=" + namenodeInfoPort
         + "&chunkSizeToView=" + chunkSizeToView
@@ -361,7 +362,7 @@ public class DatanodeJspHelper {
         String datanodeAddr = locs[j].getXferAddr();
         datanodePort = locs[j].getXferPort();
         fqdn = canonicalize(locs[j].getIpAddr());
-        String blockUrl = HttpConfig.getSchemePrefix() + fqdn + ":" + locs[j].getInfoPort()
+        String blockUrl = "///" + fqdn + ":" + locs[j].getInfoPort()
             + "/browseBlock.jsp?blockId=" + blockidstring
             + "&blockSize=" + blockSize
             + "&filename=" + URLEncoder.encode(filename, "UTF-8")
@@ -372,7 +373,7 @@ public class DatanodeJspHelper {
             + JspHelper.getDelegationTokenUrlParam(tokenString)
             + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
 
-        String blockInfoUrl = HttpConfig.getSchemePrefix() + nnCanonicalName + ":"
+        String blockInfoUrl = "///" + nnCanonicalName + ":"
             + namenodeInfoPort
             + "/block_info_xml.jsp?blockId=" + blockidstring;
         out.print("<td>&nbsp</td><td><a href=\"" + blockUrl + "\">"
@@ -383,7 +384,7 @@ public class DatanodeJspHelper {
     }
     out.println("</table>");
     out.print("<hr>");
-    out.print("<br><a href=\"" + HttpConfig.getSchemePrefix()
+    out.print("<br><a href=\"///"
         + nnCanonicalName + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
     dfs.close();
@@ -483,9 +484,7 @@ public class DatanodeJspHelper {
     String parent = new File(filename).getParent();
     JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, parent, nnAddr);
     out.print("<hr>");
-    out.print("<a href=\"" + HttpConfig.getSchemePrefix()
-        + req.getServerName() + ":" + req.getServerPort()
-        + "/browseDirectory.jsp?dir=" + URLEncoder.encode(parent, "UTF-8")
+    out.print("<a href=\"/browseDirectory.jsp?dir=" + URLEncoder.encode(parent, "UTF-8")
         + "&namenodeInfoPort=" + namenodeInfoPort
         + JspHelper.getDelegationTokenUrlParam(tokenString)
         + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr)
@@ -531,7 +530,7 @@ public class DatanodeJspHelper {
     }
     String nextUrl = null;
     if (nextBlockIdStr != null) {
-      nextUrl = HttpConfig.getSchemePrefix() + canonicalize(nextHost) + ":" + nextPort
+      nextUrl = "///" + canonicalize(nextHost) + ":" + nextPort
           + "/browseBlock.jsp?blockId=" + nextBlockIdStr
           + "&blockSize=" + nextBlockSize
           + "&startOffset=" + nextStartOffset
@@ -586,7 +585,7 @@ public class DatanodeJspHelper {
 
     String prevUrl = null;
     if (prevBlockIdStr != null) {
-      prevUrl = HttpConfig.getSchemePrefix() + canonicalize(prevHost) + ":" + prevPort
+      prevUrl = "///" + canonicalize(prevHost) + ":" + prevPort
           + "/browseBlock.jsp?blockId=" + prevBlockIdStr
           + "&blockSize=" + prevBlockSize
           + "&startOffset=" + prevStartOffset
@@ -712,4 +711,24 @@ public class DatanodeJspHelper {
     final String nnAddr = request.getParameter(JspHelper.NAMENODE_ADDRESS);
     return getDFSClient(ugi, nnAddr, conf);
   }
+
+  /** Return a table containing version information. */
+  public static String getVersionTable(ServletContext context) {
+    StringBuilder sb = new StringBuilder();
+    final DataNode dataNode = (DataNode) context.getAttribute("datanode");
+    sb.append("<div class='dfstable'><table>");
+    sb.append("<tr><td class='col1'>Version:</td><td>");
+    sb.append(VersionInfo.getVersion() + ", " + VersionInfo.getRevision());
+    sb.append("</td></tr>\n" + "\n  <tr><td class='col1'>Compiled:</td><td>"
+        + VersionInfo.getDate());
+    sb.append(" by " + VersionInfo.getUser() + " from "
+        + VersionInfo.getBranch());
+    if (dataNode != null) {
+      sb.append("</td></tr>\n  <tr><td class='col1'>Cluster ID:</td><td>"
+          + dataNode.getClusterId());
+    }
+    sb.append("</td></tr>\n</table></div>");
+    return sb.toString();
+  }
+
 }

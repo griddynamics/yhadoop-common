@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -39,13 +40,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@SuppressWarnings("unchecked")
 public class RMProxy<T> {
 
   private static final Log LOG = LogFactory.getLog(RMProxy.class);
 
-  @SuppressWarnings("unchecked")
   public static <T> T createRMProxy(final Configuration conf,
       final Class<T> protocol, InetSocketAddress rmAddress) throws IOException {
     RetryPolicy retryPolicy = createRetryPolicy(conf);
@@ -54,12 +57,11 @@ public class RMProxy<T> {
     return (T) RetryProxy.create(protocol, proxy, retryPolicy);
   }
 
-  @SuppressWarnings("unchecked")
-  protected static <T> T getProxy(final Configuration conf,
+  private static <T> T getProxy(final Configuration conf,
       final Class<T> protocol, final InetSocketAddress rmAddress)
       throws IOException {
-    return (T) UserGroupInformation.getCurrentUser().doAs(
-      new PrivilegedAction<Object>() {
+    return UserGroupInformation.getCurrentUser().doAs(
+      new PrivilegedAction<T>() {
 
         @Override
         public T run() {
@@ -68,41 +70,41 @@ public class RMProxy<T> {
       });
   }
 
+  @Private
+  @VisibleForTesting
   public static RetryPolicy createRetryPolicy(Configuration conf) {
     long rmConnectWaitMS =
         conf.getInt(
-            YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS,
-            YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS)
-        * 1000;
+            YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS,
+            YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_MAX_WAIT_MS);
     long rmConnectionRetryIntervalMS =
         conf.getLong(
-            YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
+            YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
             YarnConfiguration
-            .DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS)
-        * 1000;
+            .DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS);
 
     if (rmConnectionRetryIntervalMS < 0) {
       throw new YarnRuntimeException("Invalid Configuration. " +
-          YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS +
+          YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS +
           " should not be negative.");
     }
 
-    boolean waitForEver = (rmConnectWaitMS == -1000);
+    boolean waitForEver = (rmConnectWaitMS == -1);
 
     if (waitForEver) {
       return  RetryPolicies.RETRY_FOREVER;
     } else {
       if (rmConnectWaitMS < 0) {
         throw new YarnRuntimeException("Invalid Configuration. "
-            + YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS
+            + YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS
             + " can be -1, but can not be other negative numbers");
       }
 
       // try connect once
       if (rmConnectWaitMS < rmConnectionRetryIntervalMS) {
-        LOG.warn(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_SECS
+        LOG.warn(YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS
             + " is smaller than "
-            + YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS
+            + YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS
             + ". Only try connect once.");
         rmConnectWaitMS = 0;
       }

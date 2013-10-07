@@ -120,12 +120,21 @@ public class TestNameNodeMXBean {
       String nameJournalStatus = (String) (mbs.getAttribute(mxbeanName,
           "NameJournalStatus"));
       assertEquals("Bad value for NameJournalStatus", fsn.getNameJournalStatus(), nameJournalStatus);
+      // get attribute JournalTransactionInfo
+      String journalTxnInfo = (String) mbs.getAttribute(mxbeanName,
+          "JournalTransactionInfo");
+      assertEquals("Bad value for NameTxnIds", fsn.getJournalTransactionInfo(),
+          journalTxnInfo);
       // get attribute "NNStarted"
       String nnStarted = (String) mbs.getAttribute(mxbeanName, "NNStarted");
       assertEquals("Bad value for NNStarted", fsn.getNNStarted(), nnStarted);
       // get attribute "CompileInfo"
       String compileInfo = (String) mbs.getAttribute(mxbeanName, "CompileInfo");
       assertEquals("Bad value for CompileInfo", fsn.getCompileInfo(), compileInfo);
+      // get attribute CorruptFiles
+      String corruptFiles = (String) (mbs.getAttribute(mxbeanName,
+          "CorruptFiles"));
+      assertEquals("Bad value for CorruptFiles", fsn.getCorruptFiles(), corruptFiles);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));

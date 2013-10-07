@@ -335,8 +335,11 @@ public class ContainerImpl implements Container {
   public Map<Path,List<String>> getLocalizedResources() {
     this.readLock.lock();
     try {
-    assert ContainerState.LOCALIZED == getContainerState(); // TODO: FIXME!!
-    return localizedResources;
+      if (ContainerState.LOCALIZED == getContainerState()) {
+        return localizedResources;
+      } else {
+        return null;
+      }
     } finally {
       this.readLock.unlock();
     }
@@ -499,6 +502,9 @@ public class ContainerImpl implements Container {
         ContainerEvent event) {
       final ContainerLaunchContext ctxt = container.launchContext;
       container.metrics.initingContainer();
+
+      container.dispatcher.getEventHandler().handle(new AuxServicesEvent
+          (AuxServicesEventType.CONTAINER_INIT, container));
 
       // Inform the AuxServices about the opaque serviceData
       Map<String,ByteBuffer> csd = ctxt.getServiceData();
@@ -817,8 +823,16 @@ public class ContainerImpl implements Container {
   static class ContainerDoneTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
+    @SuppressWarnings("unchecked")
     public void transition(ContainerImpl container, ContainerEvent event) {
       container.finished();
+      //if the current state is NEW it means the CONTAINER_INIT was never 
+      // sent for the event, thus no need to send the CONTAINER_STOP
+      if (container.getCurrentState() 
+          != org.apache.hadoop.yarn.api.records.ContainerState.NEW) {
+        container.dispatcher.getEventHandler().handle(new AuxServicesEvent
+            (AuxServicesEventType.CONTAINER_STOP, container));
+      }
     }
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.ipc;
 
 
 import java.util.Arrays;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,6 +28,7 @@ import org.apache.hadoop.util.LightWeightCache;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -52,7 +54,7 @@ public class RetryCache {
     private static byte SUCCESS = 1;
     private static byte FAILED = 2;
 
-    private volatile byte state = INPROGRESS;
+    private byte state = INPROGRESS;
     
     // Store uuid as two long for better memory utilization
     private final long clientIdMsb; // Most signficant bytes
@@ -63,20 +65,21 @@ public class RetryCache {
     private LightWeightGSet.LinkedElement next;
 
     CacheEntry(byte[] clientId, int callId, long expirationTime) {
-      Preconditions.checkArgument(clientId.length == 16, "Invalid clientId");
-      // Conver UUID bytes to two longs
-      long tmp = 0;
-      for (int i=0; i<8; i++) {
-        tmp = (tmp << 8) | (clientId[i] & 0xff);
-      }
-      clientIdMsb = tmp;
-      tmp = 0;
-      for (int i=8; i<16; i++) {
-        tmp = (tmp << 8) | (clientId[i] & 0xff);
-      }
-      clientIdLsb = tmp;
+      // ClientId must be a UUID - that is 16 octets.
+      Preconditions.checkArgument(clientId.length == ClientId.BYTE_LENGTH,
+          "Invalid clientId - length is " + clientId.length
+              + " expected length " + ClientId.BYTE_LENGTH);
+      // Convert UUID bytes to two longs
+      clientIdMsb = ClientId.getMsb(clientId);
+      clientIdLsb = ClientId.getLsb(clientId);
       this.callId = callId;
       this.expirationTime = expirationTime;
+    }
+
+    CacheEntry(byte[] clientId, int callId, long expirationTime,
+        boolean success) {
+      this(clientId, callId, expirationTime);
+      this.state = success ? SUCCESS : FAILED;
     }
 
     private static int hashCode(long value) {
@@ -116,7 +119,7 @@ public class RetryCache {
       this.notifyAll();
     }
 
-    public boolean isSuccess() {
+    public synchronized boolean isSuccess() {
       return state == SUCCESS;
     }
 
@@ -128,6 +131,12 @@ public class RetryCache {
     @Override
     public long getExpirationTime() {
       return expirationTime;
+    }
+    
+    @Override
+    public String toString() {
+      return (new UUID(this.clientIdMsb, this.clientIdLsb)).toString() + ":"
+          + this.callId + ":" + this.state;
     }
   }
 
@@ -143,6 +152,12 @@ public class RetryCache {
       super(clientId, callId, expirationTime);
       this.payload = payload;
     }
+
+    CacheEntryWithPayload(byte[] clientId, int callId, Object payload,
+        long expirationTime, boolean success) {
+     super(clientId, callId, expirationTime, success);
+     this.payload = payload;
+   }
 
     /** Override equals to avoid findbugs warnings */
     @Override
@@ -183,6 +198,11 @@ public class RetryCache {
     // invalid callId or clientId in retry cache
     return !Server.isRpcInvocation() || Server.getCallId() < 0
         || Arrays.equals(Server.getClientId(), RpcConstants.DUMMY_CLIENT_ID);
+  }
+  
+  @VisibleForTesting
+  public LightWeightGSet<CacheEntry, CacheEntry> getCacheSet() {
+    return set;
   }
 
   /**
@@ -238,16 +258,38 @@ public class RetryCache {
     }
     return mapEntry;
   }
+  
+  /** 
+   * Add a new cache entry into the retry cache. The cache entry consists of 
+   * clientId and callId extracted from editlog.
+   */
+  public void addCacheEntry(byte[] clientId, int callId) {
+    CacheEntry newEntry = new CacheEntry(clientId, callId, System.nanoTime()
+        + expirationTime, true);
+    synchronized(this) {
+      set.put(newEntry);
+    }
+  }
+  
+  public void addCacheEntryWithPayload(byte[] clientId, int callId,
+      Object payload) {
+    // since the entry is loaded from editlog, we can assume it succeeded.    
+    CacheEntry newEntry = new CacheEntryWithPayload(clientId, callId, payload,
+        System.nanoTime() + expirationTime, true);
+    synchronized(this) {
+      set.put(newEntry);
+    }
+  }
 
   private static CacheEntry newEntry(long expirationTime) {
     return new CacheEntry(Server.getClientId(), Server.getCallId(),
-        expirationTime);
+        System.nanoTime() + expirationTime);
   }
 
   private static CacheEntryWithPayload newEntry(Object payload,
       long expirationTime) {
     return new CacheEntryWithPayload(Server.getClientId(), Server.getCallId(),
-        payload, expirationTime);
+        payload, System.nanoTime() + expirationTime);
   }
 
   /** Static method that provides null check for retryCache */

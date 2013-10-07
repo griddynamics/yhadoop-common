@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -60,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -70,6 +72,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
@@ -119,12 +122,11 @@ public class ApplicationMasterService extends AbstractService implements
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
     Configuration serverConf = conf;
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      // If the auth is not-simple, enforce it to be token-based.
-      serverConf = new Configuration(conf);
-      serverConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-        UserGroupInformation.AuthenticationMethod.TOKEN.toString());
-    }
+    // If the auth is not-simple, enforce it to be token-based.
+    serverConf = new Configuration(conf);
+    serverConf.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        SaslRpcServer.AuthMethod.TOKEN.toString());
     this.server =
       rpc.getServer(ApplicationMasterProtocol.class, this, masterServiceAddress,
           serverConf, this.rmContext.getAMRMTokenSecretManager(),
@@ -302,9 +304,12 @@ public class ApplicationMasterService extends AbstractService implements
               .getTrackingUrl(), request.getFinalApplicationStatus(), request
               .getDiagnostics()));
 
-      FinishApplicationMasterResponse response = recordFactory
-          .newRecordInstance(FinishApplicationMasterResponse.class);
-      return response;
+      if (rmContext.getRMApps().get(applicationAttemptId.getApplicationId())
+          .isAppSafeToUnregister()) {
+        return FinishApplicationMasterResponse.newInstance(true);
+      } else {
+        return FinishApplicationMasterResponse.newInstance(false);
+      }
     }
   }
 
@@ -386,7 +391,7 @@ public class ApplicationMasterService extends AbstractService implements
       
       // sanity check
       try {
-        SchedulerUtils.validateResourceRequests(ask,
+        RMServerUtils.validateResourceRequests(ask,
             rScheduler.getMaximumResourceCapability());
       } catch (InvalidResourceRequestException e) {
         LOG.warn("Invalid resource ask by application " + appAttemptId, e);
@@ -394,9 +399,16 @@ public class ApplicationMasterService extends AbstractService implements
       }
       
       try {
-        SchedulerUtils.validateBlacklistRequest(blacklistRequest);
+        RMServerUtils.validateBlacklistRequest(blacklistRequest);
       }  catch (InvalidResourceBlacklistRequestException e) {
         LOG.warn("Invalid blacklist request by application " + appAttemptId, e);
+        throw e;
+      }
+      
+      try {
+        RMServerUtils.validateContainerReleaseRequest(release, appAttemptId);
+      } catch (InvalidContainerReleaseException e) {
+        LOG.warn("Invalid container release by application " + appAttemptId, e);
         throw e;
       }
       

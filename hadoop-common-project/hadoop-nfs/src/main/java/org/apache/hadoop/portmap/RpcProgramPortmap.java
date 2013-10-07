@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.portmap;
 
-import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -26,9 +25,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
+import org.apache.hadoop.oncrpc.RpcInfo;
 import org.apache.hadoop.oncrpc.RpcProgram;
+import org.apache.hadoop.oncrpc.RpcResponse;
+import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.XDR;
-import org.jboss.netty.channel.Channel;
+import org.apache.hadoop.oncrpc.security.VerifierNone;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * An rpcbind request handler.
@@ -43,7 +48,7 @@ public class RpcProgramPortmap extends RpcProgram implements PortmapInterface {
   private final HashMap<String, PortmapMapping> map;
 
   public RpcProgramPortmap() {
-    super("portmap", "localhost", RPCB_PORT, PROGRAM, VERSION, VERSION, 0);
+    super("portmap", "localhost", RPCB_PORT, PROGRAM, VERSION, VERSION);
     map = new HashMap<String, PortmapMapping>(256);
   }
 
@@ -129,35 +134,37 @@ public class RpcProgramPortmap extends RpcProgram implements PortmapInterface {
   }
 
   @Override
-  public XDR handleInternal(RpcCall rpcCall, XDR in, XDR out,
-      InetAddress client, Channel channel) {
-    Procedure procedure = Procedure.fromValue(rpcCall.getProcedure());
+  public void handleInternal(ChannelHandlerContext ctx, RpcInfo info) {
+    RpcCall rpcCall = (RpcCall) info.header();
+    final Procedure portmapProc = Procedure.fromValue(rpcCall.getProcedure());
     int xid = rpcCall.getXid();
-    switch (procedure) {
-    case PMAPPROC_NULL:
+    byte[] data = new byte[info.data().readableBytes()];
+    info.data().readBytes(data);
+    XDR in = new XDR(data);
+    XDR out = new XDR();
+
+    if (portmapProc == Procedure.PMAPPROC_NULL) {
       out = nullOp(xid, in, out);
-      break;
-    case PMAPPROC_SET:
+    } else if (portmapProc == Procedure.PMAPPROC_SET) {
       out = set(xid, in, out);
-      break;
-    case PMAPPROC_UNSET:
+    } else if (portmapProc == Procedure.PMAPPROC_UNSET) {
       out = unset(xid, in, out);
-      break;
-    case PMAPPROC_DUMP:
+    } else if (portmapProc == Procedure.PMAPPROC_DUMP) {
       out = dump(xid, in, out);
-      break;
-    case PMAPPROC_GETPORT:
+    } else if (portmapProc == Procedure.PMAPPROC_GETPORT) {
       out = getport(xid, in, out);
-      break;
-    case PMAPPROC_GETVERSADDR:
+    } else if (portmapProc == Procedure.PMAPPROC_GETVERSADDR) {
       out = getport(xid, in, out);
-      break;
-    default:
-      LOG.info("PortmapHandler unknown rpc procedure=" + procedure);
-      RpcAcceptedReply.voidReply(out, xid,
-          RpcAcceptedReply.AcceptState.PROC_UNAVAIL);
+    } else {
+      LOG.info("PortmapHandler unknown rpc procedure=" + portmapProc);
+      RpcAcceptedReply reply = RpcAcceptedReply.getInstance(xid,
+          RpcAcceptedReply.AcceptState.PROC_UNAVAIL, new VerifierNone());
+      reply.write(out);
     }
-    return out;
+
+    ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap().buffer());
+    RpcResponse rsp = new RpcResponse(buf, info.remoteAddress());
+    RpcUtil.sendRpcResponse(ctx, rsp);
   }
   
   @Override

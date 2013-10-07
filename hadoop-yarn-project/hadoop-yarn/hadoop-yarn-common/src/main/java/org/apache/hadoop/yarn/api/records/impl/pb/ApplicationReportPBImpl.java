@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportPro
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
+import com.google.protobuf.TextFormat;
+
 @Private
 @Unstable
 public class ApplicationReportPBImpl extends ApplicationReport {
@@ -46,6 +48,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   private ApplicationId applicationId;
   private ApplicationAttemptId currentApplicationAttemptId;
   private Token clientToAMToken = null;
+  private Token amRmToken = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -228,7 +231,20 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     }
     return p.getApplicationType();
   }
-  
+
+  @Override
+  public Token getAMRMToken() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (amRmToken != null) {
+      return amRmToken;
+    }
+    if (!p.hasAmRmToken()) {
+      return null;
+    }
+    amRmToken = convertFromProtoFormat(p.getAmRmToken());
+    return amRmToken;
+  }
+
   @Override
   public void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
@@ -377,6 +393,15 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     builder.setProgress(progress);
   }
 
+  @Override
+  public void setAMRMToken(Token amRmToken) {
+    maybeInitBuilder();
+    if (amRmToken == null) {
+      builder.clearAmRmToken();
+    }
+    this.amRmToken = amRmToken;
+  }
+
   public ApplicationReportProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -401,7 +426,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {
@@ -419,6 +444,11 @@ public class ApplicationReportPBImpl extends ApplicationReport {
         && !((TokenPBImpl) this.clientToAMToken).getProto().equals(
             builder.getClientToAmToken())) {
       builder.setClientToAmToken(convertToProtoFormat(this.clientToAMToken));
+    }
+    if (this.amRmToken != null
+      && !((TokenPBImpl) this.amRmToken).getProto().equals(
+      builder.getAmRmToken())) {
+      builder.setAmRmToken(convertToProtoFormat(this.amRmToken));
     }
   }
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
@@ -36,9 +37,11 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -141,16 +144,42 @@ public abstract class YarnClient extends AbstractService {
       throws YarnException, IOException;
 
   /**
+   * Get the AMRM token of the application.
+   * <p/>
+   * The AMRM token is required for AM to RM scheduling operations. For 
+   * managed Application Masters Yarn takes care of injecting it. For unmanaged
+   * Applications Masters, the token must be obtained via this method and set
+   * in the {@link org.apache.hadoop.security.UserGroupInformation} of the
+   * current user.
+   * <p/>
+   * The AMRM token will be returned only if all the following conditions are
+   * met:
+   * <li>
+   *   <ul>the requester is the owner of the ApplicationMaster</ul>
+   *   <ul>the application master is an unmanaged ApplicationMaster</ul>
+   *   <ul>the application master is in ACCEPTED state</ul>
+   * </li>
+   * Else this method returns NULL.
+   *
+   * @param appId {@link ApplicationId} of the application to get the AMRM token
+   * @return the AMRM token if available
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>
+      getAMRMToken(ApplicationId appId) throws YarnException, IOException;
+
+  /**
    * <p>
    * Get a report (ApplicationReport) of all Applications in the cluster.
    * </p>
-   * 
+   *
    * <p>
    * If the user does not have <code>VIEW_APP</code> access for an application
    * then the corresponding report will be filtered as described in
    * {@link #getApplicationReport(ApplicationId)}.
    * </p>
-   * 
+   *
    * @return a list of reports of all running applications
    * @throws YarnException
    * @throws IOException
@@ -177,6 +206,50 @@ public abstract class YarnClient extends AbstractService {
    */
   public abstract List<ApplicationReport> getApplications(
       Set<String> applicationTypes) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report (ApplicationReport) of Applications matching the given
+   * application states in the cluster.
+   * </p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param applicationStates
+   * @return a list of reports of applications
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationReport>
+      getApplications(EnumSet<YarnApplicationState> applicationStates)
+          throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report (ApplicationReport) of Applications matching the given
+   * application types and application states in the cluster.
+   * </p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param applicationTypes
+   * @param applicationStates
+   * @return a list of reports of applications
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationReport> getApplications(
+      Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException;
 
   /**
    * <p>

@@ -20,6 +20,7 @@ option java_package = "org.apache.hadoop.mapreduce.v2.hs.proto";
 option java_outer_classname = "HSAdminRefreshProtocolProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.mapreduce;
 
 /**
  *  refresh admin acls request.
@@ -31,6 +32,18 @@ message RefreshAdminAclsRequestProto {
  * Response for refresh admin acls.
  */
 message RefreshAdminAclsResponseProto {
+}
+
+/**
+ *  refresh loaded job cache request.
+ */
+message RefreshLoadedJobCacheRequestProto {
+}
+
+/**
+ * Response for refresh loaded job cache.
+ */
+message RefreshLoadedJobCacheResponseProto {
 }
 
 /**
@@ -66,6 +79,12 @@ service HSAdminRefreshProtocolService {
    */
   rpc refreshAdminAcls(RefreshAdminAclsRequestProto)
       returns(RefreshAdminAclsResponseProto);
+  
+  /**
+   * Refresh loaded job cache
+   */
+  rpc refreshLoadedJobCache(RefreshLoadedJobCacheRequestProto)
+      returns(RefreshLoadedJobCacheResponseProto);
       
   /**
    * Refresh job retention.
