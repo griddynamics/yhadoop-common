@@ -42,47 +42,14 @@ public class TestDbClasses {
   @Test(timeout = 1000)
   public void testDataDrivenDBInputFormatSplitter() {
     DataDrivenDBInputFormat<NullDBWritable> format = new DataDrivenDBInputFormat<NullDBWritable>();
-    assertEquals(BigDecimalSplitter.class, format.getSplitter(Types.DECIMAL)
-        .getClass());
-    assertEquals(BigDecimalSplitter.class, format.getSplitter(Types.NUMERIC)
-        .getClass());
-    assertEquals(BooleanSplitter.class, format.getSplitter(Types.BOOLEAN)
-        .getClass());
-    assertEquals(BooleanSplitter.class, format.getSplitter(Types.BIT)
-        .getClass());
-    assertEquals(IntegerSplitter.class, format.getSplitter(Types.BIGINT)
-        .getClass());
-    assertEquals(IntegerSplitter.class, format.getSplitter(Types.TINYINT)
-        .getClass());
-    assertEquals(IntegerSplitter.class, format.getSplitter(Types.SMALLINT)
-        .getClass());
-    assertEquals(IntegerSplitter.class, format.getSplitter(Types.INTEGER)
-        .getClass());
-    assertEquals(FloatSplitter.class, format.getSplitter(Types.DOUBLE)
-        .getClass());
-    assertEquals(FloatSplitter.class, format.getSplitter(Types.REAL).getClass());
-    assertEquals(FloatSplitter.class, format.getSplitter(Types.FLOAT)
-        .getClass());
-    assertEquals(TextSplitter.class, format.getSplitter(Types.LONGVARCHAR)
-        .getClass());
-    assertEquals(TextSplitter.class, format.getSplitter(Types.CHAR).getClass());
-    assertEquals(TextSplitter.class, format.getSplitter(Types.VARCHAR)
-        .getClass());
+    testCommonSplitterTypes(format);
     assertEquals(DateSplitter.class, format.getSplitter(Types.TIMESTAMP)
         .getClass());
     assertEquals(DateSplitter.class, format.getSplitter(Types.DATE).getClass());
     assertEquals(DateSplitter.class, format.getSplitter(Types.TIME).getClass());
-    // if unknown data type splitter is null
-    assertNull(format.getSplitter(Types.BINARY));
-
   }
 
-  /**
-   * test DataDrivenDBInputFormat and his splitters.
-   */
-
-  //@Test(timeout = 1000)
-  @Test
+  @Test(timeout = 1000)
   public void testDataDrivenDBInputFormat() throws Exception {
     JobContext jobContext = mock(JobContext.class);
     Configuration configuration = new Configuration();
@@ -112,24 +79,17 @@ public class TestDbClasses {
         configuration.get(DBConfiguration.INPUT_BOUNDING_QUERY));
   }
 
-  /**
-   * test OracleDataDrivenDBInputFormat class. Small change in a split
-   * generation and record reader.
-   */
   @Test(timeout = 1000)
   public void testOracleDataDrivenDBInputFormat() throws Exception {
-
-    Configuration configuration = new Configuration();
-    OracleDataDrivenDBInputFormat<NullDBWritable> format = new OracleDataDrivenDBInputFormatForTest();
+    OracleDataDrivenDBInputFormat<NullDBWritable> format = 
+        new OracleDataDrivenDBInputFormatForTest();
+    testCommonSplitterTypes(format);
     assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP)
         .getClass());
-    assertEquals(IntegerSplitter.class, format.getSplitter(Types.INTEGER)
-        .getClass());
-
-    assertEquals(
-        OracleDataDrivenDBRecordReader.class,
-        format.createDBRecordReader(new DBInputFormat.DBInputSplit(1, 10),
-            configuration).getClass());
+    assertEquals(OracleDateSplitter.class, 
+        format.getSplitter(Types.DATE).getClass());
+    assertEquals(OracleDateSplitter.class, 
+        format.getSplitter(Types.TIME).getClass());
   }
 
   /**
@@ -154,6 +114,38 @@ public class TestDbClasses {
         recorder.getSelectQuery());
   }
 
+  private void testCommonSplitterTypes(
+      DataDrivenDBInputFormat<NullDBWritable> format) {
+    assertEquals(BigDecimalSplitter.class, format.getSplitter(Types.DECIMAL)
+        .getClass());
+    assertEquals(BigDecimalSplitter.class, format.getSplitter(Types.NUMERIC)
+        .getClass());
+    assertEquals(BooleanSplitter.class, format.getSplitter(Types.BOOLEAN)
+        .getClass());
+    assertEquals(BooleanSplitter.class, format.getSplitter(Types.BIT)
+        .getClass());
+    assertEquals(IntegerSplitter.class, format.getSplitter(Types.BIGINT)
+        .getClass());
+    assertEquals(IntegerSplitter.class, format.getSplitter(Types.TINYINT)
+        .getClass());
+    assertEquals(IntegerSplitter.class, format.getSplitter(Types.SMALLINT)
+        .getClass());
+    assertEquals(IntegerSplitter.class, format.getSplitter(Types.INTEGER)
+        .getClass());
+    assertEquals(FloatSplitter.class, format.getSplitter(Types.DOUBLE)
+        .getClass());
+    assertEquals(FloatSplitter.class, format.getSplitter(Types.REAL).getClass());
+    assertEquals(FloatSplitter.class, format.getSplitter(Types.FLOAT)
+        .getClass());
+    assertEquals(TextSplitter.class, format.getSplitter(Types.LONGVARCHAR)
+        .getClass());
+    assertEquals(TextSplitter.class, format.getSplitter(Types.CHAR).getClass());
+    assertEquals(TextSplitter.class, format.getSplitter(Types.VARCHAR)
+        .getClass());
+    // if unknown data type splitter is null
+    assertNull(format.getSplitter(Types.BINARY));
+  }
+
   private class OracleDataDrivenDBInputFormatForTest extends
       OracleDataDrivenDBInputFormat<NullDBWritable> {
 
@@ -174,4 +166,5 @@ public class TestDbClasses {
     }
 
   }
+  
 }
