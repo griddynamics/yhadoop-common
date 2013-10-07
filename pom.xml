@@ -565,7 +565,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <exclude>**/protobuf/*.java</exclude>
                 <exclude>**/v2/proto/*.java</exclude>
                 <exclude>**/yarn/proto/*.java</exclude>
-                <exclude>**/org/apache/hadoop/yarn/ipc/RpcProtos.java</exclude>
+                <exclude>**/security/proto/*.java</exclude>
+                <exclude>**/tools/proto/*.java</exclude>
+                <exclude>**/hs/proto/*.java</exclude>
               </excludes>
             </configuration>
             <executions>
