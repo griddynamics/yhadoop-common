@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.mapreduce.lib.db;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Types;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
@@ -33,6 +33,8 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit;
 import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.NullDBWritable;
+import org.apache.hadoop.mapreduce.lib.db.DataDrivenDBInputFormat.DataDrivenDBInputSplit;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
@@ -42,28 +44,24 @@ import static org.junit.Assert.*;
  * Test Splitters. Splitters should build parts of sql sentences for split result. 
  */
 public class TestSplitters {
+
+  private Configuration configuration;
   
-  /**
-   * test BooleanSplitter. 
-   */
-  @Test (timeout=2000)
+  @Before
+  public void setup() {
+    configuration = new Configuration();
+    configuration.setInt(MRJobConfig.NUM_MAPS, 2);
+  }
+  
+  @Test(timeout=2000)
   public void testBooleanSplitter() throws Exception{
     BooleanSplitter splitter = new BooleanSplitter();
-    Configuration configuration= new Configuration();
-    ResultSet result= mock(ResultSet.class);
+    ResultSet result = mock(ResultSet.class);
     when(result.getString(1)).thenReturn("result1");
-    ByteArrayOutputStream data= new ByteArrayOutputStream();
     
     List<InputSplit> splits=splitter.split(configuration, result, "column");
-    assertEquals(2, splits.size());
-    DBInputSplit split=(DBInputSplit)splits.get(0);
-    split.write(new DataOutputStream(data));
-    assertEquals("column = FALSEcolumn = FALSE", data.toString());
-    data.reset();
-    split=(DBInputSplit)splits.get(1);
-    split.write(new DataOutputStream(data));
-    assertEquals("column IS NULLcolumn IS NULL", data.toString());
-    data.reset();
+    assertSplits(new String[] {"column = FALSE column = FALSE",
+        "column IS NULL column IS NULL"}, splits);
     
     when(result.getString(1)).thenReturn("result1");
     when(result.getString(2)).thenReturn("result2");
@@ -71,7 +69,6 @@ public class TestSplitters {
     when(result.getBoolean(2)).thenReturn(false);
 
     splits=splitter.split(configuration, result, "column");
-
     assertEquals(0, splits.size());
 
     when(result.getString(1)).thenReturn("result1");
@@ -79,159 +76,103 @@ public class TestSplitters {
     when(result.getBoolean(1)).thenReturn(false);
     when(result.getBoolean(2)).thenReturn(true);
 
-    splits=splitter.split(configuration, result, "column");
-    assertEquals(2, splits.size());
-
-    split=(DBInputSplit)splits.get(0);
-    split.write(new DataOutputStream(data));
-    assertEquals("column = FALSEcolumn = FALSE", data.toString());
-    data.reset();
-    split=(DBInputSplit)splits.get(1);
-    split.write(new DataOutputStream(data));
-    assertTrue(data.toString().contains("column = TRUE"));
+    splits = splitter.split(configuration, result, "column");
+    assertSplits(new String[] {
+        "column = FALSE column = FALSE", ".*column = TRUE"}, splits);
   }
   
-  /**
-   * test FloatSplitter. 
-   */
-  @Test  (timeout=2000)
+  @Test(timeout=2000)
   public void testFloatSplitter() throws Exception{
-    Configuration configuration= new Configuration();
-    configuration.setInt(MRJobConfig.NUM_MAPS, 1);
-    ResultSet result= mock(ResultSet.class);
-    ByteArrayOutputStream data= new ByteArrayOutputStream();
-
     FloatSplitter splitter = new FloatSplitter();
-    List<InputSplit> splits=  splitter.split(configuration, result, "column");
-    assertEquals(1, splits.size());
-    DBInputSplit split=(DBInputSplit)splits.get(0);
-    split.write(new DataOutputStream(data));
-    assertTrue(data.toString().contains("column IS NULL"));
     
-    when(result.getString(1)).thenReturn("result1");
-    when(result.getString(2)).thenReturn("result2");
-    when(result.getDouble(1)).thenReturn(5.0);
-    when(result.getDouble(2)).thenReturn(7.0);
+    ResultSet results = mock(ResultSet.class);
+
+    List<InputSplit> splits = splitter.split(configuration, results, "column");
+    assertSplits(new String[] {".*column IS NULL"}, splits);
     
-    splits=  splitter.split(configuration, result, "column1");
-    assertEquals(1, splits.size());
-    split=(DBInputSplit)splits.get(0);
-    data.reset();
-    split.write(new DataOutputStream(data));
-    assertEquals("column1 >= 7.0column1 <= 7.0", data.toString());
+    when(results.getString(1)).thenReturn("result1");
+    when(results.getString(2)).thenReturn("result2");
+    when(results.getDouble(1)).thenReturn(5.0);
+    when(results.getDouble(2)).thenReturn(7.0);
+
+    splits = splitter.split(configuration, results, "column1");
+    assertSplits(new String[] {"column1 >= 5.0 column1 < 6.0", 
+        "column1 >= 6.0 column1 <= 7.0"}, splits);
   }
 
-  /**
-   * test BigDecimalSplitter. 
-   */
-  @Test (timeout=2000)
+  @Test(timeout=2000)
   public void testBigDecimalSplitter() throws Exception{
+    BigDecimalSplitter splitter = new BigDecimalSplitter();
+    ResultSet result = mock(ResultSet.class);
     
-    BigDecimalSplitter  splitter=new BigDecimalSplitter ();
-    Configuration configuration= new Configuration();
-    configuration.setInt(MRJobConfig.NUM_MAPS, 1);
-    ResultSet result= mock(ResultSet.class);
-    ByteArrayOutputStream data= new ByteArrayOutputStream();
-    
-    List<InputSplit> splits=  splitter.split(configuration, result, "column");
-    assertEquals(1, splits.size());
-    DBInputSplit split=(DBInputSplit)splits.get(0);
-    split.write(new DataOutputStream(data));
-    assertTrue(data.toString().contains("column IS NULL"));
+    List<InputSplit> splits = splitter.split(configuration, result, "column");
+    assertSplits(new String[] {".*column IS NULL"}, splits);
 
     when(result.getString(1)).thenReturn("result1");
     when(result.getString(2)).thenReturn("result2");
     when(result.getBigDecimal(1)).thenReturn(new BigDecimal(10));
-    when(result.getBigDecimal(2)).thenReturn(new BigDecimal(11));
+    when(result.getBigDecimal(2)).thenReturn(new BigDecimal(12));
 
-    splits=  splitter.split(configuration, result, "column1");
-    assertEquals(1, splits.size());
-    split=(DBInputSplit)splits.get(0);
-    data.reset();
-    split.write(new DataOutputStream(data));
-    assertTrue(data.toString().contains("column1 >= 10"));
-    assertTrue(data.toString().contains("column1 <= 11"));
+    splits = splitter.split(configuration, result, "column1");
+    assertSplits(new String[] {"column1 >= 10 column1 < 11",
+        "column1 >= 11 column1 <= 12"}, splits);
   }
 
-  /**
-   * test IntegerSplitter
-   */
-  @Test  (timeout=2000)
+  @Test(timeout=2000)
   public void testIntegerSplitter() throws Exception{
-    IntegerSplitter  splitter=new IntegerSplitter ();
-    Configuration configuration= new Configuration();
-    ResultSet result= mock(ResultSet.class);
-    ByteArrayOutputStream data= new ByteArrayOutputStream();
+    IntegerSplitter splitter = new IntegerSplitter();
+    ResultSet result = mock(ResultSet.class);
     
-    List<InputSplit> splits=  splitter.split(configuration, result, "column");
-    assertEquals(1, splits.size());
-    DBInputSplit split=(DBInputSplit)splits.get(0);
-    split.write(new DataOutputStream(data));
-    assertTrue(data.toString().contains("column IS NULL"));
+    List<InputSplit> splits = splitter.split(configuration, result, "column");
+    assertSplits(new String[] {".*column IS NULL"}, splits);
 
     when(result.getString(1)).thenReturn("result1");
     when(result.getString(2)).thenReturn("result2");
     when(result.getLong(1)).thenReturn(8L);
-    when(result.getLong(2)).thenReturn(9L);
+    when(result.getLong(2)).thenReturn(19L);
 
-    splits=  splitter.split(configuration, result, "column1");
-    assertEquals(1, splits.size());
-    split=(DBInputSplit)splits.get(0);
-    data.reset();
-    split.write(new DataOutputStream(data));
-    assertTrue(data.toString().contains("column1 >= 8"));
-    assertTrue(data.toString().contains("column1 <= 9"));
+    splits = splitter.split(configuration, result, "column1");
+    assertSplits(new String[] {"column1 >= 8 column1 < 13",
+        "column1 >= 13 column1 < 18", "column1 >= 18 column1 <= 19"}, splits);
   }
 
-  /**
-   * test TextSplitter
-   */
-  @Test (timeout=2000)
+  @Test(timeout=2000)
   public void testTextSplitter() throws Exception{
-    TextSplitter  splitter=new TextSplitter ();
-    Configuration configuration= new Configuration();
-    configuration.setInt(MRJobConfig.NUM_MAPS, 1);
-    ResultSet result= mock(ResultSet.class);
-    ByteArrayOutputStream data= new ByteArrayOutputStream();
+    TextSplitter splitter = new TextSplitter();
+    ResultSet result = mock(ResultSet.class);
     
-    List<InputSplit> splits=  splitter.split(configuration, result, "column");
-    assertEquals(1, splits.size());
-    DBInputSplit split=(DBInputSplit)splits.get(0);
-    split.write(new DataOutputStream(data));
-    assertTrue(data.toString().contains("column IS NULL"));
+    List<InputSplit> splits = splitter.split(configuration, result, "column");
+    assertSplits(new String[] {"column IS NULL column IS NULL"}, splits);
 
     when(result.getString(1)).thenReturn("result1");
     when(result.getString(2)).thenReturn("result2");
 
-    splits=  splitter.split(configuration, result, "column1");
-    assertEquals(1, splits.size());
-    split=(DBInputSplit)splits.get(0);
-    data.reset();
-    split.write(new DataOutputStream(data));
-    assertEquals("column1 >= 'result1'column1 <= 'result2'", data.toString());
+    splits = splitter.split(configuration, result, "column1");
+    assertSplits(new String[] {"column1 >= 'result1' column1 < 'result1.'",
+        "column1 >= 'result1' column1 <= 'result2'"}, splits);
   }
 
-  /**
-   * test OracleDateSplitter. 
-   */
   @Test (timeout=2000)
   public void testDBSplitter() throws Exception{
-    OracleDataDrivenDBInputFormat<NullDBWritable> format = new OracleDataDrivenDBInputFormatForTest();
-    assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP).getClass()); 
-    assertEquals(IntegerSplitter.class, format.getSplitter(Types.INTEGER).getClass()); 
+    OracleDataDrivenDBInputFormat<NullDBWritable> format = 
+        new OracleDataDrivenDBInputFormatForTest();
+    assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP)
+        .getClass());
+    assertEquals(IntegerSplitter.class, format.getSplitter(Types.INTEGER)
+        .getClass());
     
-    Configuration configuration= new Configuration();
-    DBInputSplit inputSplit= new DBInputSplit(1,10);
-    RecordReader<LongWritable, NullDBWritable> recorder= format.createDBRecordReader(inputSplit, configuration);
+    DBInputSplit inputSplit = new DBInputSplit(1, 10);
+    RecordReader<LongWritable, NullDBWritable> recorder = format
+        .createDBRecordReader(inputSplit, configuration);
     assertEquals(OracleDataDrivenDBRecordReader.class, recorder.getClass());
   }
   
-  private class OracleDataDrivenDBInputFormatForTest extends OracleDataDrivenDBInputFormat<NullDBWritable>{
+  private class OracleDataDrivenDBInputFormatForTest extends
+      OracleDataDrivenDBInputFormat<NullDBWritable> {
 
     @Override
     public DBConfiguration getDBConf() {
-     
-      DBConfiguration result = new DBConfiguration(new Configuration());
+      DBConfiguration result = new DBConfiguration(configuration);
       result.setInputClass(NullDBWritable.class);
       return result;
     }
@@ -241,6 +182,19 @@ public class TestSplitters {
       return DriverForTest.getConnection();
     }
 
+  }
+
+  private void assertSplits(String[] expectedSplitRE, 
+      List<InputSplit> splits) throws IOException {
+    assertEquals(expectedSplitRE.length, splits.size());
+    for (int i = 0; i < expectedSplitRE.length; i++) {
+      DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) splits.get(i);
+      String actualExpr = split.getLowerClause() + " " + split.getUpperClause();
+      assertTrue("Split #" + (i+1) + " expression is wrong."
+          + " Expected " + expectedSplitRE[i]
+          + " Actual " + actualExpr,
+          Pattern.matches(expectedSplitRE[i], actualExpr));
+    }
   }
   
 }
