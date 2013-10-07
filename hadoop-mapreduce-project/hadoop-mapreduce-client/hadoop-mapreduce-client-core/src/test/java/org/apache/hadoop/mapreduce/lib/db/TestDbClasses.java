@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.lib.db;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.sql.Connection;
 import java.sql.Types;
 import java.util.List;
@@ -86,8 +84,6 @@ public class TestDbClasses {
   //@Test(timeout = 1000)
   @Test
   public void testDataDrivenDBInputFormat() throws Exception {
-    ByteArrayOutputStream data = new ByteArrayOutputStream();
-
     JobContext jobContext = mock(JobContext.class);
     Configuration configuration = new Configuration();
     configuration.setInt(MRJobConfig.NUM_MAPS, 1);
@@ -97,8 +93,8 @@ public class TestDbClasses {
     List<InputSplit> splits = format.getSplits(jobContext);
     assertEquals(1, splits.size());
     DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) splits.get(0);
-    split.write(new DataOutputStream(data));
-    assertEquals("1=11=1", data.toString());
+    assertEquals("1=1", split.getLowerClause());
+    assertEquals("1=1", split.getUpperClause());
 
     // 2
     configuration.setInt(MRJobConfig.NUM_MAPS, 2);
