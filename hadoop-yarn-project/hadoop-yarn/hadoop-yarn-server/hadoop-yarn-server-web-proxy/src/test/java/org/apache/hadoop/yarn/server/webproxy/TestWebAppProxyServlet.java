@@ -66,15 +66,12 @@ import org.mortbay.jetty.servlet.ServletHolder;
  * server.
  */
 public class TestWebAppProxyServlet {
-  private static Server server;
-  private static String host = "localhost";
-  private static int port = 0;
-  private static int originalPort = 0;
-  private int answer = 0;
-  private WebAppProxyServer mainServer;
 
   private static final Log LOG = LogFactory
       .getLog(TestWebAppProxyServlet.class);
+
+  private static Server server;
+  private static int originalPort = 0;
 
   /**
    * Simple http server. Server should send answer with status 200
@@ -86,11 +83,11 @@ public class TestWebAppProxyServlet {
     context.setContextPath("/foo");
     server.setHandler(context);
     context.addServlet(new ServletHolder(TestServlet.class), "/bar/");
-    server.getConnectors()[0].setHost(host);
+    server.getConnectors()[0].setHost("localhost");
     server.start();
     originalPort = server.getConnectors()[0].getLocalPort();
-    LOG.info("Running embedded servlet container at: http://" + host + ":"
-        + port);
+    LOG.info("Running embedded servlet container at: http://localhost:"
+        + originalPort);
   }
 
   @SuppressWarnings("serial")
@@ -127,17 +124,20 @@ public class TestWebAppProxyServlet {
   public void testWebAppProxyServlet() throws Exception {
 
     Configuration configuration = new Configuration();
-    configuration.set(YarnConfiguration.PROXY_ADDRESS, host + ":9090");
+    configuration.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9090");
     // overriding num of web server threads, see HttpServer.HTTP_MAXTHREADS 
     configuration.setInt("hadoop.http.max.threads", 5);
     WebAppProxyServerForTest proxy = new WebAppProxyServerForTest();
     proxy.init(configuration);
     proxy.start();
+    
+    int proxyPort = proxy.proxy.proxyServer.getPort();
+    AppReportFetcherForTest appReportFetcher = proxy.proxy.appReportFetcher;
 
     // wrong url
     try {
       // wrong url. Set wrong app ID
-      URL wrongUrl = new URL("http://localhost:" + port + "/proxy/app");
+      URL wrongUrl = new URL("http://localhost:" + proxyPort + "/proxy/app");
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
 
@@ -145,7 +145,7 @@ public class TestWebAppProxyServlet {
       assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR,
           proxyConn.getResponseCode());
       // set true Application ID in url
-      URL url = new URL("http://localhost:" + port + "/proxy/application_00_0");
+      URL url = new URL("http://localhost:" + proxyPort + "/proxy/application_00_0");
       proxyConn = (HttpURLConnection) url.openConnection();
       // set cookie
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
@@ -154,7 +154,7 @@ public class TestWebAppProxyServlet {
       assertTrue(isResponseCookiePresent(
           proxyConn, "checked_application_0_0000", "true"));
       // cannot found application
-      answer = 1;
+      appReportFetcher.answer = 1;
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
@@ -163,7 +163,7 @@ public class TestWebAppProxyServlet {
       assertFalse(isResponseCookiePresent(
           proxyConn, "checked_application_0_0000", "true"));
       // wrong user
-      answer = 2;
+      appReportFetcher.answer = 2;
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
@@ -172,7 +172,7 @@ public class TestWebAppProxyServlet {
           .contains("to continue to an Application Master web interface owned by"));
       assertTrue(s.contains("WARNING: The following page may not be safe!"));
       //case if task has a not running status
-      answer = 3;
+      appReportFetcher.answer = 3;
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
@@ -188,8 +188,9 @@ public class TestWebAppProxyServlet {
    */
   @Test (timeout=10000)
   public void testWebAppProxyServerMainMethod() throws Exception {
+    WebAppProxyServer mainServer = null;
     try {
-      mainServer = WebAppProxyServer.startServer();
+      mainServer  = WebAppProxyServer.startServer();
       int counter = 20;
 
       URL wrongUrl = new URL("http://localhost:9099/proxy/app");
@@ -276,6 +277,9 @@ public class TestWebAppProxyServlet {
 
   private class WebAppProxyForTest extends WebAppProxy {
     
+    HttpServer proxyServer;
+    AppReportFetcherForTest appReportFetcher;
+    
     @Override
     public void start() {
       try {
@@ -285,14 +289,15 @@ public class TestWebAppProxyServlet {
         AccessControlList acl = new AccessControlList(
             conf.get(YarnConfiguration.YARN_ADMIN_ACL, 
             YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
-        HttpServer proxyServer = new HttpServer.Builder()
-            .setName("proxy").setBindAddress(bindAddress).setPort(port)
-            .setFindPort(port == 0).setConf(conf).setACL(acl).build();
+        proxyServer = new HttpServer.Builder()
+            .setName("proxy").setBindAddress(bindAddress).setPort(0)
+            .setFindPort(true).setConf(conf).setACL(acl).build();
         proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
             ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
 
+        appReportFetcher = new AppReportFetcherForTest(conf);
         proxyServer.setAttribute(FETCHER_ATTRIBUTE,
-            new AppReportFetcherForTest(conf));
+            appReportFetcher );
         proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE, Boolean.TRUE);
         
         String proxy = WebAppUtils.getProxyHostAndPort(conf);
@@ -301,8 +306,8 @@ public class TestWebAppProxyServlet {
         
         proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
         proxyServer.start();
-        port = proxyServer.getPort();
-        System.out.println("Proxy server is started at port " + port);
+        System.out.println("Proxy server is started at port " + 
+            proxyServer.getPort());
       } catch (Exception e) {
         LOG.fatal("Could not start proxy web server", e);
         throw new YarnRuntimeException("Could not start proxy web server", e);
@@ -312,9 +317,11 @@ public class TestWebAppProxyServlet {
   }
 
   private class AppReportFetcherForTest extends AppReportFetcher {
+    
+    int answer = 0;
+    
     public AppReportFetcherForTest(Configuration conf) {
       super(conf);
-
     }
 
     public ApplicationReport getApplicationReport(ApplicationId appId)
@@ -339,11 +346,11 @@ public class TestWebAppProxyServlet {
     private ApplicationReport getDefaultApplicationReport(ApplicationId appId) {
       ApplicationReport result = new ApplicationReportPBImpl();
       result.setApplicationId(appId);
-      result.setOriginalTrackingUrl(host + ":" + originalPort + "/foo/bar");
+      result.setOriginalTrackingUrl("localhost:" + originalPort + "/foo/bar");
       result.setYarnApplicationState(YarnApplicationState.RUNNING);
       result.setUser(CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER);
       return result;
-
     }
+    
   }
 }
