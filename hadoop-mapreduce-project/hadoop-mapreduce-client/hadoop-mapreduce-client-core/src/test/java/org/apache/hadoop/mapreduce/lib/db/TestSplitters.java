@@ -18,27 +18,23 @@
 
 package org.apache.hadoop.mapreduce.lib.db;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.Types;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.DBInputSplit;
-import org.apache.hadoop.mapreduce.lib.db.DBInputFormat.NullDBWritable;
 import org.apache.hadoop.mapreduce.lib.db.DataDrivenDBInputFormat.DataDrivenDBInputSplit;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
 
 /**
  * Test Splitters. Splitters should build parts of sql sentences for split result. 
@@ -150,38 +146,6 @@ public class TestSplitters {
     splits = splitter.split(configuration, result, "column1");
     assertSplits(new String[] {"column1 >= 'result1' column1 < 'result1.'",
         "column1 >= 'result1' column1 <= 'result2'"}, splits);
-  }
-
-  @Test (timeout=2000)
-  public void testDBSplitter() throws Exception{
-    OracleDataDrivenDBInputFormat<NullDBWritable> format = 
-        new OracleDataDrivenDBInputFormatForTest();
-    assertEquals(OracleDateSplitter.class, format.getSplitter(Types.TIMESTAMP)
-        .getClass());
-    assertEquals(IntegerSplitter.class, format.getSplitter(Types.INTEGER)
-        .getClass());
-    
-    DBInputSplit inputSplit = new DBInputSplit(1, 10);
-    RecordReader<LongWritable, NullDBWritable> recorder = format
-        .createDBRecordReader(inputSplit, configuration);
-    assertEquals(OracleDataDrivenDBRecordReader.class, recorder.getClass());
-  }
-  
-  private class OracleDataDrivenDBInputFormatForTest extends
-      OracleDataDrivenDBInputFormat<NullDBWritable> {
-
-    @Override
-    public DBConfiguration getDBConf() {
-      DBConfiguration result = new DBConfiguration(configuration);
-      result.setInputClass(NullDBWritable.class);
-      return result;
-    }
-
-    @Override
-    public Connection getConnection() {
-      return DriverForTest.getConnection();
-    }
-
   }
 
   private void assertSplits(String[] expectedSplitRE, 

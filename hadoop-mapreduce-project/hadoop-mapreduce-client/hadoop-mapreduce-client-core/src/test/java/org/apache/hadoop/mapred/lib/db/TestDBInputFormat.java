@@ -55,11 +55,6 @@ public class TestDBInputFormat {
     RecordReader<LongWritable, NullDBWritable> reader = format.getRecordReader(
         splitter, configuration, reporter);
 
-    assertEquals(
-        "org.apache.hadoop.mapred.lib.db.DBInputFormat$DBRecordReaderWrapper",
-        reader.getClass().getName());
-
-    //
     configuration.setInt(MRJobConfig.NUM_MAPS, 3);
     InputSplit[] lSplits = format.getSplits(configuration, 3);
     assertEquals(5, lSplits[0].getLength());
