@@ -118,6 +118,9 @@ Release 2.1.2 - UNRELEASED
     HDFS-5256. Use guava LoadingCache to implement DFSClientCache. (Haohui Mai
     via brandonli)
 
+    HDFS-5308. Replace HttpConfig#getSchemePrefix with implicit schemes in HDFS 
+    JSP. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -152,6 +155,12 @@ Release 2.1.2 - UNRELEASED
 
     HDFS-5300. FSNameSystem#deleteSnapshot() should not check owner in case of 
     permissions disabled. (Vinay via jing9)
+
+    HDFS-5306. Datanode https port is not available at the namenode. (Suresh
+    Srinivas via brandonli)
+
+    HDFS-5299. DFS client hangs in updatePipeline RPC when failover happened.
+    (Vinay via jing9)
 
 Release 2.1.1-beta - 2013-09-23
 
