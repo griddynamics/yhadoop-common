@@ -26,7 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -81,31 +81,39 @@ public class TestDelegationTokenRemoteFetcher {
 
   private int httpPort;
   private String serviceUrl;
-  private URI uri;
   private FileSystem fileSys;
   private Configuration conf;
   private ServerBootstrap bootstrap;
-
+  private Token<DelegationTokenIdentifier> testToken;
+  private volatile AssertionError assertionError;
+  
   @Before
   public void init() throws Exception {
     conf = new Configuration();
     fileSys = FileSystem.getLocal(conf);
     httpPort = NetUtils.getFreeSocketPort();
     serviceUrl = "http://localhost:" + httpPort;
-    uri = new URI(serviceUrl);
+    testToken = createToken(serviceUrl);
   }
- 
+
+  @After
+  public void clean() throws IOException {
+    if (fileSys != null)
+      fileSys.delete(new Path(tokenFile), true);
+    if (bootstrap != null)
+      bootstrap.releaseExternalResources();
+  }
+
   /**
    * try to fetch token without http server with IOException
    */
   @Test
-  public void testTokenFetchFail() {
+  public void testTokenFetchFail() throws Exception {
     try {
       DelegationTokenFetcher.main(new String[] { "-webservice=" + serviceUrl,
           tokenFile });
+      fail("Token fetcher shouldn't start in absense of NN");
     } catch (IOException ex) {
-    } catch (Exception e) {
-      fail("expectedTokenIsRetrievedFail ex error " + e);
     }
   }
   
@@ -115,12 +123,10 @@ public class TestDelegationTokenRemoteFetcher {
   @Test
   public void testTokenRenewFail() {
     try {
-      DelegationTokenFetcher.renewDelegationToken(serviceUrl, 
-          createToken(uri.toString()));
+      DelegationTokenFetcher.renewDelegationToken(serviceUrl, testToken);
+      fail("Token fetcher shouldn't be able to renew tokens in absense of NN");
     } catch (IOException ex) {
-    } catch (Exception e) {
-      fail("expectedTokenIsRetrievedFail ex error " + e);
-    }
+    } 
   }     
   
   /**
@@ -129,12 +135,10 @@ public class TestDelegationTokenRemoteFetcher {
   @Test
   public void expectedTokenCancelFail() {
     try {
-      DelegationTokenFetcher.cancelDelegationToken(serviceUrl, 
-          createToken(uri.toString()));
+      DelegationTokenFetcher.cancelDelegationToken(serviceUrl, testToken);
+      fail("Token fetcher shouldn't be able to cancel tokens in absense of NN");
     } catch (IOException ex) {
-    } catch (Exception e) {
-      fail("expectedTokenIsRetrievedFail ex error " + e);
-    }
+    } 
   }
   
   /**
@@ -142,15 +146,16 @@ public class TestDelegationTokenRemoteFetcher {
    */
   @Test  
   public void expectedTokenRenewErrorHttpResponse() {
+    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
     try {
-      Token<DelegationTokenIdentifier> token = createToken(uri.toString());
-      bootstrap = startHttpServer(httpPort, token, uri.toString());
       DelegationTokenFetcher.renewDelegationToken(serviceUrl + "/exception", 
-          createToken(uri.toString()));
+          createToken(serviceUrl));
+      fail("Token fetcher shouldn't be able to renew tokens using an invalid"
+          + " NN URL");
     } catch (IOException ex) {
-    } catch (Exception e) {
-      fail("expectedTokenIsRetrievedFail ex error " + e);
-    }
+    } 
+    if (assertionError != null)
+      throw assertionError;
   }
   
   /**
@@ -159,9 +164,10 @@ public class TestDelegationTokenRemoteFetcher {
    */
   @Test
   public void testCancelTokenFromHttp() throws IOException {
-    Token<DelegationTokenIdentifier> token = createToken(uri.toString());
-    bootstrap = startHttpServer(httpPort, token, uri.toString());
-    DelegationTokenFetcher.cancelDelegationToken(serviceUrl, token);    
+    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
+    DelegationTokenFetcher.cancelDelegationToken(serviceUrl, testToken);
+    if (assertionError != null)
+      throw assertionError;
   }
   
   /**
@@ -169,13 +175,35 @@ public class TestDelegationTokenRemoteFetcher {
    */
   @Test
   public void testRenewTokenFromHttp() throws IOException {
-    Token<DelegationTokenIdentifier> token = createToken(uri.toString());
-    bootstrap = startHttpServer(httpPort, token, uri.toString());
+    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
     assertTrue("testRenewTokenFromHttp error",
         Long.valueOf(EXP_DATE) == DelegationTokenFetcher.renewDelegationToken(
-            serviceUrl, token));
+            serviceUrl, testToken));
+    if (assertionError != null)
+      throw assertionError;
   }
 
+  /**
+   * Call fetch token using http server 
+   */
+  @Test
+  public void expectedTokenIsRetrievedFromHttp() throws Exception {
+    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
+    DelegationTokenFetcher.main(new String[] { "-webservice=" + serviceUrl,
+        tokenFile });
+    Path p = new Path(fileSys.getWorkingDirectory(), tokenFile);
+    Credentials creds = Credentials.readTokenStorageFile(p, conf);
+    Iterator<Token<?>> itr = creds.getAllTokens().iterator();
+    assertTrue("token not exist error", itr.hasNext());
+    Token<?> fetchedToken = itr.next();
+    Assert.assertArrayEquals("token wrong identifier error",
+        testToken.getIdentifier(), fetchedToken.getIdentifier());
+    Assert.assertArrayEquals("token wrong password error",
+        testToken.getPassword(), fetchedToken.getPassword());
+    if (assertionError != null)
+      throw assertionError;
+  }
+  
   private static Token<DelegationTokenIdentifier> createToken(String serviceUri) {
     byte[] pw = "hadoop".getBytes();
     byte[] ident = new DelegationTokenIdentifier(new Text("owner"), new Text(
@@ -185,37 +213,18 @@ public class TestDelegationTokenRemoteFetcher {
         HftpFileSystem.TOKEN_KIND, service);
   }
 
-  /**
-   * Call fetch token using http server 
-   */
-  @Test
-  //@Ignore
-  public void expectedTokenIsRetrievedFromHttp() throws Exception {
-    Token<DelegationTokenIdentifier> token = createToken(uri.toString());
-    bootstrap = startHttpServer(httpPort, token, uri.toString());
-    DelegationTokenFetcher.main(new String[] { "-webservice=" + serviceUrl,
-        tokenFile });
-    Path p = new Path(fileSys.getWorkingDirectory(), tokenFile);
-    Credentials creds = Credentials.readTokenStorageFile(p, conf);
-    Iterator<Token<?>> itr = creds.getAllTokens().iterator();
-    assertTrue("token not exist error", itr.hasNext());
-    Token<?> fetchedToken = itr.next();
-    Assert.assertArrayEquals("token wrong identifier error",
-        token.getIdentifier(), fetchedToken.getIdentifier());
-    Assert.assertArrayEquals("token wrong password error",
-        token.getPassword(), fetchedToken.getPassword());
-  }
-
-  interface Handler {
+  private interface Handler {
     void handle(Channel channel, Token<DelegationTokenIdentifier> token,
         String serviceUrl) throws IOException;
   }
 
-  static class FetchHandler implements Handler {
+  private class FetchHandler implements Handler {
     
     @Override
     public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
         String serviceUrl) throws IOException {
+      Assert.assertEquals(testToken, token);
+
       Credentials creds = new Credentials();
       creds.addToken(new Text(serviceUrl), token);
       DataOutputBuffer out = new DataOutputBuffer();
@@ -231,11 +240,12 @@ public class TestDelegationTokenRemoteFetcher {
     }
   }
 
-  static class RenewHandler implements Handler {
+  private class RenewHandler implements Handler {
     
     @Override
     public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
         String serviceUrl) throws IOException {
+      Assert.assertEquals(testToken, token);
       byte[] bytes = EXP_DATE.getBytes();
       ChannelBuffer cbuffer = ChannelBuffers.buffer(bytes.length);
       cbuffer.writeBytes(bytes);
@@ -247,28 +257,30 @@ public class TestDelegationTokenRemoteFetcher {
     }
   }
   
-  static class ExceptionHandler implements Handler {
+  private class ExceptionHandler implements Handler {
 
     @Override
     public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
         String serviceUrl) throws IOException {
+      Assert.assertEquals(testToken, token);
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, 
           HttpResponseStatus.METHOD_NOT_ALLOWED);
       channel.write(response).addListener(ChannelFutureListener.CLOSE);
     }    
   }
   
-  static class CancelHandler implements Handler {
+  private class CancelHandler implements Handler {
 
     @Override
     public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
         String serviceUrl) throws IOException {
+      Assert.assertEquals(testToken, token);
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
       channel.write(response).addListener(ChannelFutureListener.CLOSE);
     }    
   }
   
-  private static final class CredentialsLogicHandler extends
+  private final class CredentialsLogicHandler extends
       SimpleChannelUpstreamHandler {
 
     private final Token<DelegationTokenIdentifier> token;
@@ -298,7 +310,16 @@ public class TestDelegationTokenRemoteFetcher {
         Map.Entry<String, Handler> entry = iter.next();
         if (request.getUri().contains(entry.getKey())) {
           Handler handler = entry.getValue();
-          handler.handle(e.getChannel(), token, serviceUrl);
+          try {
+            handler.handle(e.getChannel(), token, serviceUrl);
+          } catch (AssertionError ee) {
+            TestDelegationTokenRemoteFetcher.this.assertionError = ee;
+            HttpResponse response = new DefaultHttpResponse(HTTP_1_1, 
+                HttpResponseStatus.BAD_REQUEST);
+            response.setContent(ChannelBuffers.copiedBuffer(ee.getMessage(), 
+                Charset.defaultCharset()));
+            e.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+          }
           return;
         }
       }
@@ -319,8 +340,8 @@ public class TestDelegationTokenRemoteFetcher {
   private ServerBootstrap startHttpServer(int port,
       final Token<DelegationTokenIdentifier> token, final String url) {
     ServerBootstrap bootstrap = new ServerBootstrap(
-        new NioServerSocketChannelFactory(Executors.newSingleThreadExecutor(),
-            Executors.newSingleThreadExecutor()));
+        new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
+            Executors.newCachedThreadPool()));
 
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
@@ -332,14 +353,6 @@ public class TestDelegationTokenRemoteFetcher {
     });
     bootstrap.bind(new InetSocketAddress("localhost", port));
     return bootstrap;
-  }
-  
-  @After
-  public void clean() throws IOException {
-    if (fileSys != null)
-      fileSys.delete(new Path(tokenFile), true);
-    if (bootstrap != null)
-      bootstrap.releaseExternalResources();
   }
   
 }
