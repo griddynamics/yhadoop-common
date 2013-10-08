@@ -23,12 +23,14 @@ import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Executors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.Logger;
@@ -64,20 +67,21 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.UnmodifiableIterator;
 
 public class TestDelegationTokenRemoteFetcher {
-  private URI uri;
-  private static final int httpPort = 2001;
-  private static final String EXP_DATE = "124123512361236";
-  private static final String SERVICE_URL = "http://localhost:" + httpPort;
-  private static String tokenFile = "http.file.dta";
   private static final Logger LOG = Logger
       .getLogger(TestDelegationTokenRemoteFetcher.class);
+
+  private static final String EXP_DATE = "124123512361236";
+  private static final String tokenFile = "http.file.dta";
+
+  private int httpPort;
+  private String serviceUrl;
+  private URI uri;
   private FileSystem fileSys;
   private Configuration conf;
   private ServerBootstrap bootstrap;
@@ -86,7 +90,9 @@ public class TestDelegationTokenRemoteFetcher {
   public void init() throws Exception {
     conf = new Configuration();
     fileSys = FileSystem.getLocal(conf);
-    uri = new URI(SERVICE_URL);
+    httpPort = NetUtils.getFreeSocketPort();
+    serviceUrl = "http://localhost:" + httpPort;
+    uri = new URI(serviceUrl);
   }
  
   /**
@@ -95,7 +101,7 @@ public class TestDelegationTokenRemoteFetcher {
   @Test
   public void testTokenFetchFail() {
     try {
-      DelegationTokenFetcher.main(new String[] { "-webservice=" + SERVICE_URL,
+      DelegationTokenFetcher.main(new String[] { "-webservice=" + serviceUrl,
           tokenFile });
     } catch (IOException ex) {
     } catch (Exception e) {
@@ -109,7 +115,7 @@ public class TestDelegationTokenRemoteFetcher {
   @Test
   public void testTokenRenewFail() {
     try {
-      DelegationTokenFetcher.renewDelegationToken(SERVICE_URL, 
+      DelegationTokenFetcher.renewDelegationToken(serviceUrl, 
           createToken(uri.toString()));
     } catch (IOException ex) {
     } catch (Exception e) {
@@ -123,7 +129,7 @@ public class TestDelegationTokenRemoteFetcher {
   @Test
   public void expectedTokenCancelFail() {
     try {
-      DelegationTokenFetcher.cancelDelegationToken(SERVICE_URL, 
+      DelegationTokenFetcher.cancelDelegationToken(serviceUrl, 
           createToken(uri.toString()));
     } catch (IOException ex) {
     } catch (Exception e) {
@@ -139,7 +145,7 @@ public class TestDelegationTokenRemoteFetcher {
     try {
       Token<DelegationTokenIdentifier> token = createToken(uri.toString());
       bootstrap = startHttpServer(httpPort, token, uri.toString());
-      DelegationTokenFetcher.renewDelegationToken(SERVICE_URL + "/exception", 
+      DelegationTokenFetcher.renewDelegationToken(serviceUrl + "/exception", 
           createToken(uri.toString()));
     } catch (IOException ex) {
     } catch (Exception e) {
@@ -155,7 +161,7 @@ public class TestDelegationTokenRemoteFetcher {
   public void testCancelTokenFromHttp() throws IOException {
     Token<DelegationTokenIdentifier> token = createToken(uri.toString());
     bootstrap = startHttpServer(httpPort, token, uri.toString());
-    DelegationTokenFetcher.cancelDelegationToken(SERVICE_URL, token);    
+    DelegationTokenFetcher.cancelDelegationToken(serviceUrl, token);    
   }
   
   /**
@@ -167,7 +173,7 @@ public class TestDelegationTokenRemoteFetcher {
     bootstrap = startHttpServer(httpPort, token, uri.toString());
     assertTrue("testRenewTokenFromHttp error",
         Long.valueOf(EXP_DATE) == DelegationTokenFetcher.renewDelegationToken(
-            SERVICE_URL, token));
+            serviceUrl, token));
   }
 
   private static Token<DelegationTokenIdentifier> createToken(String serviceUri) {
@@ -187,7 +193,7 @@ public class TestDelegationTokenRemoteFetcher {
   public void expectedTokenIsRetrievedFromHttp() throws Exception {
     Token<DelegationTokenIdentifier> token = createToken(uri.toString());
     bootstrap = startHttpServer(httpPort, token, uri.toString());
-    DelegationTokenFetcher.main(new String[] { "-webservice=" + SERVICE_URL,
+    DelegationTokenFetcher.main(new String[] { "-webservice=" + serviceUrl,
         tokenFile });
     Path p = new Path(fileSys.getWorkingDirectory(), tokenFile);
     Credentials creds = Credentials.readTokenStorageFile(p, conf);
