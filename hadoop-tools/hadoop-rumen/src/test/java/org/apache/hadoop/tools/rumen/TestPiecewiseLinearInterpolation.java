@@ -25,6 +25,8 @@ import static org.junit.Assert.*;
 
 public class TestPiecewiseLinearInterpolation {
 
+  static private double maximumRelativeError = 0.002D;
+
   static private LoggedSingleRelativeRanking makeRR(double ranking, long datum) {
     LoggedSingleRelativeRanking result = new LoggedSingleRelativeRanking();
 
@@ -113,7 +115,6 @@ public class TestPiecewiseLinearInterpolation {
 
     System.out.println("Cumulative error is " + RMSNormalizedError);
 
-    double maximumRelativeError = 0.002D;
     assertTrue("The RMS relative error per bucket, " + RMSNormalizedError
         + ", exceeds our tolerance of " + maximumRelativeError,
         RMSNormalizedError <= maximumRelativeError);
