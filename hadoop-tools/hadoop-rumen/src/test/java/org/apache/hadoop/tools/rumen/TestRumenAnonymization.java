@@ -50,12 +50,12 @@ import org.codehaus.jackson.map.JsonSerializer;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
  * Tests Rumen output anonymization.
  */
-@SuppressWarnings("deprecation")
 public class TestRumenAnonymization {
   /**
    * Test {@link UserName}, serialization and anonymization.
@@ -271,6 +271,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobProperties}.
    */
+  @SuppressWarnings("deprecation")
   @Test (timeout=5000)
   public void testJobPropertiesDataType() throws IOException {
     // test job properties
@@ -294,6 +295,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobProperties} serialization.
    */
+  @SuppressWarnings("deprecation")
   @Test (timeout=5000)
   public void testJobPropertiesSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
@@ -312,6 +314,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobProperties} anonymization.
    */
+  @SuppressWarnings("deprecation")
   @Test (timeout=5000)
   public void testJobPropertiesAnonymization() throws IOException {
     // test job properties
