@@ -39,17 +39,32 @@ Release 2.3.0 - UNRELEASED
     YARN-1232. Configuration to support multiple RMs (Karthik Kambatla via
     bikas)
 
+    YARN-465. fix coverage org.apache.hadoop.yarn.server.webproxy (Aleksey
+    Gorshkov and Andrey Klochkov via jlowe)
+
+    YARN-976. Document the meaning of a virtual core. (Sandy Ryza)
+
+    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-461. Fair scheduler should not accept apps with empty string queue name. 
+    (ywskycn via tucu)
 
     YARN-1060. Two tests in TestFairScheduler are missing @Test annotation
     (Niranjan Singh via Sandy Ryza)
 
     YARN-1188. The context of QueueMetrics becomes default when using
     FairScheduler (Tsuyoshi Ozawa via Sandy Ryza)
+ 
+    YARN-1268. TestFairScheduler.testContinuousScheduling is flaky (Sandy Ryza)
 
-Release 2.2.0 - UNRELEASED
+    YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
+    containers. (Alejandro Abdelnur via Sandy Ryza)
+
+Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -61,7 +76,7 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
-Release 2.1.2 - UNRELEASED
+Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
   
@@ -84,6 +99,10 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1213. Restore config to ban submitting to undeclared pools in the
     Fair Scheduler. (Sandy Ryza)
+
+    YARN-1277. Added a policy based configuration for http/https in common
+    HttpServer and using the same in YARN - related to per project https config
+    support via HADOOP-10022. (Suresh Srinivas and Omkar Vinit Joshi via vinodkv)
 
   OPTIMIZATIONS
 
@@ -161,6 +180,18 @@ Release 2.1.2 - UNRELEASED
 
     YARN-1273. Fixed Distributed-shell to account for containers that failed
     to start. (Hitesh Shah via vinodkv)
+
+    YARN-1032. Fixed NPE in RackResolver. (Lohit Vijayarenu via acmurthy)
+
+    YARN-1090. Fixed CS UI to better reflect applications as non-schedulable
+    and not as pending. (Jian He via acmurthy)
+
+    YARN-1274. Fixed NodeManager's LinuxContainerExecutor to create user, app-dir
+    and log-dirs correctly even when there are no resources to localize for the
+    container. (Siddharth Seth via vinodkv)
+
+    YARN-1278. Fixed NodeManager to not delete local resources for apps on resync
+    command from RM - a bug caused by YARN-1149. (Hitesh Shah via vinodkv)
 
 Release 2.1.1-beta - 2013-09-23
 
@@ -1061,9 +1092,6 @@ Release 2.1.0-beta - 2013-08-22
 
     YARN-875. Application can hang if AMRMClientAsync callback thread has
     exception (Xuan Gong via bikas)
-
-    YARN-461. Fair scheduler should not accept apps with empty string queue name. 
-    (ywskycn via tucu)
 
     YARN-968. RM admin commands don't work. (vinodkv via kihwal)
 

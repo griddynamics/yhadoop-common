@@ -61,6 +61,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9225. Cover package org.apache.hadoop.compress.Snappy (Vadim
     Bondarev, Andrey Klochkov and Nathan Roberts via jlowe)
 
+    HADOOP-9199. Cover package org.apache.hadoop.io with unit tests (Andrey
+    Klochkov via jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -102,7 +105,7 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10006. Compilation failure in trunk for
     o.a.h.fs.swift.util.JSONUtil (Junping Du via stevel)
 
-Release 2.2.0 - UNRELEASED
+Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -114,10 +117,12 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
-    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
-    (todd)
+    HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)
 
-Release 2.1.2 - UNRELEASED
+    HADOOP-10030. FsShell -put/copyFromLocal should support Windows local path.
+    (Chuan Liu via cnauroth)
+
+Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
 
@@ -134,6 +139,9 @@ Release 2.1.2 - UNRELEASED
     HADOOP-9758.  Provide configuration option for FileSystem/FileContext
     symlink resolution.  (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-8315. Support SASL-authenticated ZooKeeper in ActiveStandbyElector
+    (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -146,6 +154,9 @@ Release 2.1.2 - UNRELEASED
 
     HADOOP-10003. HarFileSystem.listLocatedStatus() fails.
     (Jason Dere and suresh via suresh)
+
+    HADOOP-10017. Fix NPE in DFSClient#getDelegationToken when doing Distcp 
+    from a secured cluster to an insecured cluster. (Haohui Mai via jing9)
 
 Release 2.1.1-beta - 2013-09-23
 

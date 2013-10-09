@@ -24,6 +24,7 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -673,7 +674,19 @@ public class YarnConfiguration extends Configuration {
   /** Where the linux container executor should mount cgroups if not found */
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
-  
+
+
+  /**
+   * Interval of time the linux container executor should try cleaning up
+   * cgroups entry when cleaning up a container. This is required due to what 
+   * it seems a race condition because the SIGTERM/SIGKILL is asynch.
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
+   NM_PREFIX + "linux-container-executor.cgroups.delete-timeout-ms";
+
+  public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
+      1000;
+
   /** T-file compression types used to compress aggregated logs.*/
   public static final String NM_LOG_AGG_COMPRESSION_TYPE = 
     NM_PREFIX + "log-aggregation.compression-type";
@@ -862,7 +875,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CLIENT_MAX_NM_PROXIES =
       YARN_PREFIX + "client.max-nodemanagers-proxies";
   public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
-  
+
+  public static final String YARN_HTTP_POLICY_KEY =
+          YARN_PREFIX + "http.policy";
+  public static final String YARN_HTTP_POLICY_DEFAULT =
+          CommonConfigurationKeysPublic.HTTP_POLICY_HTTP_ONLY;
+
   public YarnConfiguration() {
     super();
   }

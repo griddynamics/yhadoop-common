@@ -21,9 +21,6 @@ Release 2.3.0 - UNRELEASED
     HDFS-4278. Log an ERROR when DFS_BLOCK_ACCESS_TOKEN_ENABLE config is
     disabled but security is turned on. (Kousuke Saruta via harsh)
 
-    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
-    (Colin Patrick McCabe)
-
     HDFS-5004. Add additional JMX bean for NameNode status data. Contributed
     by Trevor Lorimer.
 
@@ -89,7 +86,7 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5266. ElasticByteBufferPool#Key does not implement equals. (cnauroth)
 
-Release 2.2.0 - UNRELEASED
+Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -101,11 +98,28 @@ Release 2.2.0 - UNRELEASED
 
   BUG FIXES
 
-Release 2.1.2 - UNRELEASED
+    HDFS-5307. Support both HTTP and HTTPS in jsp pages (Haohui Mai via
+    brandonli)
+
+    HDFS-5291. Standby namenode after transition to active goes into safemode.
+    (jing9)
+
+    HDFS-5317. Go back to DFS Home link does not work on datanode webUI
+    (Haohui Mai via brandonli)
+
+    HDFS-5316. Namenode ignores the default https port (Haohui Mai via
+    brandonli)
+
+    HDFS-5281. COMMIT request should not block. (brandonli)
+
+Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HDFS-4817.  Make HDFS advisory caching configurable on a per-file basis.
+    (Colin Patrick McCabe)
 
     HDFS-5230. Introduce RpcInfo to decouple XDR classes from the RPC API.
     (Haohui Mai via brandonli)
@@ -117,6 +131,9 @@ Release 2.1.2 - UNRELEASED
 
     HDFS-5256. Use guava LoadingCache to implement DFSClientCache. (Haohui Mai
     via brandonli)
+
+    HDFS-5308. Replace HttpConfig#getSchemePrefix with implicit schemes in HDFS 
+    JSP. (Haohui Mai via jing9)
 
   OPTIMIZATIONS
 
@@ -152,6 +169,15 @@ Release 2.1.2 - UNRELEASED
 
     HDFS-5300. FSNameSystem#deleteSnapshot() should not check owner in case of 
     permissions disabled. (Vinay via jing9)
+
+    HDFS-5306. Datanode https port is not available at the namenode. (Suresh
+    Srinivas via brandonli)
+
+    HDFS-5299. DFS client hangs in updatePipeline RPC when failover happened.
+    (Vinay via jing9)
+
+    HDFS-5259. Support client which combines appended data with old data
+    before sends it to NFS server. (brandonli)
 
 Release 2.1.1-beta - 2013-09-23
 
