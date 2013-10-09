@@ -64,6 +64,7 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -146,10 +147,10 @@ public class TestDelegationTokenRemoteFetcher {
    */
   @Test  
   public void expectedTokenRenewErrorHttpResponse() {
-    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
+    bootstrap = startHttpServer();
     try {
       DelegationTokenFetcher.renewDelegationToken(serviceUrl + "/exception", 
-          createToken(serviceUrl));
+          testToken);
       fail("Token fetcher shouldn't be able to renew tokens using an invalid"
           + " NN URL");
     } catch (IOException ex) {
@@ -164,7 +165,7 @@ public class TestDelegationTokenRemoteFetcher {
    */
   @Test
   public void testCancelTokenFromHttp() throws IOException {
-    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
+    bootstrap = startHttpServer();
     DelegationTokenFetcher.cancelDelegationToken(serviceUrl, testToken);
     if (assertionError != null)
       throw assertionError;
@@ -175,7 +176,7 @@ public class TestDelegationTokenRemoteFetcher {
    */
   @Test
   public void testRenewTokenFromHttp() throws IOException {
-    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
+    bootstrap = startHttpServer();
     assertTrue("testRenewTokenFromHttp error",
         Long.valueOf(EXP_DATE) == DelegationTokenFetcher.renewDelegationToken(
             serviceUrl, testToken));
@@ -188,7 +189,7 @@ public class TestDelegationTokenRemoteFetcher {
    */
   @Test
   public void expectedTokenIsRetrievedFromHttp() throws Exception {
-    bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
+    bootstrap = startHttpServer();
     DelegationTokenFetcher.main(new String[] { "-webservice=" + serviceUrl,
         tokenFile });
     Path p = new Path(fileSys.getWorkingDirectory(), tokenFile);
@@ -214,19 +215,19 @@ public class TestDelegationTokenRemoteFetcher {
   }
 
   private interface Handler {
-    void handle(Channel channel, Token<DelegationTokenIdentifier> token,
+    void handle(Channel channel, Token<DelegationTokenIdentifier> requestToken, 
         String serviceUrl) throws IOException;
   }
 
   private class FetchHandler implements Handler {
     
     @Override
-    public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
-        String serviceUrl) throws IOException {
-      Assert.assertEquals(testToken, token);
-
+    public void handle(Channel channel, 
+        Token<DelegationTokenIdentifier> requestToken, String serviceUrl) 
+        throws IOException {
+      Assert.assertNull(requestToken);
       Credentials creds = new Credentials();
-      creds.addToken(new Text(serviceUrl), token);
+      creds.addToken(new Text(serviceUrl), testToken);
       DataOutputBuffer out = new DataOutputBuffer();
       creds.write(out);
       int fileLength = out.getData().length;
@@ -243,9 +244,10 @@ public class TestDelegationTokenRemoteFetcher {
   private class RenewHandler implements Handler {
     
     @Override
-    public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
-        String serviceUrl) throws IOException {
-      Assert.assertEquals(testToken, token);
+    public void handle(Channel channel, 
+        Token<DelegationTokenIdentifier> requestToken, String serviceUrl) 
+        throws IOException {
+      Assert.assertEquals(testToken, requestToken);
       byte[] bytes = EXP_DATE.getBytes();
       ChannelBuffer cbuffer = ChannelBuffers.buffer(bytes.length);
       cbuffer.writeBytes(bytes);
@@ -260,9 +262,9 @@ public class TestDelegationTokenRemoteFetcher {
   private class ExceptionHandler implements Handler {
 
     @Override
-    public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
-        String serviceUrl) throws IOException {
-      Assert.assertEquals(testToken, token);
+    public void handle(Channel channel, 
+        Token<DelegationTokenIdentifier> requestToken, String serviceUrl) 
+        throws IOException {
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, 
           HttpResponseStatus.METHOD_NOT_ALLOWED);
       channel.write(response).addListener(ChannelFutureListener.CLOSE);
@@ -272,9 +274,10 @@ public class TestDelegationTokenRemoteFetcher {
   private class CancelHandler implements Handler {
 
     @Override
-    public void handle(Channel channel, Token<DelegationTokenIdentifier> token,
-        String serviceUrl) throws IOException {
-      Assert.assertEquals(testToken, token);
+    public void handle(Channel channel, 
+        Token<DelegationTokenIdentifier> requestToken, String serviceUrl) 
+        throws IOException {
+      Assert.assertEquals(testToken, requestToken);
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
       channel.write(response).addListener(ChannelFutureListener.CLOSE);
     }    
@@ -283,7 +286,6 @@ public class TestDelegationTokenRemoteFetcher {
   private final class CredentialsLogicHandler extends
       SimpleChannelUpstreamHandler {
 
-    private final Token<DelegationTokenIdentifier> token;
     private final String serviceUrl;
     private ImmutableMap<String, Handler> routes = ImmutableMap.of(
         "/exception", new ExceptionHandler(),
@@ -291,9 +293,7 @@ public class TestDelegationTokenRemoteFetcher {
         "/getDelegationToken", new FetchHandler() , 
         "/renewDelegationToken", new RenewHandler());
 
-    public CredentialsLogicHandler(Token<DelegationTokenIdentifier> token,
-        String serviceUrl) {
-      this.token = token;
+    public CredentialsLogicHandler(String serviceUrl) {
       this.serviceUrl = serviceUrl;
     }
 
@@ -304,6 +304,15 @@ public class TestDelegationTokenRemoteFetcher {
       if (request.getMethod() != GET) {
         return;
       }
+      
+      Token<DelegationTokenIdentifier> token = null; 
+      QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
+      if (decoder.getParameters().containsKey("token")) {
+        token = new Token<DelegationTokenIdentifier>();
+        String tokenParam = decoder.getParameters().get("token").get(0);
+        token.decodeFromUrlString(tokenParam);
+      }
+      
       UnmodifiableIterator<Map.Entry<String, Handler>> iter = routes.entrySet()
           .iterator();
       while (iter.hasNext()) {
@@ -337,8 +346,7 @@ public class TestDelegationTokenRemoteFetcher {
     }
   }
 
-  private ServerBootstrap startHttpServer(int port,
-      final Token<DelegationTokenIdentifier> token, final String url) {
+  private ServerBootstrap startHttpServer() {
     ServerBootstrap bootstrap = new ServerBootstrap(
         new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
             Executors.newCachedThreadPool()));
@@ -348,10 +356,10 @@ public class TestDelegationTokenRemoteFetcher {
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(new HttpRequestDecoder(),
             new HttpChunkAggregator(65536), new HttpResponseEncoder(),
-            new CredentialsLogicHandler(token, url));
+            new CredentialsLogicHandler(serviceUrl));
       }
     });
-    bootstrap.bind(new InetSocketAddress("localhost", port));
+    bootstrap.bind(new InetSocketAddress("localhost", httpPort));
     return bootstrap;
   }
   
