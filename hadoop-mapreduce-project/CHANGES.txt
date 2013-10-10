@@ -52,6 +52,17 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
     Roberts via jlowe)
 
+    MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
+    fails with jdk7. (tgraves via tucu)
+
+    MAPREDUCE-4571. TestHsWebServicesJobs fails on jdk7. (tgraves via tucu)
+
+    MAPREDUCE-5425. Junit in TestJobHistoryServer failing in jdk 7 (Robert
+    Parker via jlowe)
+
+    MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
+    jdk7. (Thomas Graves via vinodkv)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
