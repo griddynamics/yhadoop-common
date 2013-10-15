@@ -316,6 +316,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5338. Add a conf to disable hostname check in datanode registration.
     (szetszwo)
 
+    HDFS-5130. Add test for snapshot related FsShell and DFSAdmin commands.
+    (Binglin Chang via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -383,6 +386,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5329. Update FSNamesystem#getListing() to handle inode path in startAfter
     token. (brandonli)
+
+    HDFS-5330. fix readdir and readdirplus for large directories (brandonli)
 
 Release 2.2.0 - 2013-10-13
 
