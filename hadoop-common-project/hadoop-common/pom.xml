@@ -251,23 +251,21 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
     </dependency>
-
-	<dependency>
-		<groupId>org.apache.mina</groupId>
-		<artifactId>mina-core</artifactId>
+    <dependency>
+        <groupId>org.apache.mina</groupId>
+        <artifactId>mina-core</artifactId>
         <scope>test</scope>
     </dependency>
-	<dependency>
-		<groupId>org.apache.ftpserver</groupId>
-		<artifactId>ftplet-api</artifactId>
+    <dependency>
+        <groupId>org.apache.ftpserver</groupId>
+        <artifactId>ftplet-api</artifactId>
         <scope>test</scope>
     </dependency>
-	<dependency>
-		<groupId>org.apache.ftpserver</groupId>
-		<artifactId>ftpserver-core</artifactId>
+    <dependency>
+        <groupId>org.apache.ftpserver</groupId>
+        <artifactId>ftpserver-core</artifactId>
         <scope>test</scope>
     </dependency>
-
   </dependencies>
 
   <build>
