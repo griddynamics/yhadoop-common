@@ -174,6 +174,13 @@ public abstract class FileContextPermissionBase {
         System.out.println("Not testing changing the group since user " +
                            "belongs to only one group.");
       }
+      
+      try {
+        fc.setOwner(f, null, null);
+        Assert.assertTrue(false);
+      } catch (IllegalArgumentException iae) {
+        // okay
+      }
     } 
     finally {cleanupFile(fc, f);}
   }
