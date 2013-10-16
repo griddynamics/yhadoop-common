@@ -148,6 +148,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5330. fix readdir and readdirplus for large directories (brandonli)
 
+    HDFS-5370. Typo in Error Message: different between range in condition
+    and range in error message. (Kousuke Saruta via suresh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
@@ -3485,6 +3488,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-5010. Reduce the frequency of getCurrentUser() calls from namenode
     (kihwal)
+
+    HDFS-5346. Avoid unnecessary call to getNumLiveDataNodes() for each block 
+    during IBR processing (Ravi Prakash via kihwal)
 
   OPTIMIZATIONS
 
