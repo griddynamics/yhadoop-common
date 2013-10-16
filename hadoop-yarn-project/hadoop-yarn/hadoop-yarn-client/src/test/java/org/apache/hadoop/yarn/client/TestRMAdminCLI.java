@@ -18,147 +18,120 @@
 
 package org.apache.hadoop.yarn.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.client.cli.RMAdminCLI;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 
-import static org.junit.Assert.*;
+public class TestRMAdminCLI {
 
-/**
- * Test class TestRMAdmin
- */
-public class TestRMAdmin {
+  private ResourceManagerAdministrationProtocol admin;
+  private RMAdminCLI rmAdminCLI;
 
-  private static ResourceManager resourceManager;
+  @Before
+  public void configure() {
+    admin = mock(ResourceManagerAdministrationProtocol.class);
+    rmAdminCLI = new RMAdminCLI() {
 
-  @BeforeClass
-  public static void setUp() {
-    
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.IPC_CLIENT_FACTORY_CLASS,
-        "org.apache.hadoop.yarn.client.FakeRpcClientClassFactory");
-    resourceManager = new ResourceManager();
-    resourceManager.init(conf);
-    resourceManager.start();
-
+      @Override
+      protected ResourceManagerAdministrationProtocol createAdminProtocol()
+          throws IOException {
+        return admin;
+      }
+      
+    };
   }
-
-  /**
-   * Test method refreshQueues
-   */
-  @Test
+  
+  @Test(timeout=500)
   public void testRefreshQueues() throws Exception {
-    RMAdminCLI test = new RMAdminCLI();
-    test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshQueues" };
-    assertEquals(0, test.run(args));
-
-    assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
-        refreshQueues,
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin).refreshQueues(any(RefreshQueuesRequest.class));
   }
 
-  /**
-   * Test method refreshUserToGroupsMappings
-   */
-  @Test
+  @Test(timeout=500)
   public void testRefreshUserToGroupsMappings() throws Exception {
-    RMAdminCLI test = new RMAdminCLI();
-    test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshUserToGroupsMappings" };
-    assertEquals(0, test.run(args));
-    assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
-        refreshUserToGroupsMappings,
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin).refreshUserToGroupsMappings(
+        any(RefreshUserToGroupsMappingsRequest.class));
   }
 
-  /**
-   * Test method refreshSuperUserGroupsConfiguration
-   */
-  @Test
+  @Test(timeout=500)
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
-    RMAdminCLI test = new RMAdminCLI();
-    test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshSuperUserGroupsConfiguration" };
-    assertEquals(0, test.run(args));
-    assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
-        refreshSuperUserGroupsConfiguration,
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin).refreshSuperUserGroupsConfiguration(
+        any(RefreshSuperUserGroupsConfigurationRequest.class));
   }
 
-  /**
-   * Test method refreshAdminAcls
-   */
-  @Test
+  @Test(timeout=500)
   public void testRefreshAdminAcls() throws Exception {
-    RMAdminCLI test = new RMAdminCLI();
-    test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshAdminAcls" };
-    assertEquals(0, test.run(args));
-    assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
-        refreshAdminAcls,
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin).refreshAdminAcls(any(RefreshAdminAclsRequest.class));
   }
 
-  /**
-   * Test method refreshServiceAcl
-   */
-  @Test
+  @Test(timeout=500)
   public void testRefreshServiceAcl() throws Exception {
-    RMAdminCLI test = new RMAdminCLI();
-    test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshServiceAcl" };
-    assertEquals(0, test.run(args));
-    assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
-        refreshServiceAcls,
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin).refreshServiceAcls(any(RefreshServiceAclsRequest.class));
   }
 
-  /**
-   * Test method refreshNodes
-   */
-  @Test
+  @Test(timeout=500)
   public void testRefreshNodes() throws Exception {
-
-    RMAdminCLI test = new RMAdminCLI();
-    test.setConf(resourceManager.getConfig());
     String[] args = { "-refreshNodes" };
-    assertEquals(0, test.run(args));
-    assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.refreshNodes,
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin).refreshNodes(any(RefreshNodesRequest.class));
   }
-  /**
-   * Test method getGroups
-   */
-  @Test
-  public void testgetGroups() throws Exception {
-
-    RMAdminCLI test = new RMAdminCLI();
-    test.setConf(resourceManager.getConfig());
-    String[] args = { "-getGroups","admin" };
-    assertEquals(0, test.run(args));
-    assertEquals(
-        FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.getGroupsForUser,
-          FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+  
+  @Test(timeout=500)
+  public void testGetGroups() throws Exception {
+    when(admin.getGroupsForUser(eq("admin"))).thenReturn(
+        new String[] {"group1", "group2"});
+    PrintStream origOut = System.out;
+    PrintStream out = mock(PrintStream.class);
+    System.setOut(out);
+    try {
+      String[] args = { "-getGroups", "admin" };
+      assertEquals(0, rmAdminCLI.run(args));
+      verify(admin).getGroupsForUser(eq("admin"));
+      verify(out).println(argThat(new ArgumentMatcher<StringBuilder>() {
+        @Override
+        public boolean matches(Object argument) {
+          return ("" + argument).equals("admin : group1 group2");
+        }
+      }));
+    } finally {
+      System.setOut(origOut);
+    }
   }
 
   /**
-   * Test print help messages
+   * Test printing of help messages
    */
-  @Test
+  @Test(timeout=500)
   public void testHelp() throws Exception {
     PrintStream oldOutPrintStream = System.out;
     PrintStream oldErrPrintStream = System.err;
@@ -168,7 +141,7 @@ public class TestRMAdmin {
     System.setErr(new PrintStream(dataErr));
     try {
       String[] args = { "-help" };
-      assertEquals(0, new RMAdminCLI().run(args));
+      assertEquals(0, rmAdminCLI.run(args));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -236,65 +209,35 @@ public class TestRMAdmin {
           "Usage: java RMAdmin", dataErr, 0);
       testError(new String[] { "-badParameter" },
           "badParameter: Unknown command", dataErr, -1); 
-
     } finally {
       System.setOut(oldOutPrintStream);
       System.setErr(oldErrPrintStream);
-
     }
-
   }
 
-  /**
-   * Test exceptions
-   */
-  @Test
+  @Test(timeout=500)
   public void testException() throws Exception {
     PrintStream oldErrPrintStream = System.err;
     ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
     System.setErr(new PrintStream(dataErr));
     try {
-
-      FakeRpcClientClassFactory.FakeRMAdminProtocol.resultCode = 
-          FakeRpcClientClassFactory.FakeRMAdminProtocol.ResultCode.
-          RemoteException;
+      when(admin.refreshQueues(any(RefreshQueuesRequest.class)))
+          .thenThrow(new IOException("test exception"));
       String[] args = { "-refreshQueues" };
-      RMAdminCLI test = new RMAdminCLI();
-      Configuration configuration = resourceManager.getConfig();
-      test.setConf(configuration);
 
-      assertEquals(-1, test.run(args));
-      assertEquals(
-          FakeRpcClientClassFactory.FakeRMAdminProtocol.FunctionCall.
-          refreshQueues,
-          FakeRpcClientClassFactory.FakeRMAdminProtocol.functionCall);
+      assertEquals(-1, rmAdminCLI.run(args));
+      verify(admin).refreshQueues(any(RefreshQueuesRequest.class));
       assertTrue(dataErr.toString().contains("refreshQueues: test exception"));
-      configuration.set(YarnConfiguration.RM_ADMIN_ADDRESS, "fake address");
-      // test IllegalArgumentException
-      assertEquals(-1, test.run(args));
-      assertTrue(dataErr.toString().contains(
-          "refreshQueues: Does not contain a valid host:port authority:"));
-
     } finally {
-      FakeRpcClientClassFactory.FakeRMAdminProtocol.resultCode = 
-          FakeRpcClientClassFactory.FakeRMAdminProtocol.ResultCode.OK;
       System.setErr(oldErrPrintStream);
-
     }
-
   }
 
   private void testError(String[] args, String template,
       ByteArrayOutputStream data, int resultCode) throws Exception {
-    assertEquals(resultCode, new RMAdminCLI().run(args));
+    assertEquals(resultCode, rmAdminCLI.run(args));
     assertTrue(data.toString().contains(template));
     data.reset();
-
   }
-
-  @AfterClass
-  public static void tearDown() {
-    resourceManager.stop();
-  }
-
+  
 }
