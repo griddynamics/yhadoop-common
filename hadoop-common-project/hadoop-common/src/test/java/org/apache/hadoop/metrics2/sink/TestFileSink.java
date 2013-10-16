@@ -112,15 +112,20 @@ public class TestFileSink {
     String outFileContent = new String(baos.toByteArray(), "UTF-8");
 
     // Check the out file content. Should be something like the following:
-    //1360244820087 test1.testRecord1: Context=test1, testTag1=testTagValue1, testTag2=testTagValue2, Hostname=myhost, testMetric1=1, testMetric2=1
+    //1360244820087 test1.testRecord1: Context=test1, testTag1=testTagValue1, testTag2=testTagValue2, Hostname=myhost, testMetric1=1, testMetric2=2
     //1360244820089 test1.testRecord2: Context=test1, testTag22=testTagValue22, Hostname=myhost
+    
+    // Note that in the below expression we allow tags and metrics to go in arbitrary order.  
     Pattern expectedContentPattern = Pattern.compile(
-       "^\\d+\\s+test1.testRecord1:\\s+Context=test1,\\s+testTag1=testTagValue1," +
-       "\\s+testTag2=testTagValue2,\\s+Hostname=.*,\\s+testMetric1=1,\\s+testMetric2=2" +
-    	 "$[\\n\\r]*^\\d+\\s+test1.testRecord2:\\s+Context=test1," +
-    	 "\\s+testTag22=testTagValue22,\\s+Hostname=.*$[\\n\\r]*", 
-    		Pattern.MULTILINE);
-    assertTrue(expectedContentPattern.matcher(outFileContent).matches());
+        // line #1:
+        "^\\d+\\s+test1.testRecord1:\\s+Context=test1,\\s+" +
+        "(testTag1=testTagValue1,\\s+testTag2=testTagValue2|testTag2=testTagValue2,\\s+testTag1=testTagValue1)," +
+        "\\s+Hostname=.*,\\s+(testMetric1=1,\\s+testMetric2=2|testMetric2=2,\\s+testMetric1=1)" +
+        // line #2:
+        "$[\\n\\r]*^\\d+\\s+test1.testRecord2:\\s+Context=test1," +
+        "\\s+testTag22=testTagValue22,\\s+Hostname=.*$[\\n\\r]*", 
+         Pattern.MULTILINE);
+     assertTrue(expectedContentPattern.matcher(outFileContent).matches());
   }
   
   @After

@@ -55,7 +55,7 @@ public class TestPatternFilter {
         .add("p.include.tags", "foo:f").subset("p");
     shouldAccept(wl, "foo");
     shouldAccept(wl, Arrays.asList(tag("bar", "", ""),
-                                   tag("foo", "", "f")));
+                                   tag("foo", "", "f")), new boolean[] {false, true});
     shouldAccept(wl, mockMetricsRecord("foo", Arrays.asList(
       tag("bar", "", ""), tag("foo", "", "f"))));
     shouldReject(wl, "bar");
@@ -80,7 +80,7 @@ public class TestPatternFilter {
       tag("bar", "", ""))));
     shouldReject(bl, "foo");
     shouldReject(bl, Arrays.asList(tag("bar", "", ""),
-                                   tag("foo", "", "f")));
+                                   tag("foo", "", "f")), new boolean[] {true, false});
     shouldReject(bl, mockMetricsRecord("foo", Arrays.asList(
       tag("bar", "", ""))));
     shouldReject(bl, mockMetricsRecord("bar", Arrays.asList(
@@ -133,35 +133,54 @@ public class TestPatternFilter {
     assertTrue("accepts "+ s, newRegexFilter(conf).accepts(s));
   }
 
+  // Version for one tag:
   static void shouldAccept(SubsetConfiguration conf, List<MetricsTag> tags) {
-    shouldAcceptImpl(true, conf, tags);
+    shouldAcceptImpl(true, conf, tags, new boolean[] {true});
+  }
+  // Version for multiple tags: 
+  static void shouldAccept(SubsetConfiguration conf, List<MetricsTag> tags, 
+      boolean[] expectedAcceptedSpec) {
+    shouldAcceptImpl(true, conf, tags, expectedAcceptedSpec);
   }
 
+  // Version for one tag:
   static void shouldReject(SubsetConfiguration conf, List<MetricsTag> tags) {
-    shouldAcceptImpl(false, conf, tags);
+    shouldAcceptImpl(false, conf, tags, new boolean[] {false});
+  }
+  // Version for multiple tags: 
+  static void shouldReject(SubsetConfiguration conf, List<MetricsTag> tags, 
+      boolean[] expectedAcceptedSpec) {
+    shouldAcceptImpl(false, conf, tags, expectedAcceptedSpec);
   }
   
-  private static void shouldAcceptImpl(final boolean expectAccept, 
-      SubsetConfiguration conf, List<MetricsTag> tags) {
+  private static void shouldAcceptImpl(final boolean expectAcceptList,  
+      SubsetConfiguration conf, List<MetricsTag> tags, boolean[] expectedAcceptedSpec) {
     final MetricsFilter globFilter = newGlobFilter(conf);
     final MetricsFilter regexFilter = newRegexFilter(conf);
     
-    assertTrue("accepts "+ tags, expectAccept == globFilter.accepts(tags));
-    assertTrue("accepts "+ tags, expectAccept == regexFilter.accepts(tags));
+    // Test acceptance of the tag list:  
+    assertEquals("accepts "+ tags, expectAcceptList, globFilter.accepts(tags));
+    assertEquals("accepts "+ tags, expectAcceptList, regexFilter.accepts(tags));
     
-    // Test results on each of the individual tag:
-    int acceptedCount = 0, rejectedCount = 0;
-    for (MetricsTag tag: tags) {
-      if (globFilter.accepts(tag)) {
+    // Test results on each of the individual tags:
+    int acceptedCount = 0;
+    for (int i=0; i<tags.size(); i++) {
+      MetricsTag tag = tags.get(i);
+      boolean actGlob = globFilter.accepts(tag);
+      boolean actRegex = regexFilter.accepts(tag);
+      assertEquals("accepts "+tag, expectedAcceptedSpec[i], actGlob);
+      // Both the filters should give the same result:
+      assertEquals(actGlob, actRegex);
+      if (actGlob) {
         acceptedCount++;
-      } else {
-        rejectedCount++;
       }
     }
-    if (expectAccept) {
+    if (expectAcceptList) {
+      // At least one individual tag should be accepted:
       assertTrue("No tag of the following accepted: " + tags, acceptedCount > 0);
     } else {
-      assertTrue("No tag of the following rejected: " + tags, rejectedCount > 0);
+      // At least one individual tag should be rejected: 
+      assertTrue("No tag of the following rejected: " + tags, acceptedCount < tags.size());
     }
   }
 
