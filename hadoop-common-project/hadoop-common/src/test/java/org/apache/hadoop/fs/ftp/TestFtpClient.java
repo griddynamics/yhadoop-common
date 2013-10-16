@@ -120,7 +120,7 @@ public class TestFtpClient {
    * Test a create file functions
    *
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 3000)
   public void testCreateFile() throws Exception {
     assertEquals("/", ftpFs.getHomeDirectory().toString());
     Path testFile = new Path("test1/test2/testFile.txt");
@@ -157,7 +157,7 @@ public class TestFtpClient {
    * Test a create directory functions
    * @throws Exception
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 3000)
   public void testCreateDirectories() throws Exception {
     FsPermission permission = new FsPermission((short) 777);
 
@@ -185,7 +185,7 @@ public class TestFtpClient {
    * Test a copy files functions
    *
    */
-  @Test(timeout = 3000)
+  @Test(timeout = 5000)
   public void testTransferFile() throws Exception {
     Path testFile = new Path("test1/test2/testFile.txt");
     ftpFs.create(testFile);
@@ -209,7 +209,7 @@ public class TestFtpClient {
    * Test a get  list functions
    *
    */
-  @Test(timeout = 3000)
+  @Test(timeout = 5000)
   public void testListFile() throws Exception {
     Path testFile = new Path("test1/test2/testFile.txt");
     Path testFile2 = new Path("test1/testFile2.txt");
@@ -261,7 +261,7 @@ public class TestFtpClient {
   /**
    * test rename files functions
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 3000)
   public void testRenameFile() throws Exception {
     Path testFile = new Path("test1/test2/testFile.txt");
     Path copyFile = new Path("test1/test2/copyFile.txt");
@@ -306,7 +306,7 @@ public class TestFtpClient {
    * Test a FTPInputStream class
    */
   @SuppressWarnings("resource")
-  @Test(timeout = 1000)
+  @Test(timeout = 3000)
   public void testFTPInputStream() throws Exception {
     Path testFile = new Path("test1/test2/testFile.txt");
     ftpFs.copyFromLocalFile(new Path(tmpFile), testFile);
@@ -371,7 +371,7 @@ public class TestFtpClient {
   /**
    * test FtpFs
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 3000)
   public void testFtpFs() throws Exception {
     FtpFs test = new FtpFs(getURI(), getConfiguration());
     assertEquals(21, test.getUriDefaultPort());
