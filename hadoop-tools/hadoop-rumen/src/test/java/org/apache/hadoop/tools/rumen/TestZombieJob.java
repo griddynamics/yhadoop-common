@@ -55,71 +55,73 @@ public class TestZombieJob {
     final Configuration conf = new Configuration();
     final FileSystem lfs = FileSystem.getLocal(conf);
 
-    @SuppressWarnings("deprecation")
-    final Path rootInputDir = new Path(INPUT_DIR_ROOT).makeQualified(lfs);
+    final Path rootInputDir = new Path(INPUT_DIR_ROOT)
+        .makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
     final Path rootInputFile = new Path(rootInputDir, "zombie");
 
-    @SuppressWarnings("resource")
     ZombieJobProducer parser = new ZombieJobProducer(new Path(rootInputFile,
         "input-trace.json"), new ZombieCluster(new Path(rootInputFile,
         "input-topology.json"), null, conf), conf);
-
-    JobStory job = null;
-    for (int i = 0; i < 4; i++) {
-      job = parser.getNextJob();
-      ZombieJob zJob = (ZombieJob) job;
-      LoggedJob loggedJob = zJob.getLoggedJob();
-      System.out.println(i + ":" + job.getNumberMaps() + "m, "
-          + job.getNumberReduces() + "r");
-      System.out
-          .println(loggedJob.getOutcome() + ", " + loggedJob.getJobtype());
-
-      System.out.println("Input Splits -- " + job.getInputSplits().length
-          + ", " + job.getNumberMaps());
-
-      System.out.println("Successful Map CDF -------");
-      for (LoggedDiscreteCDF cdf : loggedJob.getSuccessfulMapAttemptCDFs()) {
-        System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum()
-            + "--" + cdf.getMaximum());
+    try {
+      JobStory job = null;
+      for (int i = 0; i < 4; i++) {
+        job = parser.getNextJob();
+        ZombieJob zJob = (ZombieJob) job;
+        LoggedJob loggedJob = zJob.getLoggedJob();
+        System.out.println(i + ":" + job.getNumberMaps() + "m, "
+            + job.getNumberReduces() + "r");
+        System.out
+            .println(loggedJob.getOutcome() + ", " + loggedJob.getJobtype());
+  
+        System.out.println("Input Splits -- " + job.getInputSplits().length
+            + ", " + job.getNumberMaps());
+  
+        System.out.println("Successful Map CDF -------");
+        for (LoggedDiscreteCDF cdf : loggedJob.getSuccessfulMapAttemptCDFs()) {
+          System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum()
+              + "--" + cdf.getMaximum());
+          for (LoggedSingleRelativeRanking ranking : cdf.getRankings()) {
+            System.out.println("   " + ranking.getRelativeRanking() + ":"
+                + ranking.getDatum());
+          }
+        }
+        System.out.println("Failed Map CDF -----------");
+        for (LoggedDiscreteCDF cdf : loggedJob.getFailedMapAttemptCDFs()) {
+          System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum()
+              + "--" + cdf.getMaximum());
+          for (LoggedSingleRelativeRanking ranking : cdf.getRankings()) {
+            System.out.println("   " + ranking.getRelativeRanking() + ":"
+                + ranking.getDatum());
+          }
+        }
+        System.out.println("Successful Reduce CDF ----");
+        LoggedDiscreteCDF cdf = loggedJob.getSuccessfulReduceAttemptCDF();
+        System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum() + "--"
+            + cdf.getMaximum());
         for (LoggedSingleRelativeRanking ranking : cdf.getRankings()) {
           System.out.println("   " + ranking.getRelativeRanking() + ":"
               + ranking.getDatum());
         }
-      }
-      System.out.println("Failed Map CDF -----------");
-      for (LoggedDiscreteCDF cdf : loggedJob.getFailedMapAttemptCDFs()) {
-        System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum()
-            + "--" + cdf.getMaximum());
+        System.out.println("Failed Reduce CDF --------");
+        cdf = loggedJob.getFailedReduceAttemptCDF();
+        System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum() + "--"
+            + cdf.getMaximum());
         for (LoggedSingleRelativeRanking ranking : cdf.getRankings()) {
           System.out.println("   " + ranking.getRelativeRanking() + ":"
               + ranking.getDatum());
         }
+        System.out.print("map attempts to success -- ");
+        for (double p : loggedJob.getMapperTriesToSucceed()) {
+          System.out.print(p + ", ");
+        }
+        System.out.println();
+        System.out.println("===============");
+  
+        loggedJobs.add(loggedJob);
+        jobStories.add(job);
       }
-      System.out.println("Successful Reduce CDF ----");
-      LoggedDiscreteCDF cdf = loggedJob.getSuccessfulReduceAttemptCDF();
-      System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum() + "--"
-          + cdf.getMaximum());
-      for (LoggedSingleRelativeRanking ranking : cdf.getRankings()) {
-        System.out.println("   " + ranking.getRelativeRanking() + ":"
-            + ranking.getDatum());
-      }
-      System.out.println("Failed Reduce CDF --------");
-      cdf = loggedJob.getFailedReduceAttemptCDF();
-      System.out.println(cdf.getNumberValues() + ": " + cdf.getMinimum() + "--"
-          + cdf.getMaximum());
-      for (LoggedSingleRelativeRanking ranking : cdf.getRankings()) {
-        System.out.println("   " + ranking.getRelativeRanking() + ":"
-            + ranking.getDatum());
-      }
-      System.out.print("map attempts to success -- ");
-      for (double p : loggedJob.getMapperTriesToSucceed()) {
-        System.out.print(p + ", ");
-      }
-      System.out.println();
-      System.out.println("===============");
-
-      loggedJobs.add(loggedJob);
-      jobStories.add(job);
+    } finally {
+      parser.close();
     }
   }
 
