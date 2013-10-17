@@ -30,7 +30,7 @@ import org.apache.hadoop.mapred.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.test.PathUtils;
 
-public class TestFileOutputCommitter extends TestCase {
+public class TestMRCJCFileOutputCommitter extends TestCase {
   private static Path outDir = new Path(
      PathUtils.getTestPath(TestFileOutputCommitter.class), "output");
 

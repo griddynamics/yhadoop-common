@@ -34,7 +34,7 @@ import org.junit.Test;
 /**
  * A test to rest the RunJar class.
  */
-public class TestRunJar {
+public class TestMRCJCRunJar {
 
   private static File TEST_ROOT_DIR = PathUtils.getTestDir(TestRunJar.class);
 

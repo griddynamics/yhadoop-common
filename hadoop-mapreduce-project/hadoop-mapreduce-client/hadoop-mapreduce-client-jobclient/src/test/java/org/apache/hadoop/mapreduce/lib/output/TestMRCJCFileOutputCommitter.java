@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.test.PathUtils;
 
 
-public class TestFileOutputCommitter extends TestCase {
+public class TestMRCJCFileOutputCommitter extends TestCase {
   private static Path outDir = PathUtils.getTestPath(TestFileOutputCommitter.class);
 
   // A random task attempt id for testing.

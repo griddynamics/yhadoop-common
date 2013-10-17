@@ -187,6 +187,13 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5514. Fix TestRMContainerAllocator. (Zhijie Shen via acmurthy) 
 
+    MAPREDUCE-5102. fix coverage org.apache.hadoop.mapreduce.lib.db and
+    org.apache.hadoop.mapred.lib.db (Aleksey Gorshkov, Andrey Klochkov, and
+    Nathan Roberts via jlowe)
+
+    MAPREDUCE-5585. TestCopyCommitter#testNoCommitAction Fails on JDK7
+    (jeagles)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -194,10 +201,26 @@ Release 2.2.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+  
+    MAPREDUCE-5329. Allow MR applications to use additional AuxServices,
+    which are compatible with the default MapReduce shuffle.
+    (Avner BenHanoch via sseth)
+
+    MAPREDUCE-5463. Deprecate SLOTS_MILLIS counters (Tzuyoshi Ozawa via Sandy
+    Ryza)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
+    Roberts via jlowe)
+
+    MAPREDUCE-5546. mapred.cmd on Windows set HADOOP_OPTS incorrectly (Chuan Liu
+    via cnauroth)
+
+    MAPREDUCE-5518. Fixed typo "can't read paritions file". (Albert Chu
+    via devaraj)
 
 Release 2.2.0 - 2013-10-13
 
@@ -1470,6 +1493,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5513. ConcurrentModificationException in JobControl (Robert
     Parker via jlowe)
+
+    MAPREDUCE-5586. TestCopyMapper#testCopyFailOnBlockSizeDifference fails when
+    run from hadoop-tools/hadoop-distcp directory (jeagles)
 
 Release 0.23.9 - 2013-07-08
 
