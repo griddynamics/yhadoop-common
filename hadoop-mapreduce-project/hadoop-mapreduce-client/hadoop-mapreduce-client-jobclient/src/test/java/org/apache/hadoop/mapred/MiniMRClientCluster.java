@@ -21,7 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 
 /*
  * A simple interface for a client MR cluster used for testing. This interface
@@ -40,7 +39,5 @@ public interface MiniMRClientCluster {
   public void stop() throws IOException;
 
   public Configuration getConfig() throws IOException;
-  
-  public HistoryFileInfo getJobFileInfo(JobID jobId) throws IOException;
 
 }

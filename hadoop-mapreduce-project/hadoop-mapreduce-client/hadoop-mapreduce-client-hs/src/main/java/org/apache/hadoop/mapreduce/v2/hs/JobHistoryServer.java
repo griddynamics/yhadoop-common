@@ -125,7 +125,7 @@ public class JobHistoryServer extends CompositeService {
     } catch(IOException ie) {
       throw new YarnRuntimeException("History Server Failed to login", ie);
     }
-    jobHistoryService = createJobHistory();
+    jobHistoryService = new JobHistory();
     historyContext = (HistoryContext)jobHistoryService;
     stateStore = createStateStore(conf);
     this.jhsDTSecretManager = createJHSSecretManager(conf, stateStore);
@@ -140,10 +140,6 @@ public class JobHistoryServer extends CompositeService {
     addService(aggLogDelService);
     addService(hsAdminServer);
     super.serviceInit(config);
-  }
-
-  protected JobHistory createJobHistory() {
-    return new JobHistory();
   }
 
   protected JHSDelegationTokenSecretManager createJHSSecretManager(
