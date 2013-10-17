@@ -208,7 +208,8 @@ public class JobHistory extends AbstractService implements HistoryContext {
   /**
    * Helper method for test cases.
    */
-  HistoryFileInfo getJobFileInfo(JobId jobId) throws IOException {
+  @VisibleForTesting
+  public HistoryFileInfo getJobFileInfo(JobId jobId) throws IOException {
     return hsManager.getFileInfo(jobId);
   }
 

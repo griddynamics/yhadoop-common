@@ -307,7 +307,7 @@ public class HistoryFileManager extends AbstractService {
     }
 
     @VisibleForTesting
-    synchronized boolean isMovePending() {
+    public synchronized boolean isMovePending() {
       return state == HistoryInfoState.IN_INTERMEDIATE
           || state == HistoryInfoState.MOVE_FAILED;
     }
@@ -415,7 +415,8 @@ public class HistoryFileManager extends AbstractService {
      * Return the history file.  This should only be used for testing.
      * @return the history file.
      */
-    synchronized Path getHistoryFile() {
+    @VisibleForTesting
+    public synchronized Path getHistoryFile() {
       return historyFile;
     }
     
