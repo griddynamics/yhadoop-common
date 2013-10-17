@@ -40,7 +40,7 @@ import org.apache.hadoop.test.PathUtils;
 
 
 public class TestMRCJCFileOutputCommitter extends TestCase {
-  private static Path outDir = PathUtils.getTestPath(TestFileOutputCommitter.class);
+  private static Path outDir = PathUtils.getTestPath(TestMRCJCFileOutputCommitter.class);
 
   // A random task attempt id for testing.
   private static String attempt = "attempt_200707121733_0001_m_000000_0";
