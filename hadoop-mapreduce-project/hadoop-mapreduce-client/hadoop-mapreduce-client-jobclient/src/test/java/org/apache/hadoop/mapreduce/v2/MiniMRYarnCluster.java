@@ -36,6 +36,7 @@ import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
@@ -60,6 +61,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   public static final String APPJAR = JarFinder.getJar(LocalContainerLauncher.class);
 
   private static final Log LOG = LogFactory.getLog(MiniMRYarnCluster.class);
+  private JobHistory jobHistory;
   private JobHistoryServer historyServer;
   private JobHistoryServerWrapper historyServerWrapper;
 
@@ -199,7 +201,15 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
           getConfig().set(JHAdminConfig.JHS_ADMIN_ADDRESS,
             hostname + ":0");
         }
-        historyServer = new JobHistoryServer();
+        historyServer = new JobHistoryServer() {
+
+          @Override
+          protected JobHistory createJobHistory() {
+            jobHistory = new JobHistory();
+            return jobHistory;
+          }
+          
+        };
         historyServer.init(getConfig());
         new Thread() {
           public void run() {
@@ -247,4 +257,9 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   public JobHistoryServer getHistoryServer() {
     return this.historyServer;
   }
+  
+  public JobHistory getJobHistory() {
+    return this.jobHistory;
+  }
+  
 }

@@ -92,7 +92,9 @@ public class WordList implements State {
    * Note: That this API is only for Jackson JSON deserialization.
    */
   public void setSize(int size) {
-    list = new HashMap<String, Integer>(size);
+    if (size != list.size()) {
+      list = new HashMap<String, Integer>(size);
+    }
   }
   
   /**

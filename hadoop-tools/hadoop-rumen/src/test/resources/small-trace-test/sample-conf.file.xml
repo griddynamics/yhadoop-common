@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -15,32 +17,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.mapred;
-
-import java.io.IOException;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
-
-/*
- * A simple interface for a client MR cluster used for testing. This interface
- * provides basic methods which are independent of the underlying Mini Cluster (
- * either through MR1 or MR2).
- */
-public interface MiniMRClientCluster {
-
-  public void start() throws IOException;
-
-  /**
-   * Stop and start back the cluster using the same configuration.
-   */
-  public void restart() throws IOException;
-
-  public void stop() throws IOException;
-
-  public Configuration getConfig() throws IOException;
-  
-  public HistoryFileInfo getJobFileInfo(JobID jobId) throws IOException;
-
-}
+-->
+<configuration>
+<!--
+Old mapred config properties
+-->
+   <property>
+      <name>mapred.job.queue.name</name><value>TheQueue</value>
+   </property>
+   <property>
+      <name>mapred.job.name</name><value>MyMRJob</value>
+   </property>
+   <property>
+      <name>maproduce.uninteresting.property</name><value>abcdef</value>
+   </property>
+   <property><name>mapred.child.java.opts</name><value>-server -Xmx640m -Djava.net.preferIPv4Stack=true</value></property>
+</configuration>

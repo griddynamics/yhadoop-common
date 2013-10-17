@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -71,6 +75,12 @@ public class MiniMRYarnClusterAdapter implements MiniMRClientCluster {
     miniMRYarnCluster = new MiniMRYarnCluster(callerName, noOfNMs);
     miniMRYarnCluster.init(oldConf);
     miniMRYarnCluster.start();
+  }
+
+  @Override
+  public HistoryFileInfo getJobFileInfo(JobID jobId) throws IOException {
+    return miniMRYarnCluster.getJobHistory().getJobFileInfo(
+        TypeConverter.toYarn(jobId));
   }
 
 }
