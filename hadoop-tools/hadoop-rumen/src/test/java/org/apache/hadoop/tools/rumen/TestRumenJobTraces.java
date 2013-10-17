@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -313,7 +314,7 @@ public class TestRumenJobTraces {
     // Verify if all the history logs are expected ones and they are in the
     // expected order
     assertTrue("Some of the history log files do not match the expected.",
-        historyLogs.equals(expectedHistoryFileNames));
+        CollectionUtils.isEqualCollection(historyLogs, expectedHistoryFileNames));
   }
 
   /**
