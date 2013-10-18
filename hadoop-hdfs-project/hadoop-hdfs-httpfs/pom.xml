@@ -65,6 +65,11 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-core</artifactId>
       <scope>compile</scope>
@@ -442,13 +447,8 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <forkMode>once</forkMode>
+              <forkMode>always</forkMode>
               <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
-              <systemPropertyVariables>
-                <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
-                <kerberos.realm>${kerberos.realm}</kerberos.realm>
-                <httpfs.http.hostname>localhost</httpfs.http.hostname>
-              </systemPropertyVariables>
               <includes>
                 <include>**/TestHttpFSWithKerberos.java</include>
               </includes>
