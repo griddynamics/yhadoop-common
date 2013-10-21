@@ -117,7 +117,6 @@ public class TestFileSystemAccessService extends HFSTestCase {
   @TestException(exception = ServiceException.class, msgRegExp = "H02.*")
   @TestDir
   public void kerberosInitializationFailure() throws Exception {
-    try {
     String dir = TestDirHelper.getTestDir().getAbsolutePath();
     String services = StringUtils.join(",",
       Arrays.asList(InstrumentationService.class.getName(),
@@ -130,10 +129,6 @@ public class TestFileSystemAccessService extends HFSTestCase {
     conf.set("server.hadoop.authentication.kerberos.principal", "foo@FOO");
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
-    } catch (Exception e) {
-      e.printStackTrace();
-      throw e;
-    }
   }
 
   @Test
