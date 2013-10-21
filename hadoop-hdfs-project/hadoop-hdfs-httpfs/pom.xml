@@ -44,7 +44,6 @@
       ${project.build.directory}/${project.artifactId}-${project.version}/share/hadoop/httpfs/tomcat
     </httpfs.tomcat.dist.dir>
     <kerberos.realm>LOCALHOST</kerberos.realm>
-    <test.exclude.kerberos.test>**/TestHttpFSWithKerberos.java</test.exclude.kerberos.test>
     <tomcat.download.url>http://archive.apache.org/dist/tomcat/tomcat-6/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz</tomcat.download.url>
   </properties>
 
@@ -301,10 +300,10 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <threadCount>1</threadCount>
+          <forkMode>always</forkMode>
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
           <systemPropertyVariables>
             <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
-            <kerberos.realm>${kerberos.realm}</kerberos.realm>
           </systemPropertyVariables>
           <properties>
             <property>
@@ -315,7 +314,6 @@
           <excludes>
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
-            <exclude>${test.exclude.kerberos.test}</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -433,31 +431,6 @@
   </build>
 
   <profiles>
-    <profile>
-      <id>testKerberos</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <test.exclude.kerberos.test>_</test.exclude.kerberos.test>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <forkMode>always</forkMode>
-              <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
-              <includes>
-                <include>**/TestHttpFSWithKerberos.java</include>
-              </includes>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    
     <profile>
       <id>docs</id>
       <activation>
