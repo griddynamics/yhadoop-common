@@ -399,7 +399,7 @@ public class TestRumenJobTraces {
   /**
    * Test if {@link CurrentJHParser} can read events from current JH files.
    */
-  @Test//(timeout=150000)
+  @Test(timeout=150000)
   public void testCurrentJHParser() throws Exception {
     final Path tempDir = new Path(rootTempDir, "TestCurrentJHParser");
     lfs.delete(tempDir, true);
