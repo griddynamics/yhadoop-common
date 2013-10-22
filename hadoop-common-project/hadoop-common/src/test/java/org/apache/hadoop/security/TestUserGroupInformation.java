@@ -19,7 +19,6 @@ package org.apache.hadoop.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.TestSaslRPC;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
@@ -32,7 +31,6 @@ import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
@@ -43,10 +41,8 @@ import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
 import static org.apache.hadoop.ipc.TestSaslRPC.*;
-import static org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.junit.Assert.*;
-import static org.junit.Assume.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -800,43 +796,6 @@ public class TestUserGroupInformation {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
     UserGroupInformation.setLoginUser(ugi);
     assertEquals(ugi, UserGroupInformation.getLoginUser());
-  }
-
-  /**
-   * System property required to pass the test: 
-   *  "user.principal"    - short name of the principal.
-   * System property that should be set in order to use correct Kerberos config file:
-   *  "java.security.krb5.conf" - the path to the Kerberos config file.
-   */
-  @Test(timeout=30000)
-  public void testMain() throws Exception {
-    // 0. test #main(String[]) with no args:
-    UserGroupInformation.main(new String[0]);
-    
-    final String principal = System.getProperty("user.principal", null);
-    // Skip the test if the principal is not set: 
-    assumeTrue(principal != null);
-    
-    final String keytabPath = System.getProperty("user.keytab", "/etc/krb5.keytab");
-    checkFileReadable(keytabPath);
-    
-    // 1. Invoke with simple auth: 
-    final String[] args = new String[] { principal, keytabPath }; 
-    UserGroupInformation.main(args);
-
-    // 2. Set Kerberos auth method and invoke again:
-    final Configuration c = new Configuration();
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, c);
-    UserGroupInformation.setConfiguration(c);
-    
-    UserGroupInformation.main(args);
-  }
-
-  static void checkFileReadable(String path) {
-    File f = new File(path);
-    assertTrue("File ["+f.getAbsolutePath()+"] does not exist.", f.exists());
-    assertTrue("File ["+f.getAbsolutePath()+"] is not a regular file.", f.isFile());
-    assertTrue("File ["+f.getAbsolutePath()+"] is not readable.", f.canRead());
   }
 
   /**
