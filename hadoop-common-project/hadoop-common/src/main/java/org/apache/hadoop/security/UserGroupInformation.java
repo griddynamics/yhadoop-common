@@ -772,7 +772,7 @@ public class UserGroupInformation {
     long end = tgt.getEndTime().getTime();
     return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
   }
-  
+
   /**Spawn a thread to do periodic renewals of kerberos credentials*/
   private void spawnAutoRenewalThreadForUserCreds() {
     if (isSecurityEnabled()) {
@@ -830,7 +830,6 @@ public class UserGroupInformation {
       }
     }
   }
-  
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
    * file and logs them in. They become the currently logged-in user.
