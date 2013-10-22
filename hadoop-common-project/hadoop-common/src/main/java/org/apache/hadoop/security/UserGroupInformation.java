@@ -779,7 +779,6 @@ public class UserGroupInformation {
       //spawn thread only if we have kerb credentials
       if (user.getAuthenticationMethod() == AuthenticationMethod.KERBEROS &&
           !isKeytab) {
-        
         Thread t = new Thread(new Runnable() {
           
           @Override
@@ -827,7 +826,7 @@ public class UserGroupInformation {
         });
         t.setDaemon(true);
         t.setName("TGT Renewer for " + getUserName());
-        t.start();      
+        t.start();
       }
     }
   }
@@ -1052,7 +1051,7 @@ public class UserGroupInformation {
     if (now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
           "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) +
-          " second(s) before.");
+          " seconds before.");
       return false;
     }
     return true;
