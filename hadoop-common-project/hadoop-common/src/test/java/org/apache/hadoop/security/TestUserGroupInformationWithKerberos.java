@@ -298,10 +298,6 @@ public class TestUserGroupInformationWithKerberos {
     assertTrue(loginTime0 == 0L);
     final LoginContext loginContext0 = user.getLogin();
 
-    // no auto-renew thread should be started in this case:
-    final Thread renewThread = ugi.getRenewalThread();
-    assertNull(renewThread);
-
     // 1. ask the UGI to re-login from the keytab:
     ugi.checkTGTAndReloginFromKeytab();
     // check that re-login really happened (because loginTime0 == 0, see above):

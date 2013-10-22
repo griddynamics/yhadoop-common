@@ -314,8 +314,6 @@ public class UserGroupInformation {
   private final User user;
   private final boolean isKeytab;
   private final boolean isKrbTkt;
-
-  private volatile Thread renewalThread;
   
   private static String OS_LOGIN_MODULE_NAME;
   private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -782,14 +780,7 @@ public class UserGroupInformation {
       if (user.getAuthenticationMethod() == AuthenticationMethod.KERBEROS &&
           !isKeytab) {
         
-        final Thread old = renewalThread;
-        if (old != null 
-            && (old.getState() != Thread.State.TERMINATED)) {
-          throw new IllegalStateException("An existing renewal thread "
-          		+ "is still not terminated.");
-        }
-        
-        final Thread newThread = new Thread(new Runnable() {
+        Thread t = new Thread(new Runnable() {
           
           @Override
           public void run() {
@@ -807,10 +798,9 @@ public class UserGroupInformation {
                   LOG.debug("Current time is " + now);
                   LOG.debug("Next refresh is " + nextRefresh);
                 }
-                long toSleep = nextRefresh - now;
-                if (toSleep > 0) {
-                  Thread.sleep(toSleep);
-                } 
+                if (now < nextRefresh) {
+                  Thread.sleep(nextRefresh - now);
+                }
                 Shell.execCommand(cmd, "-R");
                 if(LOG.isDebugEnabled()) {
                   LOG.debug("renewed ticket");
@@ -825,7 +815,7 @@ public class UserGroupInformation {
                 nextRefresh = Math.max(getRefreshTime(tgt),
                                        now + kerberosMinSecondsBeforeRelogin);
               } catch (InterruptedException ie) {
-                LOG.warn("Interrupted: terminating renewal thread.");
+                LOG.warn("Terminating renewal thread");
                 return;
               } catch (IOException ie) {
                 LOG.warn("Exception encountered while running the" +
@@ -835,17 +825,11 @@ public class UserGroupInformation {
             }
           }
         });
-        newThread.setDaemon(true);
-        newThread.setName("TGT Renewer for " + getUserName());
-        newThread.start();
-        renewalThread = newThread;
+        t.setDaemon(true);
+        t.setName("TGT Renewer for " + getUserName());
+        t.start();      
       }
     }
-  }
-  
-  @VisibleForTesting
-  Thread getRenewalThread() {
-    return renewalThread;
   }
   
   /**
