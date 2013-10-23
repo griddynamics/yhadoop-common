@@ -33,7 +33,6 @@ import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.security.SslSocketConnector;
 
 import javax.net.ssl.SSLServerSocketFactory;
@@ -140,10 +139,13 @@ public class SecureDataNodeStarter implements Daemon {
     System.err.println("Successfully obtained privileged resources (streaming port = "
         + ss + " ) (http listener port = " + listener.getConnection() +")");
     
-    if ((ss.getLocalPort() > 1023 || listener.getPort() > 1023) &&
-        UserGroupInformation.isSecurityEnabled()) {
+    boolean allowSecurePorts = conf.getBoolean("ignore.secure.ports.for.testing", false);
+    if (!allowSecurePorts 
+        && (ss.getLocalPort() > 1023 || listener.getPort() > 1023) 
+        && UserGroupInformation.isSecurityEnabled()) {
       throw new RuntimeException("Cannot start secure datanode with unprivileged ports");
     }
+    
     System.err.println("Opened streaming server at " + streamingAddr);
     System.err.println("Opened info server at " + infoSocAddr);
     return new SecureResources(ss, listener);
