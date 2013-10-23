@@ -29,12 +29,14 @@ import org.apache.directory.server.constants.ServerDNConstants;
 import org.apache.directory.server.core.DefaultDirectoryService;
 import org.apache.directory.server.core.api.CacheService;
 import org.apache.directory.server.core.api.DirectoryService;
+import org.apache.directory.server.core.api.DnFactory;
 import org.apache.directory.server.core.api.InstanceLayout;
 import org.apache.directory.server.core.api.schema.SchemaPartition;
 import org.apache.directory.server.core.kerberos.KeyDerivationInterceptor;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.core.partition.ldif.LdifPartition;
+import org.apache.directory.server.core.shared.DefaultDnFactory;
 import org.apache.directory.server.kerberos.kdc.KdcServer;
 import org.apache.directory.server.kerberos.shared.crypto.encryption.KerberosKeyFactory;
 import org.apache.directory.server.kerberos.shared.keytab.Keytab;
@@ -306,9 +308,11 @@ public class MiniKdc {
   @SuppressWarnings("unchecked")
   private void initDirectoryService() throws Exception {
     ds = new DefaultDirectoryService();
-    ds.setInstanceLayout(new InstanceLayout(workDir));
+    InstanceLayout layout = new InstanceLayout(workDir);
+    ds.setInstanceLayout(layout);
 
     CacheService cacheService = new CacheService();
+    cacheService.initialize(layout);
     ds.setCacheService(cacheService);
 
     // first load the schema
@@ -324,7 +328,8 @@ public class MiniKdc {
     schemaManager.loadAllEnabled();
     ds.setSchemaManager(schemaManager);
     // Init the LdifPartition with schema
-    LdifPartition schemaLdifPartition = new LdifPartition(schemaManager);
+    DnFactory dnf = new DefaultDnFactory(schemaManager, cacheService.getCache("dnCache") );
+    LdifPartition schemaLdifPartition = new LdifPartition(schemaManager, dnf);
     schemaLdifPartition.setPartitionPath(schemaPartitionDirectory.toURI());
 
     // The schema partition
@@ -332,7 +337,7 @@ public class MiniKdc {
     schemaPartition.setWrappedPartition(schemaLdifPartition);
     ds.setSchemaPartition(schemaPartition);
 
-    JdbmPartition systemPartition = new JdbmPartition(ds.getSchemaManager());
+    JdbmPartition systemPartition = new JdbmPartition(ds.getSchemaManager(), dnf);
     systemPartition.setId("system");
     systemPartition.setPartitionPath(new File(
             ds.getInstanceLayout().getPartitionsDirectory(),
@@ -349,7 +354,7 @@ public class MiniKdc {
     String orgName= conf.getProperty(ORG_NAME).toLowerCase();
     String orgDomain = conf.getProperty(ORG_DOMAIN).toLowerCase();
 
-    JdbmPartition partition = new JdbmPartition(ds.getSchemaManager());
+    JdbmPartition partition = new JdbmPartition(ds.getSchemaManager(), dnf);
     partition.setId(orgName);
     partition.setPartitionPath(new File(
             ds.getInstanceLayout().getPartitionsDirectory(), orgName).toURI());
@@ -516,7 +521,8 @@ public class MiniKdc {
   }
 
   /**
-   * Creates  multiple principals in the KDC and adds them to a keytab file.
+   * Creates  multiple principals in the KDC with auto-generated password 
+   * and adds them to a keytab file.
    *
    * @param keytabFile keytab file to add the created principal.s
    * @param principals principals to add to the KDC, do not include the domain.
@@ -526,21 +532,40 @@ public class MiniKdc {
   public void createPrincipal(File keytabFile, String ... principals)
           throws Exception {
     String generatedPassword = UUID.randomUUID().toString();
+    String[] passwords = new String[principals.length];
+    Arrays.fill(passwords, generatedPassword);
+    createPrincipal(keytabFile, passwords, principals);
+  }
+
+  /**
+   * Creates  multiple principals in the KDC with specified passwords 
+   * and adds them to a keytab file.
+   *
+   * @param keytabFile keytab file to add the created principal.s
+   * @param passwords passwords to use for the principals.
+   * @param principals principals to add to the KDC, do not include the domain.
+   * @throws Exception thrown if the principals or the keytab file could not be
+   * created.
+   */
+  public void createPrincipal(File keytabFile, String[] passwords, String[] principals)
+      throws Exception {
     Keytab keytab = new Keytab();
     List<KeytabEntry> entries = new ArrayList<KeytabEntry>();
-    for (String principal : principals) {
-      createPrincipal(principal, generatedPassword);
+    for (int i=0; i<principals.length; i++) {
+      String principal = principals[i];
+      String password = passwords[i];
+      createPrincipal(principal, password);
       principal = principal + "@" + getRealm();
       KerberosTime timestamp = new KerberosTime();
-      for (Map.Entry<EncryptionType, EncryptionKey> entry : KerberosKeyFactory
-              .getKerberosKeys(principal, generatedPassword).entrySet()) {
+      for (Map.Entry<EncryptionType, EncryptionKey> entry : KerberosKeyFactory.getKerberosKeys(
+          principal, password).entrySet()) {
         EncryptionKey ekey = entry.getValue();
         byte keyVersion = (byte) ekey.getKeyVersion();
-        entries.add(new KeytabEntry(principal, 1L, timestamp, keyVersion,
-                ekey));
+        entries.add(new KeytabEntry(principal, 1L, timestamp, keyVersion, ekey));
       }
     }
     keytab.setEntries(entries);
     keytab.write(keytabFile);
   }
+  
 }

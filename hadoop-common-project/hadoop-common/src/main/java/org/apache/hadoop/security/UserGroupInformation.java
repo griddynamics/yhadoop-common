@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,6 +54,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -80,7 +83,11 @@ public class UserGroupInformation {
   /**
    * Percentage of the ticket window to use before we renew ticket.
    */
-  private static final float TICKET_RENEW_WINDOW = 0.80f;
+  private static float TICKET_RENEW_WINDOW = 0.80f;
+  @VisibleForTesting
+  static void setTicketRenewWindowFactor(float ticketRenewWindowFactor) {
+    TICKET_RENEW_WINDOW = ticketRenewWindowFactor;
+  }
   static final String HADOOP_USER_NAME = "HADOOP_USER_NAME";
   static final String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
   
@@ -196,10 +203,14 @@ public class UserGroupInformation {
   private static Groups groups;
   /** The configuration to use */
   private static Configuration conf;
-
   
-  /** Leave 10 minutes between relogin attempts. */
-  private static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
+  /** Min time (in *milliseconds*) before relogin for Kerberos.
+   * Note, however, that 
+   * {@link CommonConfigurationKeysPublic#HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN}
+   * and {@link CommonConfigurationKeysPublic#HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT}
+   * are specified in *seconds*. 
+   * */
+  private static long kerberosMinSecondsBeforeRelogin;
   
   /**Environment variable pointing to the token cache file*/
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
@@ -234,6 +245,16 @@ public class UserGroupInformation {
             "Problem with Kerberos auth_to_local name configuration", ioe);
       }
     }
+    try {
+      kerberosMinSecondsBeforeRelogin = 1000L * conf.getLong(
+              HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN,
+              HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT);
+    }    
+    catch(NumberFormatException nfe) {
+        throw new IllegalArgumentException("Invalid attribute value for " +
+              HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN + " of " +
+              conf.get(HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN));
+    }    
     // If we haven't set up testing groups, use the configuration to find it
     if (!(groups instanceof TestingGroups)) {
       groups = Groups.getUserToGroupsMappingService(conf);
@@ -790,7 +811,7 @@ public class UserGroupInformation {
                   return;
                 }
                 nextRefresh = Math.max(getRefreshTime(tgt),
-                                       now + MIN_TIME_BEFORE_RELOGIN);
+                                       now + kerberosMinSecondsBeforeRelogin);
               } catch (InterruptedException ie) {
                 LOG.warn("Terminating renewal thread");
                 return;
@@ -1025,9 +1046,9 @@ public class UserGroupInformation {
   }
 
   private boolean hasSufficientTimeElapsed(long now) {
-    if (now - user.getLastLogin() < MIN_TIME_BEFORE_RELOGIN ) {
+    if (now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
-          "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
+          "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) + " second(s)"+
           " before.");
       return false;
     }

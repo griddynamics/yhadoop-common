@@ -16,10 +16,9 @@
  */
 package org.apache.hadoop.security;
 
+import static org.junit.Assert.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.TestSaslRPC;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
@@ -41,9 +40,7 @@ import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
 import static org.apache.hadoop.ipc.TestSaslRPC.*;
-import static org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import static org.apache.hadoop.test.MetricsAsserts.*;
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +59,7 @@ public class TestUserGroupInformation {
    * class that simply throws an exception will ensure that the tests fail
    * if UGI uses the static default config instead of its own config
    */
-  private static class DummyLoginConfiguration extends
+  static class DummyLoginConfiguration extends
     javax.security.auth.login.Configuration
   {
     @Override
@@ -413,39 +410,50 @@ public class TestUserGroupInformation {
   @SuppressWarnings("unchecked") // from Mockito mocks
   @Test (timeout = 30000)
   public <T extends TokenIdentifier> void testAddToken() throws Exception {
-    UserGroupInformation ugi = 
+    final UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser("someone"); 
     
     Token<T> t1 = mock(Token.class);
     Token<T> t2 = mock(Token.class);
     Token<T> t3 = mock(Token.class);
     
+    boolean result; 
     // add token to ugi
-    ugi.addToken(t1);
+    result = ugi.addToken(t1);
+    assertTrue(result);
     checkTokens(ugi, t1);
 
     // replace token t1 with t2 - with same key (null)
-    ugi.addToken(t2);
+    result = ugi.addToken(t2);
+    assertTrue(result);
     checkTokens(ugi, t2);
     
     // change t1 service and add token
     when(t1.getService()).thenReturn(new Text("t1"));
-    ugi.addToken(t1);
+    result = ugi.addToken(t1);
+    assertTrue(result);
     checkTokens(ugi, t1, t2);
   
     // overwrite t1 token with t3 - same key (!null)
     when(t3.getService()).thenReturn(new Text("t1"));
-    ugi.addToken(t3);
+    result = ugi.addToken(t3);
+    assertTrue(result);
     checkTokens(ugi, t2, t3);
 
     // just try to re-add with new name
     when(t1.getService()).thenReturn(new Text("t1.1"));
-    ugi.addToken(t1);
+    result = ugi.addToken(t1);
+    assertTrue(result);
     checkTokens(ugi, t1, t2, t3);    
 
     // just try to re-add with new name again
-    ugi.addToken(t1);
-    checkTokens(ugi, t1, t2, t3);    
+    result = ugi.addToken(t1);
+    assertTrue(result);
+    checkTokens(ugi, t1, t2, t3);
+    
+    // test null token addition:
+    result = ugi.addToken(null);
+    assertTrue(!result);
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks
