@@ -111,6 +111,9 @@ Release 2.2.1 - UNRELEASED
     YARN-1335. Move duplicate code from FSSchedulerApp and FiCaSchedulerApp
     into SchedulerApplication (Sandy Ryza)
 
+    YARN-1333. Support blacklisting in the Fair Scheduler (Tsuyoshi Ozawa via
+    Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -144,6 +147,8 @@ Release 2.2.1 - UNRELEASED
 
     YARN-1330. Fair Scheduler: defaultQueueSchedulingPolicy does not take effect
     (Sandy Ryza)
+    
+    YARN-1022. Unnecessary INFO logs in AMRMClientAsync (haosdent via bikas)
 
 Release 2.2.0 - 2013-10-13
 
