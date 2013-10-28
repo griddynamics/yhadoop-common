@@ -115,7 +115,7 @@ public class TestConcurrentRead {
     }
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testConcurrentRead() throws InterruptedException {
     int nThr = conf.getInt("test.rumen.concurrent-read.threads", 4);
     int repeat = conf.getInt("test.rumen.concurrent-read.repeat", 10);

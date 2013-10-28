@@ -125,7 +125,7 @@ public class TestZombieJob {
     }
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testFirstJob() {
     // 20th job seems reasonable: "totalMaps":329,"totalReduces":101
     // successful map: 80 node-local, 196 rack-local, 53 rack-remote, 2 unknown
@@ -164,7 +164,7 @@ public class TestZombieJob {
     // TODO fill in test case
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testSecondJob() {
     // 7th job has many failed tasks.
     // 3204 m, 0 r
@@ -196,7 +196,7 @@ public class TestZombieJob {
     // available data set.
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testFourthJob() {
     // 7th job has many failed tasks.
     // 3204 m, 0 r
@@ -228,7 +228,7 @@ public class TestZombieJob {
     assertEquals(State.FAILED, taInfo.getRunState());
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testRecordIOInfo() {
     JobStory job = jobStories.get(3);
 
@@ -249,7 +249,7 @@ public class TestZombieJob {
     assertEquals(reduceTaskCounts[4], reduceTask.getTaskMemory());
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testMakeUpInfo() {
     // get many non-exist tasks
     // total 3204 map tasks, 3300 is a non-exist task.

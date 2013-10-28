@@ -102,7 +102,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link UserName}, serialization and anonymization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testUserNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -131,7 +131,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link JobName}, serialization and anonymization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testJobNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -162,7 +162,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link QueueName}, serialization and anonymization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testQueueNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -196,7 +196,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName}.
    */
-  @Test
+  @Test(timeout=5000)
   public void testNodeNameDataType() throws IOException {
     // test hostname
     //   test only hostname
@@ -244,7 +244,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName} serialization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testNodeNameDefaultSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -272,7 +272,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName} anonymization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testNodeNameAnonymization() throws IOException {
     JsonSerializer<?> anonymizingSerializer = 
       new DefaultAnonymizingRumenSerializer(new StatePool(), 
@@ -332,7 +332,7 @@ public class TestRumenAnonymization {
    * Test {@link JobProperties}.
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test(timeout=5000)
   public void testJobPropertiesDataType() throws IOException {
     // test job properties
     Properties properties = new Properties();
@@ -360,7 +360,7 @@ public class TestRumenAnonymization {
    * Test {@link JobProperties} serialization.
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test(timeout=5000)
   public void testJobPropertiesSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -380,7 +380,7 @@ public class TestRumenAnonymization {
    * Test {@link JobProperties} anonymization.
    */
   @SuppressWarnings("deprecation")
-  @Test
+  @Test(timeout=5000)
   public void testJobPropertiesAnonymization() throws IOException {
     // test job properties
     Properties properties = new Properties();
@@ -413,7 +413,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link ClassName}, serialization and anonymization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testClassNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -460,7 +460,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName}.
    */
-  @Test
+  @Test(timeout=5000)
   public void testFileName() throws IOException {
     // test file on hdfs
     FileName hFile = new FileName("hdfs://testnn:123/user/test.json");
@@ -516,7 +516,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName} serialization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testFileNameSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -572,7 +572,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName} anonymization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testFileNameAnonymization() throws IOException {
     JsonSerializer<?> anonymizingSerializer = 
       new DefaultAnonymizingRumenSerializer(new StatePool(), 
@@ -653,7 +653,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link DefaultDataType} serialization.
    */
-  @Test
+  @Test(timeout=5000)
   public void testDefaultDataTypeSerialization() throws IOException {
     JsonSerializer<?> defaultSerializer = new DefaultRumenSerializer();
     
@@ -733,7 +733,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link DefaultRumenSerializer}.
    */
-  @Test
+  @Test(timeout=5000)
   public void testDefaultDataSerializers() throws Exception {
     JsonSerializer<?> defaultSer = new DefaultRumenSerializer();
     // test default data-type
@@ -750,7 +750,7 @@ public class TestRumenAnonymization {
     testSerializer("username:password", "null", blockingSerializer);
   }
   
-  @Test
+  @Test(timeout=5000)
   public void testObjectStringDataSerializers() throws Exception {
     JsonSerializer<?> objectStringSerializer = new ObjectStringSerializer<ID>();
     // test job/task/attempt id serializer
@@ -766,7 +766,7 @@ public class TestRumenAnonymization {
   }
   
   // test anonymizer
-  @Test
+  @Test(timeout=300000)
   public void testRumenAnonymization() throws Exception {
     // Run a MR job
     // create a MR cluster
@@ -984,7 +984,7 @@ public class TestRumenAnonymization {
     }
   }
   
-  @Test
+  @Test(timeout=5000)
   public void testCLI() throws Exception {
     Path tempDir = new Path(rootTempDir, "testCLI");
     tempDir = lfs.makeQualified(tempDir);
@@ -1062,7 +1062,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link StatePool}'s reload and persistence feature.
    */
-  @Test
+  @Test(timeout=5000)
   public void testStatePool() throws Exception {
     Path tempDir = new Path(rootTempDir, "testStatePool");
     tempDir = lfs.makeQualified(tempDir);
@@ -1196,7 +1196,7 @@ public class TestRumenAnonymization {
     return dt.getValue();
   }
   
-  @Test
+  @Test(timeout=5000)
   public void testJobPropertiesParser() {
     // test default parser
     Properties properties = new Properties();
@@ -1259,7 +1259,7 @@ public class TestRumenAnonymization {
    *   - test known words
    *   - test known suffix
    */
-  @Test
+  @Test(timeout=5000)
   public void testWordListBasedAnonymizer() {
     String[] knownSuffixes = new String[] {".1", ".2", ".3", ".4"};
     
@@ -1329,7 +1329,7 @@ public class TestRumenAnonymization {
    *   - index 
    *   - contains
    */
-  @Test
+  @Test(timeout=5000)
   public void testWordList() throws Exception {
     // test features with fresh state
     WordList wordList = new WordList();
@@ -1415,7 +1415,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName#FileNameState} persistence with directories only.
    */
-  @Test
+  @Test(timeout=5000)
   public void testFileNameStateWithDir() throws Exception {
     // test persistence
     Path tempDir = new Path(rootTempDir, "testFileNameStateWithDir");
@@ -1487,7 +1487,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName#FileNameState} persistence with files only.
    */
-  @Test
+  @Test(timeout=5000)
   public void testFileNameStateWithFiles() throws Exception {
     // test persistence
     Path tempDir = new Path(rootTempDir, "testFileNameStateWithFiles");
@@ -1559,7 +1559,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link FileName#FileNameState} persistence with files and directories.
    */
-  @Test
+  @Test(timeout=5000)
   public void testFileNameState() throws Exception {
     // test persistence
     Path tempDir = new Path(rootTempDir, "testFileNameState");
@@ -1667,7 +1667,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName#NodeName} persistence with hostnames only.
    */
-  @Test
+  @Test(timeout=5000)
   public void testNodeNameStateWithHostNameOnly() throws Exception {
     // test persistence
     Path tempDir = new Path(rootTempDir, "testNodeNameStateWithHostNameOnly");
@@ -1739,7 +1739,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName#NodeNameState} persistence with racknames only.
    */
-  @Test
+  @Test(timeout=5000)
   public void testNodeNameWithRackNamesOnly() throws Exception {
     // test persistence
     Path tempDir = new Path(rootTempDir, "testNodeNameWithRackNamesOnly");
@@ -1811,7 +1811,7 @@ public class TestRumenAnonymization {
   /**
    * Test {@link NodeName#NodeNameState} persistence with hosts and racks.
    */
-  @Test
+  @Test(timeout=5000)
   public void testNodeNameState() throws Exception {
     // test persistence
     Path tempDir = new Path(rootTempDir, "testNodeNameState");

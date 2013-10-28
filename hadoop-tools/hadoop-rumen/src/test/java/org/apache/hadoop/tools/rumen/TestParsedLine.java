@@ -61,28 +61,28 @@ public class TestParsedLine {
     }
   }
   
-  @Test
+  @Test(timeout=1000)
   public void testEscapedQuote() {
     testOneLine("REC", "A", "x", "B", "abc\"de", "C", "f");
     testOneLine("REC", "B", "abcde\"", "C", "f");
     testOneLine("REC", "A", "x", "B", "\"abcde");
   }
 
-  @Test
+  @Test(timeout=1000)
   public void testEqualSign() {
     testOneLine("REC1", "A", "x", "B", "abc=de", "C", "f");
     testOneLine("REC2", "B", "=abcde", "C", "f");
     testOneLine("REC3", "A", "x", "B", "abcde=");
   }
 
-  @Test
+  @Test(timeout=1000)
   public void testSpace() {
     testOneLine("REC1", "A", "x", "B", "abc de", "C", "f");
     testOneLine("REC2", "B", " ab c de", "C", "f");
     testOneLine("REC3", "A", "x", "B", "abc\t  de  ");
   }
 
-  @Test
+  @Test(timeout=1000)
   public void testBackSlash() {
     testOneLine("REC1", "A", "x", "B", "abc\\de", "C", "f");
     testOneLine("REC2", "B", "\\ab\\c\\de", "C", "f");
@@ -90,7 +90,7 @@ public class TestParsedLine {
     testOneLine("REC4", "A", "x", "B", "abc\\\"de\\\"", "C", "f");
   }
 
-  @Test
+  @Test(timeout=1000)
   public void testLineDelimiter() {
     testOneLine("REC1", "A", "x", "B", "abc.de", "C", "f");
     testOneLine("REC2", "B", ".ab.de");
@@ -98,7 +98,7 @@ public class TestParsedLine {
     testOneLine("REC4", "A", "x", "B", "abc.de", ".");
   }
   
-  @Test
+  @Test(timeout=1000)
   public void testMultipleLines() {
     testOneLine("REC1", "A", "x", "\n", "B", "abc.de", "\n", "C", "f", "\n", ".");
   }

@@ -37,7 +37,7 @@ public class TestRumenFolder {
   private final static String INPUT_DIR_ROOT = 
       System.getProperty("test.cache.data", "target/test-classes");
 
-  @Test
+  @Test(timeout=30000)
   public void testFoldingSmallTrace() throws Exception {
     final Configuration conf = new Configuration();
     final FileSystem lfs = FileSystem.getLocal(conf);
@@ -73,7 +73,7 @@ public class TestRumenFolder {
         foldedGoldFile, LoggedJob.class, "trace");
   }
   
-  @Test
+  @Test(timeout=30000)
   public void testStartsAfterOption() throws Exception {
     final Configuration conf = new Configuration();
     final FileSystem lfs = FileSystem.getLocal(conf);

@@ -84,13 +84,13 @@ public class TestRumenJobTraces {
     rootTempDir = PathUtils.getTestPath(getClass());
   }
   
-  @Test(timeout=5000)
+  @Test(timeout=10000)
   public void testSmallTrace() throws Exception {
     performSingleTest("sample-job-tracker-logs.gz",
         "job-tracker-logs-topology-output", "job-tracker-logs-trace-output.gz");
   }
 
-  @Test(timeout=5000)
+  @Test(timeout=10000)
   public void testTruncatedTask() throws Exception {
     performSingleTest("truncated-job-tracker-log", "truncated-topology-output",
         "truncated-trace-output");
@@ -140,7 +140,7 @@ public class TestRumenJobTraces {
         traceGoldFile, LoggedJob.class, "trace");
   }
 
-  @Test(timeout=5000)
+  @Test(timeout=10000)
   public void testRumenViaDispatch() throws Exception {
     final Path rootInputPath = new Path(rootInputDir, "small-trace-test");
     final Path tempDir = new Path(rootTempDir, "TestRumenViaDispatch");
@@ -177,7 +177,7 @@ public class TestRumenJobTraces {
         traceGoldFile, LoggedJob.class, "trace");
   }
 
-  @Test(timeout=5000)
+  @Test(timeout=10000)
   public void testBracketedCounters() throws Exception {
     final Path rootInputPath = new Path(rootInputDir, "small-trace-test");
     final Path tempDir = new Path(rootTempDir, "TestBracketedCounters");
@@ -205,7 +205,7 @@ public class TestRumenJobTraces {
         goldPath, LoggedJob.class, "trace");
   }
 
-  @Test(timeout=500)
+  @Test(timeout=10000)
   public void testHadoop20JHParser() throws Exception {
     final Path rootInputPath = new Path(rootInputDir, "small-trace-test");
 
@@ -254,7 +254,7 @@ public class TestRumenJobTraces {
    * <li> without -recursive option and
    * <li> with -recursive option.
    */
-  @Test(timeout=5000)
+  @Test(timeout=10000)
   public void testProcessInputArgument() throws Exception {
     // define the test's root input directory
     Path testRootInputDir = new Path(rootTempDir, "TestProcessInputArgument");
@@ -399,7 +399,7 @@ public class TestRumenJobTraces {
   /**
    * Test if {@link CurrentJHParser} can read events from current JH files.
    */
-  @Test(timeout=150000)
+  @Test(timeout=300000)
   public void testCurrentJHParser() throws Exception {
     final Path tempDir = new Path(rootTempDir, "TestCurrentJHParser");
     lfs.delete(tempDir, true);
@@ -652,7 +652,7 @@ public class TestRumenJobTraces {
         parsedTaskAttempt.obtainShufflePort());
   }
 
-  @Test(timeout=500)
+  @Test(timeout=10000)
   public void testJobConfigurationParser() throws Exception {
     validateJobConfParser("small-trace-test/sample-conf.file.xml", false);
     validateJobConfParser("small-trace-test/sample-conf.file.new.xml", true);
@@ -729,7 +729,7 @@ public class TestRumenJobTraces {
      * Test if the {@link JobConfigurationParser} can correctly extract out 
      * key-value pairs from the job configuration.
      */
-    @Test(timeout=500)
+    @Test(timeout=10000)
     public void testJobConfigurationParsing() throws Exception {
       final Path tempDir = new Path(rootTempDir, "TestJobConfigurationParser");
       lfs.delete(tempDir, true);
@@ -780,7 +780,7 @@ public class TestRumenJobTraces {
   /**
    * Test {@link ResourceUsageMetrics}.
    */
-  @Test(timeout=500)
+  @Test(timeout=10000)
   public void testResourceUsageMetrics() throws Exception {
     final long cpuUsage = 100;
     final long pMemUsage = 200;
@@ -867,7 +867,7 @@ public class TestRumenJobTraces {
   /**
    * Testing {@link ResourceUsageMetrics} using {@link HadoopLogsAnalyzer}.
    */
-  @Test(timeout=500)
+  @Test(timeout=10000)
   @SuppressWarnings("deprecation")
   public void testResourceUsageMetricsWithHadoopLogsAnalyzer() 
   throws IOException {
@@ -912,7 +912,7 @@ public class TestRumenJobTraces {
     }
   }
   
-  @Test(timeout=100)
+  @Test(timeout=10000)
   public void testTopologyBuilder() throws Exception {
     final TopologyBuilder subject = new TopologyBuilder();
 
