@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.web;
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -301,10 +302,13 @@ public class WebHdfsFileSystem extends FileSystem
     if (in == null) {
       throw new IOException("The " + (useErrorStream? "error": "input") + " stream is null.");
     }
+    
     final String contentType = c.getContentType();
     if (contentType != null) {
       final MediaType parsed = MediaType.valueOf(contentType);
       if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
+        String content = readFully(in);
+        System.out.println("Respponse: " + content);
         throw new IOException("Content-Type \"" + contentType
             + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
             + "\" (parsed=\"" + parsed + "\")");
@@ -313,6 +317,20 @@ public class WebHdfsFileSystem extends FileSystem
     return (Map<?, ?>)JSON.parse(new InputStreamReader(in, Charsets.UTF_8));
   }
 
+  private static String readFully(InputStream is) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    int b;
+    while (true) {
+      b = is.read();
+      if (b < 0) {
+        break;
+      } else {
+        baos.write(b);
+      }
+    }
+    return baos.toString("UTF-8"); 
+  }
+  
   private static Map<?, ?> validateResponse(final HttpOpParam.Op op,
       final HttpURLConnection conn, boolean unwrapException) throws IOException {
     final int code = conn.getResponseCode();
@@ -321,6 +339,7 @@ public class WebHdfsFileSystem extends FileSystem
       try {
         m = jsonParse(conn, true);
       } catch(Exception e) {
+        e.printStackTrace();
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
             + ", message=" + conn.getResponseMessage(), e);

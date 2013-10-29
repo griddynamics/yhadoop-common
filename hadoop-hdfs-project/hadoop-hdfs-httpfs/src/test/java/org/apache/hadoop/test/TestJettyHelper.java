@@ -50,9 +50,11 @@ public class TestJettyHelper implements MethodRule {
         }
         try {
           TEST_SERVLET_TL.set(server);
+          System.out.println("======= Jetty rule: server = " + server);
           statement.evaluate();
         } finally {
           TEST_SERVLET_TL.remove();
+          System.out.println("------- Jetty rule: stopping server.");
           if (server != null && server.isRunning()) {
             try {
               server.stop();

@@ -327,6 +327,7 @@ public class AuthenticationFilter implements Filter {
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
       throws IOException, ServletException {
+    System.out.println(this + " ################ rq: " + request);
     boolean unauthorizedResponse = true;
     String unauthorizedMsg = "";
     HttpServletRequest httpRequest = (HttpServletRequest) request;
@@ -341,12 +342,14 @@ public class AuthenticationFilter implements Filter {
         LOG.warn("AuthenticationToken ignored: " + ex.getMessage());
         token = null;
       }
+      System.out.println(this + "############## #1: Token = " + toString(token));
       if (authHandler.managementOperation(token, httpRequest, httpResponse)) {
         if (token == null) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
           }
           token = authHandler.authenticate(httpRequest, httpResponse);
+          System.out.println(this + "############## #2: Token = " + toString(token));
           if (token != null && token.getExpires() != 0 &&
               token != AuthenticationToken.ANONYMOUS) {
             token.setExpires(System.currentTimeMillis() + getValidity() * 1000);
@@ -354,6 +357,7 @@ public class AuthenticationFilter implements Filter {
           newToken = true;
         }
         if (token != null) {
+          System.out.println(this + "############## Token found, auth ok. token = " + toString(token));
           unauthorizedResponse = false;
           if (LOG.isDebugEnabled()) {
             LOG.debug("Request [{}] user [{}] authenticated", getRequestURL(httpRequest), token.getUserName());
@@ -384,6 +388,7 @@ public class AuthenticationFilter implements Filter {
           filterChain.doFilter(httpRequest, httpResponse);
         }
       } else {
+        System.out.println(this + "############## not management op, auth ok. ");
         unauthorizedResponse = false;
       }
     } catch (AuthenticationException ex) {
@@ -395,11 +400,20 @@ public class AuthenticationFilter implements Filter {
         Cookie cookie = createCookie("");
         cookie.setMaxAge(0);
         httpResponse.addCookie(cookie);
+        System.out.println(this + "############## Sending " + HttpServletResponse.SC_UNAUTHORIZED);
         httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, unauthorizedMsg);
       }
     }
   }
 
+  private static String toString(Object x) {
+    if (x == null) {
+      return "<<NULL>>";
+    } else {
+      return "<<NOT-NULL>>: [" + x + "]";
+    }
+  }
+  
   /**
    * Creates the Hadoop authentiation HTTP cookie.
    * <p/>

@@ -71,6 +71,7 @@ public class TestHdfsHelper extends TestDirHelper {
       try {
         HDFS_CONF_TL.set(conf);
         HDFS_TEST_DIR_TL.set(resetHdfsTestDir(conf));
+        System.out.println("======= HDFS rule: cluster = " + miniHdfs);
         statement.evaluate();
       } finally {
         HDFS_CONF_TL.remove();
@@ -158,10 +159,10 @@ public class TestHdfsHelper extends TestDirHelper {
     return MINI_DFS;
   }
 
-  public static synchronized void shutdown() {
+  public static synchronized void shutdown(boolean deleteDfsDir) {
     if (MINI_DFS != null) {
       System.out.println("Shutting down the MiniDFSCluster...");
-      MINI_DFS.shutdown();
+      MINI_DFS.shutdown(deleteDfsDir);
       MINI_DFS = null;
     }
   }

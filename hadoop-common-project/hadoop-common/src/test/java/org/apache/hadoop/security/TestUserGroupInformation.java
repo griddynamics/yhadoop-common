@@ -23,6 +23,7 @@ import org.apache.hadoop.ipc.TestSaslRPC;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
@@ -87,7 +88,7 @@ public class TestUserGroupInformation {
   }
   
   @Before
-  public void setupUgi() {
+  public void setupUgi() throws Exception {
     conf = new Configuration();
     UserGroupInformation.reset();
     UserGroupInformation.setConfiguration(conf);

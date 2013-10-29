@@ -225,6 +225,7 @@ public class KerberosAuthenticator implements Authenticator {
       String authHeader = conn.getHeaderField(WWW_AUTHENTICATE);
       negotiate = authHeader != null && authHeader.trim().startsWith(NEGOTIATE);
     }
+    System.out.println("###### isNegotiate = " + negotiate);
     return negotiate;
   }
 

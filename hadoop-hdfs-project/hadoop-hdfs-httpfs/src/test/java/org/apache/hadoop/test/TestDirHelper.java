@@ -103,6 +103,7 @@ public class TestDirHelper implements MethodRule {
         }
         try {
           TEST_DIR_TL.set(testDir);
+          System.out.println("======= test dir rule: " + testDir);
           statement.evaluate();
         } finally {
           TEST_DIR_TL.remove();

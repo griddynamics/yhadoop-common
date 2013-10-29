@@ -51,6 +51,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <!-- <version>4.11</version> -->
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -270,7 +271,7 @@
         </excludes>
       </resource>
     </resources>
-    <testResources>
+    <!-- <testResources>
       <testResource>
         <directory>${basedir}/src/test/resources</directory>
         <filtering>false</filtering>
@@ -285,7 +286,7 @@
           <include>krb5.conf</include>
         </includes>
       </testResource>
-    </testResources>
+    </testResources> -->
 
     <plugins>
       <plugin>
@@ -299,12 +300,14 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <threadCount>1</threadCount>
-          <forkMode>always</forkMode>
+          <!-- <threadCount>1</threadCount>
+          <forkMode>always</forkMode> -->
+          <forkCount>1</forkCount>
+          <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
-          <systemPropertyVariables>
+          <!-- <systemPropertyVariables>
             <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
-          </systemPropertyVariables>
+          </systemPropertyVariables> -->
           <properties>
             <property>
               <name>listener</name>

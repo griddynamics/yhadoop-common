@@ -1434,7 +1434,7 @@ public class MiniDFSCluster {
       }
     }
     if (deleteDfsDir) {
-        base_dir.delete();
+        FileUtil.fullyDelete(base_dir, true);
     } else {
         base_dir.deleteOnExit();
     }
