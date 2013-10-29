@@ -69,6 +69,7 @@ public class TestSocketFactory {
     serverThread.start();
     final long timeout = System.currentTimeMillis() + START_STOP_TIMEOUT_SEC * 1000;
     while (!serverRunnable.isReady()) {
+      assertNull(serverRunnable.getThrowable());
       Thread.sleep(10);
       if (System.currentTimeMillis() > timeout) {
         fail("Server thread did not start properly in allowed time of "
