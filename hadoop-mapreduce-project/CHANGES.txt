@@ -209,7 +209,16 @@ Release 2.2.1 - UNRELEASED
     MAPREDUCE-5463. Deprecate SLOTS_MILLIS counters (Tzuyoshi Ozawa via Sandy
     Ryza)
 
+    MAPREDUCE-5457. Add a KeyOnlyTextOutputReader to enable streaming to write
+    out text files without separators (Sandy Ryza)
+
+    MAPREDUCE-5596. Allow configuring the number of threads used to serve
+    shuffle connections (Sandy Ryza via jlowe)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-4680. Job history cleaner should only check timestamps of files in
+    old enough directories (Robert Kanter via Sandy Ryza)
 
   BUG FIXES
 
@@ -221,6 +230,12 @@ Release 2.2.1 - UNRELEASED
 
     MAPREDUCE-5518. Fixed typo "can't read paritions file". (Albert Chu
     via devaraj)
+
+    MAPREDUCE-5561. org.apache.hadoop.mapreduce.v2.app.job.impl.TestJobImpl
+    testcase failing on trunk (Karthik Kambatla via jlowe)
+
+    MAPREDUCE-5598. TestUserDefinedCounters.testMapReduceJob is flakey
+    (Robert Kanter via jlowe)
 
 Release 2.2.0 - 2013-10-13
 
@@ -1496,6 +1511,8 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5586. TestCopyMapper#testCopyFailOnBlockSizeDifference fails when
     run from hadoop-tools/hadoop-distcp directory (jeagles)
+
+    MAPREDUCE-5587. TestTextOutputFormat fails on JDK7 (jeagles)
 
 Release 0.23.9 - 2013-07-08
 

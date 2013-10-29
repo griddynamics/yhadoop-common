@@ -61,7 +61,7 @@ public class TestUserDefinedCounters extends TestCase {
   }
   
   private void cleanAndCreateInput(FileSystem fs) throws IOException {
-    fs.delete(INPUT_FILE, true);
+    fs.delete(INPUT_DIR, true);
     fs.delete(OUTPUT_DIR, true);
 
     OutputStream os = fs.create(INPUT_FILE);
