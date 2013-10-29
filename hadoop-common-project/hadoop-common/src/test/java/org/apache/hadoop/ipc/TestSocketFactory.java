@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.*;
-
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -45,6 +43,12 @@ import org.apache.hadoop.net.StandardSocketFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 /**
  * test StandardSocketFactory and SocksSocketFactory NetUtils
@@ -52,24 +56,40 @@ import org.junit.Test;
  */
 public class TestSocketFactory {
 
-  private volatile int port;
-  private ServerThread serverThread;
+  private static final int START_STOP_TIMEOUT_SEC = 30;
+  
+  private ServerRunnable serverRunnable;
+  private Thread serverThread;
+  private int port;
 
-  @Before
-  public void start() throws Exception {
+  private void startTestServer() throws Exception {
     // start simple tcp server.
-    serverThread = new ServerThread();
-    Thread server = new Thread(serverThread);
-    server.start();
-    while (!serverThread.isReady()) {
+    serverRunnable = new ServerRunnable();
+    serverThread = new Thread(serverRunnable);
+    serverThread.start();
+    final long timeout = System.currentTimeMillis() + START_STOP_TIMEOUT_SEC * 1000;
+    while (!serverRunnable.isReady()) {
       Thread.sleep(10);
+      if (System.currentTimeMillis() > timeout) {
+        fail("Server thread did not start properly in allowed time of "
+            + START_STOP_TIMEOUT_SEC + " sec.");
+      }
     }
+    port = serverRunnable.getPort();
   }
 
   @After
-  public void stop() {
-    // stop server
-    serverThread.stop();
+  public void stopTestServer() throws InterruptedException {
+    final Thread t = serverThread;
+    if (t != null) {
+      serverThread = null;
+      port = -1;
+      // stop server
+      serverRunnable.stop();
+      t.join(START_STOP_TIMEOUT_SEC * 1000);
+      assertFalse(t.isAlive());
+      assertNull(serverRunnable.getThrowable());
+    }
   }
 
   @Test
@@ -109,29 +129,29 @@ public class TestSocketFactory {
   }
 
   /**
-   * Test SocksSocketFactory. test different constructors
+   * Test SocksSocketFactory.
    */
   @Test (timeout=5000)
   public void testSocksSocketFactory() throws Exception {
-
+    startTestServer();
     testSocketFactory(new SocksSocketFactory());
   }
 
-  /*
-   * Test SocksSocketFactory. Test different constructors
+  /**
+   * Test StandardSocketFactory.
    */
-
   @Test (timeout=5000)
   public void testStandardSocketFactory() throws Exception {
-
+    startTestServer();
     testSocketFactory(new StandardSocketFactory());
-
   }
 
-  /**
-   * common test. Socket should work
+  /*
+   * Common test implementation.
    */
   private void testSocketFactory(SocketFactory socketFactory) throws Exception {
+    assertNull(serverRunnable.getThrowable());
+    
     InetAddress address = InetAddress.getLocalHost();
     Socket socket = socketFactory.createSocket(address, port);
     checkSocket(socket);
@@ -184,20 +204,21 @@ public class TestSocketFactory {
   }
 
   /**
-   * simple tcp server. Server gets a string transforms to upper case and return
-   * it .
+   * Simple tcp server. Server gets a string, transforms it to upper case and returns it.
    */
-  private class ServerThread implements Runnable {
+  private static class ServerRunnable implements Runnable {
 
     private volatile boolean works = true;
     private ServerSocket testSocket;
     private volatile boolean ready = false;
+    private volatile Throwable throwable;
+    private int port0;
 
     @Override
     public void run() {
       try {
         testSocket = new ServerSocket(0);
-        port = testSocket.getLocalPort();
+        port0 = testSocket.getLocalPort();
         ready = true;
         while (works) {
           try {
@@ -214,23 +235,31 @@ public class TestSocketFactory {
 
           }
         }
-      } catch (IOException ignored) {
-
+      } catch (IOException ioe) {
+        ioe.printStackTrace();
+        throwable = ioe;
       }
-
     }
 
     public void stop() {
+      works = false;
       try {
         testSocket.close();
       } catch (IOException e) {
         e.printStackTrace();
       }
-      works = false;
     }
 
     public boolean isReady() {
       return ready;
+    }
+    
+    public int getPort() {
+      return port0;
+    }
+    
+    public Throwable getThrowable() {
+      return throwable;
     }
   }
 
