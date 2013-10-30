@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
+import org.junit.runner.Description;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 
@@ -50,6 +51,15 @@ public class TestHdfsHelper extends TestDirHelper {
     }
     return super.apply(statement, frameworkMethod, o);
   }
+  
+  @Override
+  public Statement apply(Statement base, Description description) {
+    TestHdfs testHdfsAnnotation = description.getAnnotation(TestHdfs.class);
+    if (testHdfsAnnotation != null) {
+      base = new HdfsStatement(base, description.getMethodName());
+    }
+    return super.apply(base, description);
+  }
 
   private static class HdfsStatement extends Statement {
     private Statement statement;
@@ -71,7 +81,6 @@ public class TestHdfsHelper extends TestDirHelper {
       try {
         HDFS_CONF_TL.set(conf);
         HDFS_TEST_DIR_TL.set(resetHdfsTestDir(conf));
-        System.out.println("======= HDFS rule: cluster = " + miniHdfs);
         statement.evaluate();
       } finally {
         HDFS_CONF_TL.remove();

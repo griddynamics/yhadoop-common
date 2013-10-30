@@ -26,11 +26,13 @@ import java.net.UnknownHostException;
 
 import org.junit.Test;
 import org.junit.rules.MethodRule;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 import org.mortbay.jetty.Server;
 
-public class TestJettyHelper implements MethodRule {
+public class TestJettyHelper implements MethodRule, TestRule {
 
   @Test
   public void dummy() {
@@ -40,34 +42,49 @@ public class TestJettyHelper implements MethodRule {
 
   @Override
   public Statement apply(final Statement statement, final FrameworkMethod frameworkMethod, final Object o) {
-    return new Statement() {
-      @Override
-      public void evaluate() throws Throwable {
-        Server server = null;
-        TestJetty testJetty = frameworkMethod.getAnnotation(TestJetty.class);
-        if (testJetty != null) {
-          server = createJettyServer();
-        }
-        try {
-          TEST_SERVLET_TL.set(server);
-          System.out.println("======= Jetty rule: server = " + server);
-          statement.evaluate();
-        } finally {
-          TEST_SERVLET_TL.remove();
-          System.out.println("------- Jetty rule: stopping server.");
-          if (server != null && server.isRunning()) {
-            try {
-              server.stop();
-            } catch (Exception ex) {
-              throw new RuntimeException("Could not stop embedded servlet container, " + ex.getMessage(), ex);
-            }
+    TestJetty testJetty = frameworkMethod.getAnnotation(TestJetty.class);
+    return new JettyStatement(testJetty, statement);
+  }
+
+  @Override
+  public Statement apply(final Statement base, final Description description) {
+    TestJetty testJetty = description.getAnnotation(TestJetty.class);
+    return new JettyStatement(testJetty, base);
+  }
+
+  private static class JettyStatement extends Statement {
+    private final TestJetty annotation;
+    private final Statement baseStatement;
+
+    public JettyStatement(TestJetty annotation0, Statement statement0) {
+      annotation = annotation0;
+      baseStatement = statement0;
+    }
+
+    @Override
+    public void evaluate() throws Throwable {
+      Server server = null;
+      if (annotation != null) {
+        server = createJettyServer();
+      }
+      try {
+        TEST_SERVLET_TL.set(server);
+        baseStatement.evaluate();
+      } finally {
+        TEST_SERVLET_TL.remove();
+        if (server != null && server.isRunning()) {
+          try {
+            server.stop();
+          } catch (Exception ex) {
+            throw new RuntimeException("Could not stop embedded servlet container, "
+                + ex.getMessage(), ex);
           }
         }
       }
-    };
+    }
   }
-
-  private Server createJettyServer() {
+  
+  private static Server createJettyServer() {
     try {
       InetAddress localhost = InetAddress.getByName("localhost");
       String host = "localhost";
