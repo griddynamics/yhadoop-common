@@ -56,7 +56,8 @@ public class TestHdfsHelper extends TestDirHelper {
   public Statement apply(Statement base, Description description) {
     TestHdfs testHdfsAnnotation = description.getAnnotation(TestHdfs.class);
     if (testHdfsAnnotation != null) {
-      base = new HdfsStatement(base, description.getMethodName());
+      String methodName = fixMethodName(description.getMethodName());
+      base = new HdfsStatement(base, methodName);
     }
     return super.apply(base, description);
   }

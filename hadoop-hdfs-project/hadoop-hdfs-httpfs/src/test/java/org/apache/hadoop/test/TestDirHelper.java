@@ -102,7 +102,8 @@ public class TestDirHelper implements MethodRule, TestRule {
   @Override
   public Statement apply(Statement base, Description description) {
     TestDir testDirAnnotation = description.getAnnotation(TestDir.class);
-    return new DirStatement(testDirAnnotation, description.getMethodName(), base);
+    String methodName = fixMethodName(description.getMethodName());
+    return new DirStatement(testDirAnnotation, methodName, base);
   }
   
   private static class DirStatement extends Statement {
@@ -160,6 +161,17 @@ public class TestDirHelper implements MethodRule, TestRule {
       throw new RuntimeException(MessageFormat.format("Could not create test dir[{0}]", dir));
     }
     return dir;
+  }
+  
+  /*
+   * org.junit.runner.Description#getMethodName() returns names like "testFoo[5]"
+   *  in case of matrix tests, while 
+   * org.junit.runners.model.FrameworkMethod#getName() returns just "testFoo".
+   * This method used to fix the former by removing the [...] segment.  
+   */
+  public static String fixMethodName(String rawName) {
+    String result = rawName.replaceAll("\\[.*\\]", "");
+    return result;
   }
 
 }
