@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.http.server;
 
-import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -33,8 +33,9 @@ import org.apache.hadoop.security.TestUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.KerberosTestUtils;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
@@ -48,9 +49,17 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Rule;
 
 import static org.junit.Assert.*;
+
 import org.junit.Test;
+import org.junit.rules.RuleChain;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.MethodSorters;
+import org.junit.runners.model.Statement;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
 
@@ -60,22 +69,61 @@ import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
 /* 
  * *********************************************************
- * This test does not require any system properties to be passed via -D, 
- * but it uses MiniKdc and sets some system properties via System.setProperty.
- * So, this test should be run in separate fork, and this forked process 
- * should not be reused by other tests. 
+ * 
+ * 0. This test does not require any system properties to be passed from
+ * outside via -D, but it uses MiniKdc and sets some system properties 
+ * via System.setProperty(). So, this test should always be run in separate fork, 
+ * and this forked process should not be reused by other tests. 
+ * 
+ * 1. Order of the test methods should be fixed to make the test behavior reproducible in
+ * any environment (see note "4." about the JDK NegotiateAuthentication cleanup below).
+ * The test methods are named accordingly to the execution order.
+ * Note that @FixMethodOrder annotation is available since JUnit 4.11 only. 
+ * 
+ * 2. Rules order should be fixed for the same reason (see RuleChain below).
+ * 
+ * 3. MiniKdc must be started *before* class 
+ * org.apache.hadoop.security.authentication.util.KerberosName is loaded. 
+ * This is due to code 
+ *   static {
+ *    try {
+ *     defaultRealm = KerberosUtil.getDefaultRealm();
+ *    } catch (Exception ke) {
+ *      LOG.debug("Kerberos krb5 configuration not found, setting default realm to empty");
+ *      defaultRealm="";
+ *    }
+ *  }
+ * The problem is that the default realm is determined using System property 
+ * "java.security.krb5.conf", which is set by MiniKdc. So, if this static initializer
+ * invoked before MiniKdc start, 'defaultRealm' in KerberosName is set to empty string,
+ * which cause misbehavior.
+ * For that reason we start MiniKdc in @BeforeClass static method, and right after that 
+ * we force KerberosName class loading and check the default realm value. See #hardResetUGI()
+ * method.      
+ * 
+ * 4. The most difficult problem is that JDK remembers hosts that failed  
+ * SPNEGO authentication in field sun.net.www.protocol.http.NegotiateAuthentication#supported .
+ * For that reason the negative testcase #test01InvalidadHttpFSAccess() causes positive testcase
+ * #test06DelegationTokenWithWebhdfsFileSystem() to fail if executed in such order.
+ * We fix this problem by explicit cleaning the JDK field 
+ * sun.net.www.protocol.http.NegotiateAuthentication#supported with reflection, 
+ * see method #cleanJdkNegotiateAuthentication(). 
+ *     
  * *********************************************************
  */
-public class TestHttpFSWithKerberos extends HFSTestCase {
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+public class TestHttpFSWithKerberos {
   
   private static final String DEFAULT_USER = "client";
   private static final String HTTP_LOCALHOST = "HTTP/localhost";
@@ -85,9 +133,53 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   private static MiniKdc miniKdc;
   
   private Server server;
-    
+  private File homeDir;
+
+  // Using RuleChain we fix the rules application order.
+  // Note that TestDirHelper is not included into the chain 
+  // because TestHdfsHelper extends TestDirHelper, so this functionality is
+  // already there.
+  @Rule
+  public final RuleChain ruleChain = RuleChain
+    .outerRule(new TestJettyHelper())
+    .around(new TestHdfsHelper())
+    .around(new PrintTestNameRule());  
+
+  // Service simple rule that prints beginning and end of each test case.
+  // This is done for diagnostic purposes only. 
+  // Note that printed markers include @Before and @After methods execution. 
+  public static class PrintTestNameRule implements TestRule {
+    @Override
+    public Statement apply(final Statement base, final Description description) {
+      return new Statement() {
+        private void impl(boolean begin, String testName) {
+          String beginOrEnd = begin ? "BEGIN" : "END  ";
+          System.out.println("========================= "+beginOrEnd+" #" + testName + "()");
+        }
+        @Override
+        public void evaluate() throws Throwable {
+          impl(true, description.getMethodName());
+          try {
+            base.evaluate();
+          } finally {
+            impl(false, description.getMethodName());
+          }
+        }
+      };
+    }
+  }
+  
   @BeforeClass
   public static void beforeClass() throws Exception {
+    // NB: this must be before #hardResetUGI() invocation 
+    // because org.apache.hadoop.security.authentication.util.KerberosName.defaultRealm static field 
+    // initialized *before* "java.security.krb5.conf" is set by MiniKdc engine. 
+    startMiniKdc();
+    
+    hardResetUGI(); // load KerberosName class, hard reset of UGI.
+  }
+  
+  private static void startMiniKdc() throws Exception {
     user = DEFAULT_USER;
     
     // Delegate MiniKdc workdir creation to KerberosSecurityTestcase: 
@@ -102,12 +194,14 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
     assertTrue(wd.exists());
     
     // create MiniKdc in wd:
-    startMiniKdc(wd);
+    startMiniKdcImpl(wd);
   }
   
-  private static void startMiniKdc(final File wd) throws Exception {
+  private static void startMiniKdcImpl(final File wd) throws Exception {
     // keytab file to be generated by MiniKdc:
     File keytabFF = new File(wd, "krb5.keytab");
+    keytabFF.delete();
+    assertFalse(keytabFF.exists());
     keytabFile = keytabFF.getAbsolutePath();
     
     // MiniKdc creates default config:
@@ -146,7 +240,11 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   }
 
   @AfterClass
-  public static void afterClass() throws Exception { 
+  public static void afterClass() throws Exception {
+    stopMiniKdc();
+  }
+  
+  private static void stopMiniKdc() throws Exception { 
     MiniKdc mk = miniKdc;
     if (mk != null) { 
       mk.stop();
@@ -156,46 +254,80 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   
   @Before
   public void before() throws Exception {
-    assertTrue(!UserGroupInformation.isSecurityEnabled());
-    
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    AuthenticationMethod am = ugi.getAuthenticationMethod();
-    assertTrue(am == AuthenticationMethod.SIMPLE);
+    System.out.println("============= before()");
+    // The work around to clean up JDK state after failed authentication attempt,
+    // see class comment for more detail:
+    cleanJdkNegotiateAuthentication();
+    // To make the tests independent as possible,
+    // also fully clean up UGI before each test case:
+    hardResetUGI();
   }
   
   @After
   public void after() throws Exception {
+    System.out.println("============= after()");
     if (server != null) {
       server.stop();
+      server.join();
+      assertTrue(server.isStopped() && !server.isFailed());
       server.destroy();
       server = null;
     }
+    TestHdfsHelper.shutdown(true);
+    if (homeDir != null) {
+      FileUtil.fullyDelete(homeDir, true);
+      assertTrue(!homeDir.exists());
+      homeDir = null;
+    }
+  }
+  
+  private static void hardResetUGI() throws Exception {
+    // Here we force KerberosName class loading, 
+    // check that the default realm in KerberosName is correct,
+    // and that this value corresponds to the realm MiniKdc has:
+    final String defaultRealm0 = KerberosUtil.getDefaultRealm();
+    System.out.println("Default realm = ["+defaultRealm0+"]");
+    assertNotNull(defaultRealm0);
+    assertTrue(defaultRealm0.length() > 0);
+    final String miniKdcRealm = miniKdc.getRealm();
+    assertEquals(miniKdcRealm, defaultRealm0);
+    final String defaultRealm = new KerberosName("xxx").getDefaultRealm();
+    assertEquals(defaultRealm0, defaultRealm);
     
-    TestHdfsHelper.shutdown();
-    
-    resetUGI();
+    // Invoke method from another test because 
+    // org.apache.hadoop.security.UserGroupInformation.reset() has package visibility:    
+    new TestUserGroupInformation().setupUgi();
+    // Basic check that UGI is okay:
     assertTrue(!UserGroupInformation.isSecurityEnabled());
-    
-    // NB: this is needed to null the static field 
-    // org.apache.hadoop.security.UserGroupInformation.loginUser .
-    // The setter org.apache.hadoop.security.UserGroupInformation.setLoginUser(UserGroupInformation)
-    // has package visibility, so we use another test to reset it:
-    new TestUserGroupInformation().resetUgi();
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     AuthenticationMethod am = ugi.getAuthenticationMethod();
     assertTrue(am == AuthenticationMethod.SIMPLE);
   }
   
-  private void resetUGI() {
-    Configuration conf = new Configuration();
-    UserGroupInformation.setConfiguration(conf);
+  private static void cleanJdkNegotiateAuthentication() {
+    try {
+      Class<?> c = Class.forName("sun.net.www.protocol.http.NegotiateAuthentication");
+      Field supported = c.getDeclaredField("supported");
+      supported.setAccessible(true);
+      Map<?,?> mapValue = (Map<?,?>)supported.get(null);
+      if (mapValue != null) {
+        mapValue.clear();
+      }
+    } catch (Throwable t) {
+      System.err.println(
+         "*********************************************************************************************\n" +
+         " Cleanup of JDK field sun.net.www.protocol.http.NegotiateAuthentication#supported has failed.\n"+
+      	 " Some tests may not work correctly after a negative authentication test.\n" +
+         "*********************************************************************************************");
+      t.printStackTrace();
+    }
   }
 
   private void createHttpFSServer() throws Exception {
-    File homeDir = TestDirHelper.getTestDir();
-    Assert.assertTrue(new File(homeDir, "conf").mkdir());
-    Assert.assertTrue(new File(homeDir, "log").mkdir());
-    Assert.assertTrue(new File(homeDir, "temp").mkdir());
+    homeDir = TestDirHelper.getTestDir();
+    assertTrue(new File(homeDir, "conf").mkdir());
+    assertTrue(new File(homeDir, "log").mkdir());
+    assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -230,6 +362,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
 
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     URL url = cl.getResource("webapp");
+    assertNotNull("Resource 'webapp' not found in classpath.", url);
     WebAppContext context = new WebAppContext(url.getPath(), "/webhdfs");
     server = TestJettyHelper.getJettyServer();
     server.addHandler(context);
@@ -241,7 +374,21 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
-  public void testValidHttpFSAccess() throws Exception {
+  public void test01InvalidadHttpFSAccess() throws Exception {
+    createHttpFSServer();
+
+    URL url = new URL(TestJettyHelper.getJettyURL(),
+                    "/webhdfs/v1/?op=GETHOMEDIRECTORY");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    assertEquals(conn.getResponseCode(),
+                      HttpURLConnection.HTTP_UNAUTHORIZED);
+  }
+  
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void test02ValidHttpFSAccess() throws Exception {
     createHttpFSServer();
 
     KerberosTestUtils.doAsClient(new Callable<Void>() {
@@ -252,31 +399,17 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
         AuthenticatedURL aUrl = new AuthenticatedURL();
         AuthenticatedURL.Token aToken = new AuthenticatedURL.Token();
         HttpURLConnection conn = aUrl.openConnection(url, aToken);
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
         return null;
       }
     });
   }
-
+  
   @Test
   @TestDir
   @TestJetty
   @TestHdfs
-  public void testInvalidadHttpFSAccess() throws Exception {
-    createHttpFSServer();
-
-    URL url = new URL(TestJettyHelper.getJettyURL(),
-                      "/webhdfs/v1/?op=GETHOMEDIRECTORY");
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(),
-                        HttpURLConnection.HTTP_UNAUTHORIZED);
-  }
-
-  @Test
-  @TestDir
-  @TestJetty
-  @TestHdfs
-  public void testDelegationTokenHttpFSAccess() throws Exception {
+  public void test03DelegationTokenHttpFSAccess() throws Exception {
     createHttpFSServer();
 
     KerberosTestUtils.doAsClient(new Callable<Void>() {
@@ -288,7 +421,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
         AuthenticatedURL aUrl = new AuthenticatedURL();
         AuthenticatedURL.Token aToken = new AuthenticatedURL.Token();
         HttpURLConnection conn = aUrl.openConnection(url, aToken);
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
         JSONObject json = (JSONObject) new JSONParser()
           .parse(new InputStreamReader(conn.getInputStream()));
         json =
@@ -302,14 +435,14 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
                       "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" +
                       tokenStr);
         conn = (HttpURLConnection) url.openConnection();
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
 
         //try to renew the delegation token without SPNEGO credentials
         url = new URL(TestJettyHelper.getJettyURL(),
                       "/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=" + tokenStr);
         conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("PUT");
-        Assert.assertEquals(conn.getResponseCode(),
+        assertEquals(conn.getResponseCode(),
                             HttpURLConnection.HTTP_UNAUTHORIZED);
 
         //renew the delegation token with SPNEGO credentials
@@ -317,7 +450,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
                       "/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=" + tokenStr);
         conn = aUrl.openConnection(url, aToken);
         conn.setRequestMethod("PUT");
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
 
         //cancel delegation token, no need for SPNEGO credentials
         url = new URL(TestJettyHelper.getJettyURL(),
@@ -325,21 +458,21 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
                       tokenStr);
         conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("PUT");
-        Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+        assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
 
         //try to access httpfs with the canceled delegation token
         url = new URL(TestJettyHelper.getJettyURL(),
                       "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" +
                       tokenStr);
         conn = (HttpURLConnection) url.openConnection();
-        Assert.assertEquals(conn.getResponseCode(),
+        assertEquals(conn.getResponseCode(),
                             HttpURLConnection.HTTP_UNAUTHORIZED);
         return null;
       }
     });
   }
 
-  private void testDelegationTokenWithFS(Class fileSystemClass)
+  private void testDelegationTokenWithFS(Class<?> fileSystemClass)
     throws Exception {
     createHttpFSServer();
     Configuration conf = new Configuration();
@@ -350,7 +483,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
     FileSystem fs = FileSystem.get(uri, conf);
     Token<?> tokens[] = fs.addDelegationTokens("foo", null);
     fs.close();
-    Assert.assertEquals(1, tokens.length);
+    assertEquals(1, tokens.length);
     fs = FileSystem.get(uri, conf);
     ((DelegationTokenRenewer.Renewable) fs).setDelegationToken(tokens[0]);
     fs.listStatus(new Path("/"));
@@ -383,7 +516,7 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
-  public void testDelegationTokenWithHttpFSFileSystem() throws Exception {
+  public void test04DelegationTokenWithHttpFSFileSystem() throws Exception {
     testDelegationTokenWithinDoAs(HttpFSFileSystem.class, false);
   }
 
@@ -391,29 +524,27 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
   @TestDir
   @TestJetty
   @TestHdfs
-  public void testDelegationTokenWithHttpFSFileSystemProxyUser()
+  public void test05DelegationTokenWithHttpFSFileSystemProxyUser()
     throws Exception {
     testDelegationTokenWithinDoAs(HttpFSFileSystem.class, true);
   }
-  
   
   @Test
   @TestDir
   @TestJetty
   @TestHdfs
-  public void testDelegationTokenWithWebhdfsFileSystem() throws Exception {
+  public void test06DelegationTokenWithWebhdfsFileSystem() throws Exception {
     testDelegationTokenWithinDoAs(WebHdfsFileSystem.class, false);
   }
 
-
-  // TODO: WebHdfsFilesystem does work with ProxyUser HDFS-3509
-  //    @Test
-  //    @TestDir
-  //    @TestJetty
-  //    @TestHdfs
-  //    public void testDelegationTokenWithWebhdfsFileSystemProxyUser()
-  //      throws Exception {
-  //      testDelegationTokenWithinDoAs(WebHdfsFileSystem.class, true);
-  //    }
-
+//  // TODO: WebHdfsFilesystem does work with ProxyUser HDFS-3509
+//  @Test
+//  @TestDir
+//  @TestJetty
+//  @TestHdfs
+//  public void test07DelegationTokenWithWebhdfsFileSystemProxyUser()
+//     throws Exception {
+//    testDelegationTokenWithinDoAs(WebHdfsFileSystem.class, true);
+//  }
+ 
 }
