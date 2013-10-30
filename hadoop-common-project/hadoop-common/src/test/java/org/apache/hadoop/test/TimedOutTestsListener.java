@@ -59,6 +59,7 @@ public class TimedOutTestsListener extends RunListener {
       output.println("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");
       output.println();
       output.print(buildThreadDiagnosticString());
+      output.flush();
     }
   }
   
