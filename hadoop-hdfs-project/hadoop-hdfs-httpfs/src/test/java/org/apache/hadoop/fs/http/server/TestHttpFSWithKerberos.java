@@ -171,9 +171,9 @@ public class TestHttpFSWithKerberos {
   
   @BeforeClass
   public static void beforeClass() throws Exception {
-    // NB: this must be before #hardResetUGI() invocation 
-    // because org.apache.hadoop.security.authentication.util.KerberosName.defaultRealm static field 
-    // initialized *before* "java.security.krb5.conf" is set by MiniKdc engine. 
+    // NB: System property "java.security.krb5.conf" should be set by MiniKdc engine before
+    // static field org.apache.hadoop.security.authentication.util.KerberosName.defaultRealm  
+    // gets initialized. 
     startMiniKdc();
     
     hardResetUGI(); // load KerberosName class, hard reset of UGI.
