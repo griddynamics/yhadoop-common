@@ -354,6 +354,9 @@ Trunk (Unreleased)
 
     HDFS-5419. Fixup test-patch.sh warnings on HDFS-4949 branch. (wang)
 
+    HDFS-5468. CacheAdmin help command does not recognize commands  (Stephen
+    Chu via Colin Patrick McCabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -498,6 +501,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5427. Not able to read deleted files from snapshot directly under 
     snapshottable dir after checkpoint and NN restart. (Vinay via jing9)
 
+    HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
+    is included in snapshot. (jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -587,6 +593,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5458. Datanode failed volume threshold ignored if exception is thrown
     in getDataDirsFromURIs. (Mike Mellenthin via wang)
+
+    HDFS-5252. Stable write is not handled correctly in someplace. (brandonli)
 
 Release 2.2.0 - 2013-10-13
 
