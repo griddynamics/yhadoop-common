@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
+import org.junit.runner.Description;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 
@@ -49,6 +50,16 @@ public class TestHdfsHelper extends TestDirHelper {
       statement = new HdfsStatement(statement, frameworkMethod.getName());
     }
     return super.apply(statement, frameworkMethod, o);
+  }
+  
+  @Override
+  public Statement apply(Statement base, Description description) {
+    TestHdfs testHdfsAnnotation = description.getAnnotation(TestHdfs.class);
+    if (testHdfsAnnotation != null) {
+      String methodName = fixMethodName(description.getMethodName());
+      base = new HdfsStatement(base, methodName);
+    }
+    return super.apply(base, description);
   }
 
   private static class HdfsStatement extends Statement {
@@ -158,4 +169,12 @@ public class TestHdfsHelper extends TestDirHelper {
     return MINI_DFS;
   }
 
+  public static synchronized void shutdown(boolean deleteDfsDir) {
+    if (MINI_DFS != null) {
+      System.out.println("Shutting down the MiniDFSCluster...");
+      MINI_DFS.shutdown(deleteDfsDir);
+      MINI_DFS = null;
+    }
+  }
+  
 }

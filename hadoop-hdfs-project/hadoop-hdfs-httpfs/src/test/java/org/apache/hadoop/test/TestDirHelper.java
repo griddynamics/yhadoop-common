@@ -24,10 +24,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
 import org.junit.rules.MethodRule;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 
-public class TestDirHelper implements MethodRule {
+public class TestDirHelper implements MethodRule, TestRule {
 
   @Test
   public void dummy() {
@@ -93,24 +95,41 @@ public class TestDirHelper implements MethodRule {
 
   @Override
   public Statement apply(final Statement statement, final FrameworkMethod frameworkMethod, final Object o) {
-    return new Statement() {
-      @Override
-      public void evaluate() throws Throwable {
-        File testDir = null;
-        TestDir testDirAnnotation = frameworkMethod.getAnnotation(TestDir.class);
-        if (testDirAnnotation != null) {
-          testDir = resetTestCaseDir(frameworkMethod.getName());
-        }
-        try {
-          TEST_DIR_TL.set(testDir);
-          statement.evaluate();
-        } finally {
-          TEST_DIR_TL.remove();
-        }
-      }
-    };
+    TestDir testDirAnnotation = frameworkMethod.getAnnotation(TestDir.class);
+    return new DirStatement(testDirAnnotation, frameworkMethod.getName(), statement);
   }
 
+  @Override
+  public Statement apply(Statement base, Description description) {
+    TestDir testDirAnnotation = description.getAnnotation(TestDir.class);
+    String methodName = fixMethodName(description.getMethodName());
+    return new DirStatement(testDirAnnotation, methodName, base);
+  }
+  
+  private static class DirStatement extends Statement {
+    private final TestDir annotation;
+    private final String methodName;
+    private final Statement baseStatement;
+    public DirStatement(TestDir annotation0, String methodName0, Statement baseStatement0) {
+      annotation = annotation0;
+      methodName = methodName0;
+      baseStatement = baseStatement0;
+    }
+    @Override
+    public void evaluate() throws Throwable {
+      File testDir = null;
+      if (annotation != null) {
+        testDir = resetTestCaseDir(methodName);
+      }
+      try {
+        TEST_DIR_TL.set(testDir);
+        baseStatement.evaluate();
+      } finally {
+        TEST_DIR_TL.remove();
+      }
+    }
+  }
+  
   /**
    * Returns the local test directory for the current test, only available when the
    * test method has been annotated with {@link TestDir}.
@@ -142,6 +161,17 @@ public class TestDirHelper implements MethodRule {
       throw new RuntimeException(MessageFormat.format("Could not create test dir[{0}]", dir));
     }
     return dir;
+  }
+  
+  /*
+   * org.junit.runner.Description#getMethodName() returns names like "testFoo[5]"
+   *  in case of matrix tests, while 
+   * org.junit.runners.model.FrameworkMethod#getName() returns just "testFoo".
+   * This method used to fix the former by removing the [...] segment.  
+   */
+  public static String fixMethodName(String rawName) {
+    String result = rawName.replaceAll("\\[.*\\]", "");
+    return result;
   }
 
 }
