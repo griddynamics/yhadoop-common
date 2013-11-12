@@ -190,6 +190,9 @@ Trunk (Unreleased)
 
     HDFS-5326. add modifyDirective to cacheAdmin.  (cmccabe)
 
+    HDFS-5495. Remove further JUnit3 usages from HDFS.
+    (Jarek Jarcec Cecho via wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -523,6 +526,8 @@ Release 2.3.0 - UNRELEASED
     file/directory while deletion. (jing9)
 
     HDFS-5325. Remove WebHdfsFileSystem#ConnRunner. (Haohui Mai via jing9) 
+
+    HDFS-5488. Clean up TestHftpURLTimeout. (Haohui Mai via jing9)
 
 Release 2.2.1 - UNRELEASED
 
