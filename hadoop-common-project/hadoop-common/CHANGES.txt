@@ -277,6 +277,9 @@ Trunk (Unreleased)
     HADOOP-9740. Fix FsShell '-text' command to be able to read Avro
     files stored in HDFS and other filesystems. (Allan Yan via cutting)
 
+    HDFS-5471. CacheAdmin -listPools fails when user lacks permissions to view
+    all pools (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -419,6 +422,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10088. copy-nativedistlibs.sh needs to quote snappy lib dir.
     (Raja Aluri via cnauroth)
+
+    HADOOP-10093. hadoop-env.cmd sets HADOOP_CLIENT_OPTS with a max heap size
+    that is too small. (Shanyu Zhao via cnauroth)
 
 Release 2.2.1 - UNRELEASED
 
