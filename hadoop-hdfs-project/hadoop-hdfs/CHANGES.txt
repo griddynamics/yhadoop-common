@@ -22,6 +22,8 @@ Release 0.23.10 - UNRELEASED
     HDFS-5346. Avoid unnecessary call to getNumLiveDataNodes() for each block
     during IBR processing (Ravi Prakash via kihwal)
 
+    HDFS-4995. Make getContentSummary less expensive. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn via
@@ -52,6 +54,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-5357. TestFileSystemAccessService failures in JDK7 (Robert Parker via
     jeagles)
+
+    HDFS-3970. Fix bug causing rollback of HDFS upgrade to result in bad
+    VERSION file. (Vinay and Andrew Wang via atm)
 
 Release 0.23.9 - 2013-07-08
 
