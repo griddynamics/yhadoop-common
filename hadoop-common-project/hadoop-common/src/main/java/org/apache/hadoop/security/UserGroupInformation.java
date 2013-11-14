@@ -54,6 +54,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -82,7 +83,11 @@ public class UserGroupInformation {
   /**
    * Percentage of the ticket window to use before we renew ticket.
    */
-  private static final float TICKET_RENEW_WINDOW = 0.80f;
+  private static float TICKET_RENEW_WINDOW = 0.80f;
+  @VisibleForTesting
+  static void setTicketRenewWindowFactor(float ticketRenewWindowFactor) {
+    TICKET_RENEW_WINDOW = ticketRenewWindowFactor;
+  }
   static final String HADOOP_USER_NAME = "HADOOP_USER_NAME";
   static final String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
   
@@ -196,7 +201,12 @@ public class UserGroupInformation {
   private static AuthenticationMethod authenticationMethod;
   /** Server-side groups fetching service */
   private static Groups groups;
-  /** Min time (in seconds) before relogin for Kerberos */
+  /** Min time (in *milliseconds*) before relogin for Kerberos.
+   * Note, however, that 
+   * {@link CommonConfigurationKeysPublic#HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN}
+   * and {@link CommonConfigurationKeysPublic#HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT}
+   * are specified in *seconds*. 
+   * */
   private static long kerberosMinSecondsBeforeRelogin;
   /** The configuration to use */
   private static Configuration conf;
