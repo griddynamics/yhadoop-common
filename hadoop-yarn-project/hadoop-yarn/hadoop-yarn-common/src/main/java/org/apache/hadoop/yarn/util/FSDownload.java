@@ -217,7 +217,9 @@ public class FSDownload implements Callable<Path> {
       if (lowerDst.endsWith(".jar")) {
         RunJar.unJar(localrsrc, dst, pattern);
         File newDst = new File(dst, dst.getName());
-        dst.mkdir();
+        if (!dst.exists() && !dst.mkdir()) {
+          throw new IOException("Unable to create directory: [" + dst + "]");
+        }
         if (!localrsrc.renameTo(newDst)) {
           throw new IOException("Unable to rename file: [" + localrsrc
               + "] to [" + newDst + "]");

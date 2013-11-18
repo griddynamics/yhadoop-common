@@ -18,6 +18,9 @@ package org.apache.hadoop.security.authentication.util;
  * limitations under the License.
  */
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +41,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class KerberosName {
+  private static final Logger LOG = LoggerFactory.getLogger(KerberosName.class);
+
   /** The first component of the name */
   private final String serviceName;
   /** The second component of the name. It may be null. */
@@ -81,6 +86,7 @@ public class KerberosName {
     try {
       defaultRealm = KerberosUtil.getDefaultRealm();
     } catch (Exception ke) {
+        LOG.debug("Kerberos krb5 configuration not found, setting default realm to empty");
         defaultRealm="";
     }
   }
@@ -282,7 +288,7 @@ public class KerberosName {
      * @param params first element is the realm, second and later elements are
      *        are the components of the name "a/b@FOO" -> {"FOO", "a", "b"}
      * @return the short name if this rule applies or null
-     * @throws IOException throws if something is wrong with the rules
+     * @throws java.io.IOException throws if something is wrong with the rules
      */
     String apply(String[] params) throws IOException {
       String result = null;
@@ -352,7 +358,7 @@ public class KerberosName {
    * Get the translation of the principal name into an operating system
    * user name.
    * @return the short name
-   * @throws IOException
+   * @throws java.io.IOException
    */
   public String getShortName() throws IOException {
     String[] params;

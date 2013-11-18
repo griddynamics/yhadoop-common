@@ -285,7 +285,7 @@ public interface ClientRMProtocol {
    * Cancel an existing delegation token.
    * 
    * @param request the delegation token to be renewed.
-   * @return
+   * @return an empty response.
    * @throws YarnRemoteException
    */
   @Private

@@ -84,7 +84,7 @@ public class KerberosUtil {
    * @param hostname
    *          Fully-qualified domain name.
    * @return Converted Kerberos principal name.
-   * @throws UnknownHostException
+   * @throws java.net.UnknownHostException
    *           If no IP address for the local host could be found.
    */
   public static final String getServicePrincipal(String service, String hostname)

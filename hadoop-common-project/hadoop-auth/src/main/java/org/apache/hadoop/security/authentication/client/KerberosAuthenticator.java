@@ -19,6 +19,8 @@ import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -36,14 +38,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The {@link KerberosAuthenticator} implements the Kerberos SPNEGO authentication sequence.
+ * The {@link org.apache.hadoop.security.authentication.client.KerberosAuthenticator} implements the Kerberos SPNEGO authentication sequence.
  * <p/>
  * It uses the default principal for the Kerberos cache (normally set via kinit).
  * <p/>
- * It falls back to the {@link PseudoAuthenticator} if the HTTP endpoint does not trigger an SPNEGO authentication
+ * It falls back to the {@link org.apache.hadoop.security.authentication.client.PseudoAuthenticator} if the HTTP endpoint does not trigger an SPNEGO authentication
  * sequence.
  */
 public class KerberosAuthenticator implements Authenticator {
+
+  private static Logger LOG = LoggerFactory.getLogger(
+      KerberosAuthenticator.class);
 
   /**
    * HTTP header used by the SPNEGO server endpoint during an authentication sequence.
@@ -125,8 +130,8 @@ public class KerberosAuthenticator implements Authenticator {
    * @param url the URl to authenticate against.
    * @param token the authentication token being used for the user.
    *
-   * @throws IOException if an IO error occurred.
-   * @throws AuthenticationException if an authentication error occurred.
+   * @throws java.io.IOException if an IO error occurred.
+   * @throws org.apache.hadoop.security.authentication.client.AuthenticationException if an authentication error occurred.
    */
   @Override
   public void authenticate(URL url, AuthenticatedURL.Token token)
@@ -146,11 +151,11 @@ public class KerberosAuthenticator implements Authenticator {
   }
 
   /**
-   * If the specified URL does not support SPNEGO authentication, a fallback {@link Authenticator} will be used.
+   * If the specified URL does not support SPNEGO authentication, a fallback {@link org.apache.hadoop.security.authentication.client.Authenticator} will be used.
    * <p/>
-   * This implementation returns a {@link PseudoAuthenticator}.
+   * This implementation returns a {@link org.apache.hadoop.security.authentication.client.PseudoAuthenticator}.
    *
-   * @return the fallback {@link Authenticator}.
+   * @return the fallback {@link org.apache.hadoop.security.authentication.client.Authenticator}.
    */
   protected Authenticator getFallBackAuthenticator() {
     return new PseudoAuthenticator();
@@ -174,18 +179,23 @@ public class KerberosAuthenticator implements Authenticator {
    *
    * @param token the authentication token being used for the user.
    *
-   * @throws IOException if an IO error occurred.
-   * @throws AuthenticationException if an authentication error occurred.
+   * @throws java.io.IOException if an IO error occurred.
+   * @throws org.apache.hadoop.security.authentication.client.AuthenticationException if an authentication error occurred.
    */
   private void doSpnegoSequence(AuthenticatedURL.Token token) throws IOException, AuthenticationException {
     try {
       AccessControlContext context = AccessController.getContext();
       Subject subject = Subject.getSubject(context);
       if (subject == null) {
+        LOG.debug("No subject in context, logging in");
         subject = new Subject();
         LoginContext login = new LoginContext("", subject,
             null, new KerberosConfiguration());
         login.login();
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using subject: " + subject);
       }
       Subject.doAs(subject, new PrivilegedExceptionAction<Void>() {
 
