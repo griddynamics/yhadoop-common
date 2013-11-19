@@ -43,6 +43,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+    <apacheds-root-dir-name>apacheds_1.5.7</apacheds-root-dir-name>
+    <apacheds-url>http://archive.apache.org/dist/directory/apacheds/unstable/1.5/1.5.7/apacheds-1.5.7.tar.gz</apacheds-url>
+
     <!-- These 2 versions are defined here becuase they are used -->
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
     <jdiff.version>1.0.9</jdiff.version>
