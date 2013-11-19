@@ -66,6 +66,7 @@ public class ReduceTask extends Task {
     WritableFactories.setFactory
       (ReduceTask.class,
        new WritableFactory() {
+         @Override
          public Writable newInstance() { return new ReduceTask(); }
        });
   }
@@ -259,11 +260,13 @@ public class ReduceTask extends Task {
        mayBeSkip();
      }
      
+     @Override
      public void nextKey() throws IOException {
        super.nextKey();
        mayBeSkip();
      }
      
+     @Override
      public boolean more() { 
        return super.more() && hasNext; 
      }
@@ -300,7 +303,6 @@ public class ReduceTask extends Task {
        reportNextRecordRange(umbilical, grpIndex);
      }
      
-     @SuppressWarnings("unchecked")
      private void writeSkippedRec(KEY key, VALUE value) throws IOException{
        if(skipWriter==null) {
          Path skipDir = SkipBadRecords.getSkipOutputPath(conf);
