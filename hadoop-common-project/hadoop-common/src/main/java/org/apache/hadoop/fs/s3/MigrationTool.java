@@ -40,6 +40,9 @@ import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.security.AWSCredentials;
 
+import com.google.common.annotations.VisibleForTesting;
+
+
 /**
  * <p>
  * This class is a tool for migrating data from an older to a newer version
@@ -61,7 +64,13 @@ public class MigrationTool extends Configured implements Tool {
     int res = ToolRunner.run(new MigrationTool(), args);
     System.exit(res);
   }
-  
+
+  @VisibleForTesting
+  FileSystemStore getFileSystemStore(  URI uri) throws IOException{
+    FileSystemStore newStore = new Jets3tFileSystemStore();
+    newStore.initialize(uri, getConf());
+    return newStore;
+  } 
   @Override
   public int run(String[] args) throws Exception {
     
@@ -75,9 +84,7 @@ public class MigrationTool extends Configured implements Tool {
     URI uri = URI.create(args[0]);
     
     initialize(uri);
-    
-    FileSystemStore newStore = new Jets3tFileSystemStore();
-    newStore.initialize(uri, getConf());
+    FileSystemStore newStore =getFileSystemStore(uri); 
     
     if (get("%2F") != null) { 
       System.err.println("Current version number is [unversioned].");
